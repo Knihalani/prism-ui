@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type HTMLAttributes } from 'react';
-import { defineComponent, registerComponent, useComponentState, useEmit, usePart, usePrism, useSlot, type PrismContextValue, type PrismComponentProps } from '@prism-ui/react';
+import { cx, defineComponent, registerComponent, useComponentState, useEmit, usePart, usePrism, useSlot, type PrismContextValue, type PrismComponentProps } from '@prism-ui/react';
 import { s } from '@prism-ui/schema';
-import { useFrame } from '../frame';
+import { FrameIcon, useFrame } from '../frame';
 import { createIncremental, escapeHTML, highlight } from '../lib/highlight';
 
 export { setHighlighter } from '../lib/highlight';
@@ -64,12 +64,13 @@ export function useCodeBlock(props: CodeBlockProps, ctx: PrismContextValue) {
 function Container(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
 function Button(props: React.ButtonHTMLAttributes<HTMLButtonElement>) { return <button type="button" {...props} />; }
 function Label(props: HTMLAttributes<HTMLSpanElement>) { return <span {...props} />; }
-function Icon({ copy = false }: { copy?: boolean }) {
-  return <svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">{copy ? <><rect x="5" y="5" width="8" height="8" rx="1.5" /><path d="M10 5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2" /></> : <path d="M2 4h9a3 3 0 0 1 0 6H5m3-3-3 3 3 3" />}</svg>;
+function CopyIcon() {
+  return <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="5" width="8" height="8" rx="1.5" /><path d="M10 5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2" /></svg>;
 }
 function Line({ html, ...props }: HTMLAttributes<HTMLSpanElement> & { html: string }) { return <span {...props} dangerouslySetInnerHTML={{ __html: html || '\n' }} />; }
 export function CodeBlock({ node, props, complete }: PrismComponentProps<CodeBlockProps>) {
-  const vm = useCodeBlock({ ...props, code: props.code ?? node.value, lang: props.lang ?? node.lang, meta: props.meta ?? node.meta, complete }, usePrism());
+  const prism = usePrism();
+  const vm = useCodeBlock({ ...props, code: props.code ?? node.value, lang: props.lang ?? node.lang, meta: props.meta ?? node.meta, complete }, prism);
   const frame = useFrame({ component: 'codeblock', label: vm.label });
   const root = usePart('codeblock', 'root', vm.complete ? 'done' : 'streaming'), header = usePart('codeblock', 'header');
   const actions = usePart('codeblock', 'actions'), label = usePart('codeblock', 'label'), body = usePart('codeblock', 'body', vm.collapsed ? 'collapsed' : 'expanded');
@@ -85,13 +86,14 @@ export function CodeBlock({ node, props, complete }: PrismComponentProps<CodeBlo
     const body = pre.current?.parentElement;
     if (body && vm.collapsed) body.scrollTop = vm.complete ? 0 : body.scrollHeight;
   }, [vm.code, vm.complete, vm.collapsed]);
-  return <Root {...root} role="region" aria-label={vm.label} onKeyDown={frame.rootProps.onKeyDown} data-animate={vm.animate ? undefined : 'false'}>
-    <Header {...header}><Title {...label}>{vm.label}</Title><Actions {...actions}>
-      <Wrap {...wrap} aria-label="Toggle line wrap" aria-pressed={vm.wrap} onClick={vm.toggleWrap}><Icon /></Wrap>
-      <Ask {...ask} aria-label="Ask about this code" onClick={frame.onAsk}>?</Ask>
-      <Copy {...copy} aria-label="Copy code" onClick={vm.copy}>{vm.feedback === 'Copied' ? 'Copied' : <Icon copy />}</Copy>
+  const iconClass = !prism.unstyled && 'prism-icon-btn';
+  return <Root {...root} role="region" aria-label={vm.label} onKeyDown={frame.rootProps.onKeyDown} data-animate={vm.animate ? undefined : 'false'} data-lines={vm.lines || vm.lang === 'diff' ? '' : undefined}>
+    <Header {...header}><Title {...label}>{vm.label}</Title>{vm.lang && vm.lang !== vm.label && <span className={!prism.unstyled ? 'prism-codeblock__language prism-chip' : undefined}>{vm.lang}</span>}<Actions {...actions}>
+      <Wrap {...wrap} aria-label="Toggle line wrap" title="Toggle line wrap" aria-pressed={vm.wrap} onClick={vm.toggleWrap}>Wrap</Wrap>
+      <Ask {...ask} className={cx(ask.className, iconClass) || undefined} aria-label="Ask about this code" title="Ask about this code" onClick={frame.onAsk}><FrameIcon name="ask" /></Ask>
+      <Copy {...copy} className={cx(copy.className, iconClass) || undefined} aria-label="Copy code" title={vm.feedback || 'Copy code'} onClick={vm.copy}>{vm.feedback === 'Copied' ? <FrameIcon name="check" /> : <CopyIcon />}</Copy>
     </Actions></Header>
-    <Body {...body} data-tail={!vm.complete && vm.collapsed ? 'true' : undefined} style={{ height: vm.collapsed ? vm.threshold * 22 + 24 : undefined, ...body.style }} data-wrap={vm.wrap ? 'true' : 'false'}><pre ref={pre}><code>{htmlLines.slice(0, vm.collapsed && vm.complete ? vm.threshold : undefined).map((html, index) => {
+    <Body {...body} data-tail={!vm.complete && vm.collapsed ? 'true' : undefined} data-empty={!vm.code && !vm.complete ? '' : undefined} style={{ height: vm.collapsed ? vm.threshold * 22 + 24 : undefined, ...body.style }} data-wrap={vm.wrap ? 'true' : 'false'}><pre ref={pre}><code>{htmlLines.slice(0, vm.collapsed && vm.complete ? vm.threshold : undefined).map((html, index) => {
       const raw = vm.rawLines[index] ?? '', metadata = vm.lang === 'diff' && /^(?:---|\+\+\+|@@)/.test(raw);
       const state = metadata ? undefined : raw.startsWith('+') ? 'inserted' : raw.startsWith('-') ? 'deleted' : undefined;
       return <span key={index} {...line} data-state={state}><Gutter {...gutter} aria-hidden="true">{state ? (state === 'inserted' ? '+' : '−') : vm.lines ? index + 1 : ''}</Gutter><Row {...content} html={state ? html.replace(/^((?:<[^>]+>)*)[+-]/, '$1') : html} /></span>;

@@ -53,9 +53,11 @@ export function useDataTable(props: DataTableProps, ctx: PrismContextValue) {
     const first = rows.find(row => row && typeof row === 'object' && !Array.isArray(row));
     return (Array.isArray(props.columns) ? props.columns.filter(column => column && typeof column.key === 'string' && column.key) : Object.keys(first ?? {}).map(key => ({ key } as DataTableColumn))).map(column => {
       const type = ['text', 'number', 'currency', 'date'].includes(column.type!) ? column.type : inferType(rows.map(row => scalar(row?.[column.key])));
+      const format = ['text', 'number', 'currency', 'percent', 'compact', 'date', 'datetime'].includes(column.format!) ? column.format : undefined;
+      const numericFormat = ['number', 'currency', 'percent', 'compact'].includes(format ?? type ?? '');
       return { key: column.key, type, label: typeof column.label === 'string' ? column.label : column.key,
-        align: ['left', 'center', 'right'].includes(column.align!) ? column.align : type === 'number' || type === 'currency' ? 'right' : 'left',
-        format: ['text', 'number', 'currency', 'percent', 'compact', 'date', 'datetime'].includes(column.format!) ? column.format : undefined,
+        align: ['left', 'center', 'right'].includes(column.align!) ? column.align : numericFormat ? 'right' : 'left',
+        format,
         currency: typeof column.currency === 'string' ? column.currency : undefined };
     });
   }, [rows, props.columns]);

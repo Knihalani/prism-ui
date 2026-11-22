@@ -1,6 +1,6 @@
-import { type HTMLAttributes } from 'react';
-import { useEmit, usePart, useSlot, type PrismComponentProps } from '@prism-ui/react';
-import { useFrame } from '../frame';
+import { useState, type HTMLAttributes } from 'react';
+import { cx, useEmit, usePart, useSlot, type PrismComponentProps } from '@prism-ui/react';
+import { FrameIcon, useFrame } from '../frame';
 
 export interface CardProps { id?: string; title?: string; subtitle?: string; image?: string; href?: string; action?: string; variant?: 'elevated' | 'outline' | 'ghost'; size?: 'sm' | 'md' | 'lg' }
 type Context = Pick<PrismComponentProps, 'complete' | 'children'>;
@@ -22,11 +22,18 @@ export function useCard(props: CardProps, ctx: Context) {
 }
 export function Card({ props, children, ...ctx }: PrismComponentProps<CardProps>) {
   const model = useCard(props, { ...ctx, children }), { parts } = model;
+  const [sentAction, setSentAction] = useState<string>();
+  const sent = props.action !== undefined && sentAction === props.action;
   const HeaderSlot = useSlot('card', 'header', Header), TitleSlot = useSlot('card', 'title', Title), BodySlot = useSlot('card', 'body', Body), ActionsSlot = useSlot('card', 'actions', Actions);
   return <article {...model.rootProps} data-variant={model.variant} data-size={model.size} data-linked={model.href ? '' : undefined}>
     {props.image && <img {...parts.image} src={props.image} alt="" />}
-    <HeaderSlot {...parts.header}><div {...parts.toolbar}>{props.title && <TitleSlot {...parts.title}>{model.href ? <a {...parts.link} href={model.href}>{props.title}</a> : props.title}</TitleSlot>}<button {...parts.ask} type="button" onClick={model.onAsk}>Ask about this</button></div>{props.subtitle && <p {...parts.subtitle}>{props.subtitle}</p>}</HeaderSlot>
-    <BodySlot {...parts.body}>{model.empty ? <div {...parts.skeleton} aria-hidden="true" /> : children}</BodySlot>
-    {props.action && <ActionsSlot {...parts.actions}><button {...parts.action} type="button" onClick={model.onSelect}>{props.action}</button></ActionsSlot>}
+    <HeaderSlot {...parts.header}><div {...parts.toolbar}>{props.title && <TitleSlot {...parts.title}>{model.href ? <a {...parts.link} href={model.href}>{props.title}</a> : props.title}</TitleSlot>}<button {...parts.ask} className={cx(parts.ask.className, !model.unstyled && 'prism-icon-btn') || undefined} type="button" onClick={model.onAsk} aria-label="Ask about this" title="Ask about this"><FrameIcon name="ask" /></button></div>{props.subtitle && <p {...parts.subtitle}>{props.subtitle}</p>}</HeaderSlot>
+    <BodySlot {...parts.body}>{model.empty ? <div {...parts.skeleton} className={cx(parts.skeleton.className, !model.unstyled && 'prism-skeleton') || undefined} aria-hidden="true" /> : children}</BodySlot>
+    {props.action && <ActionsSlot {...parts.actions}>
+      <button {...parts.action} className={cx(parts.action.className, !model.unstyled && 'prism-pill') || undefined} type="button" data-feedback="" data-sent={sent ? '' : undefined} onClick={() => { model.onSelect(); setSentAction(props.action); }}>
+        <span aria-hidden={sent || undefined} hidden={model.unstyled && sent}>{props.action}</span>
+        <span aria-hidden={!sent || undefined} hidden={model.unstyled && !sent}><FrameIcon name="check" /> Sent</span>
+      </button>
+    </ActionsSlot>}
   </article>;
 }

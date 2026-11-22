@@ -1,5 +1,5 @@
 import { Children, createContext, useContext, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type HTMLAttributes, type KeyboardEvent } from 'react';
-import { useComponentState, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
+import { cx, useComponentState, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
 
 export interface TabsProps { id?: string; label?: string; variant?: 'underline' | 'pill'; size?: 'sm' | 'md'; fitted?: boolean }
 export interface TabProps { id?: string; label?: string; badge?: string }
@@ -77,12 +77,13 @@ export function useTabs(props: TabsProps, ctx: Pick<PrismComponentProps, 'node' 
 }
 export function Tabs({ props, ...ctx }: PrismComponentProps<TabsProps>) {
   const model = useTabs(props, ctx), { parts, group } = model;
+  const { unstyled } = usePrism();
   const BodySlot = useSlot('tabs', 'body', Body), LabelSlot = useSlot('tabs', 'label', Label);
   return <TabsContext.Provider value={group}><div {...model.rootProps}>
     <div {...parts.list} ref={model.listRef} role="tablist" aria-label={props.label ?? 'Tabs'} data-measured={model.indicator.width > 0 ? '' : undefined}>
       {model.tabs.map((tab, index) => <button {...parts.tab} type="button" role="tab" key={tab.key} id={group.tabId(tab.key)} aria-controls={group.panelId(tab.key)} aria-selected={index === model.active} tabIndex={index === model.active ? 0 : -1} onClick={() => model.select(index)} onKeyDown={event => model.onKeyDown(event, index)}>
-        <LabelSlot {...parts.label}>{typeof tab.props?.label === 'string' && tab.props.label ? tab.props.label : <span {...parts.skeleton} aria-label="Loading tab" />}</LabelSlot>
-        {tab.props?.badge != null && <span {...parts.badge}>{String(tab.props.badge)}</span>}
+        <LabelSlot {...parts.label}>{tab.props.label || <span {...parts.skeleton} className={cx(parts.skeleton.className, !unstyled && 'prism-skeleton') || undefined} aria-label="Loading tab" />}</LabelSlot>
+        {tab.props.badge != null && <span {...parts.badge} className={cx(parts.badge.className, !unstyled && 'prism-chip') || undefined}>{tab.props.badge}</span>}
       </button>)}
       <span {...parts.indicator} style={model.indicatorStyle} aria-hidden="true" />
     </div>
