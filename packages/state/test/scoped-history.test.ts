@@ -1,6 +1,24 @@
 import { expect, test } from 'bun:test';
 import { createStore } from '../src';
 
+test.each(['items.2', 'items.2.label'])('scoped undo restores array length after an indexed append at %s', path => {
+  const store = createStore({ initial: { items: ['a', 'b'], other: 0 } });
+  store.set(path, 'c'); store.set('other', 1);
+  store.undo('items');
+  expect(store.get('items')).toEqual(['a', 'b']); expect(store.get('items.length')).toBe(2);
+  expect(store.snapshot()).toEqual({ items: ['a', 'b'], other: 1 });
+  store.undo(); expect(store.snapshot()).toEqual({ items: ['a', 'b'], other: 0 });
+  store.redo(); store.redo('items'); expect(store.get('items.length')).toBe(3);
+  expect(store.get(path)).toBe('c');
+});
+
+test('undoing an earlier array index preserves a later unrelated index', () => {
+  const store = createStore({ initial: { items: ['a', 'b'] } });
+  store.set('items.2', 'c'); store.set('items.3', 'd'); store.undo('items.2');
+  expect(store.get('items.length')).toBe(4); expect(store.get('items.3')).toBe('d');
+  store.redo('items.2'); expect(store.get('items')).toEqual(['a', 'b', 'c', 'd']);
+});
+
 test('scoped undo skips unrelated entries and rebases their snapshots for global travel', () => {
   const store = createStore({ initial: { first: { qty: 5 }, second: { qty: 5 } } });
   store.set('first.qty', 6); store.set('second.qty', 7);

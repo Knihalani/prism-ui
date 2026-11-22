@@ -116,9 +116,20 @@ export function createStore({ persist, namespace = '', initial = {} }: { persist
     ready: Promise.resolve(),
   };
   function restore(target: any, source: any, paths: string[]) {
+    function pathValue(target: any, source: any, keys: string[]): any {
+      const [key, ...rest] = keys, absent = source == null || !Object.hasOwn(source, key);
+      const remove = absent && (!rest.length || Array.isArray(source));
+      const value = rest.length && !remove ? pathValue(target?.[key], source?.[key], rest) : source?.[key];
+      const next = write(target, [key], value, remove);
+      if (Array.isArray(next) && Array.isArray(source) && next.length > source.length) {
+        let length = next.length;
+        while (length > source.length && !Object.hasOwn(next, length - 1)) length--;
+        if (length !== next.length) { const trimmed = next.slice(); trimmed.length = length; return trimmed; }
+      }
+      return next;
+    }
     for (const path of paths) {
-      const keys = path.split('.'), parent = read(source, keys.slice(0, -1));
-      target = write(target, keys, read(source, keys), parent == null || !Object.hasOwn(parent, keys.at(-1)!));
+      target = pathValue(target, source, path.split('.'));
     }
     return target;
   }
