@@ -1,7 +1,7 @@
 import { componentStrings } from '../strings';
-import { Children, createContext, forwardRef, useContext, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ElementType, type ReactNode } from 'react';
+import { Children, createElement, createContext, forwardRef, useContext, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ElementType, type ReactNode } from 'react';
 import type { Node } from '@prism-ui/core';
-import { useStrings, useTheme, Icon, PrismPart, PrismContext, useComponentState, usePart, usePresentation, usePrism, type MarkdownProps, type PrismComponentProps } from '@prism-ui/react';
+import { useStrings, useTheme, Icon, useSlot, PrismContext, useComponentState, usePart, usePresentation, usePrism, type MarkdownProps, type PrismComponentProps } from '@prism-ui/react';
 import { interpolate } from '../interpolate';
 import { createFlip } from '../lib/flip';
 import { dateValue, format as formatValue, type FormatKind } from '../lib/format';
@@ -120,20 +120,20 @@ export type TableSlotProps = { [P in TablePart]: { table: TableModel; row?: Tabl
   & { row: { table: TableModel; row: TableRow }; cell: { table: TableModel; row: TableRow; column: TableColumn } }
   & { [P in 'header' | 'sort' | 'sortIcon']: { table: TableModel; column: TableColumn; row: TableRow } };
 const TableContext = createContext<TableModel | null>(null);
-const Part = forwardRef<any, { part: TablePart; table: TableModel; as?: ElementType; row?: TableRow; column?: TableColumn; [key: string]: any }>(function Part({ part, table, row, column, as = 'div', ...props }, ref) {
-  const attrs = usePart('table', part, table.state);
-  return <PrismPart as={as} {...attrs} {...props} ref={ref} slotProps={{ table, row, column }} />;
+const Element = forwardRef<any, { as?: ElementType; [key: string]: any }>(function Element({ as = 'div', ...props }, ref) { return createElement(as, { ...props, ref }); });
+const Part = forwardRef<any, { part: TablePart; as?: ElementType; row?: TableRow; column?: TableColumn; [key: string]: any }>(function Part({ part, row, column, as = 'div', ...props }, ref) {
+  const table = useContext(TableContext)!, attrs = usePart('table', part, table.state), View = useSlot('table', part, Element);
+  return <View as={as} {...attrs} {...props} ref={ref} {...(View === Element ? {} : { table, row, column })} />;
 });
 function TableRowView({ node, children }: MarkdownProps) {
-  const table = useContext(TableContext)!;
-  return <Part part="row" as="tr" table={table} row={node}>{children}</Part>;
+  return <Part part="row" as="tr" row={node}>{children}</Part>;
 }
 function TableCellView({ node, children }: MarkdownProps) {
   const table = useContext(TableContext)!, context = table.cells.get(node.key), index = context?.index ?? 0, column = context?.column, row = context?.row, header = node.type === 'tableHeader', alignment = table.align[index];
   const dir = table.sort?.column === index ? table.sort.dir : undefined;
-  if (!header) return <Part part="cell" as="td" table={table} row={row} column={column} title={context?.text} data-align={alignment} data-identity={index === 0 ? '' : undefined}>{children}</Part>;
-  return <Part part="header" as="th" table={table} row={row} column={column} data-align={alignment} data-identity={index === 0 ? '' : undefined} scope="col" aria-sort={dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : 'none'}>
-    <Part part="sort" as="button" table={table} row={row} column={column} type="button" aria-label={table.sortLabel(column)} disabled={table.streaming} onClick={() => table.onSort(index)} onKeyDown={(event: React.KeyboardEvent) => table.onSortKeyDown(event, index)}>{children}<Part part="sortIcon" as="span" table={table} row={row} column={column} data-direction={dir}><Part part="icon" as={Icon} table={table} row={row} column={column} name={dir === 'asc' ? 'arrow-up' : dir === 'desc' ? 'arrow-down' : 'sort'} /></Part></Part>
+  if (!header) return <Part part="cell" as="td" row={row} column={column} title={context?.text} data-align={alignment} data-identity={index === 0 ? '' : undefined}>{children}</Part>;
+  return <Part part="header" as="th" row={row} column={column} data-align={alignment} data-identity={index === 0 ? '' : undefined} scope="col" aria-sort={dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : 'none'}>
+    <Part part="sort" as="button" row={row} column={column} type="button" aria-label={table.sortLabel(column)} disabled={table.streaming} onClick={() => table.onSort(index)} onKeyDown={(event: React.KeyboardEvent) => table.onSortKeyDown(event, index)}>{children}<Part part="sortIcon" as="span" row={row} column={column} data-direction={dir}><Part part="icon" as={Icon} row={row} column={column} name={dir === 'asc' ? 'arrow-up' : dir === 'desc' ? 'arrow-down' : 'sort'} /></Part></Part>
   </Part>;
 }
 export function MarkdownTable({ props, ...ctx }: PrismComponentProps<TableProps>) {
@@ -147,13 +147,13 @@ export function MarkdownTable({ props, ...ctx }: PrismComponentProps<TableProps>
     if (model.markdown) return model.rendered[index];
     return <TableRowView key={node.key} node={node}>{node.children?.map(cell => <TableCellView key={cell.key} node={cell}>{cell.children?.map(text).join('')}</TableCellView>)}</TableRowView>;
   };
-  return <TableContext.Provider value={model}><PrismContext.Provider value={scoped}><Part part="root" table={model} {...model.rootProps}>
-    <Part part="scroll" table={model} {...model.scrollProps} ref={model.scrollRef}><Part part="table" as="table" table={model} aria-label={model.label} aria-busy={model.streaming}>
-      <Part part="head" as="thead" table={model}>{model.rows.length > 0 && renderRow(0)}</Part>
-      <Part part="body" as="tbody" table={model}>{model.order.map(index => renderRow(index + 1))}</Part>
+  return <TableContext.Provider value={model}><PrismContext.Provider value={scoped}><Part part="root" {...model.rootProps}>
+    <Part part="scroll" {...model.scrollProps} ref={model.scrollRef}><Part part="table" as="table" aria-label={model.label} aria-busy={model.streaming}>
+      <Part part="head" as="thead">{model.rows.length > 0 && renderRow(0)}</Part>
+      <Part part="body" as="tbody">{model.order.map(index => renderRow(index + 1))}</Part>
     </Part></Part>
-    {model.paginated && <Part part="pagination" as="nav" table={model} aria-label={model.strings.tablePagination}><Part part="pageButton" as="button" table={model} type="button" aria-label={model.strings.previousPage} disabled={model.streaming || model.page === 0} onClick={() => model.setPage(model.page - 1)}><Part part="icon" as={Icon} table={model} name="chevron-left" /></Part><Part part="page-status" as="span" table={model} aria-live="polite">{model.pageStatus}</Part><Part part="pageButton" as="button" table={model} type="button" aria-label={model.strings.nextPage} disabled={model.streaming || model.page + 1 >= model.pages} onClick={() => model.setPage(model.page + 1)}><Part part="icon" as={Icon} table={model} name="chevron-right" /></Part></Part>}
-    <Part part="status" table={model} role="status" aria-live="polite">{model.announcement}</Part>
+    {model.paginated && <Part part="pagination" as="nav" aria-label={model.strings.tablePagination}><Part part="pageButton" as="button" type="button" aria-label={model.strings.previousPage} disabled={model.streaming || model.page === 0} onClick={() => model.setPage(model.page - 1)}><Part part="icon" as={Icon} name="chevron-left" /></Part><Part part="page-status" as="span" aria-live="polite">{model.pageStatus}</Part><Part part="pageButton" as="button" type="button" aria-label={model.strings.nextPage} disabled={model.streaming || model.page + 1 >= model.pages} onClick={() => model.setPage(model.page + 1)}><Part part="icon" as={Icon} name="chevron-right" /></Part></Part>}
+    <Part part="status" role="status" aria-live="polite">{model.announcement}</Part>
   </Part></PrismContext.Provider></TableContext.Provider>;
 }
 export function TableDispatcher(input: PrismComponentProps<TableProps>) {
