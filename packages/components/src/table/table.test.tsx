@@ -43,7 +43,7 @@ test('markdown table renders semantic parts, rich cells, inferred numeric and ex
   expect(view.getByRole('table').querySelector('tbody')?.children.length).toBe(3);
   expect(view.container.querySelector('strong')?.textContent).toBe('Team 10');
   const headers = view.getAllByRole('columnheader');
-  expect(headers[1].style.textAlign).toBe('right'); expect(headers[2].style.textAlign).toBe('center');
+  expect(headers[1].getAttribute('data-align')).toBe('right'); expect(headers[2].getAttribute('data-align')).toBe('center');
   expect(headers[0].getAttribute('aria-sort')).toBe('none');
   view.container.querySelectorAll('[data-prism="table"]').forEach(part => expect(part.classList.contains('prism-table__' + part.getAttribute('data-part'))).toBe(true));
   const root = view.container.querySelector('[data-part="root"][data-prism="table"]')!;
@@ -115,7 +115,7 @@ test('component-node dispatch delegates all props unchanged but never delegates 
 
 test('empty/mixed cells do not break numeric detection, stable sorting or invalid agent sort state', () => {
   const store = createStore(), view = render(<Prism scope="test" source={'| Name | Value |\n| --- | --- |\n| A | 2 |\n| B | 2 |\n| C | note |\n| D | |'} store={store} />);
-  expect(view.getAllByRole('columnheader')[1].style.textAlign).toBe('left');
+  expect(view.getAllByRole('columnheader')[1].getAttribute('data-align')).toBe('left');
   fireEvent.click(view.getByRole('button', { name: 'Value' })); expect(order(view)).toEqual(['D', 'A', 'B', 'C']);
   act(() => store.set('test:table:0.sort', { column: 100, dir: 'asc' })); expect(order(view)).toEqual(['A', 'B', 'C', 'D']);
 });

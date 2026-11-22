@@ -1,5 +1,5 @@
 import '../../react/test/setup';
-import { afterEach, expect, test } from 'bun:test';
+import { afterEach, expect, spyOn, test } from 'bun:test';
 import { createElement, forwardRef } from 'react';
 import { cleanup, fireEvent, render } from '@testing-library/react';
 import { Prism, createRegistry, defineTheme, type Action } from '@prism-ui/react';
@@ -72,8 +72,16 @@ test('computed announcements, empty/loading states, pagination, hints and defini
 
 test('delegated definition defaults and streaming detail-column metadata survive delegation', () => {
   const custom = createRegistry([tableDef, { ...dataTableDefinition, strings: { ...dataTableDefinition.strings, noRowsYet: 'Definition empty' } }]);
-  const view = render(<Prism registry={custom} source={source({ rows: [] })} />); expect(view.getByText('Definition empty')).toBeDefined();
+  const view = render(<Prism registry={custom} source={source({ rows: [] })} />); expect(view.getByText('Definition empty')).toBeDefined(); expect(view.getByRole('table', { name: 'Data table' })).toBeDefined();
   view.rerender(<Prism registry={custom} source={'```ui:table\n' + JSON.stringify({ columns, selectable: true, rows: [] }).slice(0, -2)} done={false} />);
   const placeholders = view.container.querySelectorAll('[data-part="placeholder-row"]'); expect(placeholders).toHaveLength(3);
   placeholders.forEach(row => { expect(row.children).toHaveLength(4); expect(row.lastElementChild?.hasAttribute('data-detail')).toBe(true); expect(row.children[1].hasAttribute('data-identity')).toBe(true); });
+});
+
+test('non-animated stream appends do not repeat computed-style reads', () => {
+  const partial = (count: number) => '```ui:table\n' + JSON.stringify({ id: 'growing', columns, rows: rows.slice(0, count) }).slice(0, -1);
+  const view = render(<Prism registry={registry} source={partial(1)} done={false} animate={false} />);
+  const styles = spyOn(globalThis, 'getComputedStyle');
+  try { view.rerender(<Prism registry={registry} source={partial(2)} done={false} animate={false} />); expect(styles).not.toHaveBeenCalled(); }
+  finally { styles.mockRestore(); }
 });

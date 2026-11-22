@@ -86,8 +86,10 @@ export function formatCell(input: unknown, column: DataTableColumn, context: Pri
 }
 function useDataTableState(props: DataTableProps, ctx: PrismContextValue) {
   const defaults = { ...dataTableStrings, ...ctx.registry.get('dataTable')?.strings };
-  const canonical = useStrings('dataTable', defaults), alias = useStrings('table', defaults), theme = useTheme().theme, component = useContext(ComponentContext);
-  const strings = { ...(component?.name === 'table' ? alias : canonical), ...theme.components.datatable?.strings, ...theme.components.table?.strings, ...theme.components.dataTable?.strings };
+  const canonical = useStrings('dataTable', defaults), theme = useTheme().theme, component = useContext(ComponentContext);
+  const delegated = component?.name === 'table' ? component.props : {};
+  const labels = delegated.labels && typeof delegated.labels === 'object' ? delegated.labels : {};
+  const strings = { ...canonical, ...labels, ...Object.fromEntries(Object.entries(delegated).filter(([, value]) => typeof value === 'string')), ...theme.components.datatable?.strings, ...theme.components.table?.strings, ...theme.components.dataTable?.strings } as Record<string, string>;
 
   const rows = Array.isArray(props.rows) ? props.rows : emptyRows, complete = props.complete !== false;
   const columns = useMemo(() => {
@@ -177,7 +179,7 @@ export function useDataTable(props: DataTableProps, ctx: PrismContextValue, rawR
       element = element.parentElement;
     }
     setHostBackground(undefined);
-  }, [appearance, theme, ctx.styles]);
+  }, [appearance, theme, ctx.styles.datatable?.root, ctx.styles.datatable?.scroll]);
   const flip = useRef<ReturnType<typeof createFlip> | null>(null), sortPending = useRef(false), resizeAnimation = useRef<Animation | undefined>(undefined);
   const preview = useRef<{ height: number; pageSize: number } | undefined>(undefined);
   const selectionKey = JSON.stringify(vm.selected.map(entry => [entry.index, ...entry.cells])), previousSelection = useRef(selectionKey);
@@ -185,8 +187,9 @@ export function useDataTable(props: DataTableProps, ctx: PrismContextValue, rawR
   const columnCount = vm.columns.length + Number(Boolean(vm.mode)), missing = Math.max(0, (vm.pageSize || 3) - vm.visible.length), skeletonCount = vm.complete ? 0 : missing;
   const elements = () => Array.from(scroll.current?.querySelectorAll('tr[data-index]') ?? []);
   const motion = () => {
+    if (!ctx.animate || ctx.unstyled || typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return { duration: 0, easing: 'linear' };
     const style = scroll.current && getComputedStyle(scroll.current), token = style?.getPropertyValue('--prism-datatable-motion-base').trim() || style?.getPropertyValue('--prism-motion-base').trim() || '0ms';
-    return { duration: ctx.animate && !ctx.unstyled && !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) ? parseFloat(token) * (token.endsWith('ms') ? 1 : 1000) || 0 : 0, easing: style?.getPropertyValue('--prism-datatable-motion-spring').trim() || style?.getPropertyValue('--prism-motion-spring').trim() || 'linear' };
+    return { duration: parseFloat(token) * (token.endsWith('ms') ? 1 : 1000) || 0, easing: style?.getPropertyValue('--prism-datatable-motion-spring').trim() || style?.getPropertyValue('--prism-motion-spring').trim() || 'linear' };
   };
   useLayoutEffect(() => { if (previousSelection.current !== selectionKey) { previousSelection.current = selectionKey; vm.resetSent(); } }, [selectionKey, vm.resetSent]);
   useLayoutEffect(() => { if (pageCheckbox.current) pageCheckbox.current.indeterminate = vm.selectedOnPage > 0 && !vm.pageSelected; }, [vm.selectedOnPage, vm.pageSelected]);
