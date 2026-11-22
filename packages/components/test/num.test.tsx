@@ -1,9 +1,9 @@
 import '../../react/test/setup';
 import { afterEach, expect, test } from 'bun:test';
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
-import { Prism, type Action } from '@prism-ui/react';
+import { Prism, createRegistry, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
-import '../src/num';
+import { num, calc } from '../src/num';
 
 afterEach(cleanup);
 
@@ -13,6 +13,11 @@ function setup(source = ':num[1200]{id=rent min=0 max=5000 step=50 format=curren
 }
 const changes = (actions: Action[]) => actions.map(({ type, payload }) => ({ type, payload }));
 
+test('inline number docs include usable directive examples', () => {
+  const docs = createRegistry([num, calc]).docs();
+  expect(docs).toContain(':num['); expect(docs).toContain(':calc[');
+});
+
 test('static inline pills have accessible parts and format live shared values', () => {
   const view = setup();
   const slider = view.getByRole('slider', { name: 'rent' });
@@ -20,7 +25,8 @@ test('static inline pills have accessible parts and format live shared values', 
   expect(slider.getAttribute('aria-valuenow')).toBe('1200');
   expect(slider.getAttribute('aria-valuetext')).toBe('$1,200.00');
   expect(slider.className).toBe('prism-num__root');
-  expect(view.getByText('$14,400.00').getAttribute('aria-live')).toBe('polite');
+  expect(view.getByText('$14,400.00').getAttribute('aria-live')).toBeNull();
+  expect(view.getByText('$14,400.00').getAttribute('aria-label')).toBe('$14,400.00');
   fireEvent.keyDown(slider, { key: 'ArrowUp' });
   expect(view.store.get('rent')).toBe(1250); expect(view.getByText('$15,000.00')).toBeDefined();
   expect(changes(view.actions)).toEqual([{ type: 'change', payload: { id: 'rent', value: 1250, previous: 1200 } }]);

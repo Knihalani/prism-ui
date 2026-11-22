@@ -89,13 +89,13 @@ export function useCalc(props: CalcProps, ctx: PrismComponentProps<CalcProps>) {
     frame = requestAnimationFrame(tick); return () => cancelAnimationFrame(frame);
   }, [result, animate]);
   const error = !Number.isFinite(result);
-  return { text: error ? props.errorLabel : format(animate && Number.isFinite(display) ? display : result), rootProps: { ...usePart('calc', 'root', error ? 'error' : 'ready'), 'aria-live': 'polite' as const, 'aria-label': props.label, title: error ? expr : undefined } };
+  return { text: error ? props.errorLabel : format(animate && Number.isFinite(display) ? display : result), rootProps: { ...usePart('calc', 'root', error ? 'error' : 'ready'), 'aria-label': [props.label, error ? props.errorLabel : format(result)].filter(Boolean).join(': '), title: error ? expr : undefined } };
 }
 export function Calc(ctx: PrismComponentProps<CalcProps>) {
   const calc = useCalc(ctx.props, ctx), Value = useSlot('calc', 'value', 'span' as any);
   return <Value {...calc.rootProps}>{calc.text}</Value>;
 }
-export const num = defineComponent({ name: 'num', schema: numSchema, syntax: 'inline', inline: true, component: Num });
-export const calc = defineComponent({ name: 'calc', schema: calcSchema, syntax: 'inline', inline: true, component: Calc });
+export const num = defineComponent({ name: 'num', schema: numSchema, syntax: 'inline', inline: true, component: Num, docs: 'Editable shared-store number. Drag, click to type, or use arrow keys; percent values are fractions.', examples: [':num[1200]{id=rent min=0 max=5000 step=50 format=currency}'] });
+export const calc = defineComponent({ name: 'calc', schema: calcSchema, syntax: 'inline', inline: true, component: Calc, docs: 'Read-only live formula over shared-store paths, with localized number formatting.', examples: [':calc[rent * 12]{format=currency}'] });
 registerComponent(num);
 registerComponent(calc);
