@@ -14,7 +14,7 @@ const registry = createRegistry([codeBlockDefinition, tableDef, dataTableDefinit
 for (const [name, source] of replayFixtures) {
   test(`harness ${name}: every small-chunk prefix renders safely while streaming`, () => {
     const view = render(<Prism registry={registry} source="" done={false} animate={false} />);
-    const chunk = name === 'ledger' ? 128 : 16;
+    const chunk = name === 'ledger' ? 128 : ['line', 'bar', 'area', 'pie'].includes(name) ? 1 : 16;
     for (let length = 1; length < source.length; length += chunk) {
       expect(() => view.rerender(<Prism registry={registry} source={source.slice(0, length)} done={false} animate={false} />)).not.toThrow();
     }

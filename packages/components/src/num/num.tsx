@@ -29,12 +29,13 @@ export function useNum(props: NumProps, ctx: PrismComponentProps<NumProps>) {
   const step = props.step > 0 ? props.step : 1, min = props.min ?? -Infinity, max = Math.max(min, props.max ?? Infinity);
   const normalize = (n: number) => Math.max(min, Math.min(max, Number((Math.round((n - (props.min ?? 0)) / step) * step + (props.min ?? 0)).toPrecision(14))));
   const value = typeof current === 'number' && Number.isFinite(current) ? current : Number.isFinite(initial) ? normalize(initial) : 0;
-  const format = useNumberFormat(props), [editing, setEditing] = useState(false), [draft, setDraft] = useState('');
+  const format = useNumberFormat(props), [editing, setEditing] = useState(false), [draft, setDraft] = useState(''), [scrubbing, setScrubbing] = useState(false), [editWidth, setEditWidth] = useState(0);
+  const element = useRef<HTMLElement>(null);
   const suppressClick = useRef(false), edit = useRef(false), previous = useRef(value), drag = useRef<{ x: number; previous: number; next: number; moved: boolean; pointer: number } | null>(null), frame = useRef<number | null>(null);
   useLayoutEffect(() => { if (store.get(id) === undefined && Number.isFinite(initial)) store.set(id, normalize(initial)); }, [store, id, initial, min, max, step]);
   useEffect(() => () => { if (frame.current !== null) cancelAnimationFrame(frame.current); }, []);
   const commit = (next: number, before: number) => { store.set(id, next); emit('change', { id, value: next, previous: before }); };
-  const beginEdit = () => { if (!ready) return; previous.current = value; edit.current = true; setDraft(String(value)); setEditing(true); };
+  const beginEdit = () => { if (!ready) return; setEditWidth(element.current?.getBoundingClientRect().width ?? 0); previous.current = value; edit.current = true; setDraft(String(value)); setEditing(true); };
   const finishEdit = (cancel = false, text = draft) => {
     if (!edit.current) return;
     edit.current = false; setEditing(false);
@@ -60,37 +61,49 @@ export function useNum(props: NumProps, ctx: PrismComponentProps<NumProps>) {
     const distance = event.clientX - active.x;
     active.moved ||= Math.abs(distance) >= 3;
     if (!active.moved) return;
+    setScrubbing(true);
     active.next = normalize(active.previous + Math.round(distance / 4) * step * (event.shiftKey ? 10 : 1));
     if (frame.current === null) frame.current = requestAnimationFrame(() => { frame.current = null; if (drag.current) store.set(id, drag.current.next); });
   };
   const endDrag = (event: PointerEvent<HTMLElement>, cancel = false) => {
     const active = drag.current; if (!active || active.pointer !== event.pointerId) return;
-    stopFrame(); drag.current = null;
+    stopFrame(); drag.current = null; setScrubbing(false);
     suppressClick.current = active.moved || cancel;
     if (cancel) store.set(id, active.previous);
     else if (active.moved) commit(active.next, active.previous);
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
-  return { editing, formatted: ready ? format(value) : '\u00a0', rootProps: { ...usePart('num', 'root', ready ? 'ready' : 'loading'), role: 'slider', tabIndex: ready ? 0 : -1, 'aria-label': props.label ?? id, 'aria-valuemin': props.min, 'aria-valuemax': props.max, 'aria-valuenow': value, 'aria-valuetext': format(value), 'aria-busy': !ready, onKeyDown, onPointerDown, onPointerMove, onPointerUp: (e: PointerEvent<HTMLElement>) => endDrag(e), onPointerCancel: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onLostPointerCapture: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onClick: () => { if (!suppressClick.current) beginEdit(); suppressClick.current = false; } },
+  return { editing, editWidth, formatted: ready ? format(value) : '\u00a0', rootProps: { ...usePart('num', 'root', ready ? 'ready' : 'loading'), ref: element, 'data-hint': scrubbing ? format(value) : 'Drag or ↑↓', 'data-scrubbing': scrubbing || undefined, role: 'slider', tabIndex: ready ? 0 : -1, 'aria-label': props.label ?? id, 'aria-valuemin': props.min, 'aria-valuemax': props.max, 'aria-valuenow': value, 'aria-valuetext': format(value), 'aria-busy': !ready, onKeyDown, onPointerDown, onPointerMove, onPointerUp: (e: PointerEvent<HTMLElement>) => endDrag(e), onPointerCancel: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onLostPointerCapture: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onClick: () => { if (!suppressClick.current) beginEdit(); suppressClick.current = false; } },
     inputProps: { ...usePart('num', 'input'), type: 'number', role: 'spinbutton', 'aria-label': props.label ?? id, min: props.min, max: props.max, step, value: draft, autoFocus: true, onFocus: (e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.select(), onChange: (e: React.ChangeEvent<HTMLInputElement>) => setDraft(e.target.value), onBlur: (e: React.FocusEvent<HTMLInputElement>) => finishEdit(false, e.currentTarget.value), onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); finishEdit(e.key === 'Escape', e.currentTarget.value); } } } };
 }
 
 export function Num(ctx: PrismComponentProps<NumProps>) {
   const num = useNum(ctx.props, ctx), Value = useSlot('num', 'value', 'span' as any);
-  return num.editing ? <input {...num.inputProps} /> : <Value {...num.rootProps}>{num.formatted}</Value>;
+  return num.editing ? <input {...num.inputProps} style={{ ...num.inputProps.style, width: num.editWidth || `${Math.max(2, num.formatted.length)}ch` }} /> : <Value {...num.rootProps}>{num.formatted}</Value>;
 }
 
 export function useCalc(props: CalcProps, ctx: PrismComponentProps<CalcProps>) {
   const { animate } = usePrism(), expr = props.expr ?? rawText(ctx.node), result = useFormula(expr), format = useNumberFormat(props);
   const [display, setDisplay] = useState(result), shown = useRef(result);
+  const element = useRef<HTMLElement>(null), previous = useRef(result);
   useEffect(() => {
-    if (!animate || !Number.isFinite(result) || !Number.isFinite(shown.current)) { shown.current = result; setDisplay(result); return; }
+    const changed = !Object.is(previous.current, result);
+    previous.current = result;
+    if (!changed || !animate || !Number.isFinite(result) || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const node = element.current;
+    if (!node?.animate || node.closest('.prism-root[data-animate="false"]')) return;
+    const fill = getComputedStyle(node).getPropertyValue('--prism-accent-soft').trim() || 'color-mix(in oklab, currentColor 8%, transparent)';
+    const animation = node.animate([{ backgroundColor: fill }, { backgroundColor: 'transparent' }], { duration: 600, easing: 'ease-out' });
+    return () => animation.cancel();
+  }, [result, animate]);
+  useEffect(() => {
+    if (!animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || !Number.isFinite(result) || !Number.isFinite(shown.current)) { shown.current = result; setDisplay(result); return; }
     const start = performance.now(), from = shown.current; let frame: number;
     const tick = (now: number) => { const progress = Math.min(1, (now - start) / 250); shown.current = progress === 1 ? result : from + (result - from) * (1 - (1 - progress) ** 3); setDisplay(shown.current); if (progress < 1) frame = requestAnimationFrame(tick); };
     frame = requestAnimationFrame(tick); return () => cancelAnimationFrame(frame);
   }, [result, animate]);
   const error = !Number.isFinite(result);
-  return { text: error ? props.errorLabel : format(animate && Number.isFinite(display) ? display : result), rootProps: { ...usePart('calc', 'root', error ? 'error' : 'ready'), 'aria-label': [props.label, error ? props.errorLabel : format(result)].filter(Boolean).join(': '), title: error ? expr : undefined } };
+  return { text: error ? props.errorLabel : format(animate && Number.isFinite(display) ? display : result), rootProps: { ...usePart('calc', 'root', error ? 'error' : 'ready'), ref: element, 'aria-label': [props.label, error ? props.errorLabel : format(result)].filter(Boolean).join(': '), title: error ? expr : undefined } };
 }
 export function Calc(ctx: PrismComponentProps<CalcProps>) {
   const calc = useCalc(ctx.props, ctx), Value = useSlot('calc', 'value', 'span' as any);

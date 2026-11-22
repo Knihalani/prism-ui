@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { s, type Infer } from '@prism-ui/schema';
 import { defineComponent, registerComponent, useEmit, useFormat, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
@@ -25,9 +25,9 @@ function calculate(props: EstimateProps, readItem: (id: string) => ItemState | u
 function useTween(value: number, animate: boolean) {
   const [display, setDisplay] = useState(value), shown = useRef(value);
   useEffect(() => {
-    if (!animate) { shown.current = value; setDisplay(value); return; }
+    if (!animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { shown.current = value; setDisplay(value); return; }
     const from = shown.current, start = performance.now(); let frame: number;
-    const tick = (now: number) => { const t = Math.min(1, (now - start) / 250); shown.current = t === 1 ? value : from + (value - from) * (1 - (1 - t) ** 3); setDisplay(shown.current); if (t < 1) frame = requestAnimationFrame(tick); };
+    const tick = (now: number) => { const t = Math.min(1, (now - start) / 380); shown.current = t === 1 ? value : from + (value - from) * (1 - (1 + 7 * t) * Math.exp(-7 * t)); setDisplay(shown.current); if (t < 1) frame = requestAnimationFrame(tick); };
     frame = requestAnimationFrame(tick); return () => cancelAnimationFrame(frame);
   }, [value, animate]);
   return animate ? display : value;
@@ -55,14 +55,14 @@ export function useEstimate(props: EstimateProps, ctx: PrismComponentProps<Estim
   const update = (item: Item, key: 'qty' | 'enabled', value: number | boolean) => store.batch(() => {
     setRecordPath(store, `${id}.items`, `${item.id}.${key}`, key === 'qty' ? quantity(item, value as number) : value); writeTotals();
   });
-  const rows = totals.rows.map(row => {
+  const rows = totals.rows.map((row, index) => {
     const setQuantity = (text: string) => { const n = text.trim() ? Number(text) : NaN; if (Number.isFinite(n)) update(row, 'qty', n); };
     const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
       const step = row.step > 0 ? row.step : 1;
       const delta: Record<string, number> = { ArrowUp: step, ArrowDown: -step, PageUp: step * 10, PageDown: -step * 10 };
       if (Object.hasOwn(delta, event.key)) { event.preventDefault(); update(row, 'qty', row.qty + delta[event.key] * (event.shiftKey ? 10 : 1)); }
     };
-    return { ...row, priceText: row.ready ? money(row.price!) + (row.unit ? ` / ${row.unit}` : '') : '\u00a0', amountText: row.ready ? money(row.amount) : '\u00a0',
+    return { ...row, index, priceText: row.ready ? money(row.price!) + (row.unit ? ` / ${row.unit}` : '') : '\u00a0', amountText: row.ready ? money(row.amount) : '\u00a0',
       checkboxProps: { type: 'checkbox', role: 'checkbox', checked: row.enabled, 'aria-label': row.label, onChange: () => update(row, 'enabled', !row.enabled) },
       inputProps: { type: 'number', role: 'spinbutton', 'aria-label': row.label, 'aria-valuenow': row.qty, min: row.min, max: row.max, step: row.step > 0 ? row.step : 1, value: row.qty, disabled: !row.enabled || !row.ready, onChange: (event: React.ChangeEvent<HTMLInputElement>) => setQuantity(event.currentTarget.value), onInput: (event: React.FormEvent<HTMLInputElement>) => setQuantity(event.currentTarget.value), onKeyDown },
       decreaseProps: { type: 'button' as const, 'aria-label': `${props.decreaseLabel} ${row.label}`, disabled: !row.enabled || !row.ready || row.qty <= row.min, onClick: () => update(row, 'qty', row.qty - (row.step || 1)) },
@@ -81,9 +81,9 @@ export function useEstimate(props: EstimateProps, ctx: PrismComponentProps<Estim
 type Row = ReturnType<typeof useEstimate>['rows'][number];
 function EstimateItem({ row }: { row: Row }) {
   const parts = { root: usePart('estimate', 'item', !row.ready ? 'loading' : row.enabled ? 'ready' : 'disabled'), checkbox: usePart('estimate', 'checkbox'), details: usePart('estimate', 'details'), label: usePart('estimate', 'label'), description: usePart('estimate', 'description'), price: usePart('estimate', 'price'), stepper: usePart('estimate', 'stepper'), decrease: usePart('estimate', 'decrease'), input: usePart('estimate', 'input'), increase: usePart('estimate', 'increase'), amount: usePart('estimate', 'amount') };
-  return <div {...parts.root} aria-busy={!row.ready}>
-    {row.optional && <input {...parts.checkbox} {...row.checkboxProps} />}
+  return <div {...parts.root} style={{ ...parts.root.style, '--estimate-index': row.index } as CSSProperties} aria-busy={!row.ready}>
     <div {...parts.details}><div {...parts.label}>{row.label}</div>{row.description && <div {...parts.description}>{row.description}</div>}<div {...parts.price}>{row.priceText}</div></div>
+    {row.optional && <input {...parts.checkbox} {...row.checkboxProps} />}
     <div {...parts.stepper}><button {...parts.decrease} {...row.decreaseProps}>−</button><input {...parts.input} {...row.inputProps} /><button {...parts.increase} {...row.increaseProps}>+</button></div>
     <span {...parts.amount}>{row.amountText}</span>
   </div>;

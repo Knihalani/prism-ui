@@ -4,7 +4,7 @@ import { Prism, createRegistry, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { askDefinition } from '../src/ask';
 
-const { act, cleanup, fireEvent, render } = await import('@testing-library/react');
+const { act, cleanup, fireEvent, render, waitFor } = await import('@testing-library/react');
 
 afterEach(cleanup);
 const registry = createRegistry([askDefinition]);
@@ -48,7 +48,7 @@ test('submit emits exact typed values including nulls, shows formatted summary, 
   fireEvent.click(view.getByRole('button', { name: 'Book table' }));
   const values = { party: 4, date: '2026-12-12', name: null, notes: 'window seat', outside: false, area: null, time: null };
   expect(actions).toEqual([{ type: 'submit', component: 'ask', id: 'book', payload: { values }, context: { component: 'ask', props, state: { values, touched: { party: true, date: true, name: true, notes: true, outside: true, area: true, time: true }, submitted: true } }, message: 'Here are the details for "Book a table": Party size: 4 guests, Date: 12 Dec 2026, Name: Not provided, Notes: window seat, Outside: No, Area: Not provided, Time: Not provided.' }]);
-  expect(view.getByRole('group').dataset.state).toBe('submitted'); expect(view.queryByRole('spinbutton')).toBeNull(); expect(view.getByText('12 Dec 2026')).toBeDefined();
+  expect(view.getByRole('group').dataset.state).toBe('sent'); expect(view.getByRole('spinbutton')).toBeDefined(); expect(view.getByText('12 Dec 2026')).toBeDefined();
   fireEvent.click(view.getByRole('button', { name: 'Edit' }));
   change(view.getByRole('textbox', { name: 'Name' }), 'Ada');
   fireEvent.click(view.getByRole('button', { name: 'Book table' }));
@@ -127,12 +127,111 @@ test('unstyled mode, slots, labels, localized summaries and prompt docs', () => 
   expect(registry.docs()).toContain('```ui:ask'); expect(registry.docs()).toContain('"title":"Book a table"'); expect(registry.docs()).toContain('Only the missing details');
 });
 
-test('bound prefill updates until edited, undo restores edits, and false is a valid required answer', () => {
+test('bound prefill updates until edited, undo restores edits, and false is a valid required answer', async () => {
   const store = createStore({ initial: { guests: 4 } }), input = { id: 'bound', fields: [{ id: 'n', label: 'Guests', type: 'number', value: { $ref: 'guests' } }, { id: 'consent', label: 'Updates', type: 'toggle', required: true, value: false }] };
   const view = render(<Prism source={source(input)} registry={registry} store={store} />);
   expect((view.getByRole('spinbutton', { name: /Guests/ }) as HTMLInputElement).value).toBe('4');
-  act(() => store.set('guests', 6)); expect((view.getByRole('spinbutton', { name: /Guests/ }) as HTMLInputElement).value).toBe('6');
+  act(() => store.set('guests', 6)); await waitFor(() => expect((view.getByRole('spinbutton', { name: /Guests/ }) as HTMLInputElement).value).toBe('6'));
   change(view.getByRole('spinbutton', { name: /Guests/ }), '8');
-  fireEvent.keyDown(view.getByRole('group'), { key: 'z', ctrlKey: true }); expect((view.getByRole('spinbutton', { name: /Guests/ }) as HTMLInputElement).value).toBe('6');
-  fireEvent.click(view.getByRole('button', { name: 'Send' })); expect(view.getByRole('group').dataset.state).toBe('submitted');
+  fireEvent.keyDown(view.getByRole('group'), { key: 'z', ctrlKey: true }); await waitFor(() => expect((view.getByRole('spinbutton', { name: /Guests/ }) as HTMLInputElement).value).toBe('6'));
+  fireEvent.click(view.getByRole('button', { name: 'Send' })); expect(view.getByRole('group').dataset.state).toBe('sent');
+});
+
+test('sentence blanks are real labelled inputs, stay mounted after send, and can resend', () => {
+  const actions: Action[] = [];
+  const input = { sentence: 'Plan a kickoff for {team} with {people} people.', fields: [{ id: 'team', label: 'Team', type: 'text', value: 'Fieldnotes', required: true }, { id: 'people', label: 'People', type: 'number', value: 5 }] };
+  const view = render(<Prism registry={registry} source={source(input)} onAction={action => actions.push(action)} />);
+  const team = view.getByRole('textbox', { name: /Team/ });
+  expect(view.container.querySelector('form')?.dataset.layout).toBe('sentence');
+  expect(team.getAttribute('aria-description')).toBe('Suggested');
+  expect(view.container.textContent).toContain('Plan a kickoff for');
+  expect(view.getByRole('button', { name: 'Send' }).classList.contains('prism-pill')).toBe(true);
+  expect(view.getByRole('button', { name: 'Undo' }).classList.contains('prism-icon-btn')).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Send' }));
+  expect(view.getByRole('textbox', { name: 'Team' })).toBe(team);
+  expect(view.getByText('Sent · Fieldnotes, 5')).toBeDefined();
+  expect(view.container.querySelector('.prism-check')).toBeTruthy();
+  change(team, 'Prism');
+  expect(view.getByRole('group').dataset.state).toBe('editing');
+  fireEvent.click(view.getByRole('button', { name: 'Send' }));
+  expect(actions.length).toBe(2);
+  expect(actions[1].payload).toEqual({ values: { team: 'Prism', people: 5 } });
+});
+
+test('short fields always compose inline, long fields render below, and invalid templates keep every field', () => {
+  const fields = [{ id: 'name', label: 'Name', type: 'text' }, { id: 'zone', label: 'Zone', type: 'select', options: ['East', 'West'] }];
+  const view = render(<Prism registry={registry} source={source({ fields })} />);
+  expect(view.container.querySelector('form')?.dataset.layout).toBe('sentence');
+  expect(view.getByRole('combobox', { name: 'Zone' })).toBeDefined();
+  view.rerender(<Prism registry={registry} source={source({ sentence: '{missing}', fields })} />);
+  expect(view.getByRole('textbox', { name: 'Name' })).toBeDefined();
+  expect(view.getByRole('combobox', { name: 'Zone' })).toBeDefined();
+  view.rerender(<Prism registry={registry} source={source({ sentence: '{name}', fields: [...fields, { id: 'notes', label: 'Notes', type: 'textarea' }] })} />);
+  expect(view.container.querySelector('form')?.dataset.layout).toBe('sentence');
+  expect(view.getByRole('textbox', { name: 'Name' }).closest('[data-part="sentence"]')).toBeTruthy();
+  expect(view.getByRole('textbox', { name: 'Notes' }).closest('[data-part="longFields"]')).toBeTruthy();
+  expect(registry.docs()).toContain('{fieldId}');
+});
+
+test('date and more than four short fields stay inline beside a separately labelled textarea', () => {
+  const fields = ['Team', 'People', 'Date', 'Place', 'Timezone'].map((label, index) => ({ id: label, label, type: index === 1 ? 'number' : index === 2 ? 'date' : 'text', required: true }));
+  const view = render(<Prism registry={registry} source={source({ fields: [...fields, { id: 'notes', label: 'Notes', type: 'textarea' }] })} />);
+  const flow = view.container.querySelector('[data-part="sentence"]')!;
+  expect(flow.querySelectorAll('[data-part="field"]')).toHaveLength(5);
+  expect(flow.querySelector('input[type="date"]')).toBeTruthy();
+  expect(flow.textContent).not.toContain('*');
+  expect(flow.textContent).not.toContain(':');
+  expect(view.getByRole('textbox', { name: 'Team' }).getAttribute('aria-required')).toBe('true');
+  expect(flow.querySelectorAll('[data-part="separator"]')).toHaveLength(4);
+  expect(view.getByRole('textbox', { name: 'Notes' }).closest('[data-part="longFields"]')).toBeTruthy();
+});
+
+test('mixed fields keep the same sentence and long-field containers through streaming completion', () => {
+  const text = source({ fields: [{ id: 'team', label: 'Team name', type: 'text', placeholder: 'Fieldnotes' }, { id: 'people', label: 'People attending', type: 'number', value: 5 }, { id: 'notes', label: 'Notes', type: 'textarea' }] });
+  const view = render(<Prism registry={registry} source="" done={false} />);
+  for (let length = 1; length < text.length; length++) view.rerender(<Prism registry={registry} source={text.slice(0, length)} done={false} />);
+  view.rerender(<Prism registry={registry} source={text.slice(0, text.lastIndexOf('\n```'))} done={false} />);
+  const flow = view.container.querySelector('[data-part="sentence"]'), long = view.container.querySelector('[data-part="longFields"]');
+  const team = view.getByRole('textbox', { name: 'Team name' }), notes = long!.querySelector('textarea')!;
+  expect(long?.querySelector('[data-part="skeleton"]')).toBeTruthy();
+  view.rerender(<Prism registry={registry} source={text} done />);
+  expect(view.container.querySelector('[data-part="sentence"]')).toBe(flow);
+  expect(view.container.querySelector('[data-part="longFields"]')).toBe(long);
+  expect(view.getByRole('textbox', { name: 'Team name' })).toBe(team);
+  expect(view.getByRole('textbox', { name: 'Notes' })).toBe(notes);
+});
+
+test('sentence streaming renders every prefix safely and keeps control nodes at completion', () => {
+  const text = source({ sentence: 'For {name}, with {count} people.', fields: [{ id: 'name', label: 'Name', type: 'text' }, { id: 'count', label: 'Count', type: 'number', value: 5 }] });
+  const view = render(<Prism registry={registry} source="" done={false} />);
+  for (let length = 1; length < text.length; length++) view.rerender(<Prism registry={registry} source={text.slice(0, length)} done={false} />);
+  view.rerender(<Prism registry={registry} source={text} done={false} />);
+  const name = view.getByRole('textbox', { name: 'Name' });
+  view.rerender(<Prism registry={registry} source={text} />);
+  expect(view.getByRole('textbox', { name: 'Name' })).toBe(name);
+});
+
+test('agent patches glow after mount, while local edits and motion-disabled updates do not', () => {
+  const animate = HTMLElement.prototype.animate, media = window.matchMedia;
+  let flashes = 0, reduced = false;
+  HTMLElement.prototype.animate = (() => { flashes++; return { cancel() {}, finished: Promise.resolve() } as unknown as Animation; }) as typeof animate;
+  window.matchMedia = ((query: string) => ({ matches: reduced, media: query, onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; } })) as typeof media;
+  try {
+    const store = createStore({ initial: { count: 4 } });
+    const text = source({ id: 'patch', fields: [{ id: 'count', label: 'Count', type: 'number', value: { $ref: 'count' } }] });
+    const view = render(<Prism registry={registry} store={store} source={text} />);
+    expect(flashes).toBe(0);
+    act(() => store.set('count', 6));
+    expect(flashes).toBe(1);
+    change(view.getByRole('spinbutton', { name: 'Count' }), '8');
+    expect(flashes).toBe(1);
+    view.rerender(<Prism registry={registry} store={store} source={text} animate={false} />);
+    act(() => store.set('patch.values.count', 10));
+    expect(flashes).toBe(1);
+    reduced = true;
+    view.rerender(<Prism registry={registry} store={store} source={text} />);
+    act(() => store.set('patch.values.count', 12));
+    expect(flashes).toBe(1);
+    cleanup();
+  } finally { HTMLElement.prototype.animate = animate; window.matchMedia = media; }
 });

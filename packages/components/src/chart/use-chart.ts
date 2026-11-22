@@ -86,7 +86,7 @@ export function useChart(inputProps: ChartProps, ctx: PrismContextValue, width =
       const baseline: (Point | null)[] = data.map((_, i) => [xs[i], yScale.map(stacks?.[s][i][0] ?? 0)]);
       const curve = props.curve ?? 'monotone', line = linePath(topPoints, { curve });
       return { key: item.key, color: seriesColor(item, series.findIndex(value => value.key === item.key)),
-        d: type === 'area' ? areaPath(topPoints, baseline, { curve }) : line,
+        d: areaPath(topPoints, baseline, { curve }),
         line,
         points: topPoints,
         bars: data.map((row, i) => {
@@ -127,7 +127,7 @@ export function useChart(inputProps: ChartProps, ctx: PrismContextValue, width =
     const payload: ChartSelectPayload = { x: row[x] ?? index, series: item.key, value: number(row[item.key]) };
     emit('select', payload);
   };
-  return { geometry, type, x, series, shown, data, pivot, hidden, active, activeIndex, activeSeries, valueFormat,
+  return { geometry, type, x, series, shown, data, pivot, hidden, active, activeIndex, activeSeries, valueFormat, userActive: interaction !== null,
     answer: !!(props.insight || props.annotations?.length || props.pivots?.length),
     activate: setInteraction, selectPoint,
     toggleSeries(key: string) { if (!shown.some(item => item.key === key) || shown.length > 1) setHidden(old => old.includes(key) ? old.filter(value => value !== key) : [...old, key]); },

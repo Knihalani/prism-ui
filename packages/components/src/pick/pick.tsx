@@ -1,11 +1,11 @@
-import { useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { s, type Infer } from '@prism-ui/schema';
 import { defineComponent, registerComponent, useEmit, useFormat, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
 import { setRecordPath } from '../store-record';
 import { useFlip } from './flip';
 
-export const pickSchema = s.object({ id: s.string().optional(), question: s.string().default('Find your best fit'), criteria: s.array(s.object({ id: s.string(), label: s.string() })).default([]), weights: s.any().optional(), options: s.array(s.object({ id: s.string(), title: s.string(), subtitle: s.string().optional(), scores: s.any().optional(), pros: s.array(s.string()).default([]), cons: s.array(s.string()).default([]), tag: s.string().optional() })).default([]), choose: s.string().default('Choose'), emptyLabel: s.string().default('Options will appear here'), bestLabel: s.string().default("Best for you because it's strong on"), andLabel: s.string().default('and'), weightLabel: s.string().default('weight'), ofLabel: s.string().default('of'), topLabel: s.string().default('Top pick'), matchLabel: s.string().default('match'), chosenLabel: s.string().default('Chosen') });
+export const pickSchema = s.object({ id: s.string().optional(), question: s.string().default('Find your best fit'), criteria: s.array(s.object({ id: s.string(), label: s.string() })).default([]), weights: s.any().optional(), options: s.array(s.object({ id: s.string(), title: s.string(), subtitle: s.string().optional(), scores: s.any().optional(), pros: s.array(s.string()).default([]), cons: s.array(s.string()).default([]), tag: s.string().optional() })).default([]), choose: s.string().default('Choose'), emptyLabel: s.string().default('Options will appear here'), bestLabel: s.string().default('Strong on'), andLabel: s.string().default('and'), weightLabel: s.string().default('weight'), ofLabel: s.string().default('of'), topLabel: s.string().default('Top pick'), matchLabel: s.string().default('match'), chosenLabel: s.string().default('Chosen') });
 export type PickProps = Infer<typeof pickSchema>;
 type Weights = Record<string, number>;
 const clamp = (value: unknown, fallback: number, max = 3) => typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.min(max, Math.round(value))) : fallback;
@@ -62,8 +62,10 @@ type Row = ReturnType<typeof usePick>['rows'][number];
 function PickItem({ row }: { row: Row }) {
   const parts = { item: usePart('pick', 'item', !row.ready ? 'loading' : row.chosen ? 'chosen' : row.top ? 'top' : 'ready'), header: usePart('pick', 'card-header'), rank: usePart('pick', 'rank'), match: usePart('pick', 'match'), top: usePart('pick', 'top'), value: usePart('pick', 'value'), title: usePart('pick', 'title'), subtitle: usePart('pick', 'subtitle'), tag: usePart('pick', 'tag'), reason: usePart('pick', 'reason'), bars: usePart('pick', 'bars'), criterion: usePart('pick', 'criterion'), criterionLabel: usePart('pick', 'criterion-label'), bar: usePart('pick', 'bar'), pros: usePart('pick', 'pros'), cons: usePart('pick', 'cons'), pro: usePart('pick', 'pro'), con: usePart('pick', 'con'), actions: usePart('pick', 'actions'), choose: usePart('pick', 'choose'), check: usePart('pick', 'check') };
   const Actions = useSlot('pick', 'actions', 'div' as any);
-  return <article {...parts.item} data-option={row.id} data-top={row.top || undefined} aria-busy={!row.ready}>
-    <div {...parts.header}><span {...parts.rank}>#{row.rankText}</span><span {...parts.match}>{row.ready ? `${row.matchText} ${row.matchLabel}` : '—'}</span>{row.top && <span {...parts.top}>{row.topLabel}</span>}{row.tag && <span {...parts.tag}>{row.tag}</span>}{row.chosen && <span {...parts.check}>✓ {row.chosenLabel}</span>}</div>
+  return <article {...parts.item} style={{ ...parts.item.style, '--pick-index': row.index } as CSSProperties} data-option={row.id} data-top={row.top || undefined} aria-busy={!row.ready}>
+    <div {...parts.header}><span {...parts.rank}>#{row.rankText}</span>{row.top && <><span {...parts.top}>{row.topLabel}</span>{!row.tag && <span className="prism-pick__badge" aria-hidden="true">Best match</span>}</>}{row.tag && <span {...parts.tag}>{row.tag}</span>}{row.chosen && <span {...parts.check}>✓ {row.chosenLabel}</span>}<span {...parts.match} role="img" aria-label={row.ready ? `${row.matchText} ${row.matchLabel}` : '—'}>
+      <svg viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="25" /><circle cx="28" cy="28" r="25" pathLength="100" strokeDasharray={`${row.ready ? row.match * 100 : 0} 100`} /></svg><span aria-hidden="true">{row.ready ? row.matchText : '—'}</span>
+    </span></div>
     <h4 {...parts.title}>{row.title}</h4>{row.subtitle && <p {...parts.subtitle}>{row.subtitle}</p>}
     {row.reason && <p {...parts.reason}>{row.reason}</p>}
     <div {...parts.bars}>{row.bars.map(bar => <div key={bar.id} {...parts.criterion} data-state={bar.weight ? 'active' : 'off'}><span {...parts.criterionLabel}>{bar.label}</span><meter {...parts.bar} min={0} max={1} value={bar.score} aria-label={bar.label}>{bar.text}</meter><span {...parts.value}>{bar.text}</span></div>)}</div>
@@ -75,7 +77,7 @@ function PickItem({ row }: { row: Row }) {
 export function Pick(ctx: PrismComponentProps<PickProps>) {
   const pick = usePick(ctx.props, ctx), { parts } = pick, Item = useSlot('pick', 'item', PickItem), Empty = useSlot('pick', 'empty', 'div' as any);
   return <ComponentFrame component="pick" title={pick.question} ask undo>
-    <div {...parts.criteria}>{pick.chips.map(chip => <button key={chip.id} {...parts.chip} {...chip.props}>{chip.label}<span {...parts.pips} aria-hidden="true">{chip.pips.map((on, index) => <span key={index} {...parts.pip} data-state={on ? 'on' : 'off'} />)}</span></button>)}</div>
+    <div {...parts.criteria}><span className="prism-pick__criteria-label">What matters</span>{pick.chips.map(chip => <button key={chip.id} {...parts.chip} {...chip.props}>{chip.label}<span {...parts.pips} aria-hidden="true">{chip.pips.map((on, index) => <span key={index} {...parts.pip} data-state={on ? 'on' : 'off'} />)}</span></button>)}</div>
     <div {...parts.live} aria-live="polite">{pick.announcement}</div>
     <div {...parts.list} ref={pick.listRef}>{pick.rows.length ? pick.rows.map(row => <Item key={row.id} row={row} />) : <Empty {...parts.empty}>{pick.emptyLabel}</Empty>}</div>
   </ComponentFrame>;

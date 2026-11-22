@@ -97,6 +97,52 @@ test('drag commits exact values, suppresses click editing, and cancellation rest
   expect(view.actions.length).toBe(1);
 });
 
+test('scrub hints track bounded shift drags and a stationary click still edits', async () => {
+  const view = setup(':num[10]{id=n min=0 max=30 step=2}'), slider = view.getByRole('slider');
+  expect(slider.getAttribute('data-hint')).toBe('Drag or ↑↓');
+  fireEvent.pointerDown(slider, { button: 0, pointerId: 1, clientX: 0 });
+  fireEvent.pointerMove(slider, { pointerId: 1, clientX: 8, shiftKey: true });
+  await act(async () => { await new Promise(resolve => requestAnimationFrame(resolve)); });
+  expect(slider.getAttribute('data-scrubbing')).toBe('true');
+  expect(slider.getAttribute('data-hint')).toBe('30');
+  fireEvent.pointerUp(slider, { pointerId: 1 }); fireEvent.click(slider);
+  expect(view.store.get('n')).toBe(30);
+  expect(slider.getAttribute('data-hint')).toBe('Drag or ↑↓');
+  expect(view.queryByRole('spinbutton')).toBeNull();
+  fireEvent.pointerDown(slider, { button: 0, pointerId: 2, clientX: 0 });
+  fireEvent.pointerUp(slider, { pointerId: 2 }); fireEvent.click(slider);
+  expect(view.getByRole('spinbutton')).toBeDefined();
+});
+
+test('calc flashes only after a valid update and respects animate and reduced motion', () => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'animate');
+  const media = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+  const flashes: KeyframeAnimationOptions[] = [];
+  Object.defineProperty(HTMLElement.prototype, 'animate', { configurable: true, value: (_frames: Keyframe[], options: KeyframeAnimationOptions) => { flashes.push(options); return { cancel() {} }; } });
+  try {
+    const store = createStore({ initial: { n: 2 } });
+    const view = render(<Prism source=":calc[n*2]" store={store} animate />);
+    expect(flashes.length).toBe(0);
+    act(() => store.set('n', 3));
+    expect(flashes.map(item => item.duration)).toEqual([600]);
+    view.rerender(<Prism source=":calc[n*2]" store={store} animate={false} />);
+    act(() => store.set('n', 4));
+    expect(flashes.length).toBe(1);
+    Object.defineProperty(window, 'matchMedia', { configurable: true, value: () => ({ matches: true }) });
+    view.rerender(<Prism source=":calc[n*2]" store={store} animate />);
+    act(() => store.set('n', 5));
+    expect(flashes.length).toBe(1);
+    expect(view.getByText('10')).toBeDefined();
+    act(() => store.set('n', NaN));
+    expect(flashes.length).toBe(1);
+    expect(view.getByText('—')).toBeDefined();
+    view.unmount();
+  } finally {
+    if (descriptor) Object.defineProperty(HTMLElement.prototype, 'animate', descriptor); else Reflect.deleteProperty(HTMLElement.prototype, 'animate');
+    if (media) Object.defineProperty(window, 'matchMedia', media); else Reflect.deleteProperty(window, 'matchMedia');
+  }
+});
+
 test('calc rebuilds emphasis formulas, handles NaN, and never writes to store', () => {
   const store = createStore({ initial: { a: 2, b: 3, c: 4 } }); let writes = 0;
   store.subscribe('*', () => writes++);

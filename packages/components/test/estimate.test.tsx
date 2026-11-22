@@ -82,6 +82,9 @@ function setup(props: object = {}, suffix = '') {
 test('renders frame, itemized prices, localized totals, docs and exact use payload', () => {
   const view = setup({ discount: 0.1, taxRate: 0.1 });
   expect(view.getByRole('group', { name: 'Team plan' })).toBeDefined();
+  expect(view.getByRole('button', { name: 'Undo' })).toBeDefined();
+  expect(view.getByRole('button', { name: 'Ask about this' })).toBeDefined();
+  expect(view.getByRole('checkbox', { name: 'Support' }).getAttribute('type')).toBe('checkbox');
   expect(view.getByText('$20.00 / seat')).toBeDefined();
   expect(view.getByText('Team access')).toBeDefined();
   expect(view.store.get('quote.subtotal')).toBe(70); expect(view.store.get('quote.total')).toBeCloseTo(69.3);

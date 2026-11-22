@@ -30,6 +30,7 @@ test('streaming skeleton keeps height, appended points keep y-domain within hyst
   let text = '```ui:chart\n{"x":"month","series":[{"key":"revenue"}],"data":[';
   const view = render(<Prism registry={registry} source={text} done={false} />);
   const svg = view.getByRole('img');
+  expect(view.getByRole('figure').getAttribute('data-streamed')).toBe('true');
   expect(view.container.querySelector('[data-part="skeleton"]')).toBeTruthy();
   expect(view.container.querySelector('[data-part="grid"]')).toBeTruthy();
   text += '{"month":"Jan","revenue":10}';
@@ -43,9 +44,45 @@ test('streaming skeleton keeps height, appended points keep y-domain within hyst
   expect(view.container.querySelector('[data-part="point"]')?.getAttribute('cx')).toBe(firstX);
   expect(view.container.querySelector('[data-part="line"]')?.getAttribute('d')).not.toBe(path);
   expect(svg.getAttribute('height')).toBe('300');
+  const line = view.container.querySelector('[data-part="line"]');
+  const area = view.container.querySelector('[data-part="area"]');
+  expect(line?.parentElement?.getAttribute('data-ready')).toBe('true');
   text += ',{"month":"Mar","revenue":100}';
   view.rerender(<Prism registry={registry} source={text} done={false} />);
   expect(Number(svg.getAttribute('data-y-domain')!.split(',')[1])).toBeGreaterThanOrEqual(100);
+  expect(view.container.querySelector('[data-part="line"]')).toBe(line);
+  expect(view.container.querySelector('[data-part="area"]')).toBe(area);
+  view.rerender(<Prism registry={registry} source={text + ']}\n```'} />);
+  expect(view.getByRole('figure').getAttribute('data-streamed')).toBe('true');
+});
+
+test('line gradients are unique per instance and legends only show for multiple series', () => {
+  const view = render(<Prism registry={registry} source={source(base) + '\n' + source({ ...base, id: 'second' })} />);
+  const gradients = Array.from(view.container.querySelectorAll('linearGradient'));
+  expect(gradients.length).toBe(4);
+  expect(new Set(gradients.map(gradient => gradient.id)).size).toBe(4);
+  view.container.querySelectorAll('[data-part="area"]').forEach(area => {
+    const id = area.getAttribute('fill')!.slice(5, -1);
+    expect(gradients.some(gradient => gradient.id === id)).toBe(true);
+    expect(area.getAttribute('d')).toContain('Z');
+  });
+  expect(view.getAllByRole('button', { name: 'Ask about this chart' }).length).toBe(2);
+  expect(view.getAllByRole('button', { name: 'Undo chart change' }).length).toBe(2);
+  view.rerender(<Prism registry={registry} source={source({ ...base, series: [{ key: 'revenue' }] })} />);
+  expect(view.queryByRole('button', { name: 'Toggle revenue' })).toBeNull();
+  expect(view.container.querySelector('[data-part="legend"]')).toBeNull();
+  view.rerender(<Prism registry={registry} source={source({ ...base, legend: false })} />);
+  expect(view.container.querySelector('[data-part="legend"]')).toBeNull();
+  view.rerender(<Prism registry={registry} source={source({ data: [] })} />);
+  expect(view.container.querySelector('[data-part="area"]')).toBeNull();
+});
+
+test('the default matching pivot appears selected before interaction', () => {
+  const view = render(<Prism registry={registry} source={source({ ...base, pivots: [{ label: 'Trend', type: 'line' }, { label: 'Bars', type: 'bar' }] })} />);
+  expect(view.getByRole('button', { name: 'Trend' }).getAttribute('aria-pressed')).toBe('true');
+  fireEvent.click(view.getByRole('button', { name: 'Bars' }));
+  expect(view.getByRole('button', { name: 'Trend' }).getAttribute('aria-pressed')).toBe('false');
+  expect(view.getByRole('button', { name: 'Bars' }).getAttribute('aria-pressed')).toBe('true');
 });
 
 test('legend toggles persist, Enter works, and the last visible series cannot be hidden', () => {
@@ -104,14 +141,22 @@ test('pointer hover shows all formatted series, crosshair and selected bar overl
 });
 
 test('Answer chart opens on annotation, pivots aggregate x and change type, emit and undo', () => {
-  const actions: Action[] = [], store = createStore();
+  const actions: Action[] = [], store = createStore({ initial: { answer: { pivot: -1, hidden: [] } } });
   const props: ChartProps = { ...base, id: 'answer', insight: 'February was strongest', annotations: [{ x: 'Feb', label: 'Launch' }], pivots: [{ label: 'By region', x: 'region', type: 'bar', series: [{ key: 'revenue', label: 'Revenue' }] }] };
   const view = render(<Prism registry={registry} store={store} source={source(props)} onAction={action => actions.push(action)} />);
+  const undo = view.getByRole('button', { name: 'Undo chart change' });
+  expect(undo.hasAttribute('disabled')).toBe(true);
+  act(() => store.set('other.value', 42));
+  expect(undo.hasAttribute('disabled')).toBe(true);
   expect(view.getByRole('heading').textContent).toBe('February was strongest');
   expect(view.container.querySelector('[data-mode="answer"]')).toBeTruthy();
   expect(view.getByRole('status').textContent).toContain('Feb');
   expect(view.getByText('Launch')).toBeTruthy();
   expect(view.container.querySelector('[data-part="highlight"]')).toBeTruthy();
+  expect(view.queryByRole('tooltip')).toBeNull();
+  expect(view.container.querySelector('[data-part="active-label"]')?.textContent).toBe('12');
+  fireEvent.focus(view.getByRole('img'));
+  expect(view.getByRole('tooltip')).toBeTruthy();
   fireEvent.click(view.getByRole('button', { name: 'By region' }));
   expect(actions[0].payload).toEqual({ pivot: 0, label: 'By region' });
   expect(actions[0].type).toBe('pivot');
@@ -119,8 +164,12 @@ test('Answer chart opens on annotation, pivots aggregate x and change type, emit
   expect(view.container.querySelectorAll('[data-part="bar"]').length).toBe(2);
   expect(view.getByRole('table').textContent).toContain('East22');
   expect(view.getByRole('button', { name: 'By region' }).getAttribute('aria-pressed')).toBe('true');
+  act(() => store.set('other.value', 43));
+  expect(undo.hasAttribute('disabled')).toBe(false);
   fireEvent.click(view.getByRole('button', { name: 'Undo chart change' }));
   expect(view.container.querySelectorAll('[data-part="line"]').length).toBe(2);
+  expect(store.get('other.value')).toBe(43);
+  expect(store.canUndo('answer')).toBe(false);
 });
 
 test('stacked area/bar, inference, Intl and pie arrow navigation', () => {
@@ -165,13 +214,14 @@ test('one ResizeObserver updates viewBox and disconnects on unmount', () => {
   } finally { globalThis.ResizeObserver = previous; }
 });
 
-test('tooltip flips away from upcoming points on the right half of the chart', () => {
+test('tooltip stays within plot bounds rather than covering axis labels', () => {
   const view = render(<Prism registry={registry} source={source(base)} />);
   const svg = view.getByRole('img');
   fireEvent.keyDown(svg, { key: 'Home' });
-  expect(view.getByRole('tooltip').style.transform).toBe('translateX(12px)');
+  expect(Number.parseFloat(view.getByRole('tooltip').style.left)).toBeGreaterThanOrEqual(70);
   fireEvent.keyDown(svg, { key: 'End' });
-  expect(view.getByRole('tooltip').style.transform).toBe('translateX(calc(-100% - 12px))');
+  const tooltip = view.getByRole('tooltip');
+  expect(Number.parseFloat(tooltip.style.left) + Number.parseFloat(tooltip.style.width)).toBeLessThanOrEqual(614);
 });
 
 test('pie center names the total series and labels include formatted values', () => {
