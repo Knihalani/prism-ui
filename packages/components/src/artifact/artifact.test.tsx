@@ -15,6 +15,48 @@ const plugins = [artifactPlugin], registry = createRegistry([artifact]);
 const html = '<p>First version</p>';
 const snippet = fence('html', 'title="Read-only report" id=report height=180px', html);
 
+test('artifacts default to inline, with adaptive runtime and model instructions', () => {
+  expect(artifact.schema!.coerce({ kind: 'html', source: '' }).value?.variant).toBe('inline');
+  expect(artifact.feedback).toBe(true);
+  const docs = registry.docs();
+  expect(docs).toContain('@container'); expect(docs).toContain('window.prism.emit');
+  expect(docs).toContain('host-granted'); expect(docs).toContain('--prism-on-accent');
+});
+
+test('narrow inline toolbars reserve document flow space rather than covering the preview', async () => {
+  const css = await Bun.file(new URL('./artifact.css', import.meta.url)).text();
+  const narrow = css.slice(css.lastIndexOf('@container (max-width: 400px)'));
+  const header = narrow.match(/\.prism-artifact__header\s*\{([^}]+)\}/)?.[1] ?? '';
+  expect(header).toMatch(/position:\s*(relative|static)\s*;/);
+  expect(header).toMatch(/inset:\s*auto\s*;/);
+  expect(header).toMatch(/margin-block-end:\s*var\(--prism-space-2\)/);
+});
+
+test('automatic content height can shrink after completion but never collapses while streaming', async () => {
+  const restore = observeFrames();
+  const store = createStore(), text = '```artifact:html {id=autofit}\n<p>Hello</p>';
+  const ui = (done: boolean) => <Prism source={text + (done ? '\n```' : '')} done={done} plugins={plugins} registry={registry} store={store} />;
+  const view = render(ui(false));
+  try {
+    const frame = await waitFor(() => { const frame = view.container.querySelector('iframe'); if (!frame) throw Error('No frame'); return frame; });
+    const id = frame.srcdoc.match(/artifact-[\da-f-]{36}/)![0];
+    const document = frame.srcdoc;
+    const sent = spyOn(frame.contentWindow!, 'postMessage');
+    act(() => { window.dispatchEvent(new MessageEvent('message', { data: { ns: 'prism-mockup', id, type: 'ready' }, source: frame.contentWindow, origin: 'null' })); });
+    const size = (height: number) => act(() => { window.dispatchEvent(new MessageEvent('message', { data: { ns: 'prism-artifact', id, type: 'size', height }, source: frame.contentWindow, origin: 'null' })); });
+    size(320); size(80);
+    expect(view.container.querySelector<HTMLElement>('[data-part=viewport]')!.style.height).toBe('320px');
+    view.rerender(ui(true));
+    expect(view.container.querySelector<HTMLElement>('[data-part=viewport]')!.style.height).toBe('80px');
+    expect(view.container.querySelector('iframe')).toBe(frame);
+    expect(frame.srcdoc).toBe(document);
+    expect(sent.mock.calls.filter(([message]) => message.ns === 'prism-artifact' && message.type === 'render' && message.render.complete)).toHaveLength(1);
+    size(0);
+    expect(view.container.querySelector<HTMLElement>('[data-part=viewport]')!.style.height).toBe('0px');
+    sent.mockRestore();
+  } finally { cleanup(); restore(); }
+});
+
 test('SSR and schemas expose usable artifact chrome and documented fence metadata', () => {
   const rendered = renderToStaticMarkup(<Prism source={snippet} plugins={plugins} registry={registry} />);
   expect(rendered).toContain('Read-only report');
@@ -22,6 +64,51 @@ test('SSR and schemas expose usable artifact chrome and documented fence metadat
   expect(rendered).not.toContain('<iframe');
   expect(registry.docs()).toContain('```artifact:html');
   expect(registry.docs()).toContain('fixed height in pixels');
+});
+
+test('reloading migrated artifact feedback preserves its iframe and document on completion', async () => {
+  const restore = observeFrames(), store = createStore();
+  const text = '```artifact:html {id=feedback-migration}\n<p>Stable frame</p>';
+  const ui = (done: boolean) => <Prism source={text + (done ? '\n```' : '')} done={done} plugins={plugins} registry={registry} store={store} />;
+  const view = render(ui(false));
+  try {
+    const frame = await waitFor(() => { const frame = view.container.querySelector('iframe'); if (!frame) throw Error('No frame'); return frame; });
+    const document = frame.srcdoc;
+    fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+    const overall = view.getByRole('textbox', { name: 'Overall feedback' });
+    act(() => overall.focus());
+    fireEvent.change(overall, { target: { value: 'Keep this artifact draft' } });
+    fireEvent.keyUp(overall, { key: 'Unidentified' });
+    fireEvent.blur(overall);
+    fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+    const comment = view.getByPlaceholderText('Add a comment…');
+    act(() => comment.focus());
+    fireEvent.change(comment, { target: { value: 'Uncommitted artifact note' } });
+    fireEvent.keyUp(comment, { key: 'Unidentified' });
+    view.rerender(ui(true));
+    expect((view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('Keep this artifact draft');
+    expect(store.get('feedback-migration.feedback')).toMatchObject({ overall: 'Keep this artifact draft' });
+    expect(view.container.querySelector('iframe')).toBe(frame);
+    expect(frame.srcdoc).toBe(document);
+    expect(view.getByPlaceholderText('Add a comment…')).toBe(comment);
+    expect((comment as HTMLTextAreaElement).value).toBe('Uncommitted artifact note');
+  } finally { cleanup(); restore(); }
+});
+
+for (const variant of ['inline', 'panel', 'minimal']) test(`${variant} artifact feedback scopes coordinates to a short preview and portals its unclipped editor`, async () => {
+  const restore = observeFrames(), view = render(<Prism source={snippet.replace('height=180px', `height=48px variant=${variant}`)} plugins={plugins} registry={registry} />);
+  try {
+    await waitFor(() => { if (!view.container.querySelector('iframe')) throw Error('No frame'); });
+    fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+    const preview = view.container.querySelector<HTMLElement>('[data-prism="artifact"][data-part="preview"]')!;
+    const canvas = view.getByRole('application');
+    expect(canvas.parentElement).toBe(preview);
+    expect(canvas.parentElement!.contains(view.container.querySelector('[data-part="header"]'))).toBe(false);
+    fireEvent.keyDown(canvas, { key: 'Enter' });
+    expect(preview.contains(view.getByRole('dialog'))).toBe(false);
+    expect(view.getByRole('dialog').style.display).toBe('block');
+    expect(view.getByRole('dialog').closest('.prism-inline-feedback__popover-layer')?.parentElement).toBe(document.body);
+  } finally { cleanup(); restore(); }
 });
 
 test('streaming partial React source reserves its preview without a frame or compiler', () => {
@@ -67,12 +154,14 @@ test('an existing artifact resyncs tokens when only the named theme changes', as
   const frame = await waitFor(() => { const frame = view.container.querySelector('iframe'); if (!frame) throw Error('No frame'); return frame; });
   const viewport = view.container.querySelector<HTMLElement>('[data-part=viewport]')!;
   const computed = window.getComputedStyle.bind(window);
+  let resolvedColor = '#25282c';
   const styles = spyOn(window, 'getComputedStyle').mockImplementation((element, pseudo) => {
     const original = computed(element, pseudo);
     if (element !== viewport) return original;
     return new Proxy(original, { get(target, key) {
-      if (key === Symbol.iterator) return function* () { yield '--prism-accent'; };
-      if (key === 'getPropertyValue') return (property: string) => property === '--prism-accent' ? (viewport.closest('[data-prism-theme-name]')?.getAttribute('data-prism-theme-name') === first.name ? '#123456' : '#654321') : original.getPropertyValue(property);
+      if (key === Symbol.iterator) return function* () { yield '--prism-accent'; yield '--prism-text'; };
+      if (key === 'color') return resolvedColor;
+      if (key === 'getPropertyValue') return (property: string) => property === '--prism-text' ? 'currentColor' : property === '--prism-accent' ? (viewport.closest('[data-prism-theme-name]')?.getAttribute('data-prism-theme-name') === first.name ? '#123456' : '#654321') : original.getPropertyValue(property);
       return Reflect.get(target, key, target);
     } });
   });
@@ -84,6 +173,9 @@ test('an existing artifact resyncs tokens when only the named theme changes', as
     await waitFor(() => expect(sent.mock.calls.some(([message]) => message.type === 'theme' && message.tokens['--prism-accent'] === '#654321' && message.dark === false)).toBe(true));
     expect(view.container.querySelector('iframe')).toBe(frame);
     expect(view.container.querySelector('.prism-root')?.getAttribute('data-prism-theme')).toBe('light');
+    resolvedColor = '#e7e9ec';
+    fireEvent(view.container.querySelector('.prism-root')!, new Event('transitionend', { bubbles: true }));
+    expect(sent.mock.calls.some(([message]) => message.type === 'theme' && message.tokens['--prism-text'] === resolvedColor)).toBe(true);
   } finally { sent.mockRestore(); styles.mockRestore(); cleanup(); restore(); }
 });
 
@@ -216,10 +308,10 @@ test('frame messages are scoped by channel, opaque origin, and explicit store pe
       view.rerender(<ArtifactProvider options={{ statePaths: ['budget'] }}>
         <Prism source={snippet.replace('height=180px', 'height=auto')} plugins={plugins} registry={registry} store={store} onAction={action => actions.push(action)} />
       </ArtifactProvider>);
-      expect(sent).toHaveBeenCalledWith({ type: 'size-mode', maxHeight: 4096, ns: 'prism-artifact', id }, '*');
+      expect(sent).toHaveBeenCalledWith({ type: 'size-mode', maxHeight: 1_000_000, ns: 'prism-artifact', id }, '*');
       expect(viewport.style.height).toBe('320px');
       act(() => post({ type: 'size', height: 4500 }));
-      expect(viewport.style.height).toBe('4096px');
+      expect(viewport.style.height).toBe('4500px');
     } finally { sent.mockRestore(); }
     act(() => post({ type: 'rendered', revision: 1 }));
     view.rerender(<ArtifactProvider options={{ statePaths: ['budget'] }}>

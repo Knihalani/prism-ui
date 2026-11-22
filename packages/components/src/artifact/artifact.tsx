@@ -1,6 +1,7 @@
 import { useEffect, useState, type HTMLAttributes } from 'react';
 import { Icon as ThemeIcon, PrismPart, defineComponent, useFormat, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
+import { useFeedbackTarget } from '../feedback';
 import { artifactSchema, type ArtifactProps } from './model';
 import { useArtifact, artifactStrings } from './use-artifact';
 
@@ -78,6 +79,7 @@ function Code({ model, ...part }: Slot) {
 
 export function Artifact({ props, complete }: PrismComponentProps<ArtifactProps>) {
   const model = useArtifact(props, usePrism(), complete);
+  const feedbackTarget = useFeedbackTarget();
   const selected = model.selected;
   const shell = usePart('artifact', 'shell'), preview = usePart('artifact', 'preview'), viewport = usePart('artifact', 'viewport'), iframe = usePart('artifact', 'iframe');
   const controls = usePart('artifact', 'controls'), empty = usePart('artifact', 'empty');
@@ -87,10 +89,10 @@ export function Artifact({ props, complete }: PrismComponentProps<ArtifactProps>
   const ErrorSlot = useSlot('artifact', 'error', Failure);
   const SourceSlot = useSlot('artifact', 'source', Code);
   const title = model.title;
-  return <PrismPart slotProps={{ model: model }} as="div" {...shell} data-artifact-shell="" data-variant={selected.variant} data-size={selected.size}>
+  return <PrismPart slotProps={{ model: model }} as="div" {...shell} tabIndex={0} aria-label={title} data-artifact-shell="" data-variant={selected.variant} data-size={selected.size}>
     <ComponentFrame slotProps={{ model: model }} component="artifact" title={title} state={model.streaming ? 'streaming' : 'ready'}
       undo toolbar={<ControlsSlot {...controls} model={model} />}>
-      <PrismPart slotProps={{ model: model }} as="div" {...preview} hidden={model.mode !== 'preview'} style={{ ...preview.style, minHeight: model.height }} aria-busy={model.updating || (model.enabled && !model.rendered && !model.error)}>
+      <PrismPart slotProps={{ model: model }} as="div" {...preview} ref={feedbackTarget} data-feedback-target="" hidden={model.mode !== 'preview'} style={{ ...preview.style, minHeight: model.height }} aria-busy={model.updating || (model.enabled && !model.rendered && !model.error)}>
         <PrismPart slotProps={{ model: model }} as="div" {...viewport} ref={model.ref} style={{ height: model.height, ...viewport.style }} hidden={!!model.error || !model.enabled}>{model.needsFrame && <PrismPart as="iframe" {...iframe} slotProps={{ model }} ref={model.iframeRef} title={model.title} sandbox="allow-scripts" referrerPolicy="no-referrer" />}</PrismPart>
         {model.error ? <ErrorSlot {...error} model={model} role="alert" /> : (!model.rendered || !model.enabled) && <EmptySlot {...empty} model={model} role={model.enabled ? 'status' : undefined} aria-label={model.enabled ? model.strings.preparingPreview : undefined} />}
       </PrismPart>
@@ -101,7 +103,8 @@ export function Artifact({ props, complete }: PrismComponentProps<ArtifactProps>
 }
 
 export const artifact = defineComponent({
+  feedback: true,
   name: 'artifact', parts: ["ask","body","button","code","controls","diff-line","empty","error","error-message","fix","footer","header","iframe","notice","preview","root","shell","skeleton-line","source","status","title","toolbar","undo","updating","version","viewport"], strings: artifactStrings, component: Artifact, schema: artifactSchema,
-  docs: 'Write a fenced artifact:html, artifact:react, artifact:svg, artifact:js or artifact:markdown block, with {title="…" height=auto id=…} after the language. Put the source in the fence body. React accepts one JSX/TSX module with a default component export and allowlisted imports. JS runs as a module with a #app mount point. Use window.prism.state for host-granted paths and window.prism.send(type, payload) for a structured user action.',
+  docs: 'Build any custom data view or input using a fenced artifact:html, artifact:react, artifact:svg, artifact:js or artifact:markdown block, with {title="…" height=auto id=…} after the language. Put the entire source in the fence body. Artifacts are chromeless inline by default; hover or focus reveals code, versions, fullscreen and graphic feedback. Use var(--prism-text), var(--prism-text-muted), var(--prism-surface), var(--prism-border), var(--prism-accent), var(--prism-on-accent) and the --prism-font-*, --prism-radius-*, --prism-space-* and --prism-motion-* roles, never a hard-coded page palette. The host font, color-scheme and reduced-motion preference update live. Design for 280px through wide chat columns: width:100%, min-width:0, flexible grids, wrapping text, and @container (min-width:...) queries (the document is already an inline-size container). Avoid fixed widths, viewport units and fixed-position page shells. Height auto-sizes; reserve an explicit height only when needed. React accepts one JSX/TSX module with a default component export and allowlisted imports. JS runs as a module with a #app mount point. window.prism.theme contains live CSS token values; listen to document prism:theme for canvas redraws. window.prism.state.get(path), .set(path,value), .subscribe(path,callback) use only host-granted paths; subscribe returns an unsubscribe function. window.prism.emit(type,payload) sends a structured onAction event (send is an alias). HTML scripts execute once the fence completes. Respect reduced motion and include keyboard-accessible inputs. Never request access to unrelated state or external resources.',
   examples: ['```artifact:html {title="Shipping checklist" id=shipping}\n<h1>Shipping checklist</h1><label><input type="checkbox"> Run tests</label>\n```'],
 });

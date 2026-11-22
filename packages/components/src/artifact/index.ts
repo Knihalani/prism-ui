@@ -1,5 +1,6 @@
 import { registerComponent } from '@prism-ui/react';
 import { artifact } from './artifact';
+import '../feedback';
 
 registerComponent(artifact);
 
