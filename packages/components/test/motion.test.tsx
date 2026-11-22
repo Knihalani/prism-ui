@@ -8,6 +8,17 @@ import { useFlip } from '../src/lib/use-flip';
 
 afterEach(cleanup);
 
+test('summary and view checkboxes share fast fill, delayed draw and fade-only uncheck timing', async () => {
+  const css = await Bun.file(new URL('../src/shared/controls.css', import.meta.url)).text();
+  expect(css).toContain(':is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"])::after');
+  expect(css).toContain('transition: opacity var(--prism-motion-fast) var(--prism-motion-ease-exit)');
+  expect(css).toContain('animation: prism-check-stroke var(--prism-motion-slow) var(--prism-motion-ease) var(--prism-motion-instant) both');
+  expect(css).toContain('.prism-view__checkBox svg { opacity: 0; transition: opacity var(--prism-motion-fast) var(--prism-motion-ease-exit); }');
+  expect(css).toContain('.prism-view__checkbox[data-checked] .prism-view__checkBox path { animation: prism-draw-check var(--prism-motion-slow) var(--prism-motion-ease) var(--prism-motion-instant) both; }');
+  expect(css).toContain('transition: background-color var(--prism-motion-fast) var(--prism-motion-ease), border-color var(--prism-motion-fast) var(--prism-motion-ease)');
+  expect(css).not.toContain('animation-direction: reverse');
+});
+
 test('odometer retargets the same decimal reels, including localized digits and signs', () => {
   const view = render(<Odometer value={12} />);
   const reels = Array.from(view.container.querySelectorAll<HTMLElement>('.prism-odometer__reel'));

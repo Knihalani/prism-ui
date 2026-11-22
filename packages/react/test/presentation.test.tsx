@@ -1,14 +1,113 @@
 import './setup';
 import { afterEach, expect, test } from 'bun:test';
 import { act, cleanup, fireEvent, render, waitFor, within } from '@testing-library/react';
-import type { CSSProperties, ReactNode } from 'react';
+import { createRef, type CSSProperties, type ReactNode } from 'react';
 import { createStore } from '@prism-ui/state';
 import {
-  createRegistry, Prism, StreamCaret, StreamSkeleton, ThemeScope, useComponentState, useEmit, useFlash,
+  createRegistry, Prism, PrismPart, StreamCaret, StreamSkeleton, ThemeScope, useComponentState, useEmit, useFlash,
   useLocalWrite, usePresentation, useSent, useSettled, type Action, type Middleware, type PrismComponentProps,
 } from '../src';
 
 afterEach(cleanup);
+
+const skeletonHost = (children: ReactNode) => <div className="prism-root" data-prism-presentation="">{children}</div>;
+const measured = (element: Element, width = 100, height = 20, left = 10, top = 30) => {
+  element.getBoundingClientRect = () => ({ width, height, left, top } as DOMRect);
+};
+
+test.each(['skeleton', 'skeleton-line', 'stepPlaceholder'])('raw %s parts fade without changing their DOM or ref contract', async part => {
+  const ref = createRef<HTMLElement>();
+  const skeleton = <PrismPart as="i" ref={ref} data-part={part} id="raw" style={{ '--prism-motion-fast': '20ms' } as CSSProperties} />;
+  const view = render(skeletonHost(skeleton)), element = view.container.querySelector('i')!;
+  expect(ref.current).toBe(element); expect(element.parentElement?.children.length).toBe(1);
+  measured(element);
+  await act(async () => { view.rerender(skeletonHost(skeleton)); });
+  expect(view.container.querySelector('i')).toBe(element);
+  expect(view.container.querySelector('[data-prism-skeleton-exit]')).toBeNull();
+  await act(async () => { view.rerender(skeletonHost(<p>Ready</p>)); });
+  expect(ref.current).toBeNull();
+  const ghost = view.container.querySelector<HTMLElement>('[data-prism-skeleton-exit]')!;
+  expect(ghost.tagName).toBe('I'); expect(ghost.style.opacity).toBe('0'); expect(ghost.inert).toBe(true);
+  expect(ghost.hasAttribute('id')).toBe(false);
+  expect(ghost.style.getPropertyValue('--prism-motion-fast')).toBe('20ms');
+  await waitFor(() => expect(ghost.isConnected).toBe(false));
+});
+
+test('removed parents preserve styled sibling skeletons in one inert snapshot', async () => {
+  const view = render(skeletonHost(<section id="loading-panel" style={{ color: 'rebeccapurple' }}>
+    {[0, 1].map(index => <PrismPart as="span" data-part="skeleton" key={index} id={`line-${index}`} style={{ '--prism-motion-fast': '20ms' } as CSSProperties} />)}
+  </section>));
+  measured(view.container.querySelector('section')!, 120, 60, 4, 20);
+  view.container.querySelectorAll('span').forEach((span, index) => measured(span, 100, 20, 10, 30 + index * 20));
+  const color = getComputedStyle(view.container.querySelector('span')!).color;
+  await act(async () => { view.rerender(skeletonHost(<p>Ready</p>)); });
+  const ghosts = view.container.querySelectorAll<HTMLElement>('[data-prism-skeleton-exit]');
+  expect(ghosts.length).toBe(1);
+  const ghost = ghosts[0];
+  expect(ghost.tagName).toBe('SECTION'); expect(ghost.querySelectorAll('span').length).toBe(2);
+  expect(ghost.style.width).toBe('120px'); expect(ghost.style.height).toBe('60px');
+  expect(ghost.querySelector('span')!.style.color).toBe(color);
+  expect(ghost.querySelector('[id]')).toBeNull(); expect(ghost.hasAttribute('id')).toBe(false);
+  expect(ghost.style.getPropertyValue('--prism-motion-fast')).toBe('20ms');
+  expect(ghost.inert).toBe(true); expect(ghost.style.opacity).toBe('0');
+  await waitFor(() => expect(ghost.isConnected).toBe(false));
+});
+
+test('nested raw skeletons do not duplicate a StreamSkeleton exit', async () => {
+  const view = render(skeletonHost(<StreamSkeleton><PrismPart as="i" data-part="skeleton-line" /></StreamSkeleton>));
+  measured(view.container.querySelector('[data-prism-skeleton]')!);
+  measured(view.container.querySelector('i')!);
+  await act(async () => { view.rerender(skeletonHost(<p>Ready</p>)); });
+  expect(view.container.querySelectorAll('[data-prism-skeleton-exit]').length).toBe(1);
+});
+
+test('SVG skeletons retain their viewport, namespace and ancestor transforms on exit', async () => {
+  const view = render(skeletonHost(<svg viewBox="0 0 200 80"><g transform="translate(4 5)">
+    <PrismPart as="rect" data-part="skeleton" id="chart-loading" x={10} y={20} width={100} height={20} />
+  </g></svg>));
+  measured(view.container.querySelector('svg')!, 200, 80);
+  measured(view.container.querySelector('g')!);
+  measured(view.container.querySelector('rect')!);
+  await act(async () => { view.rerender(skeletonHost(<p>Ready</p>)); });
+  const ghost = view.container.querySelector('[data-prism-skeleton-exit]')!;
+  expect(ghost.tagName.toLowerCase()).toBe('svg'); expect(ghost.getAttribute('viewBox')).toBe('0 0 200 80');
+  expect(ghost.querySelector('g')!.getAttribute('transform')).toBe('translate(4 5)');
+  expect(ghost.querySelector('rect')!.namespaceURI).toBe('http://www.w3.org/2000/svg');
+  expect(ghost.querySelector('rect')!.getAttribute('width')).toBe('100');
+  expect(ghost.querySelector('[id]')).toBeNull(); expect(ghost.getAttribute('aria-hidden')).toBe('true');
+});
+
+test('zero-duration, detached-root and out-of-scope skeletons do not leave ghosts', async () => {
+  const zero = <PrismPart as="div" data-part="skeleton" style={{ '--prism-motion-fast': '0ms' } as CSSProperties} />;
+  const view = render(skeletonHost(zero));
+  measured(view.container.querySelector('[data-part]')!);
+  await act(async () => { view.rerender(skeletonHost(null)); });
+  expect(view.container.querySelector('[data-prism-skeleton-exit]')).toBeNull();
+  view.rerender(skeletonHost(<PrismPart data-part="skeleton" />));
+  measured(view.container.querySelector('[data-part]')!);
+  await act(async () => { view.unmount(); });
+  expect(document.querySelector('[data-prism-skeleton-exit]')).toBeNull();
+  const outside = render(<PrismPart data-part="skeleton" />);
+  measured(outside.container.firstElementChild!);
+  await act(async () => { outside.unmount(); });
+  expect(document.querySelector('[data-prism-skeleton-exit]')).toBeNull();
+});
+
+test('SVG exits align to positioned, scaled hosts without relying on offsetParent', async () => {
+  const view = render(skeletonHost(<svg><PrismPart as="rect" data-part="skeleton" width={100} height={20} /></svg>));
+  const svg = view.container.querySelector('svg')!;
+  measured(svg, 200, 80); measured(view.container.querySelector('rect')!);
+  const prototype = Object.getPrototypeOf(svg), original = prototype.getBoundingClientRect;
+  prototype.getBoundingClientRect = function(this: SVGSVGElement) {
+    return { left: 40, top: 60, width: Number.parseFloat(this.style.width) / 2, height: Number.parseFloat(this.style.height) / 2 } as DOMRect;
+  };
+  try {
+    await act(async () => { view.rerender(skeletonHost(<p>Ready</p>)); });
+    const ghost = view.container.querySelector<SVGSVGElement>('[data-prism-skeleton-exit]')!;
+    expect(ghost.style.left).toBe('-60px'); expect(ghost.style.top).toBe('-60px');
+    expect(ghost.style.width).toBe('400px'); expect(ghost.style.height).toBe('160px');
+  } finally { prototype.getBoundingClientRect = original; }
+});
 
 test('skeleton exits preserve a measured inert image without duplicate ids or layout', async () => {
   const skeleton = <StreamSkeleton id="loading" style={{ '--prism-motion-fast': '20ms' } as CSSProperties}><span id="line">Loading</span></StreamSkeleton>;

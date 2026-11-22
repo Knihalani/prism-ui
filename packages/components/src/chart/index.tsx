@@ -9,7 +9,7 @@ import { streamProps } from './stream-props';
 export { chartSchema, useChart } from './use-chart';
 export type { ChartProps, ChartSeries, ChartType, ChartPivot, ChartAnnotation, ChartModel, ChartSelectPayload, ChartPivotPayload } from './use-chart';
 interface ElementProps extends HTMLAttributes<HTMLElement> { as?: ElementType; [key: string]: any }
-function Element({ as = 'div', ...props }: ElementProps) { return createElement(as, props); }
+function Element({ as = 'div', ...props }: ElementProps) { return props['data-part'] === 'skeleton' ? <PrismPart as={as} {...props} /> : createElement(as, props); }
 function Part({ part, state, style, ...props }: ElementProps & { part: string; state?: string }) {
   const attrs = usePart('chart', part, state), View = useSlot('chart', part, Element);
   return <View {...attrs} {...props} style={{ ...style, ...attrs.style }} />;

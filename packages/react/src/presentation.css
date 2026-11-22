@@ -2,7 +2,9 @@
   transition: opacity var(--prism-motion-fast) var(--prism-motion-ease-exit) !important;
   translate: none !important; filter: none !important;
 }
-.prism-root [data-prism-skeleton-exit], .prism-root [data-prism-skeleton-exit] * { animation: none !important; }
+.prism-root [data-prism-skeleton-exit], .prism-root [data-prism-skeleton-exit] *,
+.prism-root [data-prism-skeleton-exit]::before, .prism-root [data-prism-skeleton-exit]::after,
+.prism-root [data-prism-skeleton-exit] *::before, .prism-root [data-prism-skeleton-exit] *::after { animation: none !important; }
 /* Only follow the last rendered branch of built-in prose. A directive or
  * custom block ends that branch unless its view supplies an explicit caret. */
 .prism-root[data-prism-presentation] { --prism-stream-tail: none; }
