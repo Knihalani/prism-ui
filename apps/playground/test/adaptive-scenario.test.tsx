@@ -21,6 +21,17 @@ test.each(shells)('%s opens the adaptive artifact scenario from the palette', as
   await waitFor(() => expect(view.queryByRole('button', { name: 'Stop response' })).toBeNull());
   expect(view.getAllByRole('button', { name: 'Give feedback' })).toHaveLength(2);
   expect(view.container.querySelector('.prism-artifact__shell')?.getAttribute('data-variant')).toBe('inline');
+  const scroll = view.container.querySelector<HTMLElement>('.thread-scroll')!;
+  Object.defineProperties(scroll, { scrollHeight: { configurable: true, value: 1200 }, clientHeight: { configurable: true, value: 400 } });
+  scroll.scrollTop = 0;
+  fireEvent.scroll(scroll);
+  expect(view.getByRole('button', { name: 'Jump to latest' })).toBeDefined();
+  scroll.scrollTop = 760;
+  fireEvent.scroll(scroll);
+  expect(view.queryByRole('button', { name: 'Jump to latest' })).toBeNull();
+  scroll.scrollTop = 800;
+  fireEvent.scroll(scroll);
+  expect(view.queryByRole('button', { name: 'Jump to latest' })).toBeNull();
   if (shell === 'workspace') {
     const feedback = view.getAllByRole('button', { name: 'Give feedback' })[0];
     fireEvent.click(feedback);
