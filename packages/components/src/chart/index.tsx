@@ -1,5 +1,5 @@
 import { createElement, memo, useEffect, useId, useMemo, useRef, useState, type ElementType, type HTMLAttributes, type KeyboardEvent, type PointerEvent } from 'react';
-import { defineComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
+import { defineComponent, registerComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
 import { nearestX, pointX, pointY } from '../lib/chart';
 import { useFrame } from '../frame';
 import { chartSchema, seriesColor, useChart, type ChartModel, type ChartProps } from './use-chart';
@@ -110,3 +110,4 @@ export function Chart({ props: inputProps, complete }: PrismComponentProps<Chart
 export const chartDefinition = defineComponent({ name: 'chart', schema: chartSchema, component: Chart, syntax: 'fence',
   docs: 'Responsive SVG; insight/annotations/pivots enable Answer mode. Point click/Enter emits select {x: category, series: key, value: number|null}. View chips emit pivot {pivot: zero-based index, label}. Pie: first visible series, rows as slices. Legend keeps one visible. Views support undo.',
   examples: ['```ui:chart\n{"type":"line","title":"Revenue","x":"month","series":[{"key":"revenue","label":"Revenue"}],"data":[{"month":"Jan","revenue":120}],"insight":"Revenue is growing","annotations":[{"x":"Jan","label":"Launch"}],"pivots":[{"label":"Bars","type":"bar"}]}\n```'] });
+registerComponent(chartDefinition);

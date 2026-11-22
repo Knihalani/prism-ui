@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type HTMLAttributes } from 'react';
-import { defineComponent, useComponentState, useEmit, usePart, usePrism, useSlot, type PrismContextValue, type PrismComponentProps } from '@prism-ui/react';
+import { defineComponent, registerComponent, useComponentState, useEmit, usePart, usePrism, useSlot, type PrismContextValue, type PrismComponentProps } from '@prism-ui/react';
 import { s } from '@prism-ui/schema';
 import { useFrame } from '../frame';
 import { createIncremental, escapeHTML, highlight } from '../lib/highlight';
@@ -103,3 +103,4 @@ export function CodeBlock({ node, props, complete }: PrismComponentProps<CodeBlo
 export const codeBlockDefinition = defineComponent({ name: 'code', schema: codeBlockSchema, component: CodeBlock,
   docs: 'Highlighted fenced code with copy, line numbers, wrapping and collapse.',
   examples: ['```ts {lines title="example.ts"}\nconst answer = 42;\n```'], syntax: 'leaf' });
+registerComponent(codeBlockDefinition);

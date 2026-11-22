@@ -1,5 +1,5 @@
 import { createElement, useLayoutEffect, useRef, type ElementType, type HTMLAttributes } from 'react';
-import { defineComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
+import { defineComponent, registerComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
 import { useFrame } from '../frame';
 import { dataTableSchema, useDataTable, type DataTableProps } from './use-datatable';
 
@@ -85,3 +85,4 @@ export function DataTable({ props: inputProps, complete }: PrismComponentProps<D
 export const dataTableDefinition = defineComponent({ name: 'dataTable', schema: dataTableSchema, component: DataTable, syntax: 'fence',
   docs: 'Sortable, fuzzy-searchable, paginated/windowed table. Streaming appends unsorted/unfiltered. select emits {rows, indices}: original objects and zero-based input positions in input order. Keep input order stable. View/selection state supports undo.',
   examples: ['```ui:table\n{"columns":[{"key":"name","label":"Name"},{"key":"cost","label":"Cost","type":"currency"}],"rows":[{"name":"Pro","cost":24}],"pageSize":10,"selectable":true}\n```'] });
+registerComponent(dataTableDefinition);
