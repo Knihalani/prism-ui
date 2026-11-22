@@ -43,3 +43,23 @@ test('tabbing through Submit commits an overall comment without submitting it', 
   act(() => store.undo('target'));
   expect(store.get('target.feedback.overall')).toBe('Newer saved');
 });
+
+for (const kind of ['pin', 'region'] as const) test(`clearing the only ${kind} comment cannot submit empty feedback`, () => {
+  const saved = createFeedback();
+  if (kind === 'pin') saved.addPin({ x: 30, y: 40, comment: 'Only comment' });
+  else saved.addRegion({ x: 30, y: 40, w: 20, h: 20, comment: 'Only comment' });
+  const { view, store, actions } = setup(saved.toJSON());
+  act(() => store.set('target.feedback.overall', ''));
+  fireEvent.click(view.getByRole('button', { name: 'Comment 1: Only comment' }));
+  change(view.getByPlaceholderText('Add a comment…'), '   ');
+  const before = store.snapshot(), submit = view.getByRole('button', { name: 'Submit feedback' });
+  expect(submit.hasAttribute('disabled')).toBe(true);
+  fireEvent.click(submit);
+  expect(actions).toEqual([]);
+  expect(store.snapshot()).toEqual(before);
+  change(view.getByRole('textbox', { name: 'Overall feedback' }), 'A meaningful overall comment');
+  expect(view.getByRole('button', { name: 'Submit feedback' }).hasAttribute('disabled')).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  expect(actions).toHaveLength(1);
+  expect(actions[0].payload).toMatchObject({ overall: 'A meaningful overall comment', items: [] });
+});
