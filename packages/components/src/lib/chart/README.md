@@ -13,7 +13,10 @@ modules. No DOM, React, locale or timezone globals are changed.
 - `linePath` accepts `[x,y]` or `{x,y}`, with null/invalid points creating gaps.
   `areaPath(top, baseline=0, options)` accepts a scalar or matched bottom points.
   Options: `{curve:'linear'|'step'|'monotone', precision:2, defined?}`. Monotone
-  paths use Fritsch–Carlson limiting. `barPath({x,y,width,height,radius,topOnly})`
+  paths use Fritsch–Carlson limiting. Line/area paths pack coordinates once, reuse
+  numeric/output buffers, and encode rounded coordinates directly into SVG bytes.
+  Binary rounding ties and extreme values retain `toFixed` precision semantics.
+  `barPath({x,y,width,height,radius,topOnly})`
   normalizes negative sizes; `topOnly` refers to the visual top.
 - `pie(values, options)` retains input order in its result; `order` records angular
   sort order (`sort:true` sorts descending). Negative/non-finite values have zero
