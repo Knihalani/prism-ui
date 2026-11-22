@@ -90,17 +90,17 @@ export function createStore({ persist, namespace = '', initial = {} }: { persist
     canRedo(scope?: string) { return future.some(step => scope === undefined || step.paths.some(path => within(path, scope))); },
     move(from: string, to: string) {
       if (from === to || ![...from.split('.'), ...to.split('.')].every(safe)) return;
-      const rename = (path: string) => within(path, from) ? to + path.slice(from.length) : path;
+      const rename = (path: string) => within(path, from) ? [to + path.slice(from.length)] : within(from, path) ? [path, to] : [path];
       if (depth) {
         before = moveTree(before, from, to);
-        const paths = [...changed].map(rename); changed.clear(); paths.forEach(path => changed.add(path));
+        const paths = [...changed].flatMap(rename); changed.clear(); paths.forEach(path => changed.add(path));
       }
       store.batch(() => {
         const previous = state; state = moveTree(state, from, to);
         let moved = previous !== state;
         for (const step of [...past, ...future]) {
-          const paths = step.paths.map(rename);
-          moved ||= paths.some((path, index) => path !== step.paths[index]);
+          const paths = step.paths.flatMap(rename);
+          moved ||= paths.length !== step.paths.length || paths.some((path, index) => path !== step.paths[index]);
           step.paths = [...new Set(paths)]; step.state = moveTree(step.state, from, to);
         }
         if (moved) { changed.add(from); changed.add(to); }

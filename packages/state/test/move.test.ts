@@ -1,6 +1,22 @@
 import { expect, test } from 'bun:test';
 import { createStore } from '../src';
 
+test.each(['undo', 'redo'])('moves split ancestor writes across destination and remaining %s history', travel => {
+  const store = createStore({ initial: { outer: { keep: 0 } } });
+  store.set('outer', { branch: { child: { value: 1 }, sibling: 3 }, keep: 2 });
+  if (travel === 'redo') store.undo();
+  store.move('outer.branch.child', 'final');
+  if (travel === 'undo') {
+    expect(store.canUndo('final')).toBe(true); store.undo('final');
+    expect(store.snapshot()).toEqual({ outer: { branch: { sibling: 3 }, keep: 2 } });
+    store.undo('outer'); expect(store.snapshot()).toEqual({ outer: { keep: 0 } });
+  } else expect(store.canRedo('final')).toBe(true);
+  store.redo('final');
+  expect(store.snapshot()).toEqual({ outer: { keep: 0 }, final: { value: 1 } });
+  store.redo('outer');
+  expect(store.snapshot()).toEqual({ outer: { branch: { sibling: 3 }, keep: 2 }, final: { value: 1 } });
+});
+
 test('namespace moves rewrite both history stacks without recording migration', () => {
   const store = createStore({ initial: { provisional: { a: false, b: false }, unrelated: 1 } });
   store.set('provisional.a', true); store.set('provisional.b', true); store.undo();
