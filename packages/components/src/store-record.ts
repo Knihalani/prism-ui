@@ -1,6 +1,8 @@
-type RecordStore = { get(path: string): unknown; set(path: string, value: unknown): void };
+import type { WriteOptions } from '@prism-ui/state';
 
-export function setRecordPath(store: RecordStore, root: string, path: string, value: unknown) {
+type RecordStore = { get(path: string): unknown; set(path: string, value: unknown, options?: WriteOptions): void };
+
+export function setRecordPath(store: RecordStore, root: string, path: string, value: unknown, options?: WriteOptions) {
   const keys = path.split('.');
   if (keys.some(key => ['__proto__', 'prototype', 'constructor'].includes(key)) || Object.is(store.get(`${root}.${path}`), value)) return;
   const write = (current: unknown, index: number): Record<string, unknown> => {
@@ -9,5 +11,5 @@ export function setRecordPath(store: RecordStore, root: string, path: string, va
     record[key] = index === keys.length - 1 ? value : write(record[key], index + 1);
     return record;
   };
-  store.set(root, write(store.get(root), 0));
+  store.set(root, write(store.get(root), 0), options);
 }
