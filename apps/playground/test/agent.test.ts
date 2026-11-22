@@ -103,8 +103,9 @@ test('offsite confirms edited totals and never adds contingency twice or prints 
   const offsite = scenarios[4];
   const reply = offsite.onAction(action('estimate', 'use', { total: 1830, items: [{ id: 'seats', qty: 9 }, { id: 'buffer', enabled: false, price: 200, qty: 1 }] }), ctx)!;
   expect(reply.text).toContain('$1,830 for 9 people'); expect(reply.text).toContain('$2,030');
-  const included = offsite.onAction(action('estimate', 'use', { total: 1520, items: [{ id: 'buffer', price: 200, qty: 1, amount: 200 }] }), ctx)!.text;
-  expect(included).toContain('already included'); expect(included).not.toContain('$1,720');
+  const included = offsite.onAction(action('estimate', 'use', { total: 1520, items: [{ id: 'buffer', price: 200, qty: 1, amount: 200 }] }), ctx)!;
+  expect(included.text).toContain('already included'); expect(included.text).not.toContain('$1,720');
+  expect(included.patch).toBeUndefined();
   const empty = offsite.onAction(action('estimate', 'use', {}), ctx)!.text;
   expect(empty).toContain('6 people'); expect(empty).not.toMatch(/NaN|undefined|\$0/);
   expect(offsite.onAction(action('estimate', 'use', { total: 'broken', items: [] }), ctx)!.text).not.toContain('NaN');
@@ -122,6 +123,17 @@ test('Kyoto, landing and research replies reflect preferences, notes and action 
   expect(handoff).toContain('Interview five teams — Sam, Friday (complete)');
   expect(research.onAction(action('summary', 'send', {}), ctx)!.text).toContain('aren’t any action items');
   expect(research.onAction(action('summary', 'ask', { text: 'Scattered updates', source: { quote: 'Too many tabs' } }), ctx)!.text).toContain('Too many tabs');
+});
+
+test('offsite changes only contingency after the assistant continuation finishes streaming', async () => {
+  const agent = createScriptedAgent({ pace: fast });
+  const opening = textOf(await collect(agent.respond({ kind: 'message', text: 'budget a team offsite', history: [] }, signal())));
+  const id = JSON.parse(opening.split('```ui:estimate\n')[1].split('\n```')[0]).id;
+  const events = await collect(agent.respond({ kind: 'action', action: action('estimate', 'use', { total: 1320, items: [{ id: 'seats', qty: 6 }] }, id), history: [{ role: 'assistant', text: opening }] }, signal()));
+  expect(events[0].type).toBe('thinking');
+  expect(events.slice(1, -1).every(event => event.type === 'text')).toBe(true);
+  expect(events.at(-1)).toEqual({ type: 'patch', patch: { set: { [id + '.items.buffer.enabled']: true } } });
+  expect(textOf(events)).toContain('$1,520');
 });
 
 test('actions route to old owning scenario, follow-up ids remain owned, mid-turn text continues', async () => {

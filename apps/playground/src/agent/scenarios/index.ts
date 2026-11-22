@@ -134,7 +134,7 @@ export const scenarios: Scenario[] = [
       const count = positive(seats?.qty, 6), total = Number(p.total), known = p.total != null && Number.isFinite(total) && total >= 0;
       const included = !!buffer && buffer.enabled !== false;
       const reserve = included ? 0 : positive(buffer?.price, 200) * positive(buffer?.qty, 1);
-      return { text: `${known ? money(total) + ' for ' : 'The working plan for '}${count} people looks workable. ${included ? 'The contingency is already included, so I’ve left it in place.' : 'I’ve included the ' + money(reserve) + ' contingency in the estimate above' + (known ? ', bringing the total to ' + money(total + reserve) : '') + '.'} That gives the team a little breathing room without turning the day into a big production. Next I’d confirm dietary and access needs, then ask the venue for a hold and its cancellation terms. Nothing has been booked.`, patch: { set: { [action.id + '.items.buffer.enabled']: true } } };
+      return { text: `${known ? money(total) + ' for ' : 'The working plan for '}${count} people looks workable. ${included ? 'The contingency is already included, so I’ve left it in place.' : 'I’ve included the ' + money(reserve) + ' contingency in the estimate above' + (known ? ', bringing the total to ' + money(total + reserve) : '') + '.'} That gives the team a little breathing room without turning the day into a big production. Next I’d confirm dietary and access needs, then ask the venue for a hold and its cancellation terms. Nothing has been booked.`, patch: included ? undefined : { set: { [action.id + '.items.buffer.enabled']: true } } };
     },
   },
   {

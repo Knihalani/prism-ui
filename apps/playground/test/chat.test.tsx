@@ -12,7 +12,7 @@ const users = (container: HTMLElement) => container.querySelectorAll('[data-mess
 const replies = (container: HTMLElement) => container.querySelectorAll('[data-message="assistant"]');
 async function done(view: ReturnType<typeof render>) {
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
-  await waitFor(() => expect(view.container.querySelector('button[aria-label="Stop response"]')).toBeNull());
+  await waitFor(() => expect(view.container.querySelector('button[aria-label="Stop response"]') === null).toBe(true));
 }
 function type(view: ReturnType<typeof render>, text: string) {
   const input = view.getByRole('textbox', { name: 'Message Prism' });
@@ -101,10 +101,15 @@ test('pick action adds only an assistant continuation and no payload or syntax',
 });
 
 test('estimate action confirms in place, appends assistant and patches earlier estimate', async () => {
-  const view = render(<App pace={fast} />); send(view, 'Budget a 6-person team offsite'); await done(view);
+  let turn = 0;
+  const view = render(<App pace={{ ...fast, thinking: () => turn++ ? 100 : 0 }} />); send(view, 'Budget a 6-person team offsite'); await done(view);
   const checkbox = view.getByRole('checkbox', { name: 'Contingency' }) as HTMLInputElement;
   expect(checkbox.checked).toBe(false);
-  fireEvent.click(view.getByRole('button', { name: 'Use this estimate' })); await done(view);
+  fireEvent.click(view.getByRole('button', { name: 'Use this estimate' }));
+  expect(checkbox.checked).toBe(false);
+  expect(replies(view.container)).toHaveLength(2);
+  expect((view.getByRole('button', { name: 'Estimate saved' }) as HTMLButtonElement).disabled).toBe(true);
+  await done(view);
   expect(users(view.container)).toHaveLength(1); expect(replies(view.container)).toHaveLength(2);
   expect(checkbox.checked).toBe(true);
   expect((view.getByRole('button', { name: 'Estimate saved' }) as HTMLButtonElement).disabled).toBe(true);
