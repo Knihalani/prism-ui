@@ -6,7 +6,7 @@ import type { usePick } from '@prism-ui/components/pick';
 
 type SlotProps = FrameSlotProps<unknown>;
 type PickRow = ReturnType<typeof usePick>['rows'][number];
-const supported = new Set(['estimate', 'pick', 'mockup', 'view', 'frame']);
+const supported = new Set(['estimate', 'pick', 'mockup', 'view', 'frame', 'runbook', 'troubleshoot', 'summary']);
 const Chassis = forwardRef<HTMLElement, SlotProps>(function Chassis({ as = 'section', model, frame, overflow, children, ...props }, ref) {
   const component = (props as Record<string, unknown>)['data-prism'] as string;
   return createElement(as, { ...props, ref, 'data-instrument-chassis': supported.has(component) ? '' : undefined },
@@ -105,6 +105,9 @@ export const instrument = defineTheme({
       tokens: { display: '#1b1c18', signal: '#e55b25', 'display-border': '#171812', 'key-shadow': 'var(--prism-frame-key-shadow)' },
     },
     pick: { slots: { criteria: Faders, item: Module, list: Modules }, strings: { question: 'What matters to you?', sectionIndex: '02 / PICK', optionIndex: '{n} / APPROACH', chooseTemplate: 'Choose {title} ↗', ratingSuffix: '/10', leads: 'leads.' } },
+    runbook: { strings: { sectionIndex: '05 / GUIDE' } },
+    summary: { strings: { sectionIndex: '06 / NOTES' } },
+    troubleshoot: { strings: { sectionIndex: '07 / CHECK' } },
     mockup: { strings: { sectionIndex: '03 / DESIGN' } },
     view: { strings: { sectionIndex: '04 / SETUP' } },
   },
@@ -198,19 +201,14 @@ export const instrument = defineTheme({
     :scope .instrument-pick-footer { padding-top:21px; }
     :scope .instrument-pick-footer p { min-height:2.8em; margin:0 0 18px; color:var(--prism-text-muted); font:11px/1.7 var(--prism-font-mono); }
     :scope .instrument-pick-footer button { width:100%; min-height:42px; padding:10px 14px; border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:0 3px 0 var(--prism-frame-key-shadow),inset 0 1px 0 var(--prism-surface); font:11px/1.5 var(--prism-font-mono); text-transform:uppercase; letter-spacing:.05em; cursor:pointer; }
-    :scope :is([data-instrument-tool],.instrument-pick-footer button,.prism-mockup__button,.prism-mockup__primary,.prism-view__button,.prism-view__segment) { transition:transform var(--prism-motion-fast) var(--prism-motion-ease),box-shadow var(--prism-motion-fast) var(--prism-motion-ease); }
-    :scope :is([data-instrument-tool],.instrument-pick-footer button,.prism-mockup__button,.prism-mockup__primary,.prism-view__button,.prism-view__segment):active:not(:disabled) { transform:translateY(2px); box-shadow:inset 0 1px 2px var(--prism-frame-key-shadow); }
+    :scope :is([data-instrument-tool],.instrument-pick-footer button,.prism-mockup__header .prism-mockup__button,.prism-view__button,.prism-view__segment) { transition:transform var(--prism-motion-fast) var(--prism-motion-ease),box-shadow var(--prism-motion-fast) var(--prism-motion-ease); }
+    :scope :is([data-instrument-tool],.instrument-pick-footer button,.prism-mockup__header .prism-mockup__button,.prism-view__button,.prism-view__segment):active:not(:disabled) { transform:translateY(2px); box-shadow:inset 0 1px 2px var(--prism-frame-key-shadow); }
     :scope .prism-mockup__viewport { padding:0; border:0; outline:4px solid var(--prism-border); border-radius:3px; background:var(--prism-frame-display); box-shadow:inset 0 2px 4px var(--prism-frame-display); }
     :scope .prism-mockup__stage { border-radius:0; outline:0; }
-    :scope .prism-mockup__button { border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); box-shadow:0 2px 0 var(--prism-frame-key-shadow),inset 0 1px 0 var(--prism-surface); color:var(--prism-text); font:10px var(--prism-font-mono); text-transform:uppercase; }
-    :scope .prism-mockup__button[aria-pressed="true"] { color:var(--prism-text); background:var(--prism-bg); box-shadow:inset 0 2px 3px var(--prism-frame-key-shadow); }
-    :scope .prism-mockup__marker[data-kind="pin"] { background:var(--prism-accent); color:var(--prism-on-accent); font-family:var(--prism-font-mono); border-radius:50%; }
-    :scope .prism-mockup__popover { background:var(--prism-surface); border:1px solid var(--prism-border-strong); border-radius:3px; box-shadow:0 3px 0 var(--prism-frame-key-shadow),0 8px 18px color-mix(in srgb,var(--prism-text) 18%,transparent); }
-    :scope :is(.prism-mockup__empty,.prism-mockup__overall,.prism-mockup__count) { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text-muted); letter-spacing:.03em; }
-    :scope :is(.prism-mockup__input,.prism-view__controlWrap,.prism-view__control) { border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:inset 0 2px 3px color-mix(in srgb,var(--prism-text) 12%,transparent); font:12px/1.7 var(--prism-font-mono); }
-    :scope .prism-mockup__input { padding:12px; min-height:64px; text-transform:none; letter-spacing:normal; }
-    :scope .prism-mockup__primary, :scope .prism-view__button[data-variant="primary"] { min-height:40px; padding:10px 14px; border:1px solid color-mix(in srgb,var(--prism-accent) 70%,var(--prism-text)); border-radius:3px; background:var(--prism-accent); color:var(--prism-on-accent); box-shadow:0 3px 0 color-mix(in srgb,var(--prism-accent) 60%,var(--prism-text)),inset 0 1px 0 color-mix(in srgb,var(--prism-accent) 70%,var(--prism-surface-raised)); font:500 11px/1.5 var(--prism-font-mono); text-transform:uppercase; }
-    :scope .prism-mockup__primary:disabled { opacity:1; color:var(--prism-text-muted); background:var(--prism-bg); border-color:var(--prism-border-strong); box-shadow:0 2px 0 var(--prism-frame-key-shadow); }
+    :scope .prism-mockup__header .prism-mockup__button { border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); box-shadow:0 2px 0 var(--prism-frame-key-shadow),inset 0 1px 0 var(--prism-surface); color:var(--prism-text); font:10px var(--prism-font-mono); text-transform:uppercase; }
+    :scope .prism-mockup__header .prism-mockup__button[aria-pressed="true"] { color:var(--prism-text); background:var(--prism-bg); box-shadow:inset 0 2px 3px var(--prism-frame-key-shadow); }
+    :scope :is(.prism-view__controlWrap,.prism-view__control) { border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:inset 0 2px 3px color-mix(in srgb,var(--prism-text) 12%,transparent); font:12px/1.7 var(--prism-font-mono); }
+    :scope .prism-view__button[data-variant="primary"] { min-height:40px; padding:10px 14px; border:1px solid color-mix(in srgb,var(--prism-accent) 70%,var(--prism-text)); border-radius:3px; background:var(--prism-accent); color:var(--prism-on-accent); box-shadow:0 3px 0 color-mix(in srgb,var(--prism-accent) 60%,var(--prism-text)),inset 0 1px 0 color-mix(in srgb,var(--prism-accent) 70%,var(--prism-surface-raised)); font:500 11px/1.5 var(--prism-font-mono); text-transform:uppercase; }
     :scope .prism-view__body { padding:0; }
     :scope .prism-view__label { font:10px/1.6 var(--prism-font-mono); letter-spacing:.03em; text-transform:uppercase; }
     :scope .prism-view__controlWrap .prism-view__control { border:0; background:transparent; box-shadow:none; }
@@ -233,17 +231,15 @@ export const instrument = defineTheme({
     :scope .prism-table__root { border:1px solid var(--prism-border-strong); border-collapse:collapse; background:var(--prism-surface); border-radius:3px; font-variant-numeric:tabular-nums; }
     :scope .prism-table__root :is(th,td) { padding:10px 14px; border-bottom:1px solid var(--prism-border); background:transparent; }
     :scope .prism-table__root th { font:10px/1.5 var(--prism-font-mono); text-transform:uppercase; letter-spacing:.04em; background:var(--prism-surface-raised); }
-    :scope .prism-codeblock__root { border:2px solid var(--prism-border-strong); border-radius:4px; background:var(--prism-frame-display); color:var(--prism-frame-display-ink); box-shadow:inset 0 2px 5px #0005,0 1px 0 var(--prism-surface-raised); }
+    :scope .prism-codeblock__root { --prism-codeblock-text:var(--prism-frame-display-ink); --prism-codeblock-text-muted:var(--prism-frame-display-ink); border:2px solid var(--prism-border-strong); border-radius:4px; background:var(--prism-frame-display); color:var(--prism-frame-display-ink); box-shadow:inset 0 2px 5px #0005,0 1px 0 var(--prism-surface-raised); }
     :scope .prism-codeblock__header { padding:9px 14px; background:transparent; color:var(--prism-frame-display-ink); border-bottom:1px solid var(--prism-border); font:10px var(--prism-font-mono); text-transform:uppercase; }
     :scope .prism-codeblock__label { color:var(--prism-frame-display-ink); }
     :scope .prism-codeblock__body { padding:8px 0; background:transparent; }
     :scope .prism-codeblock__line { padding-inline:14px; }
     :scope .prism-codeblock__root [class*="prism-tok-"] { color:var(--prism-frame-display-ink); }
     :scope .prism-codeblock__root :is(.prism-tok-keyword,.prism-tok-number,.prism-tok-boolean) { color:var(--prism-accent); }
-    :scope .prism-codeblock__actions { gap:6px; }
-    :scope .prism-codeblock__actions button { border:1px solid var(--prism-border-strong); padding:4px 7px; border-radius:2px; background:var(--prism-frame-display); color:var(--prism-frame-display-ink); font:9px var(--prism-font-mono); }
     :scope [data-instrument-chassis] :focus-visible { outline:2px solid var(--prism-focus); outline-offset:3px; }
-    @container prism-estimate (max-width:480px) { :scope .prism-estimate__item { grid-template-columns:minmax(0,1fr) auto; gap:6px 12px; } :scope .prism-estimate__details { flex-basis:auto; grid-row:span 2; } :scope .prism-estimate__amount { grid-column:2; margin:0; } }
+    @container (max-width:480px) { :scope .prism-estimate__item { grid-template-columns:minmax(0,1fr) auto; gap:6px 12px; } :scope .prism-estimate__details { flex-basis:auto; grid-row:span 2; } :scope .prism-estimate__amount { grid-column:2; margin:0; } }
     @container (max-width:540px) {
       :scope .prism-pick__criteria, :scope .instrument-module-grid { grid-template-columns:1fr; }
       :scope .prism-pick__criteria { gap:24px; }
@@ -255,14 +251,81 @@ export const instrument = defineTheme({
       :scope .prism-mockup__header { flex-direction:row; }
       :scope .prism-mockup__toolbar { position:static; order:2; flex-wrap:wrap; justify-content:flex-end; }
       :scope .prism-mockup__tools { flex:1 1 auto; min-width:0; flex-wrap:wrap; justify-content:flex-end; }
-      :scope .prism-mockup__tools .prism-mockup__button { padding-inline:4px; font-size:9px; min-width:24px; }
-      :scope .prism-mockup__feedbackFooter { flex-wrap:wrap; }
-      :scope .prism-mockup__feedbackFooter > .prism-mockup__primary { flex-basis:100%; max-width:none; margin-left:0; }
+      :scope .prism-mockup__header .prism-mockup__tools .prism-mockup__button { padding-inline:4px; font-size:9px; min-width:24px; }
       :scope .prism-view__segment { padding-inline:8px; font-size:9px; }
     }
-    @media (hover:hover) and (pointer:fine) { :scope .prism-codeblock__actions { opacity:0; } :scope .prism-codeblock__root:is(:hover,:focus-within) .prism-codeblock__actions { opacity:1; } }
     @media (hover:none) { :scope :is(.prism-estimate__toolbar,.prism-pick__toolbar,.prism-view__toolbar,.prism-mockup__toolbar) { opacity:1; pointer-events:auto; } }
     @media (prefers-reduced-motion:reduce) { :scope [data-instrument-chassis] *, :scope [data-instrument-chassis] *::after, :scope [data-instrument-chassis] *::before { transition:none; } }
     :scope[data-animate="false"] [data-instrument-chassis] *, :scope[data-animate="false"] [data-instrument-chassis] *::after, :scope[data-animate="false"] [data-instrument-chassis] *::before, :scope [data-animate="false"] [data-instrument-chassis] *, :scope [data-animate="false"] [data-instrument-chassis] *::after, :scope [data-animate="false"] [data-instrument-chassis] *::before { transition:none; }
+    :scope :is(.prism-runbook__root,.prism-summary__root,.prism-troubleshoot__root,.prism-tabs__root,.prism-callout__root,.prism-card__root,.prism-grid__root) { min-width:0; max-width:100%; box-sizing:border-box; margin-block:28px; }
+    :scope :is(.prism-runbook__body,.prism-summary__body,.prism-troubleshoot__body) { padding:16px 0 0; }
+    :scope .prism-runbook__step[data-numbered="true"] { position:relative; margin:0; padding:16px 0 16px 44px; border:0; border-bottom:1px solid var(--prism-border); border-radius:0; background:none; box-shadow:none; }
+    :scope .prism-runbook__step[data-numbered="true"] .prism-runbook__check { left:-44px; top:0; width:28px; height:28px; font:11px var(--prism-font-mono); }
+    :scope .prism-runbook__step[data-numbered="true"]::before { display:none; }
+    :scope .prism-runbook__stepHeader { flex-wrap:wrap; }
+    :scope .prism-runbook__stepTitle { font-size:14px; }
+    :scope .prism-runbook__stepBody .prism-paragraph__root { font-size:13px; }
+    :scope :is(.prism-runbook__progress,.prism-summary__actionsTitle,.prism-summary__progress,.prism-troubleshoot__position,.prism-grid__meta) { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text-muted); }
+    :scope .prism-runbook__actions { min-width:0; }
+    :scope .prism-runbook__stuck { font:10px var(--prism-font-mono); }
+    :scope .prism-tabs__list { gap:0; min-height:40px; overflow:visible; flex-wrap:wrap; }
+    :scope .prism-tabs__tab { min-width:0; white-space:normal; flex:1; padding:12px 14px; color:var(--prism-text-muted); font:11px/1.5 var(--prism-font-mono); }
+    :scope .prism-tabs__indicator { display:none; }
+    :scope .prism-tab__body { padding:18px 0; }
+    :scope .prism-badge__root { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text); }
+    :scope .prism-badge__root[data-variant="solid"] { background:var(--prism-accent); color:var(--prism-on-accent); }
+    :scope .prism-grid__body { gap:20px; }
+    :scope .prism-grid__body > .prism-card__root { margin:0; }
+    :scope .prism-grid__body > .prism-card__root::before { display:none; }
+    :scope :is(.prism-card__title,.prism-callout__title) { margin:0; }
+    :scope :is(.prism-card__body,.prism-callout__body) > .prism-paragraph__root { font-size:13px; line-height:1.65; }
+    :scope .prism-troubleshoot__step { padding:0; border:0; background:none; box-shadow:none; }
+    :scope .prism-troubleshoot__position { white-space:nowrap; flex:none; }
+    :scope .prism-troubleshoot__stepTitle { display:flex; align-items:center; gap:12px; }
+    :scope .prism-troubleshoot__text { font-size:13px; line-height:1.65; }
+    :scope :is(.prism-summary__send,.prism-troubleshoot__primary) { background:var(--prism-accent); color:var(--prism-on-accent); border:0; font:11px/1.5 var(--prism-font-mono); text-transform:uppercase; padding:10px 16px; }
+    :scope .prism-summary__points { padding:0; }
+    :scope .prism-summary__point { padding-block:12px; border-bottom:1px solid var(--prism-border); }
+    :scope .prism-summary__avatar { color:var(--prism-text); background:var(--prism-surface-raised); }
+    @container (max-width:420px) { :scope .prism-grid__body { grid-template-columns:1fr; } :scope .prism-runbook__actions { flex-basis:100%; justify-content:flex-start; margin:0; } }
+
+    :scope :is(.prism-card__root,.prism-callout__root,.prism-tabs__root) { padding:20px; border:1px solid var(--prism-border-strong); border-radius:4px; background:var(--prism-surface); box-shadow:0 3px 0 var(--prism-frame-key-shadow),inset 0 1px 0 var(--prism-surface-raised); }
+    :scope :is(.prism-card__title,.prism-callout__title,.prism-tabs__title,.prism-grid__title) { font:500 11px/1.5 var(--prism-font-mono); text-transform:uppercase; letter-spacing:.06em; }
+    :scope .prism-callout__root { border-left:3px solid var(--prism-accent); }
+    :scope .prism-callout__icon { color:var(--prism-accent-text); }
+    :scope .prism-tabs__list { gap:6px; padding:14px 0 4px; border:0; }
+    :scope .prism-tabs__tab { border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:0 3px 0 var(--prism-frame-key-shadow); }
+    :scope .prism-tabs__tab[aria-selected="true"] { background:var(--prism-bg); color:var(--prism-text); box-shadow:inset 0 2px 3px var(--prism-frame-key-shadow); transform:translateY(2px); border-top:2px solid var(--prism-accent); }
+    :scope .prism-runbook__check { border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:0 2px 0 var(--prism-frame-key-shadow); }
+    :scope .prism-runbook__check::after { content:""; position:absolute; right:-4px; top:-4px; width:6px; height:6px; border-radius:50%; background:var(--prism-border-strong); border:2px solid var(--prism-surface); }
+    :scope .prism-runbook__check[data-state="current"]::after { background:var(--prism-accent); }
+    :scope .prism-runbook__check[data-state="done"] { color:var(--prism-text); background:var(--prism-bg); border-color:var(--prism-border-strong); box-shadow:inset 0 1px 2px var(--prism-frame-key-shadow); }
+    :scope .prism-runbook__check[data-state="done"]::after { background:var(--prism-accent); box-shadow:0 0 5px var(--prism-accent); }
+    :scope .prism-badge__root { border:1px solid var(--prism-border-strong); border-radius:2px; padding:3px 8px; background:var(--prism-bg); box-shadow:inset 0 1px 2px var(--prism-frame-key-shadow); }
+    :scope .prism-badge__dot { background:var(--prism-accent); }
+    :scope .prism-troubleshoot__position { color:var(--prism-accent); background:var(--prism-frame-display); border:1px solid var(--prism-border-strong); border-radius:2px; padding:5px 8px; }
+    :scope :is(.prism-summary__send,.prism-troubleshoot__primary) { border-radius:3px; box-shadow:0 3px 0 var(--prism-frame-key-shadow); }
+    :scope .prism-summary__quote { background:var(--prism-bg); border-color:var(--prism-accent); }
+
+    :scope .prism-codeblock__root :is(.prism-codeblock__copy,.prism-codeblock__wrap,.prism-codeblock__collapse,.prism-codeblock__ask) { min-height:26px; padding:3px 5px; font:10px/1.4 var(--prism-font-mono); text-transform:uppercase; }
+    :scope .prism-codeblock__actions { gap:6px; }
+    :scope [data-prism="runbook"][data-part="header"] { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; }
+    :scope [data-prism="runbook"][data-part="header"] > [data-part="title"] { grid-area:1/1; }
+    :scope [data-prism="runbook"][data-part="header"] > [class$="-index"] { grid-area:1/2; }
+    :scope [data-prism="runbook"][data-part="header"] > [data-part="toolbar"] { grid-area:2/1/3/-1; position:static; opacity:1; pointer-events:auto; justify-content:flex-start; width:100%; margin-top:8px; }
+    :scope .prism-runbook__progress { flex:1; min-width:0; }
+    :scope .prism-runbook__track { max-width:220px; }
+    :scope .prism-runbook__stepTitle { padding-inline-end:0; }
+    :scope .prism-runbook__actions { position:absolute; inset-block-start:auto; inset-block-end:calc(100% + 4px); right:0; flex-basis:auto; justify-content:flex-end; margin:0; }
+    :scope :is(.prism-summary__header,.prism-troubleshoot__header) > [data-part="toolbar"] { position:absolute; bottom:calc(100% + 6px); right:0; }
+    :scope .prism-summary__root { overflow:visible; }
+    :scope .prism-summary__point { padding-block:0; }
+    :scope .prism-summary__pointRow { min-height:0; padding-block:12px; }
+    :scope .prism-summary__footer { padding:16px 0 0; margin-top:16px; border-top:1px solid var(--prism-border); background:none; gap:12px; flex-wrap:wrap; }
+    :scope .prism-tabs__body { padding:0; }
+    @container (max-width:420px) { :scope .prism-summary__footer { align-items:stretch; flex-direction:column; } :scope .prism-summary__send { width:100%; justify-content:center; } }
+
+    :scope .prism-runbook__check[data-state="current"] { box-shadow:0 2px 0 var(--prism-frame-key-shadow); color:var(--prism-text); background:var(--prism-surface-raised); }
+
   `,
 });

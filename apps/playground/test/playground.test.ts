@@ -19,9 +19,9 @@ test('theme preview supports five themes and safe screenshot query options', () 
   expect(previewOptions('?width=99999').width).toBe(1200);
 });
 
-test('theme preview reply contains prose, table, code and all four interactive fixtures', () => {
+test('theme preview reply contains prose, table, code and interactive workflow fixtures', () => {
   const nodes = parse(previewSource).children;
-  expect(nodes.filter(node => node.type === 'component').map(node => node.name)).toEqual(['estimate', 'pick', 'mockup', 'view']);
+  expect(nodes.filter(node => node.type === 'component').map(node => node.name)).toEqual(['estimate', 'pick', 'mockup', 'view', 'callout', 'runbook', 'tabs', 'grid', 'summary', 'troubleshoot']);
   for (const kind of ['heading', 'paragraph', 'table', 'code']) expect(nodes.some(node => node.type === kind)).toBe(true);
   expect(previewSource).toContain('Concierge');
   expect(previewSource).toContain('Self-serve');

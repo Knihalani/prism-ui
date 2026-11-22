@@ -7,6 +7,14 @@ import { createStore } from '../../state/src';
 import '@prism-ui/components/estimate';
 import '@prism-ui/components/pick';
 import '@prism-ui/components/mockup';
+import '@prism-ui/components/runbook';
+import '@prism-ui/components/troubleshoot';
+import '@prism-ui/components/summary';
+import '@prism-ui/components/tabs';
+import '@prism-ui/components/callout';
+import '@prism-ui/components/card';
+import '@prism-ui/components/grid';
+import '@prism-ui/components/badge';
 import { instrument, objects, print, refraction } from './index';
 import { print as printSubpath } from '@prism-ui/themes/print';
 import { objects as objectsSubpath } from '@prism-ui/themes/objects';
@@ -81,13 +89,13 @@ test('Objects handles empty and unready receipt and cards', () => {
   expect(view.container.querySelector('[data-objects-stamp]')).toBeNull();
 });
 
-test('Print feedback field preserves its label, edits and submit action', () => {
+test('Print leaves native feedback intact while preserving edits and submit action', () => {
   const actions: { type: string }[] = [];
   const source = '```ui:mockup\n' + JSON.stringify({ id: 'figure', kind: 'svg', source: '<svg viewBox="0 0 100 100"><rect width="100" height="100"/></svg>' }) + '\n```';
   const view = render(<Prism source={source} theme={print} animate={false} onAction={action => actions.push(action)} />);
   const field = within(view.container).getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement;
   const submit = within(view.container).getByRole('button', { name: 'Submit feedback' });
-  expect(field.getAttribute('rows')).toBe('1');
+  expect(field.getAttribute('rows')).toBeNull();
   expect(field.hasAttribute('model')).toBe(false);
   expect(submit.hasAttribute('disabled')).toBe(true);
   act(() => field.focus());
@@ -244,3 +252,64 @@ test('Instrument faders use the Pick model fallback for malformed saved weights'
   fireEvent.click(ui.getByRole('button', { name: 'Choose Beta ↗' }));
   expect(actions.at(-1)).toMatchObject({ type: 'choose', payload: { option: 'beta', weights: { learning: 2, cost: 3 } } });
 });
+
+const workflowSource = [
+  ':badge[Pilot]{tone="accent"}',
+  ':::callout{title="Keep it small"}\nOne useful conversation.\n:::',
+  '::::runbook{title="Launch" id="launch"}\n:::step{title="Invite teams" id="invite"}\nSend a short invitation.\n:::\n::::',
+  '::::tabs{id="notes"}\n:::tab{label="Plan"}\nFirst panel.\n:::\n:::tab{label="Signals"}\nSecond panel.\n:::\n::::',
+  '::::grid{cols=2}\n:::card{title="Learning"}\nA useful surprise.\n:::\n:::card{title="Cost"}\nKeep it small.\n:::\n::::',
+  '```ui:summary\n{"id":"notes","title":"Decisions","points":[{"text":"Start small.","source":{"quote":"Six teams.","title":"Brief"}}],"actions":[{"text":"Send invitations"}]}\n```',
+  '```ui:troubleshoot\n{"id":"check","start":"test","steps":{"test":{"text":"Send a test.","yes":"$fixed","no":"$escalate"}}}\n```',
+].join('\n\n');
+
+for (const theme of [print, objects, instrument]) {
+  test(`${theme.name} preserves workflow roles, keyboard tabs, steps, citations and actions`, () => {
+    const actions: { type: string; payload: unknown }[] = [];
+    const view = render(<Prism source={workflowSource} theme={theme} animate={false} onAction={action => actions.push(action)} />);
+    for (const component of ['runbook', 'troubleshoot', 'summary', 'tabs', 'callout', 'card', 'grid', 'badge']) expect(view.container.querySelector(`[data-prism="${component}"][data-part="root"]`)).not.toBeNull();
+    const runbook = view.container.querySelector('[data-prism="runbook"][data-part="root"]') as HTMLElement;
+    const step = within(runbook).getByRole('checkbox', { name: 'Invite teams' });
+    fireEvent.click(step);
+    expect(step.getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(within(runbook).getByRole('button', { name: 'Undo' }));
+    expect(step.getAttribute('aria-checked')).toBe('false');
+    const ui = within(view.container), plan = ui.getByRole('tab', { name: 'Plan' }), signals = ui.getByRole('tab', { name: 'Signals' });
+    act(() => plan.focus());
+    fireEvent.keyDown(plan, { key: 'ArrowRight' });
+    expect(signals.getAttribute('aria-selected')).toBe('true');
+    expect(signals === document.activeElement).toBe(true);
+    expect(ui.getByRole('tabpanel').textContent).toContain('Second panel.');
+    expect(ui.getByRole('tabpanel').id).toBe(signals.getAttribute('aria-controls')!);
+    const summary = view.container.querySelector('[data-prism="summary"][data-part="root"]') as HTMLElement;
+    const point = summary.querySelector('[data-part="pointButton"]')!;
+    fireEvent.click(point);
+    expect(point.getAttribute('aria-expanded')).toBe('true');
+    expect(within(summary).getByText('Six teams.')).toBeTruthy();
+    fireEvent.click(within(summary).getByRole('checkbox'));
+    expect((within(summary).getByRole('checkbox') as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(summary.querySelector('[data-part="send"]')!);
+    expect(actions.at(-1)?.type).toBe('send');
+    const troubleshoot = view.container.querySelector('[data-prism="troubleshoot"][data-part="root"]') as HTMLElement;
+    fireEvent.click(within(troubleshoot).getByRole('button', { name: /^Yes$/ }));
+    fireEvent.click(within(troubleshoot).getByRole('button', { name: 'Send report' }));
+    expect(actions.at(-1)).toMatchObject({ type: 'troubleshoot', payload: { resolved: true } });
+  });
+
+  test(`${theme.name} keeps empty and malformed workflows guarded and feedback theme-neutral`, () => {
+    const actions: { type: string; payload: unknown }[] = [];
+    const view = render(<Prism source={':::runbook{title="Empty"}\n:::\n\n:::tabs\n:::\n\n```ui:summary\n{"points":[],"actions":[]}\n```\n\n```ui:troubleshoot\n{"start":"missing","steps":{}}\n```'} theme={theme} animate={false} onAction={action => actions.push(action)} />);
+    expect(within(view.container).queryAllByRole('tab')).toHaveLength(0);
+    const summary = view.container.querySelector('[data-prism="summary"][data-part="send"]')!;
+    expect(summary.hasAttribute('disabled')).toBe(true);
+    const primary = view.container.querySelector('[data-prism="troubleshoot"][data-part="primary"]')!;
+    expect(primary.textContent).toContain('Send report');
+    fireEvent.click(primary);
+    expect(actions.at(-1)).toMatchObject({ type: 'troubleshoot', payload: { resolved: false } });
+    const components: Record<string, { slots?: unknown; strings?: Record<string, string> }> = theme.components;
+    expect(components.artifact).toBeUndefined();
+    expect(components.feedback).toBeUndefined();
+    expect(components.mockup?.slots).toBeUndefined();
+    expect(theme.css).not.toMatch(/prism-(artifact__|inline-feedback|mockup__(input|overall|count|feedbackFooter|marker|popover|primary))/);
+  });
+}

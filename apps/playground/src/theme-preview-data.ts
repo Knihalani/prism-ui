@@ -58,4 +58,12 @@ export const previewSource = [
     ],
     actions: [{ type: 'button', label: 'Save pilot plan', variant: 'primary', onClick: { action: 'save', payload: { name: { $ref: 'name' }, cadence: { $ref: 'cadence' } } } }],
   }),
+  '## From plan to practice',
+  ':badge[6 teams]{tone="accent" dot=true} :badge[Week 01]{variant="outline"}',
+  ':::callout{title="Keep the first week small" tone="tip"}\nLearn from six conversations before adding another feature.\n:::',
+  '::::runbook{title="Launch checklist" id="launch"}\n:::step{title="Invite six teams" id="invite-teams"}\nSend the invitation and confirm a time.\n:::\n:::step{title="Capture one signal" id="capture"}\nNote the moment each team needed help.\n:::\n::::',
+  '::::tabs{title="Research notes" id="research-notes"}\n:::tab{label="Plan" id="plan"}\nOne week. Six teams. A short conversation after the first session.\n:::\n:::tab{label="Signals" id="signals"}\nWatch for hesitation, repeat questions and small workarounds.\n:::\n::::',
+  '::::grid{title="What to watch" cols=2}\n:::card{title="Learning"}\nOne useful surprise per conversation.\n:::\n:::card{title="Cost"}\nStay inside the pilot budget.\n:::\n::::',
+  fence('summary', { id: 'pilot-notes', title: 'Decisions & next steps', points: [{ text: 'Start with the self-serve invitation.', source: { title: 'Pilot brief', quote: 'Keep the first week small.', url: 'https://example.com/pilot' } }, { text: 'Review the first six conversations together.' }], actions: [{ text: 'Send the invitations', owner: 'Alex Chen' }] }),
+  fence('troubleshoot', { id: 'pilot-check', title: 'Invitation check', start: 'delivery', steps: { delivery: { title: 'Confirm delivery', text: 'Send a test invitation to yourself.', question: 'Did it arrive?', yes: '$fixed', no: '$escalate' } } }),
 ].join('\n\n');

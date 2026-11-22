@@ -1,16 +1,15 @@
-import { Children, createContext, createElement, forwardRef, useContext, useImperativeHandle, useLayoutEffect, useRef, type ElementType, type InputHTMLAttributes, type ReactElement, type ReactNode } from 'react';
+import { Children, createContext, createElement, forwardRef, useContext, type ElementType, type InputHTMLAttributes, type ReactElement, type ReactNode } from 'react';
 import { ComponentContext, PrismPart, defineTheme, useFormat, usePart, usePrism, useStoreValue, useStrings } from '@prism-ui/react';
 import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { usePick } from '@prism-ui/components/pick';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
-import type { MockupSlotProps } from '@prism-ui/components/mockup';
 
 type SlotProps = FrameSlotProps<unknown>;
 type EstimateRow = EstimateModel['rows'][number];
 type PickRow = ReturnType<typeof usePick>['rows'][number];
 const AccountActions = createContext<ReactNode>(null);
 const ItemIndex = createContext(-1);
-const supported = new Set(['estimate', 'pick', 'mockup', 'view', 'frame']);
+const supported = new Set(['estimate', 'pick', 'mockup', 'view', 'frame', 'runbook', 'troubleshoot', 'summary']);
 function currencyCode(value: unknown, fallback: string) {
   return typeof value === 'string' && /^[a-z]{3}$/i.test(value.trim()) ? value.trim().toUpperCase() : fallback;
 }
@@ -47,26 +46,6 @@ const EstimateLabel = forwardRef<HTMLDivElement, SlotProps>(function EstimateLab
 });
 const Switch = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { as?: ElementType }>(function Switch({ as, ...props }, ref) {
   return <input {...props} ref={ref} role="switch" />;
-});
-const FeedbackInput = forwardRef<HTMLTextAreaElement, MockupSlotProps<'textarea'>>(function FeedbackInput({ as, model, vm, item, children, ...props }, ref) {
-  const input = useRef<HTMLTextAreaElement>(null);
-  useImperativeHandle(ref, () => input.current!, []);
-  useLayoutEffect(() => {
-    const element = input.current;
-    if (!element) return;
-    const resize = () => {
-      element.style.height = 'auto';
-      const style = getComputedStyle(element);
-      element.style.height = `${Math.ceil(element.scrollHeight + parseFloat(style.borderTopWidth || '0') + parseFloat(style.borderBottomWidth || '0'))}px`;
-    };
-    resize();
-    if (typeof ResizeObserver === 'undefined') return;
-    let width = element.clientWidth;
-    const observer = new ResizeObserver(() => { if (element.clientWidth !== width) { width = element.clientWidth; resize(); } });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [props.value]);
-  return <textarea {...props} ref={input} rows={props.rows ?? 1}>{children}</textarea>;
 });
 const Total = forwardRef<HTMLDivElement, SlotProps & { estimate: EstimateModel }>(function Total({ as, model, frame, overflow, estimate, children, ...props }, ref) {
   const format = useFormat(), context = useContext(ComponentContext)!;
@@ -126,7 +105,10 @@ export const print = defineTheme({
     frame: { slots: { header: Header, undo: Tool, ask: Tool, overflowTrigger: Tool }, strings: { undoLabel: 'Undo', askLabel: 'Ask', moreLabel: 'Tools' } },
     estimate: { slots: { root: EstimateRoot, body: EstimateBody, item: EstimateItem, label: EstimateLabel, checkbox: Switch, total: Total }, strings: { title: 'Week-one estimate', sectionIndex: '01 / EST', submit: 'Send estimate ↗', sentLabel: 'Estimate sent ✓', totalLabel: 'Total', footnote: '{notes} · {currency}' } },
     pick: { slots: { criteria: Criteria, item: Option, list: Options }, strings: { question: 'What matters to you?', sectionIndex: '02 / PICK', optionIndex: '{n} / APPROACH', scoreSuffix: '/100', ratingSuffix: '/10', chooseTemplate: 'Choose {title} ↗' } },
-    mockup: { slots: { input: FeedbackInput }, strings: { sectionIndex: '03 / DESIGN' } },
+    runbook: { strings: { sectionIndex: '05 / GUIDE' } },
+    summary: { strings: { sectionIndex: '06 / NOTES' } },
+    troubleshoot: { strings: { sectionIndex: '07 / CHECK' } },
+    mockup: { strings: { sectionIndex: '03 / DESIGN' } },
     view: { strings: { sectionIndex: '04 / SETUP' } },
   },
   css: `
@@ -139,12 +121,10 @@ export const print = defineTheme({
     :scope .prism-table__root thead { border-top:4px solid var(--prism-text); }
     :scope .prism-table__root th { font:500 10px var(--prism-font-mono); text-transform:uppercase; }
     :scope .prism-codeblock__root { border:0; border-left:3px solid var(--prism-accent); border-radius:0; background:color-mix(in srgb,var(--prism-text) 4%,var(--prism-bg)); box-shadow:none; margin-block:22px; }
-    :scope .prism-codeblock__header, :scope .prism-codeblock__actions { font:10px var(--prism-font-mono); text-transform:uppercase; }
     :scope .prism-codeblock__header { min-height:28px; padding:8px 12px 0; background:transparent; }
+    :scope .prism-codeblock__header { font:10px var(--prism-font-mono); text-transform:uppercase; }
     :scope .prism-codeblock__body { padding:6px 0 2px; background:transparent; }
     :scope .prism-codeblock__line { padding-inline:12px; }
-    :scope .prism-codeblock__actions { min-height:28px; margin:0; padding:0 12px 4px; gap:12px; transition:opacity var(--prism-motion-fast) var(--prism-motion-ease); }
-    :scope .prism-codeblock__actions button, :scope .prism-codeblock__copy { min-height:24px; font:10px var(--prism-font-mono); text-transform:uppercase; }
     :scope .prism-codeblock__root [class*="prism-tok-"] { color:var(--prism-text); }
     :scope .prism-codeblock__root .prism-tok-comment { color:var(--prism-text-muted); }
     :scope .prism-codeblock__root :is(.prism-tok-keyword,.prism-tok-builtin) { color:var(--prism-accent-text); }
@@ -215,19 +195,9 @@ export const print = defineTheme({
     :scope .print-chosen { font:10px var(--prism-font-mono); color:var(--prism-accent-text); }
     :scope .print-option-notes { padding-left:14px; font-size:11px; }
     :scope .prism-mockup__viewport { border-top:4px solid var(--prism-text); border-radius:0; }
-    :scope .prism-mockup__empty { margin:0; padding:10px 0 14px; color:var(--prism-text-muted); font:10px/1.6 var(--prism-font-mono); }
-    :scope .prism-mockup__overall { font:10px/1.5 var(--prism-font-mono); text-transform:uppercase; }
-    :scope .prism-mockup__overall > .prism-mockup__input { min-height:40px; margin:4px 0 0; padding:8px 0; border:0; border-bottom:1px solid var(--prism-text); border-radius:0; box-shadow:none; background:none; resize:none; font:14px/1.5 var(--prism-font-body); text-transform:none; }
-    :scope .prism-mockup__overall > .prism-mockup__input:focus { outline:0; border-color:var(--prism-focus); }
-    :scope .prism-mockup__feedbackFooter { gap:8px; margin-top:10px; font:10px/1.5 var(--prism-font-mono); text-transform:uppercase; }
-    :scope .prism-mockup__count { font:inherit; }
-    :scope .prism-mockup__feedbackFooter > .prism-mockup__primary { padding:0; min-height:30px; border:0; border-radius:0; box-shadow:none; background:none; color:var(--prism-accent-text); font:700 11px/1.5 var(--prism-font-body); }
-    :scope .prism-mockup__feedbackFooter > .prism-mockup__primary:disabled { background:none; color:var(--prism-text); opacity:.5; }
     :scope .prism-mockup__member .prism-mockup__header { flex-direction:row; align-items:center; }
     :scope .prism-mockup__member .prism-mockup__header > .prism-mockup__title { flex:1; text-align:left; }
-    :scope .prism-mockup__tools .prism-mockup__button { font:10px var(--prism-font-mono); text-transform:uppercase; }
-    :scope .prism-mockup__marker[data-kind="pin"] { background:var(--prism-accent); color:var(--prism-on-accent); border-radius:0; }
-    :scope .prism-mockup__popover { border-radius:0; box-shadow:none; border-color:var(--prism-text); }
+    :scope .prism-mockup__header .prism-mockup__tools .prism-mockup__button { font:10px var(--prism-font-mono); text-transform:uppercase; }
     :scope .prism-view__body { padding:18px 0 0; }
     :scope .prism-view__root[data-variant="card"] { padding:0; border:0; border-radius:0; background:none; box-shadow:none; }
     :scope .prism-view__content:has(> .prism-view__field) { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 24px; align-items:start; }
@@ -261,7 +231,7 @@ export const print = defineTheme({
       :scope .print-score { grid-column:2; grid-row:2/span 2; align-self:start; font-size:60px; line-height:1; }
       :scope .print-pick-footer { flex-direction:column; gap:10px; }
     }
-    @container prism-estimate (max-width:420px) {
+    @container (max-width:420px) {
       :scope [data-print-estimate-grid] { grid-template-columns:minmax(0,1fr); gap:0; }
       :scope .prism-estimate__list { display:block; }
       :scope .prism-estimate__details { flex-basis:65%; }
@@ -271,13 +241,83 @@ export const print = defineTheme({
     @container (max-width:420px) {
       :scope .prism-view__content:has(> .prism-view__field) { grid-template-columns:minmax(0,1fr); }
     }
-    @media (hover:hover) {
-      :scope .prism-codeblock__root:not(:hover,:focus-within) :is(.prism-codeblock__actions,.prism-codeblock__copy) { opacity:0; }
-    }
     @media (hover:none) { :scope .print-option-select { opacity:1; } }
-    @media (prefers-reduced-motion:reduce) { :scope .prism-estimate__checkbox::after, :scope .prism-codeblock__actions, :scope .prism-view__controlWrap { transition:none; } }
+    @media (prefers-reduced-motion:reduce) { :scope .prism-estimate__checkbox::after, :scope .prism-view__controlWrap { transition:none; } }
     :scope[data-animate="false"] .prism-estimate__checkbox::after { transition:none; }
-    :scope[data-animate="false"] .prism-codeblock__actions, :scope [data-animate="false"] .prism-codeblock__actions { transition:none; }
     :scope[data-animate="false"] .prism-view__controlWrap, :scope [data-animate="false"] .prism-view__controlWrap { transition:none; }
+    :scope :is(.prism-runbook__root,.prism-summary__root,.prism-troubleshoot__root,.prism-tabs__root,.prism-callout__root,.prism-card__root,.prism-grid__root) { min-width:0; max-width:100%; box-sizing:border-box; margin-block:28px; }
+    :scope :is(.prism-runbook__body,.prism-summary__body,.prism-troubleshoot__body) { padding:16px 0 0; }
+    :scope .prism-runbook__step[data-numbered="true"] { position:relative; margin:0; padding:16px 0 16px 44px; border:0; border-bottom:1px solid var(--prism-border); border-radius:0; background:none; box-shadow:none; }
+    :scope .prism-runbook__step[data-numbered="true"] .prism-runbook__check { left:-44px; top:0; width:28px; height:28px; font:11px var(--prism-font-mono); }
+    :scope .prism-runbook__step[data-numbered="true"]::before { display:none; }
+    :scope .prism-runbook__stepHeader { flex-wrap:wrap; }
+    :scope .prism-runbook__stepTitle { font-size:14px; }
+    :scope .prism-runbook__stepBody .prism-paragraph__root { font-size:13px; }
+    :scope :is(.prism-runbook__progress,.prism-summary__actionsTitle,.prism-summary__progress,.prism-troubleshoot__position,.prism-grid__meta) { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text-muted); }
+    :scope .prism-runbook__actions { min-width:0; }
+    :scope .prism-runbook__stuck { font:10px var(--prism-font-mono); }
+    :scope .prism-tabs__list { gap:0; min-height:40px; overflow:visible; flex-wrap:wrap; }
+    :scope .prism-tabs__tab { min-width:0; white-space:normal; flex:1; padding:12px 14px; color:var(--prism-text-muted); font:11px/1.5 var(--prism-font-mono); }
+    :scope .prism-tabs__indicator { display:none; }
+    :scope .prism-tab__body { padding:18px 0; }
+    :scope .prism-badge__root { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text); }
+    :scope .prism-badge__root[data-variant="solid"] { background:var(--prism-accent); color:var(--prism-on-accent); }
+    :scope .prism-grid__body { gap:20px; }
+    :scope .prism-grid__body > .prism-card__root { margin:0; }
+    :scope .prism-grid__body > .prism-card__root::before { display:none; }
+    :scope :is(.prism-card__title,.prism-callout__title) { margin:0; }
+    :scope :is(.prism-card__body,.prism-callout__body) > .prism-paragraph__root { font-size:13px; line-height:1.65; }
+    :scope .prism-troubleshoot__step { padding:0; border:0; background:none; box-shadow:none; }
+    :scope .prism-troubleshoot__position { white-space:nowrap; flex:none; }
+    :scope .prism-troubleshoot__stepTitle { display:flex; align-items:center; gap:12px; }
+    :scope .prism-troubleshoot__text { font-size:13px; line-height:1.65; }
+    :scope :is(.prism-summary__send,.prism-troubleshoot__primary) { background:var(--prism-accent); color:var(--prism-on-accent); border:0; font:11px/1.5 var(--prism-font-mono); text-transform:uppercase; padding:10px 16px; }
+    :scope .prism-summary__points { padding:0; }
+    :scope .prism-summary__point { padding-block:12px; border-bottom:1px solid var(--prism-border); }
+    :scope .prism-summary__avatar { color:var(--prism-text); background:var(--prism-surface-raised); }
+    @container (max-width:420px) { :scope .prism-grid__body { grid-template-columns:1fr; } :scope .prism-runbook__actions { flex-basis:100%; justify-content:flex-start; margin:0; } }
+
+    :scope :is(.prism-runbook__root,.prism-summary__root,.prism-troubleshoot__root) { padding:0; border:0; background:none; box-shadow:none; border-radius:0; }
+    :scope :is(.prism-card__root,.prism-callout__root) { padding:18px 0; border:0; border-top:4px solid var(--prism-text); border-bottom:1px solid var(--prism-text); background:none; border-radius:0; box-shadow:none; }
+    :scope .prism-callout__root { border-top-width:1px; border-left:4px solid var(--prism-accent); padding:16px 20px; }
+    :scope .prism-callout__icon { color:var(--prism-accent-text); }
+    :scope :is(.prism-card__title,.prism-callout__title,.prism-tabs__title,.prism-grid__title) { font:800 19px/1.25 var(--prism-font-display); letter-spacing:-.025em; }
+    :scope .prism-tabs__list { border-block:1px solid var(--prism-text); margin-top:12px; }
+    :scope .prism-tabs__tab { border:0; border-right:1px solid var(--prism-text); border-radius:0; }
+    :scope .prism-tabs__tab[aria-selected="true"] { background:var(--prism-text); color:var(--prism-bg); }
+    :scope .prism-runbook__check { border:1px solid var(--prism-accent); border-radius:0; background:none; color:var(--prism-accent-text); }
+    :scope .prism-runbook__check[data-state="done"] { background:var(--prism-accent); color:var(--prism-on-accent); border-color:var(--prism-accent); }
+    :scope .prism-runbook__fill { background:var(--prism-accent); }
+    :scope .prism-badge__root { border:1px solid var(--prism-text); border-radius:0; background:none; box-shadow:none; padding:3px 7px; letter-spacing:.06em; }
+    :scope .prism-summary__point { border-bottom-color:var(--prism-text); }
+    :scope .prism-summary__citation { color:var(--prism-accent-text); border-radius:0; background:none; }
+    :scope .prism-summary__quote { background:none; border-left:3px solid var(--prism-accent); }
+    :scope .prism-troubleshoot__position { background:none; color:var(--prism-accent-text); }
+    :scope :is(.prism-summary__send,.prism-troubleshoot__primary) { border-radius:0; box-shadow:none; }
+
+    :scope .prism-codeblock__root :is(.prism-codeblock__copy,.prism-codeblock__wrap,.prism-codeblock__collapse,.prism-codeblock__ask) { min-height:26px; padding:3px 5px; font:10px/1.4 var(--prism-font-mono); text-transform:uppercase; }
+    :scope .prism-codeblock__actions { gap:6px; }
+    :scope [data-prism="runbook"][data-part="header"] { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; }
+    :scope [data-prism="runbook"][data-part="header"] > [data-part="title"] { grid-area:1/1; }
+    :scope [data-prism="runbook"][data-part="header"] > [class$="-index"] { grid-area:1/2; }
+    :scope [data-prism="runbook"][data-part="header"] > [data-part="toolbar"] { grid-area:2/1/3/-1; position:static; opacity:1; pointer-events:auto; justify-content:flex-start; width:100%; margin-top:8px; }
+    :scope .prism-runbook__progress { flex:1; min-width:0; }
+    :scope .prism-runbook__track { max-width:220px; }
+    :scope .prism-runbook__stepTitle { padding-inline-end:0; }
+    :scope .prism-runbook__actions { position:absolute; inset-block-start:auto; inset-block-end:calc(100% + 4px); right:0; flex-basis:auto; justify-content:flex-end; margin:0; }
+    :scope :is(.prism-summary__header,.prism-troubleshoot__header) > [data-part="toolbar"] { position:absolute; bottom:calc(100% + 6px); right:0; }
+    :scope .prism-summary__root { overflow:visible; }
+    :scope .prism-summary__point { padding-block:0; }
+    :scope .prism-summary__pointRow { min-height:0; padding-block:12px; }
+    :scope .prism-summary__footer { padding:16px 0 0; margin-top:16px; border-top:1px solid var(--prism-border); background:none; gap:12px; flex-wrap:wrap; }
+    :scope .prism-tabs__body { padding:0; }
+    @container (max-width:420px) { :scope .prism-summary__footer { align-items:stretch; flex-direction:column; } :scope .prism-summary__send { width:100%; justify-content:center; } }
+
+    :scope .prism-summary__points { counter-reset:print-point; }
+    :scope .prism-summary__point { counter-increment:print-point; padding-left:28px; }
+    :scope .prism-summary__point::before { content:counter(print-point,decimal-leading-zero); top:16px; left:0; width:auto; height:auto; background:none; color:var(--prism-accent-text); font:10px var(--prism-font-mono); }
+
+    :scope .prism-runbook__check[data-state="current"] { box-shadow:none; background:var(--prism-surface); }
+
   `,
 });
