@@ -37,7 +37,7 @@ export function createScriptedAgent({ pace = realistic }: { pace?: Pace } = {}):
           active = owner;
           reply = owner.scenario.onAction(input.action, { scope, ownerScope: owner.scope, history: input.history });
           owners.set(scope, { scenario: owner.scenario, scope });
-        } else reply = { text: `I’ve noted ${input.action.message || 'your interaction with ' + input.action.component}. What would you like to change next?` };
+        } else reply = { text: 'I’ve noted that update. What would you like to change next?' };
       } else {
         reply = active?.scenario.onMessage?.(input.text, { scope, ownerScope: active.scope, history: input.history });
         if (reply && active) owners.set(scope, { scenario: active.scenario, scope });

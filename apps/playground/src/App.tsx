@@ -1,104 +1,184 @@
-import { Component, useCallback, useEffect, useRef, useState, type ErrorInfo, type ReactNode } from 'react';
-import { Prism, ThemeScope, type Action } from '@prism-ui/react';
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
+import { ThemeScope, type Action } from '@prism-ui/react';
 import { makeStore } from './store';
-import { demos, groups, kitchen, replyFor, demoSource, fallback, type Demo } from './catalogue';
-import { createReplay } from './replay';
-import { playgroundPlugins } from './plugins';
+import { createAgent, loadAgentConfig, saveAgentConfig, type AgentConfig } from './agent/config';
+import { createScriptedAgent } from './agent/scripted';
+import { realistic, type Pace } from './agent/pace';
+import { scenarios } from './agent/scenarios';
+import type { Agent, AgentInput, Turn } from './agent/types';
+import { Icon, type IconName } from './ui/Icon';
+import { AssistantTurn } from './ui/Turn';
+import { Palette } from './ui/Palette';
+import { Settings } from './ui/Settings';
 
-type Message = { id: string; role: 'user' | 'assistant'; text: string; stream?: AsyncIterable<string>; pending?: boolean; action?: Action };
-type Reply = { id: string; text: string };
-class MessageBoundary extends Component<{ children: ReactNode }, { error: boolean }> {
-  state = { error: false };
-  static getDerivedStateFromError() { return { error: true }; }
-  componentDidCatch(error: Error, info: ErrorInfo) { console.error('Prism demo render failed', error, info); }
-  render() { return this.state.error ? <p role="alert">This example couldn’t render. Start a new chat to try again.</p> : this.props.children; }
+type Request = { text: string; demoId?: string } | { action: Action };
+type Message = { id: string; role: 'user' | 'assistant'; text: string; streaming?: boolean; error?: string; input?: AgentInput; gallery?: boolean };
+type Conversation = { id: string; title: string; scenario?: string; originScenario?: string; messages: Message[]; store: ReturnType<typeof makeStore>; scripted: Agent; agent?: Agent; revision: number; queue: Request[]; controller?: AbortController; draft: string; scroll: number; following: boolean };
+type AppProps = { pace?: Pace; agentFactory?: (config: AgentConfig) => Agent };
+const descriptions = ['Find the right balance of power and portability.', 'Four days, with room to get a little lost.', 'Get from a red build to a safe recovery.', 'Explore two directions, then make it yours.', 'A thoughtful day together, with a clear budget.', 'Turn interview notes into a useful next step.'];
+const scenarioIcons: IconName[] = ['laptop', 'trip', 'deploy', 'design', 'budget', 'research'];
+const scenarioTitles = ['Pick a laptop', 'Four days in Kyoto', 'Debug a deploy', 'Mock up a landing page', 'Plan a team offsite', 'Make sense of research'];
+let sequence = 0;
+const nextId = () => 'chat-' + Date.now().toString(36) + '-' + ++sequence;
+function useMedia(query: string) {
+  const [matches, setMatches] = useState(() => typeof matchMedia === 'function' && matchMedia(query).matches);
+  useEffect(() => { if (typeof matchMedia !== 'function') return; const media = matchMedia(query), update = () => setMatches(media.matches); update(); media.addEventListener('change', update); return () => media.removeEventListener('change', update); }, [query]);
+  return matches;
 }
-export function App({ pace = { chars: 8, delay: 20 } }: { pace?: { chars: number; delay: number } }) {
-  const [store, setStore] = useState(() => makeStore());
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [draft, setDraft] = useState('');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [menu, setMenu] = useState(false);
-  const [active, setActive] = useState<string>();
-  const sequence = useRef(0), session = useRef(Date.now().toString(36));
-  const running = useRef<ReturnType<typeof createReplay> | undefined>(undefined);
-  const queued = useRef<Reply[]>([]);
-  const thread = useRef<HTMLDivElement>(null), composer = useRef<HTMLTextAreaElement>(null), menuButton = useRef<HTMLButtonElement>(null);
-  const follow = useRef(true);
-  const nextId = () => 'm' + session.current + 'x' + ++sequence.current;
-  const stop = useCallback(() => { queued.current = []; running.current?.stop(); running.current = undefined; setActive(undefined); }, []);
-  useEffect(() => () => { queued.current = []; running.current?.stop(); running.current = undefined; }, []);
+export function App({ pace = realistic, agentFactory }: AppProps) {
+  const [, redraw] = useReducer(value => value + 1, 0);
+  const config = useRef(loadAgentConfig()), revision = useRef(0);
+  const conversations = useRef(new Map<string, Conversation>());
+  const makeConversation = (scenario?: string): Conversation => {
+    const id = nextId();
+    const conversation: Conversation = { id, scenario, title: scenarios.find(item => item.id === scenario)?.title ?? 'New chat', messages: [], store: makeStore(true, id), scripted: createScriptedAgent({ pace }), revision: -1, queue: [], draft: '', scroll: 0, following: true };
+    conversations.current.set(id, conversation); return conversation;
+  };
+  const [currentId, setCurrentId] = useState(() => makeConversation().id);
+  const current = conversations.current.get(currentId)!;
+  const currentRef = useRef(current); currentRef.current = current;
+  const [sidebar, setSidebar] = useState(true), [drawer, setDrawer] = useState(false);
+  const [overlay, setOverlay] = useState<'palette' | 'settings'>();
+  const [themeChoice, setThemeChoice] = useState<'light' | 'dark' | 'system'>(() => { try { const saved = localStorage.getItem('prism-theme'); return saved === 'light' || saved === 'dark' ? saved : 'system'; } catch { return 'system'; } });
+  const darkSystem = useMedia('(prefers-color-scheme: dark)'), mobile = useMedia('(max-width: 760px)'), reduced = useMedia('(prefers-reduced-motion: reduce)');
+  const theme = themeChoice === 'system' ? darkSystem ? 'dark' : 'light' : themeChoice;
+  const scroll = useRef<HTMLDivElement>(null), textarea = useRef<HTMLTextAreaElement>(null), sidebarRef = useRef<HTMLElement>(null), sidebarToggle = useRef<HTMLButtonElement>(null);
+  const frame = useRef<number | undefined>(undefined), mounted = useRef(true);
+  const notify = useCallback(() => { if (mounted.current) redraw(); }, []);
+  const closeOverlay = useCallback(() => setOverlay(undefined), []);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; for (const c of conversations.current.values()) { c.queue = []; c.controller?.abort(); } if (frame.current !== undefined) cancelAnimationFrame(frame.current); }; }, []);
   useEffect(() => {
-    const element = thread.current;
-    if (!element) return;
-    const observer = new MutationObserver(() => { if (follow.current) element.scrollTop = element.scrollHeight; });
-    observer.observe(element, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
+    const listener = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setOverlay(value => value === 'palette' ? undefined : 'palette'); }
+    };
+    document.addEventListener('keydown', listener); return () => document.removeEventListener('keydown', listener);
   }, []);
   useEffect(() => {
-    if (!menu) return;
-    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') { setMenu(false); menuButton.current?.focus(); } };
-    window.addEventListener('keydown', close);
-    return () => window.removeEventListener('keydown', close);
-  }, [menu]);
-  function startReply({ id, text }: Reply) {
-    const replay = createReplay(text, () => pace, () => {
-      setMessages(current => current.map(message => message.id === id ? { ...message, pending: false } : message));
-      if (running.current === replay) {
-        running.current = undefined;
-        const next = queued.current.shift();
-        if (next) startReply(next); else setActive(undefined);
+    if (!drawer || !mobile) return;
+    const previous = document.activeElement as HTMLElement | null, root = sidebarRef.current!;
+    root.querySelector<HTMLButtonElement>('button')?.focus();
+    const listener = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); setDrawer(false); }
+      if (event.key === 'Tab') {
+        const items = Array.from(root.querySelectorAll<HTMLButtonElement>('button')), first = items[0], last = items.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }
-    });
-    running.current = replay; follow.current = true;
-    setMessages(current => [...current, { id, role: 'assistant', text, stream: replay.stream, pending: true }]);
-    setActive(id); setMenu(false);
+    };
+    root.addEventListener('keydown', listener); return () => { root.removeEventListener('keydown', listener); (previous?.isConnected ? previous : sidebarToggle.current)?.focus(); };
+  }, [drawer, mobile]);
+  useLayoutEffect(() => {
+    const element = textarea.current; if (!element) return;
+    element.style.height = 'auto'; element.style.height = Math.min(element.scrollHeight || 24, 192) + 'px';
+  }, [current.draft, currentId, current.messages.length]);
+  useLayoutEffect(() => {
+    const element = scroll.current; if (!element) return;
+    element.scrollTop = current.following ? element.scrollHeight : current.scroll;
+  }, [currentId]);
+  useLayoutEffect(() => {
+    if (!current.following || !scroll.current) return;
+    if (frame.current !== undefined) cancelAnimationFrame(frame.current);
+    frame.current = requestAnimationFrame(() => { const element = scroll.current; if (element && currentRef.current.following) element.scrollTop = element.scrollHeight; });
+  });
+  function stop(conversation = current) {
+    conversation.queue = []; conversation.controller?.abort();
+    for (const message of conversation.messages) message.streaming = false;
+    notify();
   }
-  function respond(prompt: string, item?: Demo, action?: Action, reply?: string) {
-    if (!action) stop();
-    const id = nextId(), text = reply ?? (item ? demoSource(item, id) : fallback);
-    const user: Message = { id: nextId(), role: 'user', text: prompt, action };
-    setMessages(current => [...current, user]);
-    if (running.current) queued.current.push({ id, text }); else startReply({ id, text });
+  async function run(conversation: Conversation, request: Request, replacement?: Message) {
+    if (conversation.controller) { conversation.queue.push(request); return; }
+    const history: Turn[] = conversation.messages.filter(message => message !== replacement && !message.error).map(({ role, text }) => ({ role, text }));
+    const input: AgentInput = replacement?.input ?? ('action' in request ? { kind: 'action', action: request.action, history } : { kind: 'message', text: request.demoId ? 'gallery:' + request.demoId : request.text, history });
+    const gallery = replacement?.gallery ?? ('demoId' in request && !!request.demoId);
+    if (!replacement && 'text' in request) {
+      conversation.messages.push({ id: nextId(), role: 'user', text: request.text });
+      if (conversation.title === 'New chat') conversation.title = request.text.slice(0, 40);
+    }
+    const message: Message = replacement ?? { id: nextId(), role: 'assistant', text: '' };
+    if (replacement) message.id = nextId();
+    if (!replacement) conversation.messages.push(message);
+    message.text = ''; message.error = undefined; message.streaming = true; message.input = input; message.gallery = gallery;
+    const controller = new AbortController(); conversation.controller = controller;
+    const options = config.current;
+    if (!conversation.agent || conversation.revision !== revision.current) {
+      conversation.agent = agentFactory ? agentFactory(options) : options.provider !== 'scripted' && options.apiKey?.trim() ? createAgent(options) : conversation.scripted;
+      conversation.revision = revision.current;
+    }
+    const agent = gallery ? conversation.scripted : conversation.agent;
+    notify();
+    try {
+      for await (const event of agent.respond(input, controller.signal)) {
+        if (controller.signal.aborted) break;
+        if (event.type === 'text') message.text += event.delta;
+        else if (event.type === 'patch') conversation.store.apply(event.patch);
+        else if (event.type === 'title') conversation.title = event.title;
+        notify();
+      }
+    } catch { if (!controller.signal.aborted) message.error = 'The response was interrupted. Check your connection or model settings, then try again.'; }
+    finally {
+      message.streaming = false;
+      if (conversation.controller === controller) conversation.controller = undefined;
+      notify();
+      const queued = conversation.queue.shift(); if (queued && mounted.current) void run(conversation, queued);
+    }
+  }
+  function send(text: string, demoId?: string) {
+    if (!text.trim()) return;
+    if (!current.messages.length && !demoId) current.originScenario = scenarios.find(item => item.prompt === text)?.id;
+    current.draft = ''; current.following = true;
+    void run(current, { text: text.trim(), demoId }); notify();
   }
   function onAction(action: Action) {
     if (action.type === 'copy') return;
-    let reply = `Got it — I’ve noted “${action.message || 'your choice'}”. Your changes stay in this conversation. You can keep exploring above, or ask me for the next part of the plan.`;
-    if (action.component === 'estimate' && action.type === 'use') {
-      const path = action.id + '.items.seats.qty', current = store.get(path);
-      if (typeof current === 'number') {
-        const seats = Math.min(25, current + 1);
-        store.apply({ set: { [path]: seats } });
-        reply = 'Got it. For the next planning pass, I’ve updated this estimate to **' + seats + ' seats** with an agent state patch. The estimate above has recalculated automatically. You can still adjust it before moving forward.';
-      }
-    } else if (action.component === 'ask') reply = 'Thanks — I have your kickoff details. I’d start with a **30-minute session**: ten minutes on the goal, ten on the first workflow, and ten for questions. Keep the pilot small and choose one thing to learn this week.';
-    respond(action.message || 'Use this choice', undefined, action, reply);
+    if (['use', 'send', 'submit', 'feedback', 'choose', 'troubleshoot'].includes(action.type)) current.store.set(action.id + '.sent', true, { history: false });
+    void run(current, { action });
   }
-  function newChat() { stop(); setMessages([]); setDraft(''); setStore(makeStore(true)); setMenu(false); follow.current = true; composer.current?.focus(); }
-  function send() { const text = draft.trim(); if (text) { respond(text, replyFor(text)); setDraft(''); } }
-  function choose(item: Demo) { respond(item.prompt, item); }
-  return <ThemeScope theme={theme} className="chat-app">
-    {menu && <button className="sidebar-backdrop" aria-label="Close component menu" onClick={() => setMenu(false)} />}
-    <aside className={'sidebar' + (menu ? ' is-open' : '')} aria-label="Component examples">
-      <div className="sidebar-brand"><span className="prism-mark" aria-hidden="true">◈</span><strong>Prism</strong><span>demo</span><button className="mobile-close" aria-label="Close sidebar" onClick={() => setMenu(false)}>×</button></div>
-      <button className="new-chat" onClick={newChat}><span aria-hidden="true">+</span> New chat</button>
-      <nav aria-label="Demo components">
-        <button className="kitchen-item" onClick={() => choose(kitchen)}><span aria-hidden="true">✳</span> Kitchen sink</button>
-        {groups.map(group => <section key={group} aria-label={group}><h2>{group}</h2>{demos.filter(item => item.group === group).map(item => <button key={item.id} data-demo={item.id} onClick={() => choose(item)}>{item.label}</button>)}</section>)}
+  function switchTo(conversation: Conversation) {
+    setCurrentId(conversation.id); setDrawer(false);
+  }
+  function newChat() { switchTo(makeConversation()); }
+  function openScenario(id: string) {
+    const existing = [...conversations.current.values()].find(c => c.scenario === id || c.originScenario === id);
+    if (existing) { switchTo(existing); return; }
+    const conversation = makeConversation(id); switchTo(conversation);
+    void run(conversation, { text: scenarios.find(item => item.id === id)!.prompt });
+  }
+  function regenerate(message: Message) {
+    if (current.controller || !message.input) return;
+    void run(current, { text: '' }, message);
+  }
+  const busy = !!current.controller, empty = !current.messages.length;
+  const lastAssistant = [...current.messages].reverse().find(message => message.role === 'assistant');
+  const ownChats = [...conversations.current.values()].filter(c => !c.scenario && c.messages.length).reverse();
+  const live = config.current.provider !== 'scripted' && !!config.current.apiKey?.trim();
+  const providerName = config.current.provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
+  const composer = <div className="composer-area"><form className="composer" onSubmit={event => { event.preventDefault(); if (!busy) send(current.draft); }}>
+    <textarea ref={textarea} rows={1} aria-label="Message Prism" placeholder="Message Prism" value={current.draft} onChange={event => { current.draft = event.target.value; notify(); }} onKeyDown={event => {
+      if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) { event.preventDefault(); if (!busy) send(current.draft); }
+    }} />
+    <button type={busy ? 'button' : 'submit'} className="send-btn" title={busy ? 'Stop response' : 'Send message'} aria-label={busy ? 'Stop response' : 'Send message'} disabled={!busy && !current.draft.trim()} onClick={busy ? () => stop() : undefined}><Icon name={busy ? 'stop' : 'send'} /></button>
+  </form><button className="model-status" onClick={() => setOverlay('settings')}>{live ? `${providerName} · ${config.current.model || (config.current.provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4o-mini')}` : 'Scripted demo · Connect a model'}</button></div>;
+  return <ThemeScope theme={theme} animate={!reduced} className="chat-app">
+    {drawer && mobile && <div className="sidebar-backdrop" onClick={() => setDrawer(false)} aria-hidden="true" />}
+    <aside ref={sidebarRef} inert={overlay ? true : undefined} className={'sidebar' + (sidebar ? '' : ' collapsed') + (drawer ? ' drawer-open' : '')} aria-label="Conversations" role={drawer && mobile ? 'dialog' : undefined} aria-modal={drawer && mobile ? true : undefined}>
+      <div className="sidebar-top"><button className="new-chat" onClick={newChat}><Icon name="plus" />New chat</button><button className="icon-btn" aria-label="Close sidebar" title="Close sidebar" onClick={() => { if (mobile) setDrawer(false); else setSidebar(false); }}><Icon name="sidebar" /></button></div>
+      <nav className="chat-list" aria-label="Chat history">{ownChats.length > 0 && <div className="list-heading">Today</div>}{ownChats.map(c => <button key={c.id} className={'history-item' + (current.id === c.id ? ' selected' : '')} aria-current={current.id === c.id ? 'page' : undefined} onClick={() => switchTo(c)}>{c.title}</button>)}
+        <div className="list-heading earlier">Earlier</div>{scenarios.map(item => <button key={item.id} className={'history-item' + (current.scenario === item.id ? ' selected' : '')} onClick={() => openScenario(item.id)}>{item.title}</button>)}
       </nav>
-      <div className="sidebar-foot"><span>A little more than text.</span><a href="https://github.com/Knihalani/prism-ui" target="_blank" rel="noreferrer">About Prism ↗</a></div>
+      <div className="sidebar-bottom"><button className="sidebar-link" onClick={() => setOverlay('palette')}><Icon name="grid" /><span>Components</span><kbd>Ctrl K</kbd></button><div className="sidebar-tools"><button className="sidebar-link" aria-label={'Theme: ' + themeChoice} title={'Theme: ' + themeChoice} onClick={() => { const next = themeChoice === 'system' ? 'light' : themeChoice === 'light' ? 'dark' : 'system'; setThemeChoice(next); try { localStorage.setItem('prism-theme', next); } catch {} }}><Icon name={themeChoice === 'system' ? 'monitor' : themeChoice === 'light' ? 'sun' : 'moon'} /><span>{themeChoice[0].toUpperCase() + themeChoice.slice(1)}</span></button><button className="icon-btn" aria-label="Settings" title="Settings" onClick={() => setOverlay('settings')}><Icon name="settings" /></button></div></div>
     </aside>
-    <main className="chat-main">
-      <header className="chat-header"><button ref={menuButton} className="menu-toggle" aria-label="Open component menu" aria-expanded={menu} onClick={() => setMenu(!menu)}>☰</button><span>Prism <span className="header-muted">/ chat</span></span><button className="theme-toggle" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}>{theme === 'light' ? '☾' : '☀'}<span>{theme === 'light' ? 'Dark' : 'Light'}</span></button></header>
-      <div className="thread-scroll" ref={thread} onScroll={event => { const el = event.currentTarget; follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; }}>
-        <div className="thread">
-          {!messages.length && <div className="welcome"><span className="welcome-mark" aria-hidden="true">◈</span><h1>What would you like to explore?</h1><p>A conversation with working UI built in.<br />Choose an example, or ask for something below.</p><div className="suggestions">{['estimate', 'runbook', 'mockup-html', 'artifact-react'].map(id => { const item = demos.find(item => item.id === id)!; return <button key={id} onClick={() => choose(item)}>{item.prompt}<span aria-hidden="true">↗</span></button>; })}</div></div>}
-          {messages.map(message => <article className={'message ' + message.role} key={message.id} data-message={message.role} aria-label={message.role === 'user' ? 'Your message' : 'Prism reply'}>
-            {message.role === 'user' ? <><div className="user-bubble">{message.text}</div>{message.action && <details className="payload"><summary>payload</summary><pre>{JSON.stringify(message.action, null, 2)}</pre></details>}</> : <><div className="assistant-label"><span aria-hidden="true">◈</span> Prism</div><MessageBoundary><Prism stream={message.stream} source={message.stream ? undefined : message.text} store={store} theme={theme} plugins={playgroundPlugins} onAction={onAction} /></MessageBoundary>{message.pending && active === message.id && <span className="typing" role="status">Writing<span aria-hidden="true">…</span></span>}</>}
-          </article>)}
+    <main className="chat-main" data-conversation={current.id} inert={overlay || (drawer && mobile) ? true : undefined}>
+      <header className="chat-header"><button ref={sidebarToggle} className={'icon-btn sidebar-toggle' + (sidebar ? ' desktop-hidden' : '')} title="Open sidebar" aria-label="Open sidebar" onClick={() => { if (mobile) setDrawer(true); else setSidebar(true); }}><Icon name="sidebar" /></button><span>{empty ? 'Prism' : current.title}</span></header>
+      {empty ? <div className="landing"><div className="landing-inner"><h1>What are we working on?</h1>{composer}<div className="suggestions" aria-label="Suggestions">{scenarios.map((scenario, index) => <button key={scenario.id} className="suggestion" onClick={() => send(scenario.prompt)}><Icon name={scenarioIcons[index]} /><strong>{scenarioTitles[index]}</strong><span>{descriptions[index]}</span></button>)}</div></div></div> : <>
+        <div ref={scroll} className="thread-scroll" onScroll={() => { const element = scroll.current!; current.scroll = element.scrollTop; const following = element.scrollHeight - element.scrollTop - element.clientHeight < 72; if (following !== current.following) { current.following = following; notify(); } }}>
+          <div className="thread" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions text" aria-busy={busy}>
+            {current.messages.map(message => message.role === 'user' ? <div key={message.id} className="user-turn" data-message="user"><div>{message.text}</div></div> : <AssistantTurn key={message.id} text={message.text} streaming={!!message.streaming} error={message.error} store={current.store} theme={theme} animate={!reduced} onAction={onAction} last={message === lastAssistant} regenerate={message === lastAssistant && !busy ? () => regenerate(message) : undefined} />)}
+          </div>
         </div>
-      </div>
-      <div className="composer-area"><form className="composer" onSubmit={event => { event.preventDefault(); send(); }}><textarea ref={composer} aria-label="Message Prism" placeholder="Ask for a component, or describe an idea…" rows={2} value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); send(); } }} />{active ? <button type="button" className="send-button" aria-label="Stop response" onClick={stop}>■</button> : <button type="submit" className="send-button" aria-label="Send message" disabled={!draft.trim()}>↑</button>}</form><p className="composer-note">A local demo. Scripted replies, real components. <span>Enter to send · Shift + Enter for a new line</span></p></div>
+        <footer className="composer-footer">{!current.following && <button className="jump-latest icon-btn" title="Jump to latest" aria-label="Jump to latest" onClick={() => { current.following = true; const element = scroll.current!; element.scrollTo?.({ top: element.scrollHeight, behavior: reduced ? 'instant' : 'smooth' }); notify(); }}><Icon name="down" /></button>}{composer}</footer>
+      </>}
     </main>
+    {overlay === 'palette' && <Palette onClose={closeOverlay} onChoose={(prompt, demoId) => { closeOverlay(); send(prompt, demoId); }} />}
+    {overlay === 'settings' && <Settings config={config.current} onClose={closeOverlay} onSave={value => { try { saveAgentConfig(value); } catch { return; } config.current = value; revision.current++; closeOverlay(); notify(); }} />}
   </ThemeScope>;
 }
