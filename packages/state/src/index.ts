@@ -3,6 +3,8 @@ export type { Scope, Formula } from './formula';
 export type Adapter = { load(namespace: string): object | Promise<object>; save(namespace: string, data: object): void };
 export type Patch = { set?: Record<string, unknown>; merge?: Record<string, unknown>; delete?: string[] };
 export type WriteOptions = { history?: boolean };
+type HistoryEntry = { state: any; paths: string[] };
+const within = (path: string, scope: string) => path === scope || path.startsWith(scope + '.');
 const safe = (key: string) => !['__proto__', 'prototype', 'constructor'].includes(key);
 const plain = (v: any) => v && Object.getPrototypeOf(v) === Object.prototype;
 function clean(v: any): any {
@@ -38,7 +40,7 @@ function changedPaths(previous: any, next: any, paths: Set<string>, path = '') {
 export function createStore({ persist, namespace = '', initial = {} }: { persist?: Adapter; namespace?: string; initial?: Record<string, unknown> } = {}) {
   let state = clean(initial), depth = 0, before = state, loading = false, recordHistory = false, historyDisabled = 0;
   const pending = new Set<string>();
-  const past: any[] = [], future: any[] = [], changed = new Set<string>();
+  const past: HistoryEntry[] = [], future: HistoryEntry[] = [], changed = new Set<string>();
   const listeners = new Map<string, Set<() => void>>();
   function flush(history = recordHistory) {
     if (!changed.size) return;
@@ -63,10 +65,10 @@ export function createStore({ persist, namespace = '', initial = {} }: { persist
     update(path: string, fn: (value: any) => unknown, options: WriteOptions = {}) { const old = store.get(path), next = fn(old); if (!Object.is(old, next)) store.set(path, next, options); },
     subscribe(path: string, fn: () => void) { let set = listeners.get(path); if (!set) listeners.set(path, set = new Set()); set.add(fn); return () => { set.delete(fn); }; },
     batch(fn: () => void, options: WriteOptions = {}) { depth++; if (options.history === false) historyDisabled++; try { fn(); } finally { if (options.history === false) historyDisabled--; if (!--depth) flush(); } },
-    undo() { travel(past, future); },
-    redo() { travel(future, past); },
-    get canUndo() { return !!past.length; },
-    get canRedo() { return !!future.length; },
+    undo(scope?: string) { travel(past, future, scope); },
+    redo(scope?: string) { travel(future, past, scope); },
+    canUndo(scope?: string) { return past.some(step => scope === undefined || step.paths.some(path => within(path, scope))); },
+    canRedo(scope?: string) { return future.some(step => scope === undefined || step.paths.some(path => within(path, scope))); },
     apply(patch: Patch, options: WriteOptions = {}) { if (!plain(patch)) return; store.batch(() => {
       for (const [p, v] of Object.entries(plain(patch.set) ? patch.set! : {})) store.set(p, v);
       for (const [p, v] of Object.entries(plain(patch.merge) ? patch.merge! : {})) change(p, merge(store.get(p), clean(v)));
@@ -76,9 +78,29 @@ export function createStore({ persist, namespace = '', initial = {} }: { persist
     get hydrated() { return !loading; },
     ready: Promise.resolve(),
   };
-  function travel(from: any[], to: any[]) {
+  function restore(target: any, source: any, paths: string[]) {
+    for (const path of paths) {
+      const keys = path.split('.'), parent = read(source, keys.slice(0, -1));
+      target = write(target, keys, read(source, keys), parent == null || !Object.hasOwn(parent, keys.at(-1)!));
+    }
+    return target;
+  }
+  function travel(from: HistoryEntry[], to: HistoryEntry[], scope?: string) {
     if (depth || !from.length) return;
-    const step = from.pop(), paths = new Set<string>(step.paths);
+    if (scope !== undefined) {
+      let index = from.length - 1;
+      while (index >= 0 && !from[index].paths.some(path => within(path, scope))) index--;
+      if (index < 0) return;
+      const step = from[index], paths = step.paths.filter(path => within(path, scope));
+      const next = restore(state, step.state, paths);
+      for (let i = index + 1; i < from.length; i++) from[i].state = restore(from[i].state, next, paths);
+      step.paths = step.paths.filter(path => !within(path, scope));
+      if (!step.paths.length) from.splice(index, 1);
+      to.push({ state, paths }); state = next;
+      for (const path of paths) changed.add(path);
+      flush(false); return;
+    }
+    const step = from.pop()!, paths = new Set<string>(step.paths);
     changedPaths(state, step.state, paths);
     to.push({ state, paths: [...paths] }); state = step.state;
     for (const p of paths) changed.add(p);

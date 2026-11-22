@@ -62,7 +62,7 @@ test('report path normalization and sent state are undone together', () => {
   expect(store.get('wifi')).toEqual({ path: [{ step: 'a', answer: 'no' }], sent: true });
   fireEvent.click(view.getByRole('button', { name: 'Undo' }));
   expect(store.get('wifi')).toEqual({ path, sent: false });
-  expect(store.canUndo).toBe(false);
+  expect(store.canUndo()).toBe(false);
 });
 
 test('changed branch targets truncate stale answers before advancing and reporting', () => {

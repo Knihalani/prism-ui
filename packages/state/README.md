@@ -3,6 +3,12 @@
 `createStore()` provides dotted-path reads/writes, subscriptions, batching, persistence,
 and snapshot-based undo/redo.
 
+`undo(scope?)`, `redo(scope?)`, `canUndo(scope?)`, and `canRedo(scope?)` accept
+an optional dotted namespace. The capability checks are methods. Scoped travel
+reverts only paths equal to or below that namespace, leaving unrelated edits
+and history intact. A mixed-scope batch can be undone separately for each scope.
+Without a scope, travel restores whole snapshots as before.
+
 With persistence, `store.hydrated` reports whether the initial load has finished.
 Await `store.ready` before namespace migrations that must preserve saved fields;
 it resolves after successful or failed asynchronous loads.

@@ -13,7 +13,7 @@ test('malformed patch operations are ignored without character deletes or writes
     expect(() => store.apply(patch as unknown as Patch)).not.toThrow();
     expect(store.snapshot()).toEqual({ a: 1, b: 2, keep: true });
   }
-  expect(store.canUndo).toBe(false);
+  expect(store.canUndo()).toBe(false);
   store.apply({ set: { x: 3 }, merge: { object: { y: 4 } }, delete: [null, 0, {}, 'a'] } as unknown as Patch);
   expect(store.snapshot()).toEqual({ b: 2, keep: true, x: 3, object: { y: 4 } });
   store.undo(); expect(store.snapshot()).toEqual({ a: 1, b: 2, keep: true });

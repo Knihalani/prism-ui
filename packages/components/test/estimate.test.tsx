@@ -1,12 +1,27 @@
 import '../../react/test/setup';
 import { afterEach, expect, test } from 'bun:test';
-import { act, cleanup, fireEvent, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, within } from '@testing-library/react';
 import { Prism, createRegistry, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { estimate } from '../src/estimate';
 import '../src/num';
 
 afterEach(cleanup);
+
+test('frame undo and keyboard redo affect only their estimate in a shared store', () => {
+  const store = createStore(), props = { items: [{ id: 'seats', label: 'Seats', price: 20, qty: 5 }] };
+  const view = render(<><Prism source={source({ ...props, id: 'first', title: 'First' })} store={store} animate={false} /><Prism source={source({ ...props, id: 'second', title: 'Second' })} store={store} animate={false} /></>);
+  const first = within(view.getByRole('group', { name: 'First' })), second = within(view.getByRole('group', { name: 'Second' }));
+  fireEvent.click(second.getByRole('button', { name: 'Increase Seats' }));
+  expect((first.getByRole('button', { name: 'Undo' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(first.getByRole('button', { name: 'Increase Seats' }));
+  fireEvent.click(second.getByRole('button', { name: 'Increase Seats' }));
+  fireEvent.click(first.getByRole('button', { name: 'Undo' }));
+  expect(store.get('first.items.seats.qty')).toBe(5); expect(store.get('second.items.seats.qty')).toBe(7);
+  expect((first.getByRole('button', { name: 'Undo' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.keyDown(view.getByRole('group', { name: 'First' }), { key: 'z', ctrlKey: true, shiftKey: true });
+  expect(store.get('first.items.seats.qty')).toBe(6); expect(store.get('second.items.seats.qty')).toBe(7);
+});
 
 test('numeric and dotted item ids preserve named rows through edits and undo', () => {
   const view = setup({ items: [{ id: '0', label: 'Zero', price: 10, qty: 2 }, { id: 'seats', label: 'Seats', price: 20, qty: 3 }, { id: 'support.0.hours', label: 'Support', price: 5, qty: 1, optional: true }] });
@@ -84,7 +99,7 @@ test('one click and undo restore both quantity and total, with live calc updates
   expect(view.store.get('quote.items.seats.qty')).toBe(4); expect(view.store.get('quote.total')).toBe(90); expect(view.getByText('$1,080.00')).toBeDefined();
   act(() => view.store.undo());
   expect(view.store.get('quote.items.seats.qty')).toBe(3); expect(view.store.get('quote.total')).toBe(70); expect(view.getByText('$840.00')).toBeDefined();
-  expect(view.store.canUndo).toBe(false); expect(view.store.canRedo).toBe(true);
+  expect(view.store.canUndo()).toBe(false); expect(view.store.canRedo()).toBe(true);
   act(() => view.store.redo()); expect(view.store.get('quote.items.seats.qty')).toBe(4); expect(view.store.get('quote.subtotal')).toBe(90); expect(view.store.get('quote.total')).toBe(90);
 });
 
@@ -121,7 +136,7 @@ test('external num edits and derived estimate values undo and redo together', ()
   const view = setup({}, ':num[3]{id=quote.items.seats.qty} :calc[quote.total * 12]');
   const slider = view.getByRole('slider');
   const input = view.getByRole('spinbutton', { name: 'Seats' }) as HTMLInputElement;
-  expect(view.store.canUndo).toBe(false);
+  expect(view.store.canUndo()).toBe(false);
   expect(view.store.get('quote.total')).toBe(70);
   fireEvent.keyDown(slider, { key: 'ArrowUp' });
   expect(input.value).toBe('4'); expect(view.store.get('quote.subtotal')).toBe(90); expect(view.store.get('quote.total')).toBe(90);
@@ -129,11 +144,11 @@ test('external num edits and derived estimate values undo and redo together', ()
   act(() => view.store.undo());
   expect(input.value).toBe('3'); expect(slider.textContent).toBe('3');
   expect(view.store.get('quote.subtotal')).toBe(70); expect(view.store.get('quote.total')).toBe(70);
-  expect(view.getByText('840')).toBeDefined(); expect(view.store.canUndo).toBe(false); expect(view.store.canRedo).toBe(true);
+  expect(view.getByText('840')).toBeDefined(); expect(view.store.canUndo()).toBe(false); expect(view.store.canRedo()).toBe(true);
   act(() => view.store.redo());
   expect(input.value).toBe('4'); expect(slider.textContent).toBe('4');
   expect(view.store.get('quote.subtotal')).toBe(90); expect(view.store.get('quote.total')).toBe(90);
-  expect(view.getByText('1,080')).toBeDefined(); expect(view.store.canRedo).toBe(false);
+  expect(view.getByText('1,080')).toBeDefined(); expect(view.store.canRedo()).toBe(false);
   act(() => view.store.undo()); act(() => view.store.redo());
   expect(view.store.get('quote.total')).toBe(90);
 });
@@ -141,13 +156,13 @@ test('external num edits and derived estimate values undo and redo together', ()
 test('estimate reconciliation after history travel preserves redo', () => {
   const store = createStore({ initial: { quote: { items: { seats: { qty: 3 } }, subtotal: 0, total: 0 } } });
   const view = render(<Prism source={source({ items: [items[0]] })} store={store} animate={false} />);
-  expect(store.get('quote.total')).toBe(60); expect(store.canUndo).toBe(false);
+  expect(store.get('quote.total')).toBe(60); expect(store.canUndo()).toBe(false);
   act(() => store.set('quote.items.seats.qty', 4));
   expect(store.get('quote.total')).toBe(80);
   view.rerender(<Prism source={source({ items: [{ ...items[0], price: 30 }] })} store={store} animate={false} />);
   expect(store.get('quote.total')).toBe(120);
   act(() => store.undo());
-  expect(store.get('quote.items.seats.qty')).toBe(3); expect(store.get('quote.total')).toBe(90); expect(store.canRedo).toBe(true);
+  expect(store.get('quote.items.seats.qty')).toBe(3); expect(store.get('quote.total')).toBe(90); expect(store.canRedo()).toBe(true);
   act(() => store.redo());
   expect(store.get('quote.items.seats.qty')).toBe(4); expect(store.get('quote.total')).toBe(120);
 });

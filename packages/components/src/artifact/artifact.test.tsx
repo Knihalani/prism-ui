@@ -229,7 +229,7 @@ test('Markdown frame toggles are scoped to the current tasks and use shared undo
       const message = sent.mock.calls.map(([value]) => value).find(value => value.type === 'render' && value.ns === 'prism-artifact');
       const { revision } = message.render;
       const toggle = { type: 'task-toggle', revision, task, checked: false };
-      expect(store.canUndo).toBe(false);
+      expect(store.canUndo()).toBe(false);
       post('prism-artifact', { ...toggle, revision: revision - 1 });
       post('prism-artifact', { ...toggle, task: 'unknown' });
       expect(actions).toHaveLength(0);

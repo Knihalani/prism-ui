@@ -1,5 +1,5 @@
-import { createElement, useCallback, useSyncExternalStore, type CSSProperties, type ElementType, type HTMLAttributes, type KeyboardEvent, type ReactNode } from 'react';
-import { cx, useEmit, usePart, usePrism, useSlot } from '@prism-ui/react';
+import { createElement, useCallback, useContext, useSyncExternalStore, type CSSProperties, type ElementType, type HTMLAttributes, type KeyboardEvent, type ReactNode } from 'react';
+import { ComponentContext, cx, useEmit, usePart, usePrism, useSlot } from '@prism-ui/react';
 
 export interface FrameOptions {
   component: string; title?: string; label?: string; state?: string; ask?: boolean; undo?: boolean;
@@ -16,20 +16,21 @@ function useFramePart(component: string, part: FramePart, state?: string) {
 }
 export function useFrame({ component, title, label, state, ask = true, undo = false }: FrameOptions) {
   const { store, animate } = usePrism(), emit = useEmit();
+  const { id } = useContext(ComponentContext)!;
   const subscribe = useCallback((fn: () => void) => store.subscribe('*', fn), [store]);
-  const snapshot = useCallback(() => (store.canUndo ? 1 : 0) | (store.canRedo ? 2 : 0), [store]);
+  const snapshot = useCallback(() => (store.canUndo(id) ? 1 : 0) | (store.canRedo(id) ? 2 : 0), [store, id]);
   const history = useSyncExternalStore(subscribe, snapshot, snapshot);
   const onAsk = useCallback(() => emit('ask'), [emit]);
-  const onUndo = useCallback(() => store.undo(), [store]);
-  const onRedo = useCallback(() => store.redo(), [store]);
+  const onUndo = useCallback(() => store.undo(id), [store, id]);
+  const onRedo = useCallback(() => store.redo(id), [store, id]);
   const onKeyDown = useCallback((event: KeyboardEvent<HTMLElement>) => {
     if (event.defaultPrevented) return;
     if (event.key === 'Escape') (event.currentTarget.ownerDocument.activeElement as HTMLElement | null)?.blur?.();
     if (undo && !event.altKey && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
       event.preventDefault(); event.stopPropagation();
-      if (event.shiftKey) store.redo(); else store.undo();
+      if (event.shiftKey) store.redo(id); else store.undo(id);
     }
-  }, [store, undo]);
+  }, [store, undo, id]);
   const parts = {
     root: useFramePart(component, 'root', state), header: useFramePart(component, 'header'), title: useFramePart(component, 'title'),
     toolbar: useFramePart(component, 'toolbar'), body: useFramePart(component, 'body'), footer: useFramePart(component, 'footer'),
