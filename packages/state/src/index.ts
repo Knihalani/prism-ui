@@ -35,12 +35,12 @@ export function createStore({ persist, namespace = '', initial = {} }: { persist
   const listeners = new Map<string, Set<() => void>>();
   function flush(history = true) {
     if (!changed.size) return;
-    const paths = [...changed];
+    const paths = [...changed], previous = before;
     if (history) { past.push({ state: before, paths }); if (past.length > 100) past.shift(); future.length = 0; }
     changed.clear(); before = state;
     if (loading) paths.forEach(path => pending.add(path));
     else persist?.save(namespace, copy(state));
-    for (const [path, fns] of listeners) if (paths.some(p => path === '*' || p === path || p.startsWith(path + '.') || path.startsWith(p + '.'))) for (const fn of [...fns]) fn();
+    for (const [path, fns] of listeners) if (paths.some(p => path === '*' || p === path || p.startsWith(path + '.') || path.startsWith(p + '.')) || (path.endsWith('.length') && !Object.is(read(previous, path.split('.')), store.get(path)))) for (const fn of [...fns]) fn();
   }
   function change(path: string, value: unknown, remove = false) {
     const keys = path.split('.');
