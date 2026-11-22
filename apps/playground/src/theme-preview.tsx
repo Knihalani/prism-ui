@@ -36,7 +36,7 @@ function Preview() {
         <button type="button" onClick={() => setMode(mode === 'light' ? 'dark' : 'light')}>{mode === 'light' ? 'Dark mode' : 'Light mode'}</button>
       </div>
     </header>
-    <p className="preview-intro">One reply. Independent stores. Five theme surfaces. Print and Objects are placeholders for the next design steps.</p>
+    <p className="preview-intro">One reply. Independent stores. Five theme surfaces. Objects is a placeholder for the next design step.</p>
     <div className="preview-grid" data-single={selected !== 'all' ? '' : undefined} style={width ? { '--preview-width': `${width}px` } as CSSProperties : undefined}>
       {previewThemes.filter(({ theme }) => selected === 'all' || theme.name === selected).map(({ theme, description, caption }) => <section className={`preview-example preview-${theme.name}`} key={theme.name} data-preview-theme={theme.name}>
         <div className="preview-label"><h2>{theme.name}</h2><small>{description}</small></div>
