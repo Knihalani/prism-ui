@@ -37,8 +37,6 @@
 .prism-root .prism-ask__sentence { font-family: var(--prism-ask-font-display, var(--prism-font-display)); font-size: var(--prism-ask-text-lg, var(--prism-text-lg)); line-height: 2.2; overflow-wrap: anywhere; margin-block-end: var(--prism-ask-space-3, var(--prism-space-3)); }
 .prism-root .prism-ask__sentence-chunk { display: inline-flex; align-items: baseline; gap: var(--prism-ask-space-1, var(--prism-space-1)); max-inline-size: 100%; vertical-align: baseline; }
 .prism-root .prism-ask__sentence-punctuation { margin-inline-start: calc(-1 * var(--prism-ask-space-1, var(--prism-space-1))); }
-.prism-root .prism-ask__sentence-punctuation[data-sent] { visibility: hidden; }
-.prism-root .prism-ask__confirmed-value .prism-ask__sentence-punctuation { display: contents; margin: 0; }
 .prism-root .prism-ask__field[data-inline] { position: relative; display: inline-flex; flex-wrap: wrap; inline-size: 12ch; vertical-align: baseline; }
 .prism-root .prism-ask__field[data-inline][data-type="number"] { inline-size: auto; }
 .prism-root .prism-ask__field[data-inline][data-type="number"] .prism-ask__control { flex: 0 1 auto; inline-size: 4ch; }
@@ -85,3 +83,13 @@
     .prism-root .prism-ask__field[data-inline]:is([data-type="text"], [data-type="date"]) .prism-ask__inputWrap[data-sent] > .prism-ask__control { inline-size: 0; min-inline-size: 0; }
   }
 }
+
+.prism-root .prism-ask__sentence { font-family: var(--prism-ask-font-body, var(--prism-font-body)); font-size: var(--prism-ask-text-base, var(--prism-text-base)); line-height: 1.8; }
+.prism-root .prism-ask__sentence .prism-ask__field[data-inline] { display: inline-block; inline-size: auto; font: inherit; vertical-align: baseline; }
+.prism-root .prism-ask__sentence .prism-ask__inputWrap { display: inline-flex; align-items: baseline; inline-size: auto; gap: .25em; vertical-align: baseline; }
+.prism-root .prism-ask__sentence .prism-ask__control { font: inherit; font-style: normal; line-height: inherit; min-block-size: 0; min-inline-size: 1ch; vertical-align: baseline; }
+.prism-root .prism-ask__sentence .prism-ask__control[type="number"] { appearance: textfield; }
+.prism-root .prism-ask__sentence .prism-ask__control[type="number"]::-webkit-inner-spin-button { appearance: none; margin: 0; }
+.prism-root .prism-ask__sentence .prism-ask__inputWrap[data-sent] > :not(.prism-ask__confirmed-value) { display: none; }
+.prism-root .prism-ask__sentence .prism-ask__confirmed-value { display: inline; align-self: baseline; font: inherit; line-height: inherit; vertical-align: baseline; white-space: normal; }
+@supports (field-sizing: content) { .prism-root .prism-ask__sentence .prism-ask__control { field-sizing: content; inline-size: auto; } }

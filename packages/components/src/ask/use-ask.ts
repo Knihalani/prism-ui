@@ -1,4 +1,4 @@
-import { useContext, useEffect, useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { ComponentContext, useComponentState, useEmit, useFlash, useFormat, useLocalWrite, useSent, useSettled, useStrings, type Format, type PrismContextValue } from '@prism-ui/react';
 import { useFrame } from '../frame';
 import { interpolate } from '../interpolate';
@@ -68,6 +68,14 @@ export function useAsk(props: AskProps, ctx: PrismContextValue) {
   const receiptFields = [...fields, ...Object.keys(delivered).filter(key => !fields.some(field => field.id === key)).map(key => ({ id: key, label: key, type: typeof delivered[key] === 'boolean' ? 'toggle' as const : typeof delivered[key] === 'number' ? 'number' as const : 'text' as const }))];
   const receiptValues = Object.fromEntries(receiptFields.filter(field => field.id).map(field => [field.id!, normalize(field, Object.hasOwn(delivered, field.id!) ? delivered[field.id!] : null)]));
   const sentence = composition(strings.sentence, fields);
+  const sentenceRef = useRef<HTMLDivElement>(null), sentenceWidth = useRef(0);
+  const [sentenceHeight, setSentenceHeight] = useState<number>();
+  useLayoutEffect(() => {
+    if (!sent || !sentenceRef.current || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => { if (Math.abs(sentenceRef.current!.getBoundingClientRect().width - sentenceWidth.current) > .5) setSentenceHeight(undefined); });
+    observer.observe(sentenceRef.current);
+    return () => observer.disconnect();
+  }, [!!sent]);
   const canSubmit = complete && fields.length > 0 && fields.every(field => field.id && field.label && field.type);
   function change(id: string, value: AskValue) { reset(); setSubmitted(false); setValues(old => ({ ...old, [id]: value })); }
   function blur(id: string) { setTouched(old => ({ ...old, [id]: true })); if (!Object.hasOwn(values, id) && fields.find(field => field.id === id)?.value != null) setValues(old => ({ ...old, [id]: current[id] })); }
@@ -76,10 +84,11 @@ export function useAsk(props: AskProps, ctx: PrismContextValue) {
     setTouched(Object.fromEntries(fields.map(field => [field.id!, true])));
     const invalid = fields.find(field => errors[field.id!]);
     if (invalid) { controls.current.get(invalid.id!)?.focus(); return; }
+    const bounds = sentenceRef.current?.getBoundingClientRect(); sentenceWidth.current = bounds?.width ?? 0; setSentenceHeight(bounds?.height);
     localWrite(() => ctx.store.batch(() => { setValues(current); setSubmitted(true); }));
     send('submit', { values: { ...current } }, askMessage(strings.title, fields, current, (field, value) => formatted(field, value, format, strings), strings));
   }
-  return { fields, values: current, touched, submitted: !!sent, sent, receiptFields, receiptValues, labels, strings, errors, controls, complete, title: strings.title, submitLabel: strings.submit ?? strings.send, canSubmit, sentence, frame, flashing,
+  return { fields, values: current, touched, submitted: !!sent, sent, receiptFields, receiptValues, labels, strings, errors, controls, complete, title: strings.title, submitLabel: strings.submit ?? strings.send, canSubmit, sentence, sentenceRef, sentenceHeight: sent ? sentenceHeight : undefined, frame, flashing,
     suggested(field: AskField) { return field.value !== undefined && field.value !== null && !Object.hasOwn(values, field.id ?? ''); },
     loading(index: number) { return !complete && (index === fields.length - 1 || !fields[index]?.type || !fields[index]?.id); },
     change, blur, submit, edit(id?: string) { focus.current = id ?? fields[0]?.id; setValues(receiptValues); reset(); setSubmitted(false); }, onAsk() { emit('ask', undefined, strings.askMessage); },

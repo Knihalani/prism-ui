@@ -122,11 +122,13 @@ test('sentence blanks wrap as semantic chunks, preserve native ISO dates and lea
   expect(registry.docs()).toContain('sentence'); expect(registry.docs()).toContain('{fieldId}');
 });
 
-test('sent punctuation follows the confirmed answer while hidden layout spacers retain the editing geometry', () => {
+test('sent text uses one punctuation part and preserves sentence block height without inline spacers', () => {
   const view = render(<Prism source={source({ sentence: 'Book for {party} on {date}.', fields })} registry={registry} onAction={() => {}} />);
+  const sentence = view.container.querySelector<HTMLElement>('[data-part="sentence"]')!;
+  sentence.getBoundingClientRect = () => ({ width: 280, height: 88 } as DOMRect);
   fireEvent.click(view.getByRole('button', { name: 'Send' }));
-  const date = view.container.querySelector('[data-type="date"] [data-part="confirmed-value"]')!;
-  expect(date.querySelector('[data-part="sentence-punctuation"]')?.textContent).toBe('.');
-  expect(date.textContent).toMatch(/\.$/);
-  expect(view.container.querySelector('[data-part="sentence-punctuation"][data-sent]')?.getAttribute('aria-hidden')).toBe('true');
+  expect(sentence.style.minBlockSize).toBe('88px');
+  expect(sentence.querySelectorAll('[data-part="sentence-punctuation"]')).toHaveLength(1);
+  expect(sentence.querySelector('[data-part="sentence-punctuation"]')?.getAttribute('aria-hidden')).toBeNull();
+  fireEvent.click(view.getByRole('button', { name: /Edit Date/ })); expect(sentence.style.minBlockSize).toBe('');
 });
