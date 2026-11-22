@@ -41,6 +41,7 @@ export function useEstimate(props: EstimateProps, ctx: PrismComponentProps<Estim
   const totals = useMemo(() => calculate(props, readItem), [props, state, store, id]);
   const code = props.currency?.trim().toUpperCase();
   const currency = code && /^[A-Z]{3}$/.test(code) ? code : undefined;
+  const fractionDigits = useMemo(() => new Intl.NumberFormat(format.locale, { style: 'currency', currency: currency ?? format.currencyCode }).resolvedOptions().maximumFractionDigits!, [format.locale, currency, format.currencyCode]);
   const money = (value: number) => format.currency(value, currency);
   const writeTotals = () => { const next = calculate(props, readItem); store.set(`${id}.subtotal`, next.subtotal, { history: false }); store.set(`${id}.total`, next.total, { history: false }); };
   useLayoutEffect(() => {
@@ -77,7 +78,7 @@ export function useEstimate(props: EstimateProps, ctx: PrismComponentProps<Estim
   };
   const displayedTotal = useTween(totals.total, animate);
   const parts = { list: usePart('estimate', 'list'), empty: usePart('estimate', 'empty'), summary: usePart('estimate', 'summary'), summaryRow: usePart('estimate', 'summary-row'), summaryLabel: usePart('estimate', 'summary-label'), summaryValue: usePart('estimate', 'summary-value'), total: usePart('estimate', 'total'), totalLabel: usePart('estimate', 'total-label'), totalValue: usePart('estimate', 'total-value'), live: usePart('estimate', 'live'), actions: usePart('estimate', 'actions'), submit: usePart('estimate', 'submit') };
-  return { rows, parts, title: strings.title, emptyLabel: strings.emptyLabel, submit: strings.submit, sentLabel: strings.sentLabel, sent: !!sent, total: totals.total, displayedTotal, formatMoney: money, onUse, canUse: rows.length > 0 && rows.every(row => row.ready), totalText: money(displayedTotal), finalTotalText: money(totals.total), totalLabel: strings.totalLabel,
+  return { rows, parts, title: strings.title, emptyLabel: strings.emptyLabel, submit: strings.submit, sentLabel: strings.sentLabel, sent: !!sent, total: totals.total, displayedTotal, fractionDigits, formatMoney: money, onUse, canUse: rows.length > 0 && rows.every(row => row.ready), totalText: money(displayedTotal), finalTotalText: money(totals.total), totalLabel: strings.totalLabel,
     summary: [{ label: strings.subtotalLabel, value: money(totals.subtotal) }, ...(props.discount ? [{ label: strings.discountLabel, value: `−${money(totals.discount)}` }] : []), ...(props.taxRate ? [{ label: strings.taxLabel, value: money(totals.tax) }] : [])] };
 }
 export type EstimateModel = ReturnType<typeof useEstimate>;

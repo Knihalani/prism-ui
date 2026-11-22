@@ -56,7 +56,7 @@ export function usePick(props: PickProps, ctx: PrismComponentProps<PickProps>) {
   });
   const listRef = useFlip(animate && ranked.every(row => row.ready));
   const parts = { criteria: usePart('pick', 'criteria'), chip: usePart('pick', 'chip'), pip: usePart('pick', 'pip'), pips: usePart('pick', 'pips'), list: usePart('pick', 'list'), empty: usePart('pick', 'empty'), live: usePart('pick', 'live') };
-  return { parts, rows, listRef, question: props.question, emptyLabel: props.emptyLabel, announcement: rows[0]?.ready ? `${props.topLabel}: ${rows[0].title}` : '',
+  return { parts, rows, listRef, setWeight, question: props.question, emptyLabel: props.emptyLabel, announcement: rows[0]?.ready ? `${props.topLabel}: ${rows[0].title}` : '',
     chips: criteria.map((c, index) => ({ ...c, weight: weights[c.id], pips: [1, 2, 3].map(n => n <= weights[c.id]), props: { ref: (element: HTMLButtonElement | null) => { if (element) chips.current.set(c.id, element); else chips.current.delete(c.id); }, type: 'button' as const, tabIndex: active === c.id ? 0 : -1, 'aria-pressed': weights[c.id] > 0, 'aria-label': `${c.label}, ${props.weightLabel} ${format.number(weights[c.id])} ${props.ofLabel} ${format.number(3)}`, onFocus: () => setFocused(c.id), onClick: () => cycle(c.id), onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => onKeyDown(event, index) } })) };
 }
 type Row = ReturnType<typeof usePick>['rows'][number];
@@ -76,7 +76,7 @@ function PickItem({ row }: { row: Row }) {
 export function Pick(ctx: PrismComponentProps<PickProps>) {
   const pick = usePick(ctx.props, ctx), { parts } = pick, Item = useSlot('pick', 'item', PickItem), Empty = useSlot('pick', 'empty', 'div' as any);
   return <ComponentFrame component="pick" title={pick.question} ask undo>
-    <PrismPart as="div" {...parts.criteria}>{pick.chips.map(chip => <PrismPart as="button" key={chip.id} {...parts.chip} {...chip.props}>{chip.label}<PrismPart as="span" {...parts.pips} aria-hidden="true">{chip.pips.map((on, index) => <PrismPart as="span" key={index} {...parts.pip} data-state={on ? 'on' : 'off'} />)}</PrismPart></PrismPart>)}</PrismPart>
+    <PrismPart as="div" {...parts.criteria} slotProps={{ pick }}>{pick.chips.map(chip => <PrismPart as="button" key={chip.id} {...parts.chip} {...chip.props}>{chip.label}<PrismPart as="span" {...parts.pips} aria-hidden="true">{chip.pips.map((on, index) => <PrismPart as="span" key={index} {...parts.pip} data-state={on ? 'on' : 'off'} />)}</PrismPart></PrismPart>)}</PrismPart>
     <PrismPart as="div" {...parts.live} aria-live="polite">{pick.announcement}</PrismPart>
     <PrismPart as="div" {...parts.list} ref={pick.listRef}>{pick.rows.length ? pick.rows.map(row => <Item key={row.id} row={row} />) : <Empty {...parts.empty}>{pick.emptyLabel}</Empty>}</PrismPart>
   </ComponentFrame>;

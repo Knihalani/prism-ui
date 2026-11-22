@@ -8,6 +8,25 @@ import { createReplay } from '../src/replay';
 import { createParser } from '../src/instrumented-core';
 import { metrics, resetMetrics } from '../src/metrics';
 import { playgroundPlugins } from '../src/plugins';
+import { previewOptions, previewSource, previewThemes } from '../src/theme-preview-data';
+
+test('theme preview supports five themes and safe screenshot query options', () => {
+  expect(previewThemes.map(({ theme }) => theme.name)).toEqual(['host', 'refraction', 'instrument', 'print', 'objects']);
+  expect(previewOptions('')).toEqual({ theme: 'all', mode: 'light', width: undefined });
+  expect(previewOptions('?theme=print&mode=dark&width=300')).toEqual({ theme: 'print', mode: 'dark', width: 300 });
+  expect(previewOptions('?theme=unknown&mode=invalid&width=bad')).toEqual({ theme: 'all', mode: 'light', width: undefined });
+  expect(previewOptions('?width=12').width).toBe(280);
+  expect(previewOptions('?width=99999').width).toBe(1200);
+});
+
+test('theme preview reply contains prose, table, code and interactive workflow fixtures', () => {
+  const nodes = parse(previewSource).children;
+  expect(nodes.filter(node => node.type === 'component').map(node => node.name)).toEqual(['estimate', 'pick', 'mockup', 'view', 'callout', 'runbook', 'tabs', 'grid', 'summary', 'troubleshoot']);
+  for (const kind of ['heading', 'paragraph', 'table', 'code']) expect(nodes.some(node => node.type === kind)).toBe(true);
+  expect(previewSource).toContain('Concierge');
+  expect(previewSource).toContain('Self-serve');
+  expect(previewSource).toContain('Paired');
+});
 
 test('every registered directive has a parseable fixture', () => {
   const fixtures = examples();
