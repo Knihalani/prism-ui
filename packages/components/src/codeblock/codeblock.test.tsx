@@ -5,6 +5,14 @@ import { Prism, createRegistry, type Action } from '@prism-ui/react';
 import { CodeBlock, CodeBlockHighlighterContext, codeBlockDefinition, setHighlighter } from './index';
 import { defineLanguage, getLanguage, registerLanguage } from '../lib/highlight';
 
+test('empty and long command scroll areas are keyboard-focusable', () => {
+  for (const code of ['', 'console.log("long command");'.repeat(30)]) {
+    const view = render(<Prism registry={createRegistry([codeBlockDefinition])} source={'```ui:code\n' + JSON.stringify({ code }) + '\n```'} />);
+    expect(view.container.querySelector('[data-part="body"]')?.getAttribute('tabindex')).toBe('0');
+    view.unmount();
+  }
+});
+
 afterEach(() => { cleanup(); setHighlighter(); });
 const registry = createRegistry([codeBlockDefinition]);
 const fence = (code: string, info = 'ts') => `\`\`\`${info}\n${code}\n\`\`\``;
@@ -12,6 +20,7 @@ const fence = (code: string, info = 'ts') => `\`\`\`${info}\n${code}\n\`\`\``;
 test('static registry render, metadata, empty and escaped unknown languages', () => {
   const view = render(<Prism registry={registry} source={fence('const x = 1;', 'ts {lines title="file.ts"}')} />);
   expect(view.getByRole('region').getAttribute('aria-label')).toBe('file.ts');
+  expect(view.container.querySelector('[data-part="body"]')?.getAttribute('tabindex')).toBe('0');
   expect(view.container.querySelector('.prism-tok-keyword')?.textContent).toBe('const');
   expect(view.container.querySelector('[data-part="gutter"]')?.textContent).toBe('1');
   view.rerender(<Prism registry={registry} source={fence('<script>alert(1)</script>', 'unknown')} />);
@@ -94,12 +103,12 @@ test('streaming long blocks cap the body, retain all tail lines, and reserve the
   const code = Array.from({ length: 31 }, (_, index) => `const n${index} = ${index};`).join('\n');
   const view = render(<Prism registry={registry} source={'```ts\n' + code} done={false} />);
   const body = view.container.querySelector('[data-part="body"]') as HTMLElement;
-  expect(body.style.height).toBe('519px');
+  expect(body.style.getPropertyValue('--prism-codeblock-visible-lines')).toBe('20');
   expect(body.getAttribute('data-tail')).toBe('true');
   expect(view.container.querySelectorAll('[data-part="line"]').length).toBe(31);
   expect((view.getByRole('button', { name: 'Streaming…' }) as HTMLButtonElement).disabled).toBe(true);
   view.rerender(<Prism registry={registry} source={fence(code)} />);
-  expect(body.style.height).toBe('519px');
+  expect(body.style.getPropertyValue('--prism-codeblock-visible-lines')).toBe('20');
   expect(body.getAttribute('data-tail')).toBeNull();
   expect(view.container.querySelectorAll('[data-part="line"]').length).toBe(20);
   expect(view.getByRole('button', { name: 'Show all 31 lines' })).toBeTruthy();

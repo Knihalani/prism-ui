@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { Prism, defaultRegistry, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import './index';
+import type { SummarySlotProps } from './summary';
 
 afterEach(cleanup);
 const props = {
@@ -14,13 +15,27 @@ const props = {
 const source = '```ui:summary\n' + JSON.stringify(props) + '\n```';
 function pointButtons(view: ReturnType<typeof render>) { return Array.from(view.container.querySelectorAll<HTMLButtonElement>('[data-part="pointButton"]')); }
 
+test('Undo after sending resets the receipt and allows sending the restored checklist', async () => {
+  const actions: Action[] = [];
+  const view = render(<Prism source={source} onAction={action => actions.push(action)} />);
+  fireEvent.click(view.getAllByRole('checkbox')[0]);
+  await act(async () => { fireEvent.click(view.getByRole('button', { name: 'Send action items' })); });
+  expect((view.getByRole('button', { name: /Sent/ }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Undo' }));
+  expect((view.getAllByRole('checkbox')[0] as HTMLInputElement).checked).toBe(false);
+  const send = view.getByRole('button', { name: 'Send action items' }) as HTMLButtonElement;
+  expect(send.disabled).toBe(false);
+  await act(async () => { fireEvent.click(send); });
+  expect((actions.at(-1)!.payload as { actions: { done: boolean }[] }).actions[0].done).toBe(false);
+});
+
 test('summary renders frame, numbered citations, checklist owners and formatted due dates', () => {
   const view = render(<Prism source={source} locale="en-US" />);
   expect(view.getByRole('group', { name: 'Launch review' }).className).toBe('prism-frame__root prism-summary__root');
   expect(view.getByRole('group').getAttribute('data-state')).toBe('done');
   expect(view.getByRole('group').hasAttribute('data-prism-enter')).toBe(true);
   expect(view.getByRole('heading', { name: 'Action items' })).toBeDefined();
-  expect(pointButtons(view).length).toBe(2); expect(pointButtons(view)[0].textContent).toBe('Ready to launch[1]');
+  expect(pointButtons(view).length).toBe(2); expect(pointButtons(view)[0].textContent).toBe('Ready to launch1');
   expect(view.getByText('Keep current pricing').tagName).toBe('P');
   expect(view.getAllByRole('checkbox').length).toBe(2); expect(view.getByText('MC').getAttribute('aria-hidden')).toBe('true');
   expect(view.getByText('Jan 15, 2020').getAttribute('data-tone')).toBe('warning'); expect(view.getByText('Next week')).toBeDefined();
@@ -91,19 +106,16 @@ test('arrow keys cycle all points in both directions without toggling sources', 
   expect(view.getByText('No summary points yet.')).toBeDefined();
 });
 
-test('streaming partial JSON progressively renders title, point text and actions with a disabled footer', () => {
-  const view = render(<Prism source={'```ui:summary\n{'} done={false} />);
-  expect(view.getByRole('group').getAttribute('data-state')).toBe('streaming');
-  expect(view.container.querySelector('[data-part="title"]')?.textContent).toBe('');
-  expect(view.container.querySelectorAll('[data-part="skeleton"]').length).toBe(5);
-  const prefix = '```ui:summary\n{"id":"review","title":"Live review","points":[{"text":"Ready';
-  view.rerender(<Prism source={prefix} done={false} />);
-  expect(view.getByRole('heading', { name: 'Live review' })).toBeDefined(); expect(view.getByText('Ready')).toBeDefined();
-  view.rerender(<Prism source={prefix + ' to launch"}],"actions":[{"text":"Publish'} done={false} />);
-  expect(view.getByText('Ready to launch')).toBeDefined(); expect(view.getByRole('checkbox', { name: 'Publish' })).toBeDefined();
-  expect((view.getByRole('button', { name: 'Send action items' }) as HTMLButtonElement).disabled).toBe(true);
-  view.rerender(<Prism source={source} />);
-  expect(view.getByRole('group').getAttribute('data-state')).toBe('done'); expect((view.getByRole('button', { name: 'Send action items' }) as HTMLButtonElement).disabled).toBe(false);
+test('streaming skeletons are presentational and preserve restored checklist progress', () => {
+  const store = createStore();
+  const view = render(<Prism source={'\`\`\`ui:summary\n{'} done={false} store={store} />);
+  expect(view.container.querySelector('[data-prism-skeleton]')).not.toBeNull();
+  expect(view.queryByRole('checkbox')).toBeNull();
+  expect(store.get('summary:0')).toBeUndefined();
+  act(() => store.set('review.done', { 0: true }));
+  view.rerender(<Prism source={source} store={store} />);
+  expect((view.getByRole('checkbox', { name: 'Publish guide' }) as HTMLInputElement).checked).toBe(true);
+  expect((view.getByRole('button', { name: 'Send action items' }) as HTMLButtonElement).disabled).toBe(false);
 });
 
 test('empty and invalid data are safe, unsafe source URLs are not links, optional send keys are retained', () => {
@@ -117,8 +129,8 @@ test('empty and invalid data are safe, unsafe source URLs are not links, optiona
 });
 
 test('summary respects unstyled mode and header, point, source, action, empty and footer slots', () => {
-  function Item({ children, ...props }: React.HTMLAttributes<HTMLLIElement>) { return <li {...props} data-slot="item">{children}</li>; }
-  function Panel({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) { return <div {...props} data-slot="source">{children}</div>; }
+  function Item({ children, summary, point, action, ...props }: React.HTMLAttributes<HTMLLIElement> & Partial<SummarySlotProps>) { return <li {...props} data-slot="item">{children}</li>; }
+  function Panel({ children, summary, point, action, ...props }: React.HTMLAttributes<HTMLDivElement> & Partial<SummarySlotProps>) { return <div {...props} data-slot="source">{children}</div>; }
   function Header({ children }: { children?: React.ReactNode }) { return <header data-slot="header">{children}</header>; }
   function Footer({ children }: { children?: React.ReactNode }) { return <footer data-slot="footer">{children}</footer>; }
   function Empty({ children }: { children?: React.ReactNode }) { return <p data-slot="empty">{children}</p>; }

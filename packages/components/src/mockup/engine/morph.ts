@@ -190,6 +190,11 @@ export function createStreamMorpher(doc: Document, opts: MorphOptions = {}): { u
       frames[0]!.element = root;
       fresh = false;
       update(html);
+      if (!root.isEqualNode(doc.body)) {
+        root = doc.body;
+        fallback = true;
+        return;
+      }
       for (const frame of frames) {
         const anchorIndex = frame.anchor ? Array.prototype.indexOf.call(frame.element.childNodes, frame.anchor) : -1;
         const path: number[] = [];

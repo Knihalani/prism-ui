@@ -1,3 +1,7 @@
+export function formatComponentMessage(template: string, values: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (placeholder, key: string) => Object.hasOwn(values, key) ? values[key] : placeholder);
+}
+
 export const componentStrings = {
   "artifact": {
     "updating": "Updating…",
@@ -29,9 +33,11 @@ export const componentStrings = {
     "nbsp": "\u00a0"
   },
   "callout": {
+    "label": "Callout",
     "askAboutThis": "Ask about this"
   },
   "card": {
+    "selectMessage": "User select in card: {payload}",
     "askAboutThis": "Ask about this",
     "sent": "Sent"
   },
@@ -45,6 +51,14 @@ export const componentStrings = {
     "data": "data"
   },
   "codeblock": {
+    "copyFailed": "Copy failed",
+    "plainText": "Plain text",
+    "showAll": "Show all {count} lines",
+    "copyMessage": "User copy in code: {payload}",
+    "languageJs": "JavaScript",
+    "languageTs": "TypeScript",
+    "languagePy": "Python",
+    "languageSh": "Shell",
     "copyCode": "Copy code",
     "copied": "Copied",
     "copy": "Copy",
@@ -73,6 +87,11 @@ export const componentStrings = {
     "nbsp": "\u00a0"
   },
   "summary": {
+    "title": "Summary",
+    "actionItem": "Action item ",
+    "sent": "Sent",
+    "sendMessage": "Please send these {count} action items: {items}.",
+    "askPointMessage": "Tell me more about this point: {text}",
     "of": " of ",
     "complete": " complete",
     "sendActionItems": "Send action items",
@@ -89,7 +108,9 @@ export const componentStrings = {
     "pageStatus": "Page {page} of {pages}",
     "nextPage": "Next page"
   },
+  "grid": { "label": "Grid" },
   "tabs": {
+    "tablistLabel": "Tabs",
     "loadingTab": "Loading tab"
   }
 };

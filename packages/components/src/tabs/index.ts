@@ -4,9 +4,9 @@ import { s } from '@prism-ui/schema';
 import { Tabs, Tab } from './tabs';
 
 export { Tabs, Tab, useTabs, useTab } from './tabs';
-export type { TabsProps, TabProps } from './tabs';
+export type { TabsModel, TabsSlotProps, TabsProps, TabProps, TabModel, TabSlotProps } from './tabs';
 export const tabsDef = defineComponent({
-  name: 'tabs', parts: ["badge","body","indicator","label","list","root","skeleton","tab","title"], strings: componentStrings.tabs, component: Tabs, syntax: 'container',
+  name: 'tabs', parts: ["badge","body","indicator","linkedText","label","list","root","skeleton","tab","title"], strings: componentStrings.tabs, component: Tabs, syntax: 'container',
   schema: s.object({ id: s.string().optional().describe('Stable instance identifier'), title: s.string().optional().describe('Visible heading above the tablist'), label: s.string().optional().describe('Accessible tablist label'), variant: s.enum(['underline', 'pill']).default('underline').describe('Navigation style'), size: s.enum(['sm', 'md']).default('md').describe('Tab height'), fitted: s.boolean().default(false).describe('Fill the available width') }),
   docs: 'Group tab containers into keyboard-accessible navigation. Use four colons around tabs and three around each tab.',
   examples: ['::::tabs{label="Project"}\n:::tab{label="Overview"}\nProject overview.\n:::\n:::tab{label="Details"}\nProject details.\n:::\n::::'],
