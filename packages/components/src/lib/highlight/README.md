@@ -29,6 +29,12 @@ Emit `(type, text)` in source order, including whitespace, without dropping text
 Return a new state when changing it: incremental checkpoints retain prior states.
 Register using `registerLanguage(name, definition, additionalAliases?)`.
 
+`defineRangeLanguage` has the same contract but emits `(type, start, end)` offsets
+within the current line. The HTML and incremental paths reuse numeric span buffers;
+token objects are materialized only for `tokenize()` or incremental `tokens()`.
+ASCII HTML uses a reusable byte buffer with precomputed tags and one final decode.
+Non-ASCII input uses source slices, preserving Unicode and lone UTF-16 surrogates.
+
 Tokens are lossless and adjacent equal types merge, including across line breaks.
 HTML is escaped and uses line-scoped spans so completed lines can reuse their HTML.
 Unknown languages remain escaped plain text. The scanners are lexical heuristics,
@@ -49,3 +55,4 @@ full highlighting during incremental updates, since their interface has no line 
 Import `highlight.css` for light/dark token colors; override `--prism-tok-*` variables.
 Run `bun run packages/components/src/lib/bench.ts` from the repository root to compare
 uncached rendering and streaming. `--oneshot` skips the slower naive streaming run.
+`--profile` measures only ours for 200 iterations; use with `bun --cpu-prof`.

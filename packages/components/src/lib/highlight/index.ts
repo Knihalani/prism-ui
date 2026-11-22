@@ -1,8 +1,8 @@
 import { createHighlighter as createCoreHighlighter, type Highlighter, type HighlighterOptions, type Language } from './core';
 import { languages } from './languages/all';
 
-export { defineLanguage, escapeHTML, renderTokens } from './core';
-export type { Token, TokenType, Emit, Language, Highlighter, HighlighterOptions } from './core';
+export { defineLanguage, defineRangeLanguage, escapeHTML, renderTokens } from './core';
+export type { Token, TokenType, Emit, RangeEmit, Language, Highlighter, HighlighterOptions } from './core';
 export function createHighlighter(options: HighlighterOptions = {}) {
   return createCoreHighlighter({ ...options, languages: options.languages ?? languages });
 }

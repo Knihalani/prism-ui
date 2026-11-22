@@ -1,12 +1,16 @@
+import { appendHTML, appendTokens, ASCIIHTML, Spans } from './spans';
+
 export type TokenType = 'keyword' | 'string' | 'number' | 'comment' | 'function' | 'type' | 'operator' | 'punctuation' | 'variable' | 'constant' | 'property' | 'tag' | 'attr' | 'regex' | 'builtin' | 'deleted' | 'inserted' | 'meta' | 'plain';
 export interface Token { type: TokenType; text: string }
 export type Emit = (type: TokenType, text: string) => void;
+export type RangeEmit = (type: TokenType, start: number, end: number) => void;
 export interface Language {
   name: string;
   aliases?: readonly string[];
   initialState(): unknown;
   /** Return a new state when changing it; checkpoints retain earlier states. */
   scan(line: string, state: unknown, emit: Emit): unknown;
+  scanRanges?(line: string, state: unknown, emit: RangeEmit): unknown;
 }
 export interface Highlighter {
   tokenize?(code: string, lang: string): Token[];
@@ -15,6 +19,13 @@ export interface Highlighter {
 }
 export function defineLanguage<S>(name: string, initialState: () => S, scan: (line: string, state: S, emit: Emit) => S, aliases: readonly string[] = []): Language {
   return { name, aliases, initialState, scan: (line, state, emit) => scan(line, state as S, emit) };
+}
+export function defineRangeLanguage<S>(name: string, initialState: () => S, scan: (line: string, state: S, emit: RangeEmit) => S, aliases: readonly string[] = []): Language {
+  return {
+    name, aliases, initialState,
+    scan: (line, state, emit) => scan(line, state as S, (type, start, end) => emit(type, line.slice(start, end))),
+    scanRanges: (line, state, emit) => scan(line, state as S, emit),
+  };
 }
 export function escapeHTML(text: string): string {
   if (!/[&<>"']/.test(text)) return text;
@@ -36,13 +47,14 @@ export function renderTokens(tokens: readonly Token[]): string {
   }
   return html;
 }
-interface Line { end: number; state: unknown; tokens: Token[]; html: string }
+interface Line { end: number; state: unknown; spans: Uint32Array; text: string; html: string }
 export interface HighlighterOptions { languages?: readonly Language[]; cacheSize?: number }
 export function createHighlighter({ languages = [], cacheSize = 64 }: HighlighterOptions = {}) {
   const registry = new Map<string, Language>();
   const aliases = new Map<string, string>();
   const cache = new Map<string, string>();
   let backend: Highlighter | undefined;
+  const buffers: { spans: Spans; html: ASCIIHTML }[] = [];
   function resolveLang(alias: string): string { const name = alias.toLowerCase(); return aliases.get(name) ?? name; }
   function getLanguage(name: string): Language | undefined { return registry.get(resolveLang(name)); }
   function registerLanguage(name: string, def: Language, extraAliases: readonly string[] = []) {
@@ -53,11 +65,15 @@ export function createHighlighter({ languages = [], cacheSize = 64 }: Highlighte
     cache.clear();
   }
   for (const language of languages) registerLanguage(language.name, language);
-  function scanLine(text: string, language: Language | undefined, state: unknown): Omit<Line, 'end'> {
-    const tokens: Token[] = [];
-    if (language) state = language.scan(text, state, collector(tokens));
-    else if (text) tokens.push({ type: 'plain', text });
-    return { state, tokens, html: renderTokens(tokens) };
+  function scanLine(text: string, language: Language | undefined, state: unknown, buffer: Spans, writer: ASCIIHTML): Omit<Line, 'end'> {
+    buffer.reset();
+    if (language?.scanRanges) state = language.scanRanges(text, state, buffer.emitRange);
+    else if (language) state = language.scan(text, state, buffer.emit);
+    else buffer.emit('plain', text);
+    let html: string;
+    if (!/[^\x00-\x7f]/.test(text)) { writer.reset(); writer.append(text, buffer.data, buffer.length); html = writer.finish(); }
+    else { const parts: string[] = []; appendHTML(text, buffer.data, buffer.length, parts); html = parts.join(''); }
+    return { state, spans: buffer.data.slice(0, buffer.length), text, html };
   }
   function scan(code: string, language: Language | undefined, emit: Emit, endLine?: () => void): void {
     let state = language?.initialState();
@@ -84,17 +100,27 @@ export function createHighlighter({ languages = [], cacheSize = 64 }: Highlighte
     const language = getLanguage(lang);
     if (!language) return escapeHTML(code);
     const output: string[] = [];
+    const scratch = buffers.pop() ?? { spans: new Spans(), html: new ASCIIHTML() };
+    const buffer = scratch.spans;
+    const ascii = !/[^\x00-\x7f]/.test(code);
+    scratch.html.reset();
     let state = language.initialState();
     let start = 0;
-    while (start < code.length) {
-      const newline = code.indexOf('\n', start);
-      const end = newline < 0 ? code.length : newline + 1;
-      const tokens: Token[] = [];
-      state = language.scan(code.slice(start, end), state, collector(tokens));
-      output.push(renderTokens(tokens));
-      start = end;
+    try {
+      while (start < code.length) {
+        const newline = code.indexOf('\n', start);
+        const end = newline < 0 ? code.length : newline + 1;
+        const text = code.slice(start, end);
+        buffer.reset();
+        state = language.scanRanges ? language.scanRanges(text, state, buffer.emitRange) : language.scan(text, state, buffer.emit);
+        if (ascii) scratch.html.append(text, buffer.data, buffer.length);
+        else appendHTML(text, buffer.data, buffer.length, output);
+        start = end;
+      }
+      return ascii ? scratch.html.finish() : output.join('');
+    } finally {
+      buffers.push(scratch);
     }
-    return output.join('');
   }
   function highlight(code: string, lang: string): string {
     const canonical = resolveLang(lang);
@@ -115,10 +141,12 @@ export function createHighlighter({ languages = [], cacheSize = 64 }: Highlighte
     let stableHTML = '';
     let stableEnd = 0;
     let currentHTML = '';
-    let tailTokens: Token[] = [];
+    let tailLine: Omit<Line, 'end'> | undefined;
+    const buffer = new Spans();
+    const writer = new ASCIIHTML();
     let activeLanguage = getLanguage(lang);
     let activeBackend = backend;
-    function reset() { previous = ''; checkpoints = []; stableHTML = ''; stableEnd = 0; currentHTML = ''; tailTokens = []; }
+    function reset() { previous = ''; checkpoints = []; stableHTML = ''; stableEnd = 0; currentHTML = ''; tailLine = undefined; }
     function update(code: string): string {
       const language = getLanguage(lang);
       if (language !== activeLanguage || backend !== activeBackend) { reset(); activeLanguage = language; activeBackend = backend; }
@@ -136,17 +164,17 @@ export function createHighlighter({ languages = [], cacheSize = 64 }: Highlighte
       let state = checkpoints.length ? checkpoints[checkpoints.length - 1].state : language?.initialState();
       let start = stableEnd;
       let tail = '';
-      tailTokens = [];
+      tailLine = undefined;
       while (start < code.length) {
         const newline = code.indexOf('\n', start);
         const end = newline < 0 ? code.length : newline + 1;
-        const line = scanLine(code.slice(start, end), language, state);
+        const line = scanLine(code.slice(start, end), language, state, buffer, writer);
         state = line.state;
         if (newline >= 0) {
           checkpoints.push({ ...line, end });
           stableHTML += line.html;
           stableEnd = end;
-        } else { tail = line.html; tailTokens = line.tokens; }
+        } else { tail = line.html; tailLine = line; }
         start = end;
       }
       previous = code;
@@ -158,8 +186,8 @@ export function createHighlighter({ languages = [], cacheSize = 64 }: Highlighte
       if (backend?.supports(resolveLang(lang))) return tokenize(previous, lang);
       const result: Token[] = [];
       const emit = collector(result);
-      for (const line of checkpoints) for (const token of line.tokens) emit(token.type, token.text);
-      for (const token of tailTokens) emit(token.type, token.text);
+      for (const line of checkpoints) appendTokens(line.text, line.spans, line.spans.length, emit);
+      if (tailLine) appendTokens(tailLine.text, tailLine.spans, tailLine.spans.length, emit);
       return result;
     }
     return { update, tokens, reset };

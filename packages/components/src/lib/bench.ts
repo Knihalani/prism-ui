@@ -12,6 +12,7 @@ hljs.registerLanguage('typescript', hljsTS);
 hljs.registerLanguage('python', hljsPython);
 hljs.registerLanguage('json', hljsJSON);
 const ours = createHighlighter({ cacheSize: 0 });
+const profiling = process.argv.includes('--profile');
 function corpus(make: (index: number) => string): string {
   const parts: string[] = [];
   let length = 0;
@@ -25,13 +26,16 @@ const datasets = [
 ];
 let checksum = 0;
 function median(run: () => string, iterations = 7): number {
-  for (let i = 0; i < 3; i++) checksum += run().length;
+  Bun.gc(true);
+  const warmup = performance.now();
+  for (let i = 0; i < 3 || performance.now() - warmup < 100; i++) checksum += run().length;
+  Bun.gc(true);
   const times: number[] = [];
   for (let i = 0; i < iterations; i++) { const start = performance.now(); checksum += run().length; times.push(performance.now() - start); }
   return times.sort((a, b) => a - b)[Math.floor(times.length / 2)];
 }
 console.log('# Highlighter benchmark');
-console.log(`Bun ${Bun.version}; median of 7 warmed runs; HTML output, caches disabled; decimal MB/s.`);
+console.log(`Bun ${Bun.version}; median of ${profiling ? 200 : 7} runs after >=100ms warmup (minimum 3 runs); GC before warmup and sampling; HTML output, caches disabled; decimal MB/s.`);
 console.log('\n| Language | KiB | Engine | One-shot ms | MB/s |');
 console.log('|---|---:|---|---:|---:|');
 for (const { lang, code } of datasets) {
@@ -41,11 +45,12 @@ for (const { lang, code } of datasets) {
     ['prismjs', () => Prism.highlight(code, Prism.languages[lang], lang)],
   ] as const;
   for (const [name, run] of engines) {
-    const ms = median(run);
+    if (profiling && name !== 'ours') continue;
+    const ms = median(run, profiling ? 200 : 7);
     console.log(`| ${lang} | ${(code.length / 1024).toFixed(1)} | ${name} | ${ms.toFixed(2)} | ${(code.length / ms / 1000).toFixed(2)} |`);
   }
 }
-if (!process.argv.includes('--oneshot')) {
+if (!process.argv.includes('--oneshot') && !profiling) {
   console.log('\nStreaming: append 16 characters and request HTML after every append. Naive uses our same scanner with caching disabled. Includes full-code prefix checks; strings are not flattened on every update.');
   console.log('\n| Language | Updates | Incremental ms | Naive full ms | Speedup |');
   console.log('|---|---:|---:|---:|---:|');
