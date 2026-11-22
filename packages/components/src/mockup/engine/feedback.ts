@@ -185,8 +185,13 @@ export function createFeedback(init: FeedbackInit = {}) {
       const a = item.anchor, b = a && boxes[a.key];
       if (!a || !b || b.w <= 0 || b.h <= 0) continue;
       const moved = box({ x: b.x + a.fx * b.w, y: b.y + a.fy * b.h, w: (a.fw ?? 0) * b.w, h: (a.fh ?? 0) * b.h });
-      item.x = moved.x; item.y = moved.y;
-      if (item.kind === 'region') { item.w = moved.w; item.h = moved.h; }
+      if (item.kind === 'drawing' && item.path) {
+        const strokes = pathStrokes(item.path).map(stroke => stroke.map(([x, y]): FeedbackPoint => [moved.x + (x - item.x) * (item.w ? moved.w / item.w : 1), moved.y + (y - item.y) * (item.h ? moved.h / item.h : 1)]));
+        Object.assign(item, drawing({ strokes }));
+      } else {
+        item.x = moved.x; item.y = moved.y;
+        if (item.kind === 'region') { item.w = moved.w; item.h = moved.h; }
+      }
     }
     return draft;
   };
@@ -202,7 +207,7 @@ export function createFeedback(init: FeedbackInit = {}) {
   const anchor = (item: FeedbackItem, b?: Box) => {
     if (!item.target || !b || b.w <= 0 || b.h <= 0) return;
     item.anchor = { key: item.id, selector: item.target.selector, fx: (item.x - b.x) / b.w, fy: (item.y - b.y) / b.h,
-      ...(item.kind === 'region' ? { fw: (item.w ?? 0) / b.w, fh: (item.h ?? 0) / b.h } : {}) };
+      ...(item.kind !== 'pin' ? { fw: (item.w ?? 0) / b.w, fh: (item.h ?? 0) / b.h } : {}) };
     boxes[item.id] = copy(b);
   };
   const add = (kind: FeedbackKind, data: Omit<FeedbackItem, 'id' | 'n' | 'kind' | 'createdAt'>, targetBox?: Box) => {
@@ -217,6 +222,17 @@ export function createFeedback(init: FeedbackInit = {}) {
   return {
     getState: () => state,
     subscribe(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; },
+    checkpoint() {
+      const draft = copy(state) as FeedbackState, history = copy(past), redo = copy(future), operationName = lastOperation, operationTime = lastTime;
+      let restored = false;
+      return () => {
+        if (restored) return;
+        restored = true;
+        past.splice(0, past.length, ...history); future.splice(0, future.length, ...redo);
+        lastOperation = operationName; lastTime = operationTime;
+        publish(applyBoxes(draft));
+      };
+    },
     addPin(input: PinInput) { return add('pin', { x: clamp(input.x), y: clamp(input.y), comment: input.comment ?? '', ...(input.target ? { target: input.target } : {}) }, input.targetBox); },
     addRegion(input: RegionInput) { return add('region', { ...box(input), comment: input.comment ?? '', ...(input.target ? { target: input.target } : {}) }, input.targetBox); },
     addDrawing(input: DrawingInput) { return add('drawing', { ...drawing(input), comment: input.comment ?? '', ...(input.color === undefined ? {} : { color: input.color }) }); },

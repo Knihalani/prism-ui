@@ -9,6 +9,24 @@ function fixture() {
 }
 
 describe('feedback state and history', () => {
+  test('rolling back creation and async target metadata restores an empty undo/redo history', () => {
+    for (const kind of ['pin', 'region'] as const) {
+      const { model } = fixture(), initial = model.toJSON(), rollback = model.checkpoint();
+      const item = kind === 'pin' ? model.addPin({ x: 10, y: 20 }) : model.addRegion({ x: 10, y: 20, w: 30, h: 40 });
+      model.edit(item.id, { target: { selector: '#cta' }, targetBox: { x: 0, y: 0, w: 50, h: 50 } });
+      rollback(); expect(model.toJSON()).toEqual(initial); expect(model.canUndo).toBe(false); expect(model.canRedo).toBe(false);
+      model.undo(); model.redo(); expect(model.toJSON()).toEqual(initial);
+      model.setOverall('Later'); rollback(); expect(model.getState().overall).toBe('Later');
+    }
+  });
+  test('rollback preserves the entire preexisting undo/redo chain and typing coalescing', () => {
+    const { model, tick } = fixture(); model.setOverall('Kept'); tick(1000); model.setOverall('Redo me'); model.undo();
+    const rollback = model.checkpoint(), initial = model.toJSON();
+    const item = model.addPin({ x: 5, y: 5 }); model.edit(item.id, { target: { selector: 'button' } }); rollback();
+    expect(model.toJSON()).toEqual(initial); expect(model.canUndo).toBe(true); expect(model.canRedo).toBe(true);
+    model.undo(); expect(model.getState().overall).toBe(''); model.redo(); expect(model.getState().overall).toBe('Kept'); model.redo(); expect(model.getState().overall).toBe('Redo me'); expect(model.getState().items).toEqual([]);
+    const next = fixture(); next.model.setOverall('a'); const cancel = next.model.checkpoint(); next.model.addRegion({ x: 1, y: 1, w: 1, h: 1 }); cancel(); next.tick(200); next.model.setOverall('ab'); next.model.undo(); expect(next.model.getState().overall).toBe('');
+  });
   test('empty state, immutable snapshots, subscriptions and no-op identity', () => {
     const { model } = fixture();
     const initial = model.getState();
@@ -81,6 +99,21 @@ describe('feedback state and history', () => {
 });
 
 describe('feedback anchors', () => {
+  test('drawing paths translate and scale with targets across layouts, history and missing targets', () => {
+    const model = createFeedback(), item = model.addDrawing({ path: 'M12 22L18 28M14 24L16 26' });
+    model.edit(item.id, { target: { selector: '#cta' }, targetBox: { x: 10, y: 20, w: 10, h: 10 } });
+    const original = model.getState().items[0].path;
+    model.edit(item.id, { comment: 'Stroke' });
+    model.reanchor({ [item.id]: { x: 30, y: 40, w: 20, h: 5 } });
+    expect(model.getState().items[0]).toMatchObject({ x: 34, y: 41, w: 12, h: 3, path: 'M34 41L46 44M38 42L42 43' });
+    model.undo(); expect(model.getState().items[0].path).toBe('M34 41L46 44M38 42L42 43');
+    model.redo(); expect(model.toPayload().items[0].path).toBe('M34 41L46 44M38 42L42 43');
+    model.reanchor({ [item.id]: null }); expect(model.getState().items[0].path).toBe('M34 41L46 44M38 42L42 43');
+    model.reanchor({ [item.id]: { x: 10, y: 20, w: 10, h: 10 } }); expect(model.getState().items[0].path).toBe(original);
+    const point = model.addDrawing({ points: [[10, 20]] });
+    model.edit(point.id, { target: { selector: '#cta' }, targetBox: { x: 10, y: 20, w: 10, h: 10 } });
+    model.reanchor({ [point.id]: { x: 30, y: 40, w: 20, h: 5 } }); expect(model.getState().items[1].path).toBe('M30 40');
+  });
   test('editing a comment with an unchanged target preserves its anchor and follows later layouts', () => {
     for (const target of [{ selector: '#cta', text: 'Sign up' }, { selector: '#cta' }]) {
       const { model } = fixture();
