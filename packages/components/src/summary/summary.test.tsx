@@ -15,6 +15,20 @@ const props = {
 const source = '```ui:summary\n' + JSON.stringify(props) + '\n```';
 function pointButtons(view: ReturnType<typeof render>) { return Array.from(view.container.querySelectorAll<HTMLButtonElement>('[data-part="pointButton"]')); }
 
+test('Undo after sending resets the receipt and allows sending the restored checklist', async () => {
+  const actions: Action[] = [];
+  const view = render(<Prism source={source} onAction={action => actions.push(action)} />);
+  fireEvent.click(view.getAllByRole('checkbox')[0]);
+  await act(async () => { fireEvent.click(view.getByRole('button', { name: 'Send action items' })); });
+  expect((view.getByRole('button', { name: /Sent/ }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Undo' }));
+  expect((view.getAllByRole('checkbox')[0] as HTMLInputElement).checked).toBe(false);
+  const send = view.getByRole('button', { name: 'Send action items' }) as HTMLButtonElement;
+  expect(send.disabled).toBe(false);
+  await act(async () => { fireEvent.click(send); });
+  expect((actions.at(-1)!.payload as { actions: { done: boolean }[] }).actions[0].done).toBe(false);
+});
+
 test('summary renders frame, numbered citations, checklist owners and formatted due dates', () => {
   const view = render(<Prism source={source} locale="en-US" />);
   expect(view.getByRole('group', { name: 'Launch review' }).className).toBe('prism-frame__root prism-summary__root');

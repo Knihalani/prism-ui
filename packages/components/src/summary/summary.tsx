@@ -1,5 +1,5 @@
 import { componentStrings } from '../strings';
-import { useId, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { useStrings, Icon, PrismPart, StreamSkeleton, useSent, useComponentState, useEmit, useFormat, usePart, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
 
@@ -34,6 +34,12 @@ export function useSummary(props: SummaryProps, ctx: Pick<PrismComponentProps, '
     const validDate = date && Number.isFinite(date.getTime()) ? date : undefined;
     return { ...action, index, done: done?.[index] === true, ownerDetails: action.owner ? ownerDetails(action.owner) : undefined, dateTime: validDate?.toISOString(), dueLabel: validDate ? format.date(validDate, { month: 'short', day: 'numeric', year: 'numeric' }) : action.due, overdue: !!validDate && validDate < today };
   });
+  const payload = { title: props.title, actions: actionModels.map(({ text, owner, due, done }) => ({ text, owner, due, done })) };
+  const signature = JSON.stringify(payload), submitted = useRef<string | undefined>(undefined);
+  useLayoutEffect(() => {
+    const snapshot = submitted.current ?? (sent ? JSON.stringify(sent.payload) : undefined);
+    if (snapshot !== undefined && snapshot !== signature) { submitted.current = undefined; reset(); }
+  }, [signature, sent, reset]);
   const onPointKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
     const buttons = Array.from(pointListRef.current?.querySelectorAll<HTMLElement>('[data-part="pointButton"], [data-part="pointText"][tabindex]') ?? []);
@@ -45,10 +51,10 @@ export function useSummary(props: SummaryProps, ctx: Pick<PrismComponentProps, '
   return { parts, sent: !!sent, strings, title: strings.title, points: pointModels, actions: actionModels, state, pointListRef, onPointKeyDown, completed: actionModels.filter(action => action.done).length,
     loadingPoints: !ctx.complete && props.points === undefined, loadingActions: !ctx.complete && props.actions === undefined,
     togglePoint: (index: number) => setExpanded(old => ({ ...old, [index]: !old[index] })),
-    toggleAction: (index: number) => { reset(); setDone(old => ({ ...old, [index]: !old?.[index] })); },
+    toggleAction: (index: number) => { setDone(old => ({ ...old, [index]: !old?.[index] })); },
     askPoint: (index: number) => { const point = points[index]; if (point) emit('ask', { point: index, text: point.text, source: point.source }, strings.askPointMessage.replace('{text}', point.text)); },
     canSend: ctx.complete && actions.length > 0 && !sent,
-    send: () => { if (ctx.complete && actions.length && !sent) send('send', { title: props.title, actions: actionModels.map(({ text, owner, due, done }) => ({ text, owner, due, done })) }, strings.sendMessage.replace('{count}', format.number(actions.length)).replace('{items}', actionModels.map(action => action.text).join('; '))); },
+    send: () => { if (ctx.complete && actions.length && !sent) { submitted.current = signature; send('send', payload, strings.sendMessage.replace('{count}', format.number(actions.length)).replace('{items}', actionModels.map(action => action.text).join('; '))); } },
   };
 }
 export type SummaryModel = ReturnType<typeof useSummary>;
