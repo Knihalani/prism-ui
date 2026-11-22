@@ -8,7 +8,7 @@ import { useDomain } from './use-domain';
 import { componentStrings } from '../strings';
 import { interpolate } from '../interpolate';
 import { useFrame } from '../frame';
-import { nearestX } from '../lib/chart';
+import { nearestX, pointY } from '../lib/chart';
 
 export const chartStrings = { ...componentStrings.chart, title: 'Chart', total: 'Total', instructions: '{title}. Use arrow keys to explore; Enter selects a point.', description: 'Interactive chart. A data table follows for screen readers.', toggleSeries: 'Toggle {series}', emptyValue: '—', pointLabel: '{category}: {value}', sliceValue: ' · {value}', dataCaption: '{title} {data}', announcement: '{category}. {values}', seriesValue: '{series}: {value}', valueSeparator: '. ', invalidData: 'No numeric values', tooltipLabel: 'Values for {category}', askMessage: 'Tell me more about this chart…', selectMessage: 'User select in chart: {payload}', pivotMessage: 'User pivot in chart: {payload}' };
 export interface ChartPoint { index: number; row: DataRow; x: unknown; value: number | null }
@@ -160,8 +160,12 @@ export function useChart(inputProps: ChartProps, ctx: PrismContextValue, fixedWi
     return position < geometry.left || position > geometry.right ? null : { index: nearestX(geometry.xs, position), series: activeSeries };
   };
   const tooltip = interaction && active && active.index >= 0 ? active : null;
+  const tooltipHeight = (shown.length + 1) * 20 + 24;
+  const anchor = tooltip && type !== 'pie' ? geometry.layers[tooltip.series]?.points[tooltip.index] : null, anchorY = anchor ? pointY(anchor) ?? geometry.cy : geometry.cy;
+  const above = anchorY - tooltipHeight - 12, tooltipY = width <= 320 && tooltip ? Math.max(geometry.top + 8, Math.min(geometry.bottom - tooltipHeight, above >= geometry.top + 8 ? above : anchorY + 12)) : geometry.top + 8;
   return { geometry, props, strings, title: strings.title, heading: props.insight ?? strings.title, onAsk() { emit('ask', undefined, strings.askMessage); }, presentation: Object.fromEntries(Object.entries(frame.rootProps).filter(([key]) => key.startsWith('data-'))), container, width, id, frame, flashing, animate: ctx.animate, point, interaction, tooltip,
     tooltipX: tooltip && type !== 'pie' ? geometry.xs[tooltip.index] : width / 2,
+    tooltipY,
     invalid: props.complete !== false && data.length > 0 && series.length > 0 && !geometry.hasValues,
     onKeyDown(event: KeyboardEvent<SVGSVGElement>) {
       if (!data.length || !shown.length) return;

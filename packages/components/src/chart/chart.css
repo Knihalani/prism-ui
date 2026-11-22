@@ -58,7 +58,7 @@
 .prism-chart__svg { inline-size: 100%; max-inline-size: 100%; }
 .prism-chart__icon { display: inline-flex; inline-size: 1em; block-size: 1em; }
 .prism-chart__icon svg { inline-size: 100%; block-size: 100%; }
-.prism-chart__tooltip { box-sizing: border-box; inline-size: min(16em, 100%); min-inline-size: 0; max-inline-size: 100%; max-block-size: 100%; overflow: hidden; inset-block-start: var(--prism-chart-space-2, var(--prism-space-2)); left: clamp(0px, var(--prism-chart-tooltip-x), max(0px, calc(100% - 16em))); padding: var(--prism-chart-space-2, var(--prism-space-2)); overflow-wrap: anywhere; }
+.prism-chart__tooltip { box-sizing: border-box; inline-size: min(14em, 100%); min-inline-size: 0; max-inline-size: 100%; max-block-size: calc(100% - var(--prism-chart-tooltip-y) - var(--prism-chart-space-2, var(--prism-space-2))); overflow: hidden; inset-block-start: var(--prism-chart-tooltip-y); left: clamp(0px, calc(var(--prism-chart-tooltip-x) + var(--prism-chart-space-3, var(--prism-space-3))), max(0px, calc(100% - 14em))); padding: var(--prism-chart-space-2, var(--prism-space-2)); overflow-wrap: anywhere; }
 .prism-chart__tooltip-row { gap: var(--prism-chart-space-2, var(--prism-space-2)); }
 .prism-chart__tooltip-value { color: var(--prism-chart-text, var(--prism-text)); }
 .prism-chart__legend { justify-content: flex-start; padding: var(--prism-chart-space-1, var(--prism-space-1)) 0; gap: var(--prism-chart-space-1, var(--prism-space-1)); }

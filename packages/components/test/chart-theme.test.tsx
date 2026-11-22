@@ -4,6 +4,7 @@ import { createElement, forwardRef } from 'react';
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { Prism, createRegistry, defineTheme, usePrism, type Action, type PrismComponentProps } from '@prism-ui/react';
 import { chartDefinition, useChart, type ChartModel, type ChartProps, type ChartSlotProps } from '../src/chart';
+import { pointY } from '../src/lib/chart';
 
 afterEach(cleanup);
 const registry = createRegistry([chartDefinition]);
@@ -14,13 +15,14 @@ const source = (props: ChartProps) => '\x60\x60\x60ui:chart\n' + JSON.stringify(
 
 test('compact headless geometry thins ticks and line charts ignore bar/area stacking', () => {
   let model!: ChartModel;
-  function Headless({ props }: PrismComponentProps<ChartProps>) { model = useChart(props, usePrism(), 280, 0); return null; }
+  function Headless({ props }: PrismComponentProps<ChartProps>) { model = useChart(props, usePrism(), 280, 0); return <button onClick={() => model.activate({ index: 1, series: 0 })}>Explore</button>; }
   const custom = createRegistry([{ ...chartDefinition, component: Headless }]);
   const view = render(<Prism registry={custom} source={source({ ...base, type: 'line' })} animate={false} />);
   const paths = model.geometry.layers.map(layer => layer.line), domain = model.geometry.domain;
   view.rerender(<Prism registry={custom} source={source({ ...base, type: 'line', stacked: true })} animate={false} />);
   expect(model.geometry.labels.length).toBeLessThanOrEqual(3); expect(model.geometry.ticks.length).toBeLessThanOrEqual(4);
   expect(model.geometry.layers.map(layer => layer.line)).toEqual(paths); expect(model.geometry.domain).toEqual(domain);
+  fireEvent.click(view.getByRole('button', { name: 'Explore' })); expect(model.tooltipY).toBeGreaterThan(model.geometry.top); expect(model.tooltipY).toBeCloseTo((pointY(model.geometry.layers[0].points[1]!) ?? 0) + 12);
 });
 
 test('all declared Chart parts accept model-aware slots across every mode and ready/empty/error/streaming states', () => {
@@ -74,4 +76,15 @@ test('fallback, empty, error, streaming and pie labels are translated', () => {
   view.rerender(<Prism registry={registry} source={source({ x: 'month', series, data: [{ month: 'Jan', revenue: 'bad' }] })} theme={theme} animate={false} />); expect(view.getByRole('alert').textContent).toBe('Nombres invalides'); expect(view.getByRole('table').textContent).toContain('Absent');
   view.rerender(<Prism registry={registry} source={source({ ...base, type: 'pie' })} theme={theme} animate={false} />); expect(view.container.querySelector('[data-part="point-title"]')?.textContent).toBe('Jan vaut 10'); expect(view.container.querySelector('[data-part="slice-value"]')?.textContent).toContain('valeur');
   view.rerender(<Prism registry={registry} source={source({ type: 'pie', data: [] })} theme={theme} animate={false} />); expect(view.container.querySelector('[data-part="total-caption"]')?.textContent).toBe('Somme');
+});
+
+test('moving axes stay canvas-clipped and grids plot-clipped without dangling empty/error masks', () => {
+  const view = render(<Prism registry={registry} source={source(base)} animate={false} />);
+  view.container.querySelectorAll('[data-part="axis-row"]').forEach(row => expect(row.getAttribute('clip-path')).toContain('-axis-clip)'));
+  view.container.querySelectorAll('[data-part="grid"]').forEach(grid => expect(grid.getAttribute('clip-path')).toContain('-clip)'));
+  expect(view.container.querySelectorAll('[data-part="clip"]')).toHaveLength(2);
+  for (const data of [[], [{ month: 'Jan', revenue: 'bad' }]]) {
+    view.rerender(<Prism registry={registry} source={source({ ...base, data })} animate={false} />);
+    expect(view.container.querySelectorAll('[clip-path]')).toHaveLength(0);
+  }
 });
