@@ -120,6 +120,19 @@ test('an externally patched table cell shows a static flash when animation is di
   expect(view.container.querySelector('[data-entering]')).toBeNull();
 });
 
+test('linked numeric cells stay readable when a store update supplies an object', () => {
+  const store = createStore();
+  store.set('total', 20);
+  const text = source({ columns, rows: [{ name: 'Zoe', amount: { $ref: 'total' } }] });
+  const view = render(<Prism registry={registry} source={text} store={store} />);
+  const cell = view.getByText('20').closest('td');
+  act(() => store.set('total', { toString: 'label', amount: 40 }));
+  expect(cell?.textContent).toBe('');
+  expect(view.getByText('Zoe')).toBeTruthy();
+  act(() => store.set('total', 40));
+  expect(cell?.textContent).toBe('40');
+});
+
 test('single selection, keyboard row arrows and Space, Enter sort, undo and persistent store state', () => {
   const store = createStore();
   const text = source({ id: 'people', columns, rows, select: 'single', pageSize: 2 });

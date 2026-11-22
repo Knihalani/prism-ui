@@ -47,7 +47,8 @@ export function inferType(values: unknown[]): DataTableColumn['type'] {
 function numeric(value: unknown) { return typeof value === 'number' ? value : Number(String(value).replace(/[$€£¥,%\s]/g, '')); }
 function scalar(value: unknown) { return value == null || ['string', 'number', 'boolean'].includes(typeof value) ? value : undefined; }
 function inferCurrency(value: unknown) { return ({ '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY' } as Record<string, string>)[String(value)[0]]; }
-export function numericCell(value: unknown, column: DataTableColumn): number | undefined {
+export function numericCell(input: unknown, column: DataTableColumn): number | undefined {
+  const value = scalar(input);
   const kind = column.format ?? column.type ?? 'text';
   if (!['number', 'currency', 'compact', 'percent'].includes(kind) || value == null || value === '') return;
   return numeric(value);
