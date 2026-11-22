@@ -2,6 +2,7 @@ import { createContext, memo, useCallback, useContext, useId, useLayoutEffect, u
 import { parse, type Node } from '@prism-ui/core';
 import { s, type Infer } from '@prism-ui/schema';
 import { ComponentContext, StreamSkeleton, cx, defaultRenderers, defineComponent, registerComponent, usePart, usePrism, useSent, useSlot, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
+import { Chip, Checkbox as SharedCheckbox, Pill, Switch } from '../shared';
 import { ComponentFrame } from '../frame';
 import { ViewIcon, iconNames } from './icons';
 import { bindPath, collect, evaluate, isOpen, listPath, resolve, resolvePath, run, snapshot, template, type Formatter, type Read, type ViewNode, type ViewScope, type ViewValue } from './tree';
@@ -254,10 +255,10 @@ function Button(p: PrimitiveProps) {
   const view = useContext(ViewContext)!;
   const get: Read = path => view.prism.store.get(path);
   const disabled = flag(p.node.disabled, p.props.disabled, p.scope, get) || isOpen(p.node.onClick) || (p.open && p.node.onClick === undefined);
-  return <button type="button" {...p.part('button')} {...tokens(p.props)} data-variant={pick(p.props.variant, new Set(['primary', 'secondary', 'ghost', 'outline', 'danger', 'link'])) ?? 'secondary'} data-full={p.props.full ? '' : undefined}
+  return <Pill {...p.part('button')} {...tokens(p.props)} variant={p.props.variant === 'primary' || p.props.variant === 'danger' ? 'primary' : p.props.variant === 'ghost' || p.props.variant === 'link' ? 'ghost' : 'secondary'} data-style={pick(p.props.variant, new Set(['primary', 'secondary', 'ghost', 'outline', 'danger', 'link'])) ?? 'secondary'} data-full={p.props.full ? '' : undefined}
     disabled={disabled} aria-label={p.props.ariaLabel ? text(p.props.ariaLabel) : undefined} onClick={() => p.act(p.node.onClick)}>
     <Icon name={p.props.icon} p={p} />{p.props.label !== undefined && <span>{text(p.props.label)}</span>}<Icon name={p.props.iconRight} p={p} />
-  </button>;
+  </Pill>;
 }
 function Field({ p, children, id, inline }: { p: PrimitiveProps; children: ReactNode; id: string; inline?: boolean }) {
   return <div {...p.part('field')} {...tokens(p.props)} data-inline={inline ? '' : undefined}>
@@ -305,19 +306,19 @@ function Segmented(p: PrimitiveProps) {
     (ref.current?.children[next] as HTMLElement | undefined)?.focus();
   };
   return <Field p={p} id={id}><div {...p.part('segmented')} ref={ref} role="radiogroup" id={id} aria-label={p.props.label ? text(p.props.label) : undefined} onKeyDown={move}>
-    {opts.map((o, i) => <button key={i} type="button" role="radio" {...p.part('segment')} aria-checked={i === current} tabIndex={i === Math.max(0, current) ? 0 : -1} onClick={() => p.set(o.value)}>
+    {opts.map((o, i) => <Chip key={i} role="radio" {...p.part('segment')} aria-checked={i === current} tabIndex={i === Math.max(0, current) ? 0 : -1} onClick={() => p.set(o.value)}>
       {o.icon && <ViewIcon name={o.icon} />}<span>{o.label}</span>{o.hint && <span {...p.part('segmentHint')}>{o.hint}</span>}
-    </button>)}
+    </Chip>)}
   </div></Field>;
 }
 function Toggle(p: PrimitiveProps) {
   const id = useId(), on = !!p.props.value;
-  return <Field p={p} id={id} inline><button id={id} type="button" role="switch" {...p.part('switch')} aria-checked={on} data-state={on ? 'on' : 'off'} aria-describedby={p.props.description ? id + '-d' : undefined} onClick={() => p.set(!on)}><span {...p.part('thumb')} /></button></Field>;
+  return <Field p={p} id={id} inline><Switch id={id} {...p.part('switch')} checked={on} data-state={on ? 'on' : 'off'} aria-describedby={p.props.description ? id + '-d' : undefined} onClick={() => p.set(!on)}><span {...p.part('thumb')} /></Switch></Field>;
 }
 function Checkbox(p: PrimitiveProps) {
   const id = useId(), on = !!p.props.value;
   return <label {...p.part('checkbox')} {...tokens(p.props)} data-checked={on ? '' : undefined} data-strike={p.props.strike ? '' : undefined} htmlFor={id}>
-    <input id={id} type="checkbox" {...p.part('checkInput')} checked={on} onChange={e => p.set(e.target.checked)} />
+    <SharedCheckbox id={id} {...p.part('checkInput')} checked={on} onChange={e => p.set(e.target.checked)} />
     <span {...p.part('checkBox')} aria-hidden="true"><ViewIcon name="check" /></span>
     <span {...p.part('checkText')}><span {...p.part('checkLabel')}><Markdown text={text(p.props.label)} /></span>{p.props.description && <span {...p.part('description')}>{text(p.props.description)}</span>}</span>
   </label>;

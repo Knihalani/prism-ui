@@ -1,6 +1,7 @@
-import type { CSSProperties } from 'react';
-import { defineComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
+import { useId, type CSSProperties } from 'react';
+import { defineComponent, usePart, usePresentation, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
 import { s } from '@prism-ui/schema';
+import { Pill } from '../shared';
 import { ComponentFrame } from '../frame';
 import { MockupToolbar, MockupPenTools, MockupSource, MockupFooter } from './chrome';
 import { WIREFRAME_DOCS, type FeedbackItem } from './engine';
@@ -17,11 +18,13 @@ function Item({ item, vm }: { item: FeedbackItem; vm: MockupModel }) {
   </div>;
 }
 function Popover({ vm }: { vm: MockupModel }) {
+  const inputId = useId();
   const part = usePart('mockup', 'popover'), input = usePart('mockup', 'input'), primary = usePart('mockup', 'primary'), button = usePart('mockup', 'button');
   const item = vm.state.items.find(item => item.id === vm.editing?.id); if (!item) return null;
   return <div {...part} role="dialog" aria-label={vm.labels.comment.replace('{n}', String(item.n)).replace('{text}', item.comment)} style={{ ...part.style, ...vm.popoverPosition(item.x, item.y) }}>
-    <textarea {...input} autoFocus aria-label={vm.labels.placeholder} placeholder={vm.labels.placeholder} value={vm.comment} onChange={event => vm.setComment(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); vm.save(true); } if (event.key === 'Escape') { event.stopPropagation(); vm.cancel(); } }} />
-    <button {...primary} onClick={() => vm.save()}>{vm.labels.save}</button><button {...button} onClick={() => vm.remove(item.id)}>{vm.labels.delete}</button>
+    <label className="prism-mockup__popoverLabel" htmlFor={inputId}>A thought on this moment</label>
+    <textarea {...input} id={inputId} autoFocus aria-label={vm.labels.placeholder} placeholder={vm.labels.placeholder} value={vm.comment} onChange={event => vm.setComment(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); vm.save(true); } if (event.key === 'Escape') { event.stopPropagation(); vm.cancel(); } }} />
+    <Pill {...primary} onClick={() => vm.save()}>{vm.editing?.fresh ? 'Comment' : vm.labels.save}</Pill><Pill {...button} variant="ghost" onClick={() => vm.cancel()}>Cancel</Pill><Pill {...button} variant="ghost" onClick={() => vm.remove(item.id)}>{vm.labels.delete}</Pill>
   </div>;
 }
 function Marker({ item, vm }: { item: FeedbackItem; vm: MockupModel }) {
@@ -33,14 +36,13 @@ function Marker({ item, vm }: { item: FeedbackItem; vm: MockupModel }) {
   </>;
 }
 export function MockupView({ vm, feedback = true, embedded = false }: { vm: MockupModel; feedback?: boolean; embedded?: boolean }) {
+  const presentation = usePresentation(), artboard = usePart('mockup', 'artboard');
   const root = usePart('mockup', 'member'), layout = usePart('mockup', 'layout'), viewport = usePart('mockup', 'viewport'), spacer = usePart('mockup', 'spacer'), stage = usePart('mockup', 'stage'), canvas = usePart('mockup', 'canvas'), media = usePart('mockup', 'media'), skeleton = usePart('mockup', 'skeleton'), list = usePart('mockup', 'list'), input = usePart('mockup', 'input'), hint = usePart('mockup', 'hint'), live = usePart('mockup', 'live'), reticle = usePart('mockup', 'reticle'), stroke = usePart('mockup', 'stroke'), overall = usePart('mockup', 'overall');
   const Row = useSlot('mockup', 'item', Item), EmptyState = useSlot('mockup', 'empty', Empty), Comment = useSlot('mockup', 'popover', Popover);
-  const tools = embedded ? undefined : <MockupToolbar vm={vm} />;
-  return <div {...root} ref={vm.root} style={{ ...root.style, '--mockup-scale': vm.scale, '--mockup-inverse-scale': 1 / vm.scale } as CSSProperties} onKeyDown={vm.onKeyDown} data-device={vm.device} data-kind={vm.kind} data-embedded={embedded || undefined} data-state={vm.expanded ? 'expanded' : vm.submitted ? 'submitted' : vm.complete ? 'done' : 'streaming'}>
-    <ComponentFrame component="mockup" title={embedded ? undefined : vm.title} label={vm.title} ask={!embedded} undo={false} state={vm.submitted ? 'submitted' : vm.complete ? 'done' : 'streaming'} toolbar={tools}>
+  return <div {...root} {...presentation} ref={vm.root} style={{ ...root.style, '--mockup-scale': vm.scale, '--mockup-inverse-scale': 1 / vm.scale } as CSSProperties} onKeyDown={vm.onKeyDown} data-device={vm.device} data-kind={vm.kind} data-embedded={embedded || undefined} data-expanded={vm.expanded || undefined} data-state={vm.submitted ? 'sent' : presentation['data-state']}>
+    <ComponentFrame component="mockup" title={embedded ? undefined : vm.title} label={vm.title} ask={!embedded} undo={false} state={vm.submitted ? 'sent' : vm.complete ? 'ready' : 'streaming'}>
       {!embedded && vm.showSource && <MockupSource vm={vm} />}
-      {!embedded && !vm.submitted && <MockupPenTools vm={vm} />}
-      <div {...layout}><div {...viewport} ref={vm.viewport} style={{ ...viewport.style, maxHeight: vm.props.height ?? '70vh' }}>
+      <div {...layout}><div {...artboard}>{!embedded && <div className="prism-mockup__glass"><MockupToolbar vm={vm} />{!vm.submitted && <MockupPenTools vm={vm} />}</div>}<div {...viewport} ref={vm.viewport} style={{ ...viewport.style, maxHeight: vm.props.height ?? '70vh' }}>
         <div {...spacer} style={{ ...spacer.style, width: vm.width * vm.scale, height: vm.framed ? Math.ceil(vm.contentHeight * vm.scale) : vm.contentHeight * vm.scale }}><div {...stage} style={{ ...stage.style, width: vm.width, height: vm.contentHeight, transform: `scale(${vm.scale})` }}>
           {!vm.visible ? <div {...skeleton} role="status" aria-label={vm.labels.loading} /> : <>
             {vm.framed ? <iframe {...media} ref={vm.iframe} title={vm.title} sandbox="allow-scripts" style={{ ...media.style, width: vm.width, height: vm.contentHeight }} /> : vm.kind === 'svg' ? <div {...media} ref={vm.graphic} dangerouslySetInnerHTML={{ __html: vm.svg }} /> : vm.imageSrc && !vm.imageError ? <img {...media} src={vm.imageSrc} alt={vm.title} loading="lazy" decoding="async" onLoad={event => vm.imageLoaded(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight)} onError={() => vm.setImageError(true)} /> : <div {...skeleton} role="status">{vm.source || vm.props.src ? vm.labels.imageError : vm.labels.loading}</div>}
@@ -49,13 +51,12 @@ export function MockupView({ vm, feedback = true, embedded = false }: { vm: Mock
               {vm.hover && !vm.state.items.length && !vm.submitted && <span {...hint} style={{ ...hint.style, left: `${Math.min(65, vm.hover[0])}%`, top: `${vm.hover[1]}%` }}>{vm.labels.hint}</span>}
               {vm.rubber.length > 0 && <svg {...stroke} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{vm.pen ? <polyline points={vm.rubber.map(p => p.join(',')).join(' ')} fill="none" stroke={vm.color} strokeWidth="2" vectorEffect="non-scaling-stroke" /> : <rect x={Math.min(vm.rubber[0][0], vm.rubber.at(-1)![0])} y={Math.min(vm.rubber[0][1], vm.rubber.at(-1)![1])} width={Math.abs(vm.rubber[0][0] - vm.rubber.at(-1)![0])} height={Math.abs(vm.rubber[0][1] - vm.rubber.at(-1)![1])} fill="var(--prism-accent-soft)" stroke="var(--prism-accent)" vectorEffect="non-scaling-stroke" />}</svg>}
             </div>
-            {[...vm.resolved, ...vm.state.items].map(item => <Marker key={item.id} item={item as FeedbackItem} vm={vm} />)}{vm.editing && !vm.submitted && <Comment vm={vm} />}
+            {[...vm.resolved, ...vm.state.items].map(item => <Marker key={item.id} item={item as FeedbackItem} vm={vm} />)}
           </>}
         </div></div>
-      </div><div {...list}>{vm.state.items.length || vm.resolved.length ? [...vm.resolved, ...vm.state.items].map(item => <Row key={item.id} item={item as FeedbackItem} vm={vm} />) : <EmptyState vm={vm} />}</div></div>
+      </div>{vm.editing && !vm.submitted && <Comment vm={vm} />}{feedback && <MockupFooter labels={vm.labels} locale={vm.locale} count={vm.submitted ? vm.feedback.toPayload().items.length : vm.state.items.length} submitted={vm.submitted} edit={() => vm.setSubmitted(false)} canUndo={vm.feedback.canUndo} canRedo={vm.feedback.canRedo} undo={() => { vm.close(); vm.feedback.undo(); }} redo={() => { vm.close(); vm.feedback.redo(); }} canSubmit={vm.canSubmit} submit={vm.submit} />}</div><div {...list} data-prism-flash={vm.flash ? '' : undefined}>{vm.state.items.length || vm.resolved.length ? [...vm.resolved, ...vm.state.items].map(item => <Row key={item.id} item={item as FeedbackItem} vm={vm} />) : <EmptyState vm={vm} />}</div></div>
       {feedback && <>
-        {!vm.submitted && <label {...overall}>{vm.labels.overall}<textarea {...input} value={vm.state.overall} onChange={event => vm.feedback.setOverall(event.target.value)} /></label>}
-        <MockupFooter labels={vm.labels} locale={vm.locale} count={vm.submitted ? vm.feedback.toPayload().items.length : vm.state.items.length} submitted={vm.submitted} edit={() => vm.setSubmitted(false)} canUndo={vm.feedback.canUndo} canRedo={vm.feedback.canRedo} undo={() => { vm.close(); vm.feedback.undo(); }} redo={() => { vm.close(); vm.feedback.redo(); }} canSubmit={vm.canSubmit} submit={vm.submit} />
+        <label {...overall}><span className="prism-mockup__sr">{vm.labels.overall}</span><textarea {...input} rows={2} placeholder="Add overall feedback…" readOnly={vm.submitted} value={vm.state.overall} onChange={event => vm.feedback.setOverall(event.target.value)} /></label>
       </>}
       <span {...live} aria-live="polite">{vm.announcement}</span>
     </ComponentFrame>

@@ -74,7 +74,8 @@ test('same-id revisions switch and show a line diff; controls are native keyboar
   for (const name of ['Code', 'Copy', 'Download source']) {
     const button = view.getByRole('button', { name });
     expect(button.getAttribute('title')).toBe(name);
-    expect(button.textContent).toBe('');
+    expect(button.classList.contains('prism-icon-btn')).toBe(true);
+    expect(button.querySelector('svg')).not.toBeNull();
   }
   fireEvent.click(view.getByRole('button', { name: 'Code' }));
   expect(view.getByRole('button', { name: 'Preview' }).getAttribute('title')).toBe('Preview');

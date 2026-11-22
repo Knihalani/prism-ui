@@ -49,6 +49,31 @@ test('an incomplete replay retains the last measured height even through empty c
   expect(x.view.container.querySelector('iframe')).toBe(iframe);
   x.rerender({ source: '<h1>Done</h1>' }); size(500); expect(stage.style.height).toBe('500px');
 });
+test('ready content settles to its last measurement after a stable streaming floor', () => {
+  const x = setup({ source: '<h1>Short' }, false);
+  x.send({ ns: 'prism-mockup', v: 1, id: 'stub', type: 'size', width: 1280, height: 120 });
+  const stage = x.view.container.querySelector<HTMLElement>('.prism-mockup__stage')!;
+  expect(stage.style.height).toBe('400px');
+  x.rerender({ source: '<h1>Short</h1>' });
+  expect(stage.style.height).toBe('120px');
+  expect(x.view.container.querySelector('.prism-mockup__member')!.getAttribute('data-state')).toBe('ready');
+});
+test('the shared feedback pill becomes a receipt in place and permits editing and resending', () => {
+  const x = setup(), pill = x.view.getByRole('button', { name: 'Submit feedback' });
+  expect((pill as HTMLButtonElement).disabled).toBe(true);
+  x.change(x.view.getByRole('textbox', { name: 'Overall feedback' }), 'Keep the first screen quiet.');
+  fireEvent.click(pill);
+  expect(x.view.container.querySelector('.prism-mockup__primary')).toBe(pill);
+  expect(pill.classList.contains('prism-pill')).toBe(true);
+  expect(pill.hasAttribute('data-sent')).toBe(true);
+  expect(x.view.container.querySelector('.prism-mockup__member')!.getAttribute('data-state')).toBe('sent');
+  fireEvent.click(x.view.getByRole('button', { name: 'Edit feedback' }));
+  expect(pill.hasAttribute('data-sent')).toBe(false);
+  x.change(x.view.getByRole('textbox', { name: 'Overall feedback' }), 'One smaller next step.');
+  fireEvent.click(pill);
+  expect(x.actions).toHaveLength(2);
+  expect((x.actions[1].payload as any).overall).toBe('One smaller next step.');
+});
 test('a named replay restores its saved feedback instead of overwriting it with the provisional model', () => {
   const previous = createFeedback({ mockup: 'Mockup', device: 'desktop', overall: 'Keep the saved reviewer notes' });
   const item = previous.addPin({ x: 20, y: 30 }); previous.edit(item.id, { comment: 'Keep the saved pin' });
@@ -135,9 +160,19 @@ test('popover stays within the content box near its lower right edge', () => {
   const x = setup({ source: '<h1>Hello</h1>' });
   x.pointer('pointerdown', 980, 490); x.pointer('pointerup', 980, 490);
   const popover = x.view.getByRole('dialog');
-  expect(popover.style.width).toBe('320px');
+  expect(popover.style.width).toBe('265px');
   expect(parseFloat(popover.style.left) + parseFloat(popover.style.width)).toBeLessThanOrEqual(1280);
   expect(parseFloat(popover.style.top) + 180).toBeLessThanOrEqual(400);
+});
+test('a full-size comment popover stays above the floating submit pill', () => {
+  const x = setup({ source: '<h1>Hello</h1>' });
+  const rect = (width: number, height: number, top = 0) => ({ x: 0, y: top, left: 0, right: width, top, bottom: top + height, width, height, toJSON() {} });
+  x.view.container.querySelector<HTMLElement>('.prism-mockup__artboard')!.getBoundingClientRect = () => rect(390, 440);
+  x.view.container.querySelector<HTMLElement>('.prism-mockup__feedbackFooter')!.getBoundingClientRect = () => rect(366, 36, 386);
+  x.pointer('pointerdown', 980, 490); x.pointer('pointerup', 980, 490);
+  const popover = x.view.getByRole('dialog');
+  expect(parseFloat(popover.style.left) + parseFloat(popover.style.width)).toBeLessThanOrEqual(378);
+  expect(parseFloat(popover.style.top) + 200).toBeLessThanOrEqual(374);
 });
 test('open typed drafts enable submit, save before payload creation and pluralize one comment', () => {
   const x = setup(); x.pointer('pointerdown', 300, 200); x.pointer('pointerup', 300, 200);
@@ -172,9 +207,9 @@ test('streaming grows source without replacing controller; empty and partial SVG
   const b = setup({ kind: 'svg', source: '' }, false); b.rerender({ kind: 'svg', source: '<svg><circle r="4"/><path d="' }, false); expect(b.view.container.querySelector('circle')).not.toBeNull();
 });
 test('pin target, comment and overall submit an exact payload and message; edit resubmits', async () => {
-  const a = setup({ title: 'Pricing', variant: 'A' }); expect((a.view.getByText('Submit feedback') as HTMLButtonElement).disabled).toBe(true);
+  const a = setup({ title: 'Pricing', variant: 'A' }); expect((a.view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement).disabled).toBe(true);
   await act(async () => { a.pointer('pointerdown', 250, 100); a.pointer('pointerup', 250, 100); });
-  a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'Make it bigger'); fireEvent.click(a.view.getByText('Save'));
+  a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'Make it bigger'); fireEvent.click(a.view.getByRole('dialog').querySelector<HTMLButtonElement>('.prism-mockup__primary')!);
   a.change(a.view.getByRole('textbox', { name: 'Overall feedback' }), 'Looks good'); fireEvent.click(a.view.getByText('Submit feedback'));
   const payload = { mockup: 'Pricing', variant: 'A', device: 'desktop', overall: 'Looks good', items: [{ n: 1, kind: 'pin', x: 25, y: 20, comment: 'Make it bigger', target: { selector: 'h1', text: 'Hello', html: '<h1>Hello</h1>' } }] };
   expect(a.actions.map(({ type, payload, message }) => ({ type, payload, message }))).toEqual([{ type: 'feedback', payload, message: toMessage(payload as Parameters<typeof toMessage>[0]) }]); expect(a.store.get('review.submitted')).toBe(true); fireEvent.click(a.view.getByText('Edit feedback')); expect(a.view.getByRole('textbox', { name: 'Overall feedback' })).toBeDefined();
@@ -184,14 +219,14 @@ test('region, drawing, undo/redo and escape cancellation use percentage space', 
   a.pointer('pointerdown', 100, 50); a.pointer('pointermove', 400, 200); a.pointer('pointerup', 400, 200);
   expect((a.store.get('review.feedback') as any).items[0]).toMatchObject({ kind: 'region', x: 10, y: 10, w: 30, h: 30 });
   fireEvent.keyDown(a.view.getByRole('textbox', { name: 'Add a comment…' }), { key: 'Escape' }); expect((a.store.get('review.feedback') as any).items).toHaveLength(0);
-  fireEvent.click(a.view.getByText('Draw', { exact: false })); a.pointer('pointerdown', 100, 50); a.pointer('pointermove', 200, 100); a.pointer('pointerup', 300, 150); fireEvent.click(a.view.getByText('Save'));
+  fireEvent.click(a.view.getByRole('button', { name: 'Draw' })); a.pointer('pointerdown', 100, 50); a.pointer('pointermove', 200, 100); a.pointer('pointerup', 300, 150); fireEvent.click(a.view.getByRole('dialog').querySelector<HTMLButtonElement>('.prism-mockup__primary')!);
   expect((a.store.get('review.feedback') as any).items[0]).toMatchObject({ kind: 'drawing', x: 10, y: 10, path: 'M10 10L30 30' });
-  fireEvent.click(a.view.getByText('Undo')); expect((a.store.get('review.feedback') as any).items).toHaveLength(0); fireEvent.click(a.view.getByText('Redo')); expect((a.store.get('review.feedback') as any).items).toHaveLength(1);
+  fireEvent.click(a.view.getByRole('button', { name: 'Undo' })); expect((a.store.get('review.feedback') as any).items).toHaveLength(0); fireEvent.click(a.view.getByRole('button', { name: 'Redo' })); expect((a.store.get('review.feedback') as any).items).toHaveLength(1);
 });
 test('keyboard reticle, previous resolved items and persisted drafts exclude resolved payload', () => {
   const a = setup({ previous: { overall: '', items: [{ n: 1, kind: 'pin', x: 10, y: 10, comment: 'Old' }] } });
   fireEvent.keyDown(a.canvas(), { key: 'ArrowRight' }); fireEvent.keyDown(a.canvas(), { key: 'ArrowDown', shiftKey: true }); fireEvent.keyDown(a.canvas(), { key: 'Enter' });
-  expect((a.store.get('review.feedback') as any).items[0]).toMatchObject({ x: 52, y: 60 }); a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'New'); fireEvent.click(a.view.getByText('Save')); fireEvent.click(a.view.getByText('Submit feedback')); expect((a.actions[0].payload as any).items).toHaveLength(1); expect(a.view.getByRole('button', { name: 'Resolved 1: Old' }).getAttribute('aria-disabled')).toBe('true');
+  expect((a.store.get('review.feedback') as any).items[0]).toMatchObject({ x: 52, y: 60 }); a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'New'); fireEvent.click(a.view.getByRole('dialog').querySelector<HTMLButtonElement>('.prism-mockup__primary')!); fireEvent.click(a.view.getByText('Submit feedback')); expect((a.actions[0].payload as any).items).toHaveLength(1); expect(a.view.getByRole('button', { name: 'Resolved 1: Old' }).getAttribute('aria-disabled')).toBe('true');
   fireEvent.click(a.view.getByText('Edit feedback')); a.rerender({ title: 'Updated' }); expect(a.view.getByText('New')).toBeDefined();
 });
 test('direct image directive and plugin fences resolve through the registry', () => {

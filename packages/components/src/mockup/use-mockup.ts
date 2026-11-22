@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent } from 'react';
-import { ComponentContext, useComponentState, useEmit, type PrismContextValue } from '@prism-ui/react';
+import { ComponentContext, useComponentState, useFlash, useLocalWrite, useSent, type PrismContextValue } from '@prism-ui/react';
 import { createFeedback, createFrameController, previousAsResolved, sanitizeSvg, toMessage, wireframeDocument, type FeedbackPayload, type FeedbackState, type FeedbackPoint, type FrameController, type HitRect } from './engine';
 
 export type MockupDevice = 'desktop' | 'tablet' | 'mobile';
@@ -12,11 +12,13 @@ const widths = { desktop: 1280, tablet: 834, mobile: 390 };
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
 
 export function useMockup(props: MockupProps, ctx: PrismContextValue, options: MockupOptions = {}) {
-  const component = useContext(ComponentContext), emit = useEmit();
+  const component = useContext(ComponentContext), receipt = useSent();
+  const flash = useFlash(`${component!.id}.feedback`), localWrite = useLocalWrite();
   const enabled = options.enabled !== false;
   const complete = component?.node.complete !== false, kind = props.kind ?? 'html', framed = kind === 'html' || kind === 'wire';
   const labels = { ...mockupLabels, ...props.labels }, title = props.title ?? labels.title, source = props.source ?? '';
-  const [localDevice, writeDevice] = useComponentState<MockupDevice>('device', props.device ?? 'desktop'), [localZoom, writeZoom] = useComponentState('zoom', 1), [draft] = useComponentState<FeedbackState | undefined>('feedback', undefined), [submitted, setSubmitted] = useComponentState('submitted', false);
+  const [localDevice, writeDevice] = useComponentState<MockupDevice>('device', props.device ?? 'desktop'), [localZoom, writeZoom] = useComponentState('zoom', 1), [draft] = useComponentState<FeedbackState | undefined>('feedback', undefined), [submitted, writeSubmitted] = useComponentState('submitted', false);
+  function setSubmitted(value: boolean) { if (!value) receipt.reset(); writeSubmitted(value); }
   const device = options.controls?.device ?? localDevice, setDevice = options.controls?.setDevice ?? writeDevice, zoom = options.controls?.zoom ?? localZoom, setZoom = options.controls?.setZoom ?? writeZoom;
   const [feedback] = useState(() => createFeedback({ ...draft, mockup: title, variant: props.variant, device }));
   const state = useSyncExternalStore(feedback.subscribe, feedback.getState, feedback.getState);
@@ -28,8 +30,10 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const gesture = useRef<{ points: FeedbackPoint[]; clientX: number; clientY: number } | null>(null);
   const pending = useRef<{ id: string; rollback(): void } | null>(null);
   const completeRef = useRef(complete); completeRef.current = complete;
-  const grow = (height: number) => setContentHeight(old => completeRef.current ? Math.max(1, height) : Math.max(old, height, 400));
-  useEffect(() => { const persist = () => ctx.store.set(`${component!.id}.feedback`, feedback.toJSON(), { history: false }); persist(); return feedback.subscribe(persist); }, [feedback, ctx.store, component?.id]);
+  const measuredHeight = useRef<number | undefined>(undefined);
+  const grow = (height: number) => { measuredHeight.current = height; setContentHeight(old => completeRef.current ? Math.max(1, height) : Math.max(old, height, 400)); };
+  useEffect(() => { if (complete && measuredHeight.current !== undefined) setContentHeight(Math.max(1, measuredHeight.current)); }, [complete]);
+  useEffect(() => { const persist = () => localWrite(() => ctx.store.set(`${component!.id}.feedback`, feedback.toJSON(), { history: false })); persist(); return feedback.subscribe(persist); }, [feedback, ctx.store, component?.id, localWrite]);
   useEffect(() => { feedback.setContext({ mockup: title, variant: props.variant, device }); }, [feedback, title, props.variant, device]);
   useEffect(() => { if (visible || !root.current || typeof IntersectionObserver === 'undefined') return; const observer = new IntersectionObserver(entries => { if (entries.some(e => e.isIntersecting)) { setVisible(true); observer.disconnect(); } }, { rootMargin: '200px' }); observer.observe(root.current); return () => observer.disconnect(); }, [visible]);
   useEffect(() => { if (!viewport.current || typeof ResizeObserver === 'undefined') return; const observer = new ResizeObserver(entries => setContainerWidth(entries[0].contentRect.width || 1280)); observer.observe(viewport.current); return () => observer.disconnect(); }, []);
@@ -52,7 +56,16 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   function remove(id: string) { feedback.remove(id); setEditing(null); announce(labels.removed); }
   function close(restoreFocus = false) { pending.current = null; setEditing(null); if (restoreFocus) canvas.current?.focus({ preventScroll: true }); }
   function popoverPosition(x: number, y: number) {
-    const popupWidth = Math.min(320, containerWidth - 24), popupHeight = 180;
+    const artboard = canvas.current?.closest<HTMLElement>('.prism-mockup__artboard'), board = artboard?.getBoundingClientRect(), target = canvas.current?.getBoundingClientRect();
+    if (board?.width && target) {
+      const popupWidth = Math.min(265, board.width - 24), popupHeight = 200;
+      const left = Math.max(12, Math.min(board.width - popupWidth - 12, target.left - board.left + x / 100 * target.width + 12));
+      const anchor = target.top - board.top + y / 100 * target.height;
+      const submit = artboard?.querySelector('.prism-mockup__feedbackFooter')?.getBoundingClientRect();
+      const bottom = submit ? submit.top - board.top - 12 : board.height - 12;
+      return { left, top: Math.max(12, Math.min(bottom - popupHeight, anchor + 18)), width: popupWidth };
+    }
+    const popupWidth = Math.min(265, containerWidth - 24), popupHeight = 200;
     const left = Math.max(12 / scale, Math.min(width - (popupWidth + 12) / scale, x / 100 * width));
     const anchor = y / 100 * contentHeight, bottom = Math.min(contentHeight, ((viewport.current?.scrollTop ?? 0) + (viewport.current?.clientHeight || contentHeight * scale)) / scale);
     const top = Math.max(12 / scale, Math.min(bottom - (popupHeight + 12) / scale, anchor + 20 / scale));
@@ -105,7 +118,8 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     imageLoaded(width: number, height: number) { setNaturalWidth(width || 800); grow(height || 400); },
     async fullscreen() { try { if (document.fullscreenElement) await document.exitFullscreen(); else if (root.current?.requestFullscreen) await root.current.requestFullscreen(); else setExpanded(old => !old); } catch { setExpanded(old => !old); } },
     async copy() { try { await navigator.clipboard?.writeText(source); } catch {} },
-    submit() { save(); if (!feedback.canSubmit) return; const payload = feedback.toPayload(); emit('feedback', payload, toMessage(payload)); setSubmitted(true); setEditing(null); },
+    flash,
+    submit() { save(); if (!feedback.canSubmit) return; const payload = feedback.toPayload(); receipt.send('feedback', payload, toMessage(payload)); setSubmitted(true); setEditing(null); },
   };
 }
 export type MockupModel = ReturnType<typeof useMockup>;

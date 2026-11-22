@@ -26,7 +26,7 @@ function setup(source = a + b, done = false, store = createStore()) {
 }
 function comment(canvas: HTMLElement, text: string, view: ReturnType<typeof render>) {
   fireEvent.keyDown(canvas, { key: 'Enter' });
-  const area = view.getByRole('textbox', { name: 'Add a comment…' }); act(() => area.focus()); fireEvent.change(area, { target: { value: text } }); fireEvent.keyUp(area, { key: 'Unidentified' }); fireEvent.click(view.getByText('Save'));
+  const area = view.getByRole('textbox', { name: 'Add a comment…' }); act(() => area.focus()); fireEvent.change(area, { target: { value: text } }); fireEvent.keyUp(area, { key: 'Unidentified' }); fireEvent.click(view.getByRole('dialog').querySelector<HTMLButtonElement>('.prism-mockup__primary')!);
 }
 test('group Redo stays subscribed to the streaming feedback model after completion', () => {
   const x = setup();
@@ -70,7 +70,7 @@ test('compare has one shared toolbar, propagates controls, and saves pending dra
   fireEvent.click(x.view.getByRole('button', { name: 'Prefer this B' }));
   fireEvent.keyDown(x.view.getAllByRole('application')[1], { key: 'Enter' });
   x.change(x.view.getByRole('textbox', { name: 'Add a comment…' }), 'Pending B draft');
-  expect((x.view.getByText('Submit feedback') as HTMLButtonElement).disabled).toBe(false);
+  expect((x.view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement).disabled).toBe(false);
   expect(x.view.getByText('1 comment')).toBeDefined();
   expect(x.view.getByRole('button', { name: 'Undo' }).querySelector('svg')).not.toBeNull();
   fireEvent.click(x.view.getByText('Submit feedback'));
@@ -79,7 +79,7 @@ test('compare has one shared toolbar, propagates controls, and saves pending dra
 });
 test('group payload includes all commented variants, shared overall and preference exactly', () => {
   const x = setup(a + b + '</h1>\n```', true);
-  expect((x.view.getByText('Submit feedback') as HTMLButtonElement).disabled).toBe(true);
+  expect((x.view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement).disabled).toBe(true);
   comment(x.view.getByRole('application'), 'Bigger heading', x.view);
   fireEvent.click(x.view.getByRole('tab', { name: 'B' })); comment(x.view.getByRole('application'), 'Better spacing', x.view);
   x.change(x.view.getByRole('textbox', { name: 'Overall feedback' }), 'Both are promising');
