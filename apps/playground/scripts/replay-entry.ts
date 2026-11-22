@@ -3,5 +3,6 @@ export { React };
 export { createRoot } from 'react-dom/client';
 export { flushSync } from 'react-dom';
 export { Prism } from '@prism-ui/react';
-export { demos, demoSource } from '../src/catalogue';
+export { demoSource } from '../src/catalogue';
+export { motionDemos as demos, motionRenderers } from '../src/motion-demos';
 export { playgroundPlugins } from '../src/plugins';

@@ -97,6 +97,31 @@
 .prism-mockup__feedbackFooter > .prism-mockup__button { white-space: nowrap; }
 .prism-mockup__empty { padding: 0; margin-block: 0; font-size: var(--prism-mockup-text-xs, var(--prism-text-xs)); }
 .prism-mockup__popover { max-inline-size: calc(100cqw - var(--prism-mockup-space-4, var(--prism-space-4))); }
+.prism-mockup__popover { opacity: 1; scale: 1; pointer-events: auto; transition: opacity var(--prism-motion-fast) var(--prism-motion-ease), scale var(--prism-motion-fast) var(--prism-motion-ease); }
+.prism-mockup__popover[data-closing] { opacity: 0; pointer-events: none; transition-timing-function: var(--prism-motion-ease-exit); }
+.prism-mockup__popover[data-closing][data-submitted] { transition-delay: var(--prism-motion-slow); }
+.prism-mockup__marker { opacity: 1; transition: opacity var(--prism-motion-fast) var(--prism-motion-ease); }
+.prism-mockup__marker:not([data-kind="region"]) { scale: 1; transition: scale var(--prism-motion-spring-bouncy-duration) var(--prism-motion-spring-bouncy), opacity var(--prism-motion-fast) var(--prism-motion-ease); }
+.prism-mockup__marker:not([data-kind="region"]):active { scale: var(--prism-motion-scale); transition-duration: var(--prism-motion-instant); }
+.prism-mockup__marker[data-kind="region"] { border-color: transparent; }
+.prism-mockup__region-outline { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.prism-mockup__region-outline rect { fill: none; stroke: var(--prism-mockup-accent, var(--prism-accent-text)); stroke-width: 2; stroke-dasharray: 1; stroke-dashoffset: 0; transition: stroke-dashoffset var(--prism-motion-fast) var(--prism-motion-ease); }
+.prism-mockup__feedbackFooter > [hidden] { display: none; }
+.prism-mockup__primary[data-sent] { opacity: 1; }
+@starting-style {
+  .prism-mockup__popover, .prism-mockup__marker { opacity: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .prism-mockup__popover[data-closing] { scale: var(--prism-motion-scale); }
+  @starting-style {
+    .prism-mockup__popover { scale: var(--prism-motion-scale); }
+    .prism-mockup__marker:not([data-kind="region"]) { scale: .9; }
+    .prism-mockup__region-outline rect { stroke-dashoffset: 1; }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prism-mockup__marker:not([data-kind="region"]):active { scale: 1; }
+}
 @container (max-width: 360px) {
   .prism-root .prism-mockup__header { flex-direction: column; align-items: stretch; }
   .prism-root .prism-mockup__title { overflow: visible; white-space: normal; overflow-wrap: anywhere; }

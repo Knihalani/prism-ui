@@ -64,19 +64,28 @@ pair so themes can derive their own spring tokens.
    path, runbook step bodies, frame overflow.
 5. **Hover-reveal controls.** Secondary controls (copy, ask, undo) sit at `opacity 0` and
    `translateY(2px)` on hover-capable pointers, appearing over `motionFast` when the component is
-   hovered or anything inside is focused; always visible on touch.
+   hovered or anything inside is focused; always visible on touch. Used by artifact hover controls
+   and the inline graphic-feedback trigger as well as frame, codeblock and table controls.
 6. **Press feedback.** `:active` scales to `motionScale` over `motionInstant`; release springs back
-   with `motionSpring`. Used by pill, chip, icon button, stepper keys, segmented, switch, checkbox.
+   with `motionSpring`. Used by pill, chip, icon button, stepper keys, segmented, switch, checkbox,
+   and feedback pins (whose first appearance drops from scale .9 with `motionSpringBouncy`).
 7. **Sent state.** The primary pill morphs in place: ready label exits up with blur over
    `motionFast`, the past-tense label enters from below over `motionSlow`, the check draws with
    `motionSpringBouncy`, the fill eases from accent to a neutral receipt. Width is reserved, so
-   nothing around it shifts.
+   nothing around it shifts. Used by feedback submission too: the same pill becomes a past-tense
+   receipt with a drawn check; any open comment popover then fades closed over `motionFast`.
 8. **Drawn checkmarks.** Stroke-dash draw over `motionSlow` with `motionEase`, the box fills first
    (`motionFast`) then the tick draws (delay `motionInstant`). Used by checkboxes, runbook and summary
    checks, sent receipts.
 9. **Charts draw in.** Lines draw by `pathLength` dash over `motionSlow × 2`, areas fade up,
    bars grow from the baseline staggered by `motionStagger`; new points while streaming transition
    their coordinates instead of re-drawing.
+10. **Graphic feedback.** Comment popovers scale from `motionScale` and fade in over `motionFast`
+    with `motionEase`, anchored by `transform-origin` at the actual pin/region even when clamped
+    against a viewport edge. Closing retargets opacity/scale with `motionEaseExit`, retaining an
+    inert editor until the exit completes. Regions fade and draw their outline over `motionFast`;
+    selection geometry follows the pointer 1:1 without layout transitions. Reduced motion keeps
+    only opacity; `animate={false}` disables all motion, including portaled feedback editors.
 
 ## Rules
 

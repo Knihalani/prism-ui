@@ -9,14 +9,14 @@ try {
   await fetch('http://localhost:5173/scripts/replay-entry.ts');
   await page.goto('http://localhost:5173/motion.html?only=markdown&instant=1', { waitUntil: 'networkidle' });
   const result = await page.evaluate(async () => {
-    const { React, createRoot, flushSync, Prism, demos, demoSource, playgroundPlugins } = await import('/scripts/replay-entry.ts');
+    const { React, createRoot, flushSync, Prism, demos, demoSource, playgroundPlugins, motionRenderers } = await import('/scripts/replay-entry.ts');
     const host = document.createElement('div'); document.body.append(host);
     const failures = [], root = createRoot(host, { onUncaughtError: error => failures.push(error.message) });
     const reports = [];
     for (const demo of demos) {
       const source = demoSource(demo, `prefix-${demo.id}`);
       for (let prefix = 0; prefix <= source.length; prefix++) {
-        flushSync(() => root.render(React.createElement(Prism, { key: demo.id, source: source.slice(0, prefix), done: false, plugins: playgroundPlugins, locale: 'en-US' })));
+        flushSync(() => root.render(React.createElement(Prism, { key: demo.id, source: source.slice(0, prefix), done: false, plugins: playgroundPlugins, renderers: motionRenderers, feedback: demo.id === 'feedback', locale: 'en-US' })));
         if (prefix % 8 === 0) await new Promise(resolve => setTimeout(resolve, 0));
       }
       reports.push({ demo: demo.id, prefixes: source.length + 1, fullText: host.innerText.length, alerts: [...host.querySelectorAll('[role="alert"]')].map(element => element.textContent) });

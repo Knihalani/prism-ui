@@ -1,6 +1,6 @@
 import '../../react/test/setup';
 import { afterEach, expect, test } from 'bun:test';
-import { act, cleanup, fireEvent, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { Prism, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { createFeedback } from '../src/mockup/engine';
@@ -17,6 +17,47 @@ function setup(saved = createFeedback({ overall: 'Saved' }).toJSON()) {
   fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
   return { view, store, actions };
 }
+
+test('feedback popover exits inertly, can reopen mid-exit, and keeps the submit pill for its receipt', async () => {
+  const { view, actions } = setup();
+  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+  const dialog = view.getByRole('dialog');
+  change(view.getByPlaceholderText('Add a comment…'), 'Keep this overview');
+  fireEvent.click(view.getByRole('button', { name: 'Save' }));
+  expect(view.queryByRole('dialog')).toBeNull();
+  expect(dialog.getAttribute('data-closing')).toBe(''); expect(dialog.hasAttribute('inert')).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Comment 1: Keep this overview' }));
+  expect(view.getByRole('dialog')).toBe(dialog); expect(dialog.hasAttribute('inert')).toBe(false);
+  const submit = view.getByRole('button', { name: 'Submit feedback' });
+  fireEvent.click(submit);
+  expect(actions).toHaveLength(1); expect(submit.hasAttribute('data-sent')).toBe(true);
+  expect(submit.querySelector('.prism-check-mark path')).not.toBeNull();
+  expect(view.getByRole('button', { name: /Feedback sent/ })).toBe(submit);
+  expect(dialog.hasAttribute('data-submitted')).toBe(true);
+  expect(view.queryByRole('dialog')).toBeNull();
+  await waitFor(() => expect(dialog.isConnected).toBe(false), { timeout: 1500 });
+});
+
+test('animate=false removes canceled feedback immediately and never sends an empty draft', () => {
+  const actions: Action[] = [];
+  const view = render(<Prism animate={false} feedback renderers={{ 'feedback-review': View }} source={source} onAction={action => actions.push(action)} />);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+  const dialog = view.getByRole('dialog');
+  expect(view.getByRole('button', { name: 'Submit feedback' }).hasAttribute('disabled')).toBe(true);
+  fireEvent.keyDown(view.getByPlaceholderText('Add a comment…'), { key: 'Escape' });
+  expect(dialog.isConnected).toBe(false); expect(actions).toHaveLength(0);
+});
+
+test('feedback motion uses transitions and leaves region geometry out of transition lists', async () => {
+  const css = await Bun.file(new URL('../src/mockup/mockup.css', import.meta.url)).text();
+  expect(css).toContain('scale var(--prism-motion-spring-bouncy-duration) var(--prism-motion-spring-bouncy)');
+  expect(css).toContain('transition-timing-function: var(--prism-motion-ease-exit)');
+  expect(css).toContain('transition-delay: var(--prism-motion-slow)');
+  expect(css).toContain('transition: stroke-dashoffset var(--prism-motion-fast)');
+  expect(css).not.toMatch(/transition:\s*(?:all|width|height|left|top)\b/);
+  expect(css.match(/\.prism-mockup__(?:popover|marker)[^{]*\{[^}]*\}/g)?.every(rule => !rule.includes('animation:'))).toBe(true);
+});
 
 test('native text undo wins over feedback history for focused fields and dirty drafts', () => {
   const { view, store } = setup(), overall = view.getByRole('textbox', { name: 'Overall feedback' });
