@@ -136,7 +136,7 @@ export function Prism({ renderers = empty, feedback, scope: providedScope, sourc
   const streamed = usePrismStream(stream, { plugins }), root = stream ? streamed.root : state.parser.root;
   const context = useMemo(() => ({ registry, components, store, emit, theme: theme ?? resolvedTheme, resolvedTheme, unstyled, ...overrides, customization, format, animate: motion, applied, scope, feedback }), [registry, components, store, emit, theme, resolvedTheme, unstyled, overrides, customization, format, motion, applied, scope, feedback]);
   const streaming = stream ? !streamed.done : !done;
-  return <PrismContext.Provider value={context}><ThemeScope theme={theme} mode={mode} density={density} animate={motion}
+  return <PrismContext.Provider value={context}><ThemeScope theme={theme} mode={mode} density={density} animate={animate}
     className={cx('prism-root', className)} style={style} data-state={streaming ? 'streaming' : 'ready'}
     data-prism-presentation={unstyled ? undefined : ''}>
     {root.children.map(node => <NodeView key={node.key} node={node} />)}

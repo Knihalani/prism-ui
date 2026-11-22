@@ -1,0 +1,24 @@
+[data-prism-enter] {
+  opacity: 1;
+  translate: 0 0;
+  filter: blur(0);
+  transition: opacity var(--prism-motion-slow) var(--prism-motion-ease), translate var(--prism-motion-slow) var(--prism-motion-ease), filter var(--prism-motion-slow) var(--prism-motion-ease);
+  transition-delay: calc(min(var(--prism-motion-index, 0), 8) * var(--prism-motion-stagger));
+}
+@starting-style {
+  [data-prism-enter] { opacity: 0; translate: 0 var(--prism-motion-distance); filter: blur(var(--prism-motion-blur)); }
+}
+[data-prism-press] {
+  scale: 1;
+  transition: scale var(--prism-motion-spring-duration) var(--prism-motion-spring);
+}
+[data-prism-press]:active { scale: var(--prism-motion-scale); transition: scale var(--prism-motion-instant) var(--prism-motion-ease); }
+[data-prism-reveal] {
+  opacity: 1;
+  translate: 0 0;
+  transition: opacity var(--prism-motion-fast) var(--prism-motion-ease), translate var(--prism-motion-fast) var(--prism-motion-ease);
+}
+@media (hover: hover) {
+  [data-prism-reveal-host] [data-prism-reveal] { opacity: 0; translate: 0 min(2px, var(--prism-motion-distance)); pointer-events: none; }
+  [data-prism-reveal-host]:is(:hover, :focus-within) [data-prism-reveal] { opacity: 1; translate: 0 0; pointer-events: auto; }
+}

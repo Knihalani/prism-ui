@@ -221,7 +221,7 @@ test('empty content, invalid formulas and reduced motion remain safe', () => {
   const original = Object.getOwnPropertyDescriptor(globalThis, 'matchMedia');
   Object.defineProperty(globalThis, 'matchMedia', { configurable: true, value: () => ({ matches: true, addEventListener() {}, removeEventListener() {} }) });
   try {
-    const empty = render(<Prism source="" />); expect(empty.container.textContent).toBe(''); expect(empty.container.firstElementChild?.getAttribute('data-animate')).toBe('false');
+    const empty = render(<Prism source="" />); expect(empty.container.textContent).toBe(''); expect(empty.container.firstElementChild?.getAttribute('data-animate')).toBe(null);
     function View() { const invalid = useFormula('bad('); const valid = useFormula('missing + 2'); expect(usePrism().animate).toBe(false); return <p>{String(invalid)}:{valid}</p>; }
     const view = render(<Prism source={'::formula\n'} components={{ formula: View }} />); expect(view.container.textContent).toBe('NaN:2');
   } finally { if (original) Object.defineProperty(globalThis, 'matchMedia', original); else Reflect.deleteProperty(globalThis, 'matchMedia'); }

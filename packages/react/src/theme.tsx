@@ -12,7 +12,10 @@ export interface Tokens {
   radiusSm: string; radiusMd: string; radiusLg: string; radiusPill: string;
   space1: string; space2: string; space3: string; space4: string; space5: string; space6: string; space7: string; space8: string;
   elevation1: string; elevation2: string; elevation3: string;
-  motionFast: string; motionBase: string; motionSlow: string; motionEase: string; motionSpring: string;
+  motionInstant: string; motionFast: string; motionBase: string; motionSlow: string;
+  motionEase: string; motionEaseInOut: string; motionEaseExit: string;
+  motionSpring: string; motionSpringDuration: string; motionSpringBouncy: string; motionSpringBouncyDuration: string;
+  motionStagger: string; motionDistance: string; motionScale: string; motionBlur: string;
 }
 export type ThemeTokens = Tokens;
 export type ThemeStyle = CSSProperties & { [key: `--prism-${string}`]: string | number };
@@ -70,6 +73,7 @@ export function resolveTheme(theme: PrismTheme): ResolvedTheme {
 }
 const initial = { theme: resolveTheme(host), mode: 'auto' as Mode };
 export const ThemeContext = createContext(initial);
+export const MotionContext = createContext(true);
 export const isPrismTheme = (value: Theme): value is PrismTheme => typeof value === 'object' && 'name' in value && typeof value.name === 'string';
 export function useTheme(theme?: Theme, mode?: Mode) {
   const parent = useContext(ThemeContext);
@@ -116,11 +120,11 @@ export interface ThemeScopeProps {
   style?: CSSProperties; children?: ReactNode; 'data-state'?: string; 'data-prism-presentation'?: '';
 }
 export function ThemeScope({ theme, mode, density = 'comfortable', animate = true, as = 'div', className, style, children, ...attributes }: ThemeScopeProps) {
-  const value = useTheme(theme, mode), motion = useMotion(animate), parent = useContext(ThemeContext);
+  const value = useTheme(theme, mode), motion = useContext(MotionContext) && animate, parent = useContext(ThemeContext);
   const css = useMemo(() => themeCss(value.theme), [value.theme]);
   const resets = Object.fromEntries(Object.entries(parent.theme.components).flatMap(([component, entry]) => Object.keys(entry.tokens ?? {}).filter(key => !value.theme.components[component]?.tokens?.[key]).map(key => [`--prism-${component}-${key}`, 'initial'])));
-  return <ThemeContext.Provider value={value}>
+  return <ThemeContext.Provider value={value}><MotionContext.Provider value={motion}>
     <ThemeCss name={value.theme.name} css={css} />
     {createElement(as, { className, style: { ...resets, ...(theme && typeof theme === 'object' && !isPrismTheme(theme) ? theme : {}), ...style }, 'data-prism-theme-name': value.theme.name, 'data-prism-theme': value.mode, 'data-density': density, 'data-animate': motion ? undefined : 'false', ...attributes }, children)}
-  </ThemeContext.Provider>;
+  </MotionContext.Provider></ThemeContext.Provider>;
 }
