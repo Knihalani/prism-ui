@@ -21,7 +21,11 @@ export function usePrismStream(stream?: PrismStream, { plugins, throttle = 'raf'
     };
     if (stream) void (async () => {
       try {
-        if ('getReader' in stream) reader = stream.getReader(); else iterator = stream[Symbol.asyncIterator]();
+        if ('getReader' in stream) {
+          await Promise.resolve();
+          if (cancelled) return;
+          reader = stream.getReader();
+        } else iterator = stream[Symbol.asyncIterator]();
         while (!cancelled) {
           const next = await (reader ? reader.read() : iterator!.next());
           if (cancelled || next.done) break;
