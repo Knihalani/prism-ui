@@ -1,16 +1,21 @@
 import type { Node } from './ast';
 import { attributes, safeUrl } from './values';
 import { Precedence } from './precedence';
+import { matchInline, pluginNode, type InlineExtensions } from './plugins';
 
-export function inline(text: string, path: string, resolve?: (node: Node) => void): Node[] {
+export function inline(text: string, path: string, resolve?: (node: Node) => void, extensions?: InlineExtensions): Node[] {
   const out: Node[] = []; let i = 0; let buffer = '';
   let precedence: Precedence | undefined;
-  const boundaries = () => precedence ??= new Precedence(text);
+  const boundaries = () => precedence ??= new Precedence(text, extensions ? pos => matchInline(extensions, text, pos)?.end : undefined);
   const add = (node: Omit<Node, 'key'>) => { flush(); const n = node as Node; n.key = `${path}.${out.length}`; if (resolve && (n.type === 'reference' || n.type === 'imageReference')) resolve(n); out.push(n); };
   const flush = () => { if (buffer) { out.push({ type: 'text', value: buffer, key: `${path}.${out.length}` }); buffer = ''; } };
   const childPath = () => `${path}.${out.length + (buffer ? 1 : 0)}`;
   while (i < text.length) {
     const c = text[i];
+    if (extensions?.triggers.has(c)) {
+      const result = matchInline(extensions, text, i);
+      if (result) { add(pluginNode(result.node, childPath())); i = result.end; continue; }
+    }
     if (c === '\\' && i + 1 < text.length && /[!"#$%&'()*+,\-./:;<=>?@[\]\\^_`{|}~\n]/.test(text[i + 1])) {
       if (text[i + 1] === '\n') add({ type: 'break' }); else buffer += text[i + 1]; i += 2; continue;
     }
@@ -38,7 +43,7 @@ export function inline(text: string, path: string, resolve?: (node: Node) => voi
           }
           attrs = text.slice(begin + 1, depth ? end : end - 1);
         }
-        add({ type: 'component', name: m[1], props: attributes(attrs), complete: true, children: inline(m[2], childPath(), resolve) }); i = end; continue;
+        add({ type: 'component', name: m[1], props: attributes(attrs), complete: true, children: inline(m[2], childPath(), resolve, extensions) }); i = end; continue;
       }
     }
     if (c === '[' || (c === '!' && text[i + 1] === '[')) {
@@ -48,10 +53,10 @@ export function inline(text: string, path: string, resolve?: (node: Node) => voi
         if (targetEnd !== undefined) {
           const target = text.slice(labelEnd + 2, targetEnd).trim(); const m = /^(<?.*?>?)(?:\s+["'](.*)["'])$/.exec(target);
           const url = (m?.[1] ?? target).replace(/^<|>$/g, '');
-          add({ type: image ? 'image' : 'link', url: safeUrl(url, image), title: m?.[2], value: image ? text.slice(begin, labelEnd) : undefined, children: image ? undefined : inline(text.slice(begin, labelEnd), childPath(), resolve) }); i = end; continue;
+          add({ type: image ? 'image' : 'link', url: safeUrl(url, image), title: m?.[2], value: image ? text.slice(begin, labelEnd) : undefined, children: image ? undefined : inline(text.slice(begin, labelEnd), childPath(), resolve, extensions) }); i = end; continue;
         }
         const label = link.referenceStart === undefined ? text.slice(begin, labelEnd) : text.slice(link.referenceStart, end - 1) || text.slice(begin, labelEnd);
-        add({ type: image ? 'imageReference' : 'reference', name: normalizeLabel(label), value: text.slice(i, end), children: inline(text.slice(begin, labelEnd), childPath(), resolve) }); i = end; continue;
+        add({ type: image ? 'imageReference' : 'reference', name: normalizeLabel(label), value: text.slice(i, end), children: inline(text.slice(begin, labelEnd), childPath(), resolve, extensions) }); i = end; continue;
       }
     }
     if (c === '<') {
@@ -70,11 +75,15 @@ export function inline(text: string, path: string, resolve?: (node: Node) => voi
       if (!/\s/.test(text[i + n] ?? ' ') ) {
         const end = boundaries().find(delimiter, i + n);
         if (end < 0 && n === 1) { buffer += delimiter; i += n; continue; }
-        add({ type: c === '~' ? 'delete' : n === 2 ? 'strong' : 'emphasis', children: inline(text.slice(i + n, end < 0 ? undefined : end), childPath(), resolve) }); i = end < 0 ? text.length : end + n; continue;
+        add({ type: c === '~' ? 'delete' : n === 2 ? 'strong' : 'emphasis', children: inline(text.slice(i + n, end < 0 ? undefined : end), childPath(), resolve, extensions) }); i = end < 0 ? text.length : end + n; continue;
       }
     }
     const begin = i++;
-    while (i < text.length) { const code = text.charCodeAt(i); if (code === 42 || code === 95 || code === 126 || code === 96 || code === 91 || code === 33 || code === 60 || code === 92 || code === 10 || code === 58 || code === 104) break; i++; }
+    if (extensions) {
+      while (i < text.length) { const code = text.charCodeAt(i); if (code === 42 || code === 95 || code === 126 || code === 96 || code === 91 || code === 33 || code === 60 || code === 92 || code === 10 || code === 58 || code === 104 || extensions.codes.has(code)) break; i++; }
+    } else {
+      while (i < text.length) { const code = text.charCodeAt(i); if (code === 42 || code === 95 || code === 126 || code === 96 || code === 91 || code === 33 || code === 60 || code === 92 || code === 10 || code === 58 || code === 104) break; i++; }
+    }
     buffer += text.slice(begin, i);
   }
   flush(); return out;

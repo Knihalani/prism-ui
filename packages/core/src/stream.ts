@@ -5,6 +5,7 @@ import { InlineState } from './inline-state';
 import { JsonScanner } from './json';
 import { attributes, safeUrl } from './values';
 import { BlockVector } from './vector';
+import { pluginNode, type Plugins, type BlockExt, type BlockState } from './plugins';
 
 interface Definition { url: string; title?: string }
 class References {
@@ -71,7 +72,16 @@ const setext = (s: string) => /^ {0,3}(?:=+|-+)\s*$/.test(s);
 const tableDelimiter = (s: string) => s.includes('|') && /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(s);
 const definition = (s: string) => /^ {0,3}\[([^\]]+)\]:\s*(?:<([^>]*)>|(\S+?))(?:\s+["'(](.*)["')])?\s*$/.exec(s);
 
-type Mode = 'paragraph' | 'list' | 'blockquote' | 'table' | 'code' | 'container';
+function append(parent: Node, child: Node) {
+  function key(node: Node, path: string) {
+    node.key = path;
+    node.children?.forEach((child, index) => key(child, `${path}.${index}`));
+  }
+  key(child, `${parent.key}.${parent.children!.length}`);
+  parent.children!.push(child);
+}
+
+type Mode = 'paragraph' | 'list' | 'blockquote' | 'table' | 'code' | 'container' | 'plugin';
 interface Active {
   mode: Mode;
   node: Node;
@@ -89,9 +99,11 @@ interface Active {
   dirtyLine: boolean;
   revision: number;
   preview: () => Node;
+  extension?: BlockExt;
+  extensionState?: BlockState;
 }
 
-export function streamParser(previews = true, path = '', references = new References()) {
+export function streamParser(previews = true, path = '', references = new References(), plugins?: Plugins) {
   const nodes: Node[] = [];
   let vector = new BlockVector(); let cachedRoot: Root = { type: 'root', key: path, children: vector.view() };
   const changed: number[] = []; let dirty = false;
@@ -111,6 +123,15 @@ export function streamParser(previews = true, path = '', references = new Refere
   const reference = () => { hasReferences = true; };
   const keyAt = (index: number) => path ? `${path}.${index}` : `${index}`;
   function preview(a: Active): Node {
+    if (a.extension) {
+      const lines = line ? [...a.lines, line] : a.lines.slice();
+      return plugins!.transform({ ...pluginNode(a.extension.finish(lines), a.node.key), complete: false });
+    }
+    if (plugins?.inline && a.mode !== 'code' && a.mode !== 'container') {
+      const lines = line ? [...a.lines, line] : a.lines.slice();
+      const node = blocks(lines, path, a.index, undefined, plugins.inline)[0] ?? { type: 'paragraph', key: a.node.key, children: [] };
+      return plugins.transform(node);
+    }
     if (a.node.type === 'paragraph') {
       if (!a.inline) { a.inline = new InlineState(a.node.key); a.node.children = a.inline.children; }
       a.inline.push(a.inlinePending); a.inlinePending = '';
@@ -121,7 +142,7 @@ export function streamParser(previews = true, path = '', references = new Refere
     }
     const node = a.node;
     if (a.nested) node.children = a.nested.root.children;
-    return { ...node };
+    return plugins ? plugins.transform({ ...node }) : { ...node };
   }
   function begin() {
     const index = nodes.length; const key = keyAt(index);
@@ -136,14 +157,17 @@ export function streamParser(previews = true, path = '', references = new Refere
   }
   function finishNode(node: Node, index: number) {
     nodes[index] = node;
-    if (!hasReferences) { nodes[index] = previews ? freeze(node) : node; changed.push(index); dirty = true; return; }
+    if (!hasReferences) { if (plugins) node = plugins.transform(node); nodes[index] = previews ? freeze(node) : node; changed.push(index); dirty = true; return; }
     changed.push(index); dirty = true;
-    references.track(node, next => { nodes[index] = next; changed.push(index); dirty = true; }, previews, hasReferences);
+    references.track(node, next => { if (plugins) next = plugins.transform(next); nodes[index] = plugins && previews ? freeze(next) : next; changed.push(index); dirty = true; }, plugins ? false : previews, hasReferences);
+    if (plugins && !Object.isFrozen(nodes[index])) nodes[index] = plugins.transform(node);
   }
   function commit() {
     if (!active) return;
     const a = active; active = undefined;
-    if (a.mode === 'container') {
+    if (a.extension) {
+      finishNode({ ...pluginNode(a.extension.finish(a.lines.slice()), a.node.key), complete: true }, a.index);
+    } else if (a.mode === 'container') {
       a.nested!.end(false); hasReferences ||= a.nested!.hasReferences;
       a.node.children = a.nested!.root.children; finishNode(a.node, a.index);
     } else if (a.mode === 'code') {
@@ -155,8 +179,8 @@ export function streamParser(previews = true, path = '', references = new Refere
       dirty = true;
       nodes.length = a.index;
       const parsed = a.mode === 'paragraph' && !a.dirtyLine
-        ? [{ type: 'paragraph', key: a.node.key, children: a.inline && !a.inlinePending ? a.inline.finish(() => a.lines.join('\n'), reference) : inline(a.lines.join('\n'), a.node.key, reference) }]
-        : blocks(a.lines, path, a.index, reference);
+        ? [{ type: 'paragraph', key: a.node.key, children: a.inline && !a.inlinePending ? a.inline.finish(() => a.lines.join('\n'), reference) : inline(a.lines.join('\n'), a.node.key, reference, plugins?.inline) }]
+        : blocks(a.lines, path, a.index, reference, plugins?.inline);
       for (const node of parsed) finishNode(node, nodes.length);
     }
   }
@@ -189,6 +213,7 @@ export function streamParser(previews = true, path = '', references = new Refere
       a.inlinePending += value;
     }
   }
+  function fragmentPlugin(value: string) { if (!active?.extension) fragment(value); }
   function resetLine() { line = ''; routed = false; candidate = true; candidateCount = 0; candidateSpaces = 0; candidateTrailing = false; }
   function accept(value: string) {
     if (active?.mode === 'code' || active?.mode === 'container') {
@@ -214,7 +239,7 @@ export function streamParser(previews = true, path = '', references = new Refere
       if (a.mode === 'paragraph' && setext(value)) { a.lines.push(value); a.dirtyLine = true; commit(); return; }
       if (a.mode === 'paragraph' && tableDelimiter(value)) {
         a.lines.push(value); a.mode = 'table';
-        if (previews) { const parsed = blocks(a.lines, path, a.index); a.node = parsed[parsed.length - 1]; }
+        if (previews) { const parsed = blocks(a.lines, path, a.index, undefined, plugins?.inline); a.node = parsed[parsed.length - 1]; }
         return;
       }
       const indented = a.mode === 'list' && value.length - value.trimStart().length > a.indent;
@@ -240,7 +265,7 @@ export function streamParser(previews = true, path = '', references = new Refere
       if (d) {
         a.node = { type: 'component', key: a.node.key, name: d[2], props: attributes(d[3] ?? ''), children: [], complete: d[1].length === 2 };
         if (d[1].length === 2) { active = undefined; finishNode(a.node, a.index); }
-        else { a.mode = 'container'; a.mark = ':'; a.size = d[1].length; a.nested = streamParser(previews, a.node.key, references); a.node.children = a.nested.root.children; }
+        else { a.mode = 'container'; a.mark = ':'; a.size = d[1].length; a.nested = streamParser(previews, a.node.key, references, plugins); a.node.children = a.nested.root.children; }
         return;
       }
       if (heading(value) || rule(value)) { a.lines.push(value); a.dirtyLine = true; commit(); return; }
@@ -250,23 +275,56 @@ export function streamParser(previews = true, path = '', references = new Refere
     a.lines.push(value); a.pendingBreak = true; a.blank = false; a.dirtyLine = false;
     if (previews && (a.mode === 'list' || a.mode === 'blockquote')) {
       // Each completed line is parsed once; the active line continues incrementally.
-      const parsed = blocks([value], a.node.key);
+      const parsed = blocks([value], a.node.key, 0, undefined, plugins?.inline);
       if (a.mode === 'list' && parsed[0]?.type === 'list') {
         if (a.node.type !== 'list') a.node = { ...parsed[0], key: keyAt(a.index), children: [] };
-        a.node.children!.push(...(parsed[0].children ?? []));
+        for (const child of parsed[0].children ?? []) append(a.node, child);
       } else if (a.mode === 'blockquote') {
         if (a.node.type !== 'blockquote') a.node = { type: 'blockquote', key: keyAt(a.index), children: [] };
-        a.node.children!.push(...(parsed[0]?.children ?? []));
+        for (const child of parsed[0]?.children ?? []) append(a.node, child);
       }
       a.inline = undefined; a.inlinePending = '';
     } else if (previews && a.mode === 'table' && !tableDelimiter(value)) {
-      const row = blocks([a.lines[0], a.lines[1], value], a.node.key)[0]?.children?.[1];
-      if (row) a.node.children!.push(row);
+      const row = blocks([a.lines[0], a.lines[1], value], a.node.key, 0, undefined, plugins?.inline)[0]?.children?.[1];
+      if (row) append(a.node, row);
     }
+  }
+  function acceptPlugin(value: string) {
+    if (active?.extension) {
+      if (active.extension.continue(value, active.extensionState!)) { active.lines.push(value); return; }
+      commit();
+    }
+    if (active?.mode !== 'code' && active?.mode !== 'container') {
+      const extension = plugins!.blocks.find(ext => ext.test(value));
+      if (extension) {
+        if (active?.lines.length) commit();
+        if (!active) begin();
+        const a = active!; a.mode = 'plugin'; a.extension = extension;
+        a.lines.push(value); a.extensionState = { lines: a.lines, data: {} };
+        return;
+      }
+    }
+    accept(value);
+  }
+  function pushPlugin(chunk: string) {
+    if (ended) throw new Error('Parser has ended');
+    let start = 0;
+    if (pendingCR && chunk) { pendingCR = false; if (chunk.charCodeAt(0) === 10) start = 1; }
+    for (let i = start; i < chunk.length; i++) {
+      const c = chunk.charCodeAt(i);
+      if (c !== 10 && c !== 13) continue;
+      const part = chunk.slice(start, i); line += part; fragmentPlugin(part); acceptPlugin(line); resetLine();
+      if (c === 13) { if (chunk.charCodeAt(i + 1) === 10) i++; else if (i + 1 === chunk.length) pendingCR = true; }
+      start = i + 1;
+    }
+    if (start < chunk.length) { const part = chunk.slice(start); line += part; fragmentPlugin(part); }
+    if (active) active.revision++;
+    return update;
   }
   const update = { get root() { return snapshot(); } };
   return {
     push(chunk: string) {
+      if (plugins) return pushPlugin(chunk);
       if (ended) throw new Error('Parser has ended');
       let start = 0;
       if (pendingCR && chunk) { pendingCR = false; if (chunk.charCodeAt(0) === 10) start = 1; }
@@ -282,7 +340,7 @@ export function streamParser(previews = true, path = '', references = new Refere
       return update;
     },
     end(final = true) {
-      if (!ended) { if (line) accept(line); resetLine(); commit(); ended = true; if (final) references.end(); }
+      if (!ended) { if (line) { if (plugins) acceptPlugin(line); else accept(line); } resetLine(); commit(); ended = true; if (final) references.end(); }
       return update;
     },
     get root() { return snapshot(); },
