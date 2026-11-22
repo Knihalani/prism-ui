@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useState, useId, useLayoutEffect, useMemo, useReducer, useRef, useSyncExternalStore, type KeyboardEvent, type RefObject } from 'react';
+import { useCallback, useContext, useEffect, useState, useId, useLayoutEffect, useMemo, useReducer, useRef, useSyncExternalStore, type ComponentPropsWithRef, type ElementType, type KeyboardEvent, type RefObject } from 'react';
 import { PrismPart, ComponentContext, useComponentState, useSent, usePart, usePrism } from '@prism-ui/react';
 import type { Store } from '@prism-ui/state';
 import { ComponentFrame } from '../frame';
@@ -99,3 +99,4 @@ function MockupGroupView({ members, options }: { members: Member[]; options?: Mo
 }
 
 export type MockupGroupModel = ReturnType<typeof useMockupGroup>;
+export type MockupGroupSlotProps<T extends ElementType = 'div'> = ComponentPropsWithRef<T> & { as?: T; model: MockupGroupModel };

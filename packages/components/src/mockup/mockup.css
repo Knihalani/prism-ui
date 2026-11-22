@@ -92,6 +92,7 @@
 .prism-mockup__feedbackFooter > [data-secondary] svg { font-size: var(--prism-mockup-text-sm, var(--prism-text-sm)); }
 .prism-mockup__feedbackFooter > [data-secondary] { min-inline-size: var(--prism-space-6); }
 .prism-mockup__feedbackFooter > .prism-mockup__primary { white-space: nowrap; padding-inline: var(--prism-mockup-space-2, var(--prism-space-2)); }
+.prism-mockup__feedbackFooter > .prism-mockup__button { white-space: nowrap; }
 .prism-mockup__empty { padding: 0; margin-block: 0; font-size: var(--prism-mockup-text-xs, var(--prism-text-xs)); }
 .prism-mockup__popover { max-inline-size: calc(100cqw - var(--prism-mockup-space-4, var(--prism-space-4))); }
 @media (hover: hover) {

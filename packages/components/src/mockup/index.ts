@@ -11,6 +11,6 @@ export { GroupedMockup, useMockupGroup } from './group';
 export type { MockupGroupPayload } from './group';
 
 export type { MockupSlotProps } from './mockup';
-export type { MockupGroupModel } from './group';
+export type { MockupGroupModel, MockupGroupSlotProps } from './group';
 
 export type { MockupFooterModel } from './chrome';

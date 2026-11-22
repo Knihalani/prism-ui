@@ -217,7 +217,7 @@ export function artifactDocument(id: string, imports: Record<string, string>, ex
   const nonce = id.replace(/[^\w-]/g, '');
   const scriptSources = [...new Set(Object.values(imports).map(value => value.split('?')[0]))].join(' ');
   const csp = `default-src 'none'; script-src 'nonce-${nonce}' blob: ${scriptSources}; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'`;
-  const head = `<style>html{background:var(--prism-surface);color:var(--prism-text);font-family:var(--prism-font-body)}html[data-prism-artifact-fit]{overflow-y:hidden}button,input,select,textarea{font:inherit}</style><script nonce="${nonce}" type="importmap">${json({ imports })}</script>`;
+  const head = `<style>html{background:var(--prism-surface,#fff);color:var(--prism-text,#242832);font-family:var(--prism-font-body,system-ui,sans-serif)}html[data-prism-artifact-fit]{overflow-y:hidden}button,input,select,textarea{font:inherit}</style><script nonce="${nonce}" type="importmap">${json({ imports })}</script>`;
   const srcdoc = buildSrcdoc({ id, csp, head, runtimeOptions: { interactive: true } }).replace('<script>', `<script nonce="${nonce}">`);
   const runtime = `(${installArtifact.toString()})(${json(id)},${json(artifactStrings)}${exported ? ',' + json(exported) : ''})`.replace(/<\/script/gi, '<\\/script');
   return srcdoc.replace('</head>', () => `<script nonce="${nonce}">${runtime}</script></head>`);

@@ -80,7 +80,7 @@ export function useFrameOverflow() {
     if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
   } };
 }
-export interface FrameOverflowSlotProps<Model = unknown> extends HTMLAttributes<HTMLElement> { as?: ElementType; model?: Model; overflow?: ReturnType<typeof useFrameOverflow>; open?: boolean }
+export interface FrameOverflowSlotProps<Model = unknown> extends HTMLAttributes<HTMLElement> { as?: ElementType; ref?: Ref<HTMLElement>; model?: Model; overflow?: ReturnType<typeof useFrameOverflow>; open?: boolean }
 export function FrameOverflow({ component, model, children }: { component: string; model?: unknown; children: ReactNode }) {
   const overflow = useFrameOverflow(), strings = useStrings('frame', frameStrings);
   const Root = useFrameSlot(component, 'overflow'), Trigger = useFrameSlot(component, 'overflowTrigger'), Content = useFrameSlot(component, 'overflowContent');
