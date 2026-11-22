@@ -92,7 +92,7 @@ Completed `ui:state` fences render nothing and apply a single patch in a layout 
 ```
 ````
 
-Patches are deduplicated by node reference and per-Prism block key, including strict-effect replays. A different reply that reuses block keys should use a new Prism `key` if its state patches should apply again.
+Only finalized, frozen patches apply. Patches are deduplicated by node reference and a per-Prism signature of block key plus serialized props, including strict-effect replays. Different patches at the same key still apply; use a new Prism `key` to intentionally replay an identical patch in a new reply.
 
 ## Formatting
 

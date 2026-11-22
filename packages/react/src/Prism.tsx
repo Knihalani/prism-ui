@@ -44,7 +44,10 @@ function StatePatch({ node }: { node: Node }) {
   const { store, applied } = usePrism();
   useLayoutEffect(() => {
     let nodes = appliedNodes.get(applied); if (!nodes) appliedNodes.set(applied, nodes = new WeakSet());
-    if (node.complete && !nodes.has(node) && !applied.has(node.key)) { nodes.add(node); applied.add(node.key); store.apply(node.props as Patch); }
+    if (!node.complete || !Object.isFrozen(node) || nodes.has(node)) return;
+    nodes.add(node);
+    const signature = JSON.stringify([node.key, node.props]);
+    if (!applied.has(signature)) { applied.add(signature); store.apply(node.props as Patch); }
   }, [node, store, applied]);
   return null;
 }
