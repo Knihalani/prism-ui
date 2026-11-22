@@ -50,6 +50,7 @@ test('streaming known columns immediately render stable headers and skeletons, t
   const view = render(<Prism registry={registry} source={text} done={false} />);
   const header = view.getByRole('columnheader', { name: /Name/ });
   expect(view.container.querySelectorAll('[data-part="skeleton"]').length).toBe(3);
+  expect(view.container.querySelectorAll('[data-prism-skeleton-line]').length).toBe(3);
   expect((view.getByRole('button', { name: 'Sort by Name' }) as HTMLButtonElement).disabled).toBe(true);
   expect((view.getByRole('searchbox') as HTMLInputElement).disabled).toBe(true);
   text += '{"name":"Zoe"}';
@@ -63,6 +64,7 @@ test('streaming known columns immediately render stable headers and skeletons, t
   text += ']}\n```';
   view.rerender(<Prism registry={registry} source={text} />);
   expect((view.getByRole('button', { name: 'Sort by Name' }) as HTMLButtonElement).disabled).toBe(false);
+  expect(view.container.querySelector('[data-prism="datatable"][data-part="root"]')?.getAttribute('data-state')).toBe('ready');
 });
 
 test('sort cycles asc desc none, fuzzy filter resets pagination and clear recovers empty state', () => {
@@ -98,9 +100,37 @@ test('selection persists across pages and submits exact original rows and indice
   expect({ type: actions[0].type, component: actions[0].component, id: actions[0].id, payload: actions[0].payload }).toEqual({
     type: 'select', component: 'table', id: 'test:table:0', payload: { rows, indices: [0, 1, 2] },
   });
+  const root = view.container.querySelector('[data-prism="datatable"][data-part="root"]');
+  expect(root?.getAttribute('data-state')).toBe('sent');
+  expect(view.getByRole('button', { name: 'Sent · 3' })).toBeTruthy();
   fireEvent.click(view.getByRole('button', { name: 'Previous page' }));
   fireEvent.click(view.getByRole('checkbox', { name: 'Select all rows on page' }));
   expect(view.getByRole('button', { name: 'Use 1 selected' })).toBeTruthy();
+  expect(root?.getAttribute('data-state')).toBe('ready');
+});
+
+test('an externally patched table cell shows a static flash when animation is disabled', () => {
+  const store = createStore();
+  store.set('total', 20);
+  const text = source({ columns, rows: [{ name: 'Zoe', amount: { $ref: 'total' } }] });
+  const view = render(<Prism registry={registry} source={text} store={store} animate={false} />);
+  expect(view.getByText('20').hasAttribute('data-prism-flash')).toBe(false);
+  act(() => store.set('total', 40));
+  expect(view.getByText('40').hasAttribute('data-prism-flash')).toBe(true);
+  expect(view.container.querySelector('[data-entering]')).toBeNull();
+});
+
+test('linked numeric cells stay readable when a store update supplies an object', () => {
+  const store = createStore();
+  store.set('total', 20);
+  const text = source({ columns, rows: [{ name: 'Zoe', amount: { $ref: 'total' } }] });
+  const view = render(<Prism registry={registry} source={text} store={store} />);
+  const cell = view.getByText('20').closest('td');
+  act(() => store.set('total', { toString: 'label', amount: 40 }));
+  expect(cell?.textContent).toBe('');
+  expect(view.getByText('Zoe')).toBeTruthy();
+  act(() => store.set('total', 40));
+  expect(cell?.textContent).toBe('40');
 });
 
 test('single selection, keyboard row arrows and Space, Enter sort, undo and persistent store state', () => {

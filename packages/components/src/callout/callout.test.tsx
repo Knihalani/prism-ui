@@ -13,8 +13,8 @@ test('callout renders semantic parts and documented defaults', () => {
   const view = render(<Prism source={source} />);
   const element = root(view.container);
   expect(element.classList.contains('prism-callout__root')).toBe(true);
-  expect(element.dataset.state).toBe('done');
-  expect(element.hasAttribute('data-prism-enter')).toBe(true);
+  expect(element.dataset.state).toBe('ready');
+  expect(element.hasAttribute('data-entering')).toBe(true);
   element.querySelectorAll('[data-prism="callout"]').forEach(part => expect(part.classList.contains('prism-callout__' + part.getAttribute('data-part'))).toBe(true));
   expect(defaultRegistry.docs()).toContain('### callout');
   expect(calloutDef.syntax).toBe('container');
@@ -30,7 +30,7 @@ test('callout tolerates partial attributes, streams open content, then finishes'
   expect(root(view.container)?.dataset.state).toBe('streaming');
   expect(view.getByText('Notice')).toBeDefined(); expect(view.container.querySelector('[data-part="skeleton"]')).not.toBeNull();
   view.rerender(<Prism source={":::callout{id=demo title=\"Notice\" tone=warning}\nBody text\n:::"} done />);
-  expect(root(view.container).dataset.state).toBe('done');
+  expect(root(view.container).dataset.state).toBe('ready');
 });
 
 test('callout supports empty content, invalid attributes, slots and unstyled mode', () => {
@@ -43,7 +43,7 @@ test('callout supports empty content, invalid attributes, slots and unstyled mod
   const element = root(view.container);
   expect(element.className).toBe('');
   expect(element.style.color).toBe('red');
-  expect(element.hasAttribute('data-prism-enter')).toBe(false);
+  expect(element.hasAttribute('data-entering')).toBe(false);
   expect(element.querySelector('em')?.textContent).toContain('replaced');
   element.querySelectorAll('[class]').forEach(part => expect(part.className).not.toContain('prism-'));
 });

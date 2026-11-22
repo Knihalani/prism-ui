@@ -1,6 +1,6 @@
 import { Children, createContext, useContext, useLayoutEffect, useMemo, useRef, useState, type HTMLAttributes, type ReactNode, type ThHTMLAttributes } from 'react';
 import type { Node } from '@prism-ui/core';
-import { PrismContext, useComponentState, usePart, usePrism, useSlot, type MarkdownProps, type PrismComponentProps } from '@prism-ui/react';
+import { PrismContext, useComponentState, usePart, usePresentation, usePrism, useSlot, type MarkdownProps, type PrismComponentProps } from '@prism-ui/react';
 import { dateValue, format as formatValue, type FormatKind } from '../lib/format';
 
 export interface TableColumn { key: string; label?: string; title?: string; align?: 'left' | 'right' | 'center'; type?: FormatKind }
@@ -37,7 +37,7 @@ function fallbackRows(props: TableProps, key: string, locale: string | undefined
 }
 
 export function useTable(props: TableProps, ctx: Pick<PrismComponentProps, 'node' | 'children' | 'complete'>) {
-  const { animate, format } = usePrism(), [stored, setSort] = useComponentState<TableSort>('sort', null);
+  const { format } = usePrism(), [stored, setSort] = useComponentState<TableSort>('sort', null), presentation = usePresentation();
   const markdown = ctx.node.type === 'table', rows = markdown ? ctx.node.children ?? [] : fallbackRows(props, ctx.node.key, format.locale, format.currencyCode);
   const [page, setPage] = useState(0);
   const headers = rows[0]?.children ?? [], data = rows.slice(1);
@@ -76,7 +76,7 @@ export function useTable(props: TableProps, ctx: Pick<PrismComponentProps, 'node
   }, [ctx.node, props.columns, props.rows]);
   return { parts, rows, headers, order: visibleOrder, sort, align, onSort, streaming, state, markdown, scrollRef, measure, paginated, page: currentPage, pages, setPage,
     rendered: Children.toArray(ctx.children),
-    rootProps: { ...parts.root, 'data-prism-enter': animate ? '' : undefined, 'data-overflow-start': edges.start ? '' : undefined, 'data-overflow-end': edges.end ? '' : undefined },
+    rootProps: { ...parts.root, ...presentation, 'data-overflow-start': edges.start ? '' : undefined, 'data-overflow-end': edges.end ? '' : undefined },
     scrollProps: { ...parts.scroll, role: 'region', 'aria-label': props.label ?? props.title ?? 'Table', tabIndex: 0, onScroll: measure } };
 }
 const TableContext = createContext<ReturnType<typeof useTable> | null>(null);

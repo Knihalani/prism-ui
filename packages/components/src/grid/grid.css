@@ -1,5 +1,12 @@
-.prism-root .prism-grid__root { --prism-grid-gap: var(--prism-space4); }
-.prism-root .prism-grid__root[data-size="sm"] { --prism-grid-gap: var(--prism-space2); }
-.prism-root .prism-grid__root[data-size="lg"] { --prism-grid-gap: var(--prism-space6); }
-.prism-root .prism-grid__body { display: grid; gap: var(--prism-grid-gap); align-items: stretch; grid-template-columns: repeat(auto-fill, minmax(min(100%, max(var(--prism-grid-min), (100% - (var(--prism-grid-cols) - 1) * var(--prism-grid-gap)) / var(--prism-grid-cols))), 1fr)); }
-.prism-root .prism-grid__body > * { margin-block: 0; min-width: 0; height: 100%; box-sizing: border-box; }
+.prism-root .prism-grid__root { --prism-grid-gap: var(--prism-space7); }
+.prism-root :where(*) + .prism-grid__root { margin-block-start: var(--prism-flow-gap); }
+.prism-root .prism-grid__root[data-size="sm"] { --prism-grid-gap: var(--prism-space3); }
+.prism-root .prism-grid__root[data-size="lg"] { --prism-grid-gap: var(--prism-space8); }
+.prism-root .prism-grid__body {
+  display: grid;
+  gap: var(--prism-grid-gap);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, max(var(--prism-grid-min), (100% - (var(--prism-grid-cols) - 1) * var(--prism-grid-gap)) / var(--prism-grid-cols))), 1fr));
+}
+.prism-root .prism-grid__body > * { min-width: 0; }
+.prism-root .prism-grid__body > [data-part="root"] { margin-block: 0; }
+.prism-root .prism-grid__body > .prism-card__root { border-block-start: 1px solid var(--prism-hairline); padding-block-start: var(--prism-space3); }

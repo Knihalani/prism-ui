@@ -48,7 +48,7 @@ test('tabs wires roles, labels, roving focus and mounted hidden panels', () => {
   });
   expect(view.getByText('Second panel')).toBeDefined();
   const root = view.container.querySelector('[data-prism="tabs"][data-part="root"]')!;
-  expect(root.getAttribute('data-state')).toBe('done'); expect(root.getAttribute('data-variant')).toBe('underline');
+  expect(root.getAttribute('data-state')).toBe('ready'); expect(root.getAttribute('data-variant')).toBe('underline');
   expect(root.className).toBe('prism-tabs__root');
   root.querySelectorAll('[data-prism]').forEach(part => expect(part.classList.contains('prism-' + part.getAttribute('data-prism') + '__' + part.getAttribute('data-part'))).toBe(true));
   expect(defaultRegistry.docs()).toContain('### tabs'); expect(defaultRegistry.docs()).toContain('### tab');
@@ -98,7 +98,7 @@ test('streaming partial labels and arriving tabs keep selection stable', () => {
   expect(view.getByLabelText('Loading tab')).toBeDefined();
   view.rerender(<Prism source={two + ':::tab{label="History"}\nThird panel\n:::\n::::'} store={store} />);
   expect(buttons(view)[1].getAttribute('aria-selected')).toBe('true');
-  expect(view.container.querySelector('[data-prism="tabs"]')?.getAttribute('data-state')).toBe('done');
+  expect(view.container.querySelector('[data-prism="tabs"]')?.getAttribute('data-state')).toBe('ready');
 });
 
 test('standalone tab is titled, foreign children are ignored, empty tabs are safe', () => {
@@ -118,7 +118,7 @@ test('tabs and panels support unstyled mode and body/label slots', () => {
   expect(view.container.querySelector('b')?.textContent).toBe('Overview');
   expect(view.container.querySelector('main')?.textContent).toBe('First panel');
   expect((view.container.querySelector('[data-prism="tabs"]') as HTMLElement).style.color).toBe('red');
-  view.container.querySelectorAll('[data-prism]').forEach(part => { expect(part.className).toBe(''); expect(part.hasAttribute('data-prism-enter')).toBe(false); });
+  view.container.querySelectorAll('[data-prism]').forEach(part => { expect(part.className).toBe(''); expect(part.hasAttribute('data-entering')).toBe(false); });
 });
 
 test('underline indicator measures active buttons and remeasures after resize', () => {

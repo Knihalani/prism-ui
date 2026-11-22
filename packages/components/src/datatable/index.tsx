@@ -1,32 +1,116 @@
-import { createElement, useLayoutEffect, useRef, type ElementType, type HTMLAttributes } from 'react';
-import { defineComponent, registerComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
-import { useFrame } from '../frame';
-import { dataTableSchema, useDataTable, type DataTableProps } from './use-datatable';
+import { createElement, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ElementType, type HTMLAttributes } from 'react';
+import { cx, defineComponent, registerComponent, useFlash, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
+import { FrameIcon, useFrame } from '../frame';
+import { createFlip } from '../lib/flip';
+import { dataTableSchema, formatCell, numericCell, useDataTable, type DataTableColumn, type DataTableProps } from './use-datatable';
 
 export { useDataTable, dataTableSchema } from './use-datatable';
 export type { DataTableProps, DataTableColumn, DataTableRow, DataTableSelection } from './use-datatable';
 
 interface ElementProps extends HTMLAttributes<HTMLElement> { as?: ElementType; [key: string]: any }
 function Element({ as = 'div', ...props }: ElementProps) { return createElement(as, props); }
-function Part({ part, state, style, ...props }: ElementProps & { part: string; state?: string }) {
+function Part({ part, state, style, className, ...props }: ElementProps & { part: string; state?: string }) {
   const attrs = usePart('datatable', part, state), View = useSlot('datatable', part, Element);
-  return <View {...attrs} {...props} style={{ ...style, ...attrs.style }} />;
+  return <View {...attrs} {...props} className={cx(attrs.className, className) || undefined} style={{ ...style, ...attrs.style }} />;
 }
 function Checkbox({ mixed, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { mixed?: boolean }) {
   const ref = useRef<HTMLInputElement>(null), part = usePart('datatable', 'checkbox');
+  const { unstyled } = usePrism();
   useLayoutEffect(() => { if (ref.current) ref.current.indeterminate = !!mixed; }, [mixed]);
-  return <input {...part} {...props} ref={ref} type="checkbox" />;
+  return <input {...part} {...props} className={cx(part.className, !unstyled && 'prism-check') || undefined} ref={ref} type="checkbox" />;
 }
-export function DataTable({ props: inputProps, complete }: PrismComponentProps<DataTableProps>) {
+function reference(value: unknown) {
+  return value && typeof value === 'object' && Object.hasOwn(value, '$ref') && '$ref' in value && typeof value.$ref === 'string' ? value.$ref : undefined;
+}
+function cellPath(rows: unknown, index: number, key: string) {
+  const row = Array.isArray(rows) ? rows[index] : undefined;
+  const cell = row && typeof row === 'object' && Object.hasOwn(row, key) ? row[key] : undefined;
+  const direct = reference(cell);
+  if (direct !== undefined) return direct;
+  const rowsPath = reference(rows);
+  const rowPath = reference(row) ?? (rowsPath === undefined ? undefined : `${rowsPath}.${index}`);
+  return rowPath === undefined ? undefined : key.includes('.') ? rowPath : `${rowPath}.${key}`;
+}
+function LinkedCellValue({ path, value, column, text }: { path: string; value: unknown; column: DataTableColumn; text: string }) {
+  const { animate, format, unstyled } = usePrism();
+  const flash = useFlash(path);
+  const numeric = numericCell(value, column);
+  const number = Number.isFinite(numeric) ? numeric : undefined;
+  const [display, setDisplay] = useState(number);
+  const shown = useRef(number);
+  useLayoutEffect(() => {
+    const from = shown.current;
+    if (number === undefined || from === undefined || from === number || !animate || unstyled) {
+      shown.current = number;
+      setDisplay(number);
+      return;
+    }
+    const start = performance.now();
+    let frame: number;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - start) / 240);
+      const remaining = (1 - progress) ** 3;
+      const next = from * remaining + number * (1 - remaining);
+      shown.current = next;
+      setDisplay(next);
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [animate, number, unstyled]);
+  return <span data-prism-flash={!unstyled && flash ? '' : undefined}>
+    {animate && !unstyled && display !== undefined && number !== undefined && display !== number ? formatCell(value, column, format, display) : text}
+  </span>;
+}
+export function DataTable({ props: inputProps, complete, node }: PrismComponentProps<DataTableProps>) {
   const props = { ...inputProps, title: typeof inputProps.title === 'string' ? inputProps.title : undefined, caption: typeof inputProps.caption === 'string' ? inputProps.caption : undefined };
   const ctx = usePrism();
   const vm = useDataTable({ ...props, complete }, ctx);
   const frame = useFrame({ component: 'datatable', title: props.title, undo: true });
   const scroll = useRef<HTMLDivElement>(null);
+  const previewLayout = useRef<{ height: number; pageSize: number } | undefined>(undefined);
+  const resizeAnimation = useRef<Animation | undefined>(undefined);
+  const flip = useMemo(() => createFlip({ duration: 180, easing: 'cubic-bezier(.22, 1, .36, 1)' }), []);
+  const sortPending = useRef(false);
+  const rows = () => Array.from(scroll.current?.querySelectorAll('tr[data-index]') ?? []);
+  const selectionKey = useMemo(() => JSON.stringify(vm.selected.map(entry => [entry.index, ...entry.cells])), [vm.selected]);
+  const previousSelection = useRef(selectionKey);
+  const sent = vm.sent !== undefined;
+  const payload = vm.sent?.payload as Partial<{ indices: number[] }> | undefined;
+  const sentCount = Array.isArray(payload?.indices) ? payload.indices.length : vm.selected.length;
+  const styled = (name: string) => ctx.unstyled ? undefined : name;
+  useLayoutEffect(() => {
+    if (previousSelection.current === selectionKey) return;
+    previousSelection.current = selectionKey;
+    vm.resetSent();
+  }, [selectionKey, vm.resetSent]);
+  useLayoutEffect(() => {
+    if (!sortPending.current) return;
+    sortPending.current = false;
+    if (ctx.animate) flip.play(rows()); else flip.cancel();
+  }, [vm.sort, ctx.animate, flip]);
+  useLayoutEffect(() => () => flip.cancel(), [flip]);
   useLayoutEffect(() => {
     if (vm.focusIndex !== null) scroll.current?.querySelector<HTMLElement>(`tr[data-index="${vm.focusIndex}"]`)?.focus({ preventScroll: true });
   }, [vm.focusIndex, vm.start]);
   const columns = vm.columns.length + (vm.mode ? 1 : 0), missing = Math.max(0, (vm.pageSize || 3) - vm.visible.length), skeletonCount = complete ? 0 : missing;
+  useLayoutEffect(() => {
+    const element = scroll.current;
+    if (!element) return;
+    const previous = previewLayout.current;
+    if (previous && previous.pageSize !== vm.pageSize) resizeAnimation.current?.cancel();
+    const height = element.offsetHeight;
+    previewLayout.current = complete ? undefined : { height, pageSize: vm.pageSize };
+    // Page size can arrive after the rows. Settle from the preview's height
+    // without holding extra rows or delaying the pagination controls.
+    if (ctx.animate && !ctx.unstyled && vm.pageSize && previous && previous.pageSize !== vm.pageSize && previous.height > height) {
+      resizeAnimation.current = element.animate?.(
+        [{ minHeight: `${previous.height}px` }, { minHeight: `${height}px` }],
+        { duration: 180, easing: 'cubic-bezier(.22, 1, .36, 1)' },
+      );
+    }
+  }, [complete, ctx.animate, ctx.unstyled, props.height, vm.pageSize, vm.rowHeight, vm.visible.length, skeletonCount]);
+  useLayoutEffect(() => () => resizeAnimation.current?.cancel(), [ctx.animate, ctx.unstyled]);
   const onRowKeyDown = (event: React.KeyboardEvent<HTMLElement>, index: number) => {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
@@ -43,41 +127,58 @@ export function DataTable({ props: inputProps, complete }: PrismComponentProps<D
     } else if (event.key === ' ' && event.target === event.currentTarget) { event.preventDefault(); vm.toggleRow(index); }
   };
   const resetScroll = () => { if (scroll.current) scroll.current.scrollTop = 0; };
-  return <Part part="root" state={complete ? 'done' : 'streaming'} role="region" aria-label={props.title ?? props.caption ?? 'Data table'} onKeyDown={frame.rootProps.onKeyDown} data-animate={ctx.animate ? undefined : 'false'} data-density={props.density}>
+  const sortBy = (key: string) => {
+    resetScroll();
+    if (ctx.animate && !vm.virtual) {
+      flip.measure(rows());
+      sortPending.current = true;
+    }
+    vm.toggleSort(key);
+  };
+  return <Part part="root" role="region" aria-label={props.title ?? props.caption ?? 'Data table'} onKeyDown={frame.rootProps.onKeyDown} data-state={frame.rootProps['data-state']} data-entering={frame.rootProps['data-entering']} data-animate={ctx.animate ? undefined : 'false'} data-density={props.density}>
     <Part part="toolbar">
       {props.title && <Part part="title" as="h3">{props.title}</Part>}
       {props.filter !== false && <Part part="filter" as="input" type="search" aria-label="Filter rows" placeholder="Filter rows…" value={vm.query} disabled={!complete} onInput={event => { vm.changeQuery((event.currentTarget as HTMLInputElement).value); resetScroll(); }} />}
       <Part part="count">{vm.count} rows</Part>
-      <Part part="ask" as="button" type="button" onClick={frame.onAsk} aria-label="Ask about this table">?</Part>
-      <Part part="undo" as="button" type="button" onClick={frame.onUndo} disabled={!frame.canUndo} aria-label="Undo table change" aria-keyshortcuts="Control+Z Meta+Z">↶</Part>
+      <Part part="ask" className={styled('prism-icon-btn')} as="button" type="button" onClick={frame.onAsk} aria-label="Ask about this table" title="Ask about this table"><FrameIcon name="ask" /></Part>
+      <Part part="undo" className={styled('prism-icon-btn')} as="button" type="button" onClick={frame.onUndo} disabled={!frame.canUndo} aria-label="Undo table change" title="Undo table change" aria-keyshortcuts="Control+Z Meta+Z"><FrameIcon name="undo" /></Part>
     </Part>
     <div ref={scroll} {...usePart('datatable', 'scroll')} style={{ maxHeight: typeof props.height === 'number' && Number.isFinite(props.height) || vm.virtual ? vm.height : undefined, ...ctx.styles.datatable?.scroll }} onScroll={event => vm.setScrollTop(event.currentTarget.scrollTop)}>
-      <Part part="table" as="table" aria-label={props.caption ?? props.title ?? 'Data table'} aria-rowcount={vm.virtual ? vm.count + 1 : undefined} aria-colcount={columns || undefined} aria-busy={!complete}>
+      <Part part="table" as="table" data-virtual={vm.virtual ? '' : undefined} aria-label={props.caption ?? props.title ?? 'Data table'} aria-rowcount={vm.virtual ? vm.count + 1 : undefined} aria-colcount={columns || undefined} aria-busy={!complete}>
         {props.caption && <Part part="caption" as="caption">{props.caption}</Part>}
         <Part part="header" as="thead"><tr>
           {vm.mode && <Part part="heading" as="th" scope="col">{vm.mode === 'multiple' && <Checkbox aria-label="Select all rows on page" checked={vm.pageSelected} mixed={vm.selectedOnPage > 0 && !vm.pageSelected} onChange={vm.togglePage} />}</Part>}
           {vm.columns.map(column => <Part key={column.key} part="heading" as="th" scope="col" aria-sort={complete && vm.sort?.key === column.key ? vm.sort.direction === 'asc' ? 'ascending' : 'descending' : 'none'} data-align={column.align}>
-            <Part part="sort" as="button" type="button" disabled={!complete} onClick={() => { vm.toggleSort(column.key); resetScroll(); }} onKeyDown={(event: React.KeyboardEvent) => { if (event.key === 'Enter') { event.preventDefault(); vm.toggleSort(column.key); resetScroll(); } }} aria-label={`Sort by ${column.label}`}>
+            <Part part="sort" as="button" type="button" disabled={!complete} onClick={() => sortBy(column.key)} onKeyDown={(event: React.KeyboardEvent) => { if (event.key === 'Enter') { event.preventDefault(); sortBy(column.key); } }} aria-label={`Sort by ${column.label}`}>
               {column.label}<span aria-hidden="true">{vm.sort?.key === column.key && complete ? vm.sort.direction === 'asc' ? ' ↑' : ' ↓' : ' ↕'}</span>
             </Part>
           </Part>)}
         </tr></Part>
         <tbody>
           {vm.virtual && vm.start > 0 && <tr aria-hidden="true"><td colSpan={columns} style={{ height: vm.start * vm.rowHeight, padding: 0, border: 0 }} /></tr>}
-          {vm.visible.map((entry, position) => <Part key={entry.index} part="row" as="tr" data-index={entry.index} state={vm.selection.includes(entry.index) ? 'selected' : undefined} aria-selected={vm.mode ? vm.selection.includes(entry.index) : undefined} aria-rowindex={vm.virtual ? vm.start + position + 2 : undefined} tabIndex={vm.focusIndex === entry.index || !vm.visible.some(item => item.index === vm.focusIndex) && position === 0 ? 0 : -1} onKeyDown={(event: React.KeyboardEvent<HTMLElement>) => onRowKeyDown(event, entry.index)} onFocus={(event: React.FocusEvent<HTMLElement>) => { if (event.target === event.currentTarget) vm.setFocusIndex(entry.index); }} style={{ height: vm.rowHeight }}>
+          {vm.visible.map((entry, position) => <Part key={entry.index} part="row" as="tr" data-index={entry.index} data-entering={complete ? undefined : frame.rootProps['data-entering']} state={vm.selection.includes(entry.index) ? 'selected' : undefined} aria-selected={vm.mode ? vm.selection.includes(entry.index) : undefined} aria-rowindex={vm.virtual ? vm.start + position + 2 : undefined} tabIndex={vm.focusIndex === entry.index || !vm.visible.some(item => item.index === vm.focusIndex) && position === 0 ? 0 : -1} onKeyDown={(event: React.KeyboardEvent<HTMLElement>) => onRowKeyDown(event, entry.index)} onFocus={(event: React.FocusEvent<HTMLElement>) => { if (event.target === event.currentTarget) vm.setFocusIndex(entry.index); }} style={{ height: vm.rowHeight, '--prism-enter-delay': `${Math.min(position, 6) * 16}ms` } as CSSProperties}>
             {vm.mode && <Part part="cell" as="td"><Checkbox aria-label={`Select row ${entry.index + 1}`} checked={vm.selection.includes(entry.index)} onChange={() => vm.toggleRow(entry.index)} /></Part>}
-            {vm.columns.map((column, index) => <Part key={column.key} part="cell" as="td" data-align={column.align} title={entry.cells[index]}>{entry.cells[index]}</Part>)}
+            {vm.columns.map((column, index) => {
+              const path = ctx.unstyled ? undefined : cellPath(node.props?.rows, entry.index, column.key);
+              const text = entry.cells[index];
+              return <Part key={column.key} part="cell" as="td" data-align={column.align} title={text}>
+                {path === undefined ? text : <LinkedCellValue key={path} path={path} value={entry.row[column.key]} column={column} text={text} />}
+              </Part>;
+            })}
           </Part>)}
           {vm.virtual && vm.end < vm.count && <tr aria-hidden="true"><td colSpan={columns} style={{ height: (vm.count - vm.end) * vm.rowHeight, padding: 0, border: 0 }} /></tr>}
-          {Array.from({ length: skeletonCount }, (_, index) => <tr key={`skeleton-${index}`} aria-hidden="true" style={{ height: vm.rowHeight }}>{Array.from({ length: Math.max(1, columns) }, (_, cell) => <Part key={cell} part="cell" as="td"><Part part="skeleton">&nbsp;</Part></Part>)}</tr>)}
+          {Array.from({ length: skeletonCount }, (_, index) => <tr key={`skeleton-${index}`} aria-hidden="true" style={{ height: vm.rowHeight }}>{Array.from({ length: Math.max(1, columns) }, (_, cell) => <Part key={cell} part="cell" as="td"><Part part="skeleton" data-prism-skeleton-line={styled('')} /></Part>)}</tr>)}
           {complete && vm.count > 0 && vm.pageSize > 0 && missing > 0 && <tr aria-hidden="true"><td colSpan={Math.max(1, columns)} style={{ height: missing * vm.rowHeight, padding: 0 }} /></tr>}
           {!skeletonCount && !vm.count && <tr><td colSpan={Math.max(1, columns)} style={{ height: vm.pageSize ? vm.pageSize * vm.rowHeight : undefined }}><Part part="empty">{vm.query ? `No rows match “${vm.query}”` : 'No rows yet'}{vm.query && <Part part="clear" as="button" type="button" onClick={() => vm.changeQuery('')}>Clear filter</Part>}</Part></td></tr>}
         </tbody>
       </Part>
     </div>
     <Part part="footer"><Part part="range">{vm.range}</Part><Part part="actions">
-      {vm.pageSize > 0 && <><Part part="previous" as="button" type="button" aria-label="Previous page" disabled={vm.currentPage === 0} onClick={() => { vm.changePage(vm.currentPage - 1); resetScroll(); }}>←</Part><Part part="next" as="button" type="button" aria-label="Next page" disabled={vm.currentPage >= vm.pageCount - 1} onClick={() => { vm.changePage(vm.currentPage + 1); resetScroll(); }}>→</Part></>}
-      {vm.mode && <Part part="submit" as="button" type="button" disabled={!vm.selected.length} onClick={vm.submit}>Use {vm.selected.length} selected</Part>}
+      {vm.pageSize > 0 && <><Part part="previous" className={styled('prism-icon-btn')} as="button" type="button" aria-label="Previous page" title="Previous page" disabled={vm.currentPage === 0} onClick={() => { vm.changePage(vm.currentPage - 1); resetScroll(); }}>←</Part><Part part="next" className={styled('prism-icon-btn')} as="button" type="button" aria-label="Next page" title="Next page" disabled={vm.currentPage >= vm.pageCount - 1} onClick={() => { vm.changePage(vm.currentPage + 1); resetScroll(); }}>→</Part></>}
+      {vm.mode && <Part part="submit" className={styled('prism-pill')} as="button" type="button" disabled={!vm.selected.length} data-feedback="" data-sent={sent ? '' : undefined} onClick={vm.submit}>
+        <span aria-hidden={sent || undefined} hidden={ctx.unstyled && sent}>Use {vm.selected.length} selected</span>
+        <span aria-hidden={!sent || undefined} hidden={ctx.unstyled && !sent}><FrameIcon name="check" /> Sent · {sentCount}</span>
+      </Part>}
     </Part></Part>
     <Part part="status" role="status" aria-live="polite">{vm.announcement}</Part>
   </Part>;
