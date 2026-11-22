@@ -79,11 +79,18 @@ test('reloading migrated artifact feedback preserves its iframe and document on 
     act(() => overall.focus());
     fireEvent.change(overall, { target: { value: 'Keep this artifact draft' } });
     fireEvent.keyUp(overall, { key: 'Unidentified' });
+    fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+    const comment = view.getByPlaceholderText('Add a comment…');
+    act(() => comment.focus());
+    fireEvent.change(comment, { target: { value: 'Uncommitted artifact note' } });
+    fireEvent.keyUp(comment, { key: 'Unidentified' });
     view.rerender(ui(true));
     expect((view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('Keep this artifact draft');
     expect(store.get('feedback-migration.inlineFeedback.feedback')).toMatchObject({ overall: 'Keep this artifact draft' });
     expect(view.container.querySelector('iframe')).toBe(frame);
     expect(frame.srcdoc).toBe(document);
+    expect(view.getByPlaceholderText('Add a comment…')).toBe(comment);
+    expect((comment as HTMLTextAreaElement).value).toBe('Uncommitted artifact note');
   } finally { cleanup(); restore(); }
 });
 

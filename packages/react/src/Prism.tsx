@@ -60,7 +60,7 @@ function Directive({ node }: { node: Node }) {
   const def = context.registry.get(name), raw = useBindings(node, context.store);
   const result = def?.schema?.coerce(raw) ?? { value: raw, issues: [], partial: false };
   const coerced = result.value ?? {}, complete = node.complete !== false;
-  const { id, ready, key: targetKey, owner } = useComponentId(node, coerced.id ?? raw.id, context.store, context.scope, def?.requiresFinalId);
+  const { id, ready, owner } = useComponentId(node, coerced.id ?? raw.id, context.store, context.scope, def?.requiresFinalId);
   const receipt = useMemo(createReceipt, [owner]);
   const finalized = Object.isFrozen(node), settled = ready && finalized;
   const props = coerced.id === undefined ? coerced : { ...coerced, id };
@@ -72,7 +72,7 @@ function Directive({ node }: { node: Node }) {
   if (!ready) return null;
   const children = renderChildren(node);
   const rendered = View ? <RenderBoundary key={owner} name={name}><View {...viewProps}>{children}</View></RenderBoundary> : <div data-prism="unknown" data-name={name}>{children}</div>;
-  return <ComponentContext.Provider value={value}>{(def?.feedback ?? context.feedback) ? <FeedbackSurface targetKey={targetKey}>{rendered}</FeedbackSurface> : rendered}</ComponentContext.Provider>;
+  return <ComponentContext.Provider value={value}>{(def?.feedback ?? context.feedback) ? <FeedbackSurface targetKey={owner}>{rendered}</FeedbackSurface> : rendered}</ComponentContext.Provider>;
 }
 function renderChildren(node: Node) { return node.children?.map(child => <NodeView key={child.key} node={Object.isFrozen(child) ? child : { ...child }} />); }
 const NodeView = memo(function NodeView({ node }: { node: Node }) {

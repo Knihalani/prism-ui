@@ -76,6 +76,25 @@ test('feedback reloads migrated drafts on streaming finalization without remount
   expect(view.getByText('Actual input')).toBe(input);
 });
 
+test('an unsaved annotation comment survives ID finalization and saves under the final target', () => {
+  const store = createStore(), actions: Action[] = [];
+  const ui = (done: boolean) => <Prism store={store} renderers={{ 'feedback-test': View }} feedback done={done} source={done ? source : source.slice(0, -3)} onAction={action => actions.push(action)} />;
+  const view = render(ui(false)), input = view.getByText('Actual input');
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+  const comment = view.getByPlaceholderText('Add a comment…');
+  change(comment, 'Unsaved while streaming');
+  view.rerender(ui(true));
+  expect(view.getByPlaceholderText('Add a comment…')).toBe(comment);
+  expect((comment as HTMLTextAreaElement).value).toBe('Unsaved while streaming');
+  expect(view.getByText('Actual input')).toBe(input);
+  fireEvent.click(view.getByRole('button', { name: 'Save' }));
+  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  expect(store.get('target.inlineFeedback.feedback')).toMatchObject({ items: [{ comment: 'Unsaved while streaming' }] });
+  expect(actions).toHaveLength(1);
+  expect(actions[0].payload).toMatchObject({ target: { name: 'feedback-test', id: 'target' }, items: [{ comment: 'Unsaved while streaming' }] });
+});
+
 test('feedback preserves valid phrasing content for inline built-ins, including the open editor', () => {
   const view = render(<Prism feedback source="Budget :num[3]{id=quantity} per seat." />);
   const paragraph = view.container.querySelector('p')!;
