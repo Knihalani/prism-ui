@@ -132,3 +132,15 @@ test('sent text uses one punctuation part and preserves sentence block height wi
   expect(sentence.querySelector('[data-part="sentence-punctuation"]')?.getAttribute('aria-hidden')).toBeNull();
   fireEvent.click(view.getByRole('button', { name: /Edit Date/ })); expect(sentence.style.minBlockSize).toBe('');
 });
+
+test('unstyled sent receipts remove all original inputs and segmented controls from keyboard access', () => {
+  const view = render(<Prism registry={registry} source={source({ id: 'access', fields })} unstyled animate={false} onAction={() => {}} />);
+  fireEvent.click(view.getByRole('button', { name: 'Send' }));
+  const controls = Array.from(view.container.querySelectorAll<HTMLElement>('input, textarea, select, [role="switch"], [role="radiogroup"]'));
+  expect(controls.length).toBeGreaterThan(0);
+  expect(controls.every(control => control.hasAttribute('inert') || control.hidden)).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Edit Name: Ada' }));
+  const name = view.getByRole('textbox', { name: /Name/ });
+  expect(name.hasAttribute('inert')).toBe(false);
+  expect(document.activeElement).toBe(name);
+});
