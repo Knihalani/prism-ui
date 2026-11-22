@@ -49,8 +49,6 @@
 .prism-root .prism-callout__ask { opacity: 0; pointer-events: none; transition: opacity var(--prism-callout-motion-fast, var(--prism-motion-fast)) var(--prism-callout-motion-spring, var(--prism-motion-spring)); }
 .prism-root .prism-callout__root:is(:hover, :focus-within) .prism-callout__ask { opacity: 1; pointer-events: auto; }
 @media (hover: none) { .prism-root .prism-callout__ask { opacity: 1; pointer-events: auto; } }
-.prism-root .prism-callout__root { animation: prism-callout-enter var(--prism-callout-motion-fast, var(--prism-motion-fast)) var(--prism-callout-motion-spring, var(--prism-motion-spring)); }
-@keyframes prism-callout-enter { from { opacity: 0; transform: translateY(var(--prism-callout-space-1, var(--prism-space-1))); } to { opacity: 1; transform: none; } }
 .prism-root[data-animate="false"] [data-prism="callout"], .prism-root [data-animate="false"] [data-prism="callout"] { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-root [data-prism="callout"] { animation: none; transition: none; } }
 

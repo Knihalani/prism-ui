@@ -100,7 +100,7 @@ test('collapse measures visual height before cancel, reverses and restores auto 
   visual = 45; order.length = 0;
   view.rerender(<Collapse open={false} />);
   expect(order.slice(0, 2)).toEqual(['measure', 'cancel']);
-  expect(node.animate).toHaveBeenLastCalledWith([{ height: '45px', opacity: 1 }, { height: '0px', opacity: 0 }], { duration: 240, easing: 'cubic-bezier(.23,1,.32,1)' });
+  expect(node.animate).toHaveBeenLastCalledWith([{ height: '45px', opacity: 1 }, { height: '0px', opacity: 0 }], { duration: 160, easing: 'cubic-bezier(.4,0,1,1)' });
   expect(node.inert).toBe(true);
   animations.at(-1)!.onfinish!(); expect(node.style.height).toBe('0px');
   view.rerender(<Collapse open />); animations.at(-1)!.onfinish!(); expect(node.style.height).toBe('auto');
@@ -115,4 +115,14 @@ test('collapse is instant with animate=false and hooks render on the server', ()
   view.rerender(<ThemeScope animate={false}><Collapse open /></ThemeScope>);
   expect(node.style.height).toBe('auto'); expect(node.animate).not.toHaveBeenCalled();
   expect(renderToString(<Collapse open />)).toContain('5');
+});
+
+test('partially collapsed content remains accessible and responds to preview height changes', () => {
+  function Collapse({ height }: { height: number }) { return <div {...useCollapse(false, height)}>Preview</div>; }
+  const view = render(<Collapse height={40} />), node = view.container.firstElementChild as HTMLElement;
+  expect(node.style.height).toBe('40px'); expect(node.inert).toBe(false);
+  expect(node.getAttribute('aria-hidden')).toBe('false');
+  view.rerender(<Collapse height={70} />);
+  expect(node.style.height).toBe('70px');
+  view.unmount();
 });

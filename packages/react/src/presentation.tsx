@@ -1,6 +1,7 @@
-import { useCallback, useContext, useMemo, useSyncExternalStore, type HTMLAttributes } from 'react';
+import { useCallback, useContext, useLayoutEffect, useMemo, useRef, useSyncExternalStore, type HTMLAttributes } from 'react';
 import { ComponentContext, PrismPart, usePrism, type Action } from './context';
 import { useActionDispatch } from './hooks';
+import { motionDuration, useReducedMotion } from './motion';
 
 export type PresentationState = 'streaming' | 'ready' | 'sent';
 
@@ -59,6 +60,7 @@ export function usePresentation({ exiting = false } = {}) {
   return {
     'data-state': state,
     'data-entering': motion && !exiting ? '' : undefined,
+    'data-prism-enter': motion && !exiting ? '' : undefined,
     'data-exiting': motion && exiting ? '' : undefined,
   } as const;
 }
@@ -68,7 +70,31 @@ export function StreamCaret() {
   return <span className="prism-stream-caret" aria-hidden="true" />;
 }
 
-type StreamSkeletonProps = HTMLAttributes<HTMLElement> & { as?: 'div' | 'span' };
+type StreamSkeletonProps = HTMLAttributes<HTMLElement> & { as?: 'div' | 'span' | 'li'; slotProps?: Record<string, unknown> };
 export function StreamSkeleton({ as: Element = 'div', ...props }: StreamSkeletonProps) {
-  return <PrismPart as={Element} {...props} aria-hidden="true" data-state="streaming" data-prism-skeleton="" />;
+  const ref = useRef<HTMLElement>(null), reduced = useReducedMotion();
+  const instant = useRef(reduced); instant.current = reduced;
+  useLayoutEffect(() => () => {
+    const element = ref.current, parent = element?.parentElement;
+    if (instant.current || !element || !parent?.closest('.prism-root[data-prism-presentation]')) return;
+    const rect = element.getBoundingClientRect(), computed = getComputedStyle(element);
+    const duration = motionDuration(computed.getPropertyValue('--prism-motion-fast'), 160);
+    if (!duration || !rect.width || !rect.height) return;
+    const ghost = element.cloneNode(true) as HTMLElement;
+    ghost.removeAttribute('id'); ghost.querySelectorAll('[id]').forEach(child => child.removeAttribute('id'));
+    ghost.inert = true; ghost.setAttribute('data-prism-skeleton-exit', '');
+    Object.assign(ghost.style, { position: 'absolute', width: `${rect.width}px`, height: `${rect.height}px`, margin: '0', opacity: computed.opacity, pointerEvents: 'none' });
+    queueMicrotask(() => {
+      if (element.isConnected || !parent.isConnected) return;
+      parent.append(ghost);
+      const container = ghost.offsetParent as HTMLElement | null;
+      const initial = !container || container === document.body && getComputedStyle(container).position === 'static';
+      const bounds = !initial ? container!.getBoundingClientRect() : { left: -window.scrollX, top: -window.scrollY };
+      ghost.style.left = `${rect.left - bounds.left + (initial ? 0 : container!.scrollLeft - container!.clientLeft)}px`;
+      ghost.style.top = `${rect.top - bounds.top + (initial ? 0 : container!.scrollTop - container!.clientTop)}px`;
+      ghost.getBoundingClientRect(); ghost.style.opacity = '0';
+      setTimeout(() => ghost.remove(), duration);
+    });
+  }, []);
+  return <PrismPart as={Element} {...props} ref={ref} aria-hidden="true" data-state="streaming" data-prism-skeleton="" />;
 }

@@ -73,10 +73,10 @@
   padding: var(--prism-frame-space-2, var(--prism-space-2)); border: 1px solid var(--prism-frame-border, var(--prism-border));
   border-radius: var(--prism-frame-radius-md, var(--prism-radius-md)); background: var(--prism-frame-surface-raised, var(--prism-surface-raised));
   box-shadow: var(--prism-frame-elevation-2, var(--prism-elevation-2));
-  animation: prism-frame-reveal var(--prism-frame-motion-fast, var(--prism-motion-fast)) var(--prism-frame-motion-spring, var(--prism-motion-spring));
+
 }
 .prism-frame__overflowContent[hidden] { display: none; }
-@keyframes prism-frame-reveal { from { opacity: 0; translate: 0 var(--prism-space-1); } }
+
 @media (hover: hover) {
   .prism-frame__toolbar { transition: opacity var(--prism-frame-motion-fast, var(--prism-motion-fast)) var(--prism-frame-motion-ease, var(--prism-motion-ease)); }
   .prism-frame__root:not(:hover, :focus-within) > .prism-frame__header .prism-frame__toolbar { opacity: 0; }

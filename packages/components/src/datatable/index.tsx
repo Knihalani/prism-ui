@@ -1,8 +1,8 @@
 import { componentStrings } from '../strings';
 import { createElement, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ElementType, type HTMLAttributes } from 'react';
-import { useStrings, PrismPart, cx, defineComponent, registerComponent, useFlash, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
+import { useStrings, createFlip, useReducedMotion, StreamSkeleton, PrismPart, cx, defineComponent, registerComponent, useFlash, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
 import { FrameIcon, useFrame } from '../frame';
-import { CheckMark, Odometer, createFlip } from '../shared';
+import { CheckMark, Odometer } from '../shared';
 import { dataTableSchema, numericCell, useDataTable, type DataTableColumn, type DataTableProps } from './use-datatable';
 
 export { useDataTable, dataTableSchema } from './use-datatable';
@@ -36,7 +36,7 @@ function LinkedCellValue({ path, value, column, text }: { path: string; value: u
   const { animate } = usePrism();
   const flash = useFlash(path);
   const number = numericCell(value, column);
-  return <span data-prism-flash={flash ? '' : undefined}>
+  return <span className="prism-flash" data-prism-flash={flash ? '' : undefined}>
     {animate && number !== undefined && Number.isFinite(number) ? <Odometer value={number} format={() => text} /> : text}
   </span>;
 }
@@ -54,7 +54,7 @@ export function DataTable({ props: inputProps, complete, node }: PrismComponentP
   const scroll = useRef<HTMLDivElement>(null);
   const previewLayout = useRef<{ height: number; pageSize: number } | undefined>(undefined);
   const resizeAnimation = useRef<Animation | undefined>(undefined);
-  const flip = useMemo(() => createFlip({ duration: 300, easing: 'cubic-bezier(.2, .8, .2, 1)' }), []);
+  const flip = useMemo(() => createFlip(), []), reduced = useReducedMotion();
   const sortPending = useRef(false);
   const rows = () => Array.from(scroll.current?.querySelectorAll('tr[data-index]') ?? []);
   const selectionKey = useMemo(() => JSON.stringify(vm.selected.map(entry => [entry.index, ...entry.cells])), [vm.selected]);
@@ -98,13 +98,15 @@ export function DataTable({ props: inputProps, complete, node }: PrismComponentP
     previewLayout.current = complete ? undefined : { height, pageSize: vm.pageSize };
     // Page size can arrive after the rows. Settle from the preview's height
     // without holding extra rows or delaying the pagination controls.
-    if (ctx.animate && !ctx.unstyled && vm.pageSize && previous && previous.pageSize !== vm.pageSize && previous.height > height) {
+    if (!reduced && ctx.animate && !ctx.unstyled && vm.pageSize && previous && previous.pageSize !== vm.pageSize && previous.height > height) {
+      const style = getComputedStyle(element), time = style.getPropertyValue('--prism-motion-base').trim();
+      const duration = parseFloat(time) * (time.endsWith('ms') ? 1 : 1000);
       resizeAnimation.current = element.animate?.(
         [{ minHeight: `${previous.height}px` }, { minHeight: `${height}px` }],
-        { duration: 180, easing: 'cubic-bezier(.22, 1, .36, 1)' },
+        { duration: Number.isFinite(duration) ? duration : 0, easing: style.getPropertyValue('--prism-motion-ease').trim() || 'linear' },
       );
     }
-  }, [complete, ctx.animate, ctx.unstyled, props.height, vm.pageSize, vm.rowHeight, vm.visible.length, skeletonCount]);
+  }, [complete, reduced, ctx.animate, ctx.unstyled, props.height, vm.pageSize, vm.rowHeight, vm.visible.length, skeletonCount]);
   useLayoutEffect(() => () => resizeAnimation.current?.cancel(), [ctx.animate, ctx.unstyled]);
   const onRowKeyDown = (event: React.KeyboardEvent<HTMLElement>, index: number) => {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -154,7 +156,7 @@ export function DataTable({ props: inputProps, complete, node }: PrismComponentP
         </tr></Part>
         <tbody>
           {vm.virtual && vm.start > 0 && <tr aria-hidden="true"><td colSpan={columns} style={{ height: vm.start * vm.rowHeight, padding: 0, border: 0 }} /></tr>}
-          {vm.visible.map((entry, position) => <Part key={entry.index} part="row" as="tr" data-index={entry.index} data-entering={complete ? undefined : frame.rootProps['data-entering']} state={vm.selection.includes(entry.index) ? 'selected' : undefined} aria-selected={vm.mode ? vm.selection.includes(entry.index) : undefined} aria-rowindex={vm.virtual ? vm.start + position + 2 : undefined} tabIndex={vm.focusIndex === entry.index || !vm.visible.some(item => item.index === vm.focusIndex) && position === 0 ? 0 : -1} onKeyDown={(event: React.KeyboardEvent<HTMLElement>) => onRowKeyDown(event, entry.index)} onFocus={(event: React.FocusEvent<HTMLElement>) => { if (event.target === event.currentTarget) vm.setFocusIndex(entry.index); }} style={{ height: vm.rowHeight, '--prism-frame-enter-delay': `${Math.min(position, 6) * 16}ms` } as CSSProperties}>
+          {vm.visible.map((entry, position) => <Part key={entry.index} part="row" as="tr" data-index={entry.index} data-entering={complete ? undefined : frame.rootProps['data-entering']} state={vm.selection.includes(entry.index) ? 'selected' : undefined} aria-selected={vm.mode ? vm.selection.includes(entry.index) : undefined} aria-rowindex={vm.virtual ? vm.start + position + 2 : undefined} tabIndex={vm.focusIndex === entry.index || !vm.visible.some(item => item.index === vm.focusIndex) && position === 0 ? 0 : -1} onKeyDown={(event: React.KeyboardEvent<HTMLElement>) => onRowKeyDown(event, entry.index)} onFocus={(event: React.FocusEvent<HTMLElement>) => { if (event.target === event.currentTarget) vm.setFocusIndex(entry.index); }} style={{ height: vm.rowHeight, '--prism-motion-index': Math.min(position, 8) } as CSSProperties}>
             {vm.mode && <Part part="cell" as="td"><Checkbox aria-label={`Select row ${entry.index + 1}`} checked={vm.selection.includes(entry.index)} onChange={() => vm.toggleRow(entry.index)} /></Part>}
             {vm.columns.map((column, index) => {
               const path = ctx.unstyled ? undefined : cellPath(node.props?.rows, entry.index, column.key);
@@ -163,13 +165,13 @@ export function DataTable({ props: inputProps, complete, node }: PrismComponentP
               const magnitude = magnitudes[index] ? Math.abs(numericCell(value, column) ?? 0) / magnitudes[index] : 0;
               const content = path === undefined ? text : <LinkedCellValue key={path} path={path} value={value} column={column} text={text} />;
               return <Part key={column.key} part="cell" as="td" data-align={column.align} data-detail={column.detail ? '' : undefined} title={text}>
-                {Number.isFinite(magnitude) && magnitude > 0 && <Part part="magnitude" as="span" data-max={magnitude === 1 ? '' : undefined} style={{ width: `${magnitude * 80}%` }} aria-hidden="true" />}
+                {Number.isFinite(magnitude) && magnitude > 0 && <Part part="magnitude" as="span" data-max={magnitude === 1 ? '' : undefined} style={{ width: '80%', transform: `scaleX(${magnitude})` }} aria-hidden="true" />}
                 {!ctx.unstyled && column.badge && text ? <Part part="badge" className="prism-chip" as="span">{content}</Part> : content}
               </Part>;
             })}
           </Part>)}
           {vm.virtual && vm.end < vm.count && <tr aria-hidden="true"><td colSpan={columns} style={{ height: (vm.count - vm.end) * vm.rowHeight, padding: 0, border: 0 }} /></tr>}
-          {Array.from({ length: skeletonCount }, (_, index) => <tr key={`skeleton-${index}`} aria-hidden="true" style={{ height: vm.rowHeight }}>{Array.from({ length: Math.max(1, columns) }, (_, cell) => <Part key={cell} part="cell" as="td" data-detail={vm.columns[cell - Number(Boolean(vm.mode))]?.detail ? '' : undefined}><Part part="skeleton" data-prism-skeleton-line={styled('')} /></Part>)}</tr>)}
+          {Array.from({ length: skeletonCount }, (_, index) => <tr key={`skeleton-${index}`} aria-hidden="true" style={{ height: vm.rowHeight }}>{Array.from({ length: Math.max(1, columns) }, (_, cell) => <Part key={cell} part="cell" as="td" data-detail={vm.columns[cell - Number(Boolean(vm.mode))]?.detail ? '' : undefined}><Part part="skeleton" as={StreamSkeleton} data-prism-skeleton-line={styled('')} /></Part>)}</tr>)}
           {complete && vm.currentPage === 0 && !vm.query && vm.count > 0 && vm.pageSize > 0 && missing > 0 && <tr aria-hidden="true"><td colSpan={Math.max(1, columns)} style={{ height: missing * vm.rowHeight, padding: 0 }} /></tr>}
           {!skeletonCount && !vm.count && <tr><td colSpan={Math.max(1, columns)} style={{ height: vm.pageSize ? vm.pageSize * vm.rowHeight : undefined }}><Part part="empty">{vm.query ? `No rows match “${vm.query}”` : themeStrings.noRowsYet}{vm.query && <Part part="clear" as="button" type="button" onClick={() => vm.changeQuery('')}>{themeStrings.clearFilter}</Part>}</Part></td></tr>}
         </tbody>

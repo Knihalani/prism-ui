@@ -78,8 +78,6 @@
 .prism-root .prism-card__ask { opacity: 0; pointer-events: none; transition: opacity var(--prism-card-motion-fast, var(--prism-motion-fast)) var(--prism-card-motion-spring, var(--prism-motion-spring)); }
 .prism-root .prism-card__root:is(:hover, :focus-within) .prism-card__ask { opacity: 1; pointer-events: auto; }
 @media (hover: none) { .prism-root .prism-card__ask { opacity: 1; pointer-events: auto; } }
-.prism-root .prism-card__root { animation: prism-card-enter var(--prism-card-motion-fast, var(--prism-motion-fast)) var(--prism-card-motion-spring, var(--prism-motion-spring)); }
-@keyframes prism-card-enter { from { opacity: 0; transform: translateY(var(--prism-card-space-1, var(--prism-space-1))); } to { opacity: 1; transform: none; } }
 .prism-root[data-animate="false"] [data-prism="card"], .prism-root [data-animate="false"] [data-prism="card"] { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-root [data-prism="card"] { animation: none; transition: none; } }
 .prism-root .prism-card__action:not([data-variant="quiet"]) { background: var(--prism-accent, var(--prism-card-accent-text, var(--prism-accent-text))); color: var(--prism-card-on-accent, var(--prism-on-accent)); }

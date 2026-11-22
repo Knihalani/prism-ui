@@ -3,6 +3,8 @@ import { parse, type Node } from '@prism-ui/core';
 import { s, type Infer } from '@prism-ui/schema';
 import { PrismPart, ComponentContext, StreamSkeleton, cx, defaultRenderers, defineComponent, registerComponent, usePart, usePrism, useSent, useTheme, useStrings, useFlash, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
+import { Odometer } from '../shared/controls';
+import { useFlip } from '../lib/use-flip';
 import { ViewIcon, iconNames } from './icons';
 import { gallery } from './fixtures';
 import { bindPath, collect, evaluate, isOpen, listPath, resolve, resolvePath, run, snapshot, template, type Formatter, type Read, type ViewNode, type ViewScope, type ViewValue } from './tree';
@@ -235,7 +237,7 @@ function Stat(p: PrimitiveProps) {
   const deltaText = d === undefined ? text(delta) : (d > 0 ? '+' : '') + view.format(d, props.deltaFormat ?? 'percent:1');
   return <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('stat')} {...tokens(props)}>
     <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('statLabel')}><Icon name={props.icon} p={p} />{text(props.label)}</PrismPart>
-    <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('statValue')} aria-live="polite">{value}{props.unit && <PrismPart as="span" slotProps={{ model: p.model, primitive: p }} {...p.part('statUnit')}>{text(props.unit)}</PrismPart>}</PrismPart>
+    <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('statValue')} aria-live="polite">{typeof props.value === 'number' ? <Odometer value={props.value} format={() => value} /> : value}{props.unit && <PrismPart as="span" slotProps={{ model: p.model, primitive: p }} {...p.part('statUnit')}>{text(props.unit)}</PrismPart>}</PrismPart>
     {(deltaText || props.hint) && <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('statMeta')}>
       {deltaText && <PrismPart as="span" slotProps={{ model: p.model, primitive: p }} {...p.part('statDelta')} data-trend={trend} data-good={good === undefined ? undefined : String(good)}>{trend && trend !== 'flat' && <ViewIcon name={trend === 'up' ? 'trending-up' : 'trending-down'} />}{deltaText}</PrismPart>}
       {props.hint && <PrismPart as="span" slotProps={{ model: p.model, primitive: p }} {...p.part('statHint')}>{text(props.hint)}</PrismPart>}
@@ -332,7 +334,7 @@ function Slider(p: PrimitiveProps) {
   const min = num(props.min, 0), max = num(props.max, 100), value = num(props.value, min);
   const pct = max > min ? ((Math.min(max, Math.max(min, value)) - min) / (max - min)) * 100 : 0;
   return <Field p={p} id={id}><PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('sliderRow')}>
-    <PrismPart as="input" id={id} type="range" slotProps={{ model: p.model, primitive: p }} {...p.part('slider')} min={min} max={max} step={num(props.step, 1)} value={value} style={{ '--prism-view-fill': pct + '%' } as React.CSSProperties} aria-valuetext={view.format(value, props.format)} onChange={e => p.set(+e.target.value)} />
+    <span className="prism-view__sliderTrack" style={{ '--prism-view-ratio': pct / 100 } as React.CSSProperties}><PrismPart as="input" id={id} type="range" slotProps={{ model: p.model, primitive: p }} {...p.part('slider')} min={min} max={max} step={num(props.step, 1)} value={value} style={{ '--prism-view-fill': pct + '%' } as React.CSSProperties} aria-valuetext={view.format(value, props.format)} onChange={e => p.set(+e.target.value)} /><span className="prism-view__sliderThumb" aria-hidden="true" /></span>
     <PrismPart as="output" slotProps={{ model: p.model, primitive: p }} {...p.part('sliderValue')} htmlFor={id}>{view.format(value, props.format)}{props.unit ? (/^[%°]/.test(text(props.unit)) ? '' : ' ') + text(props.unit) : ''}</PrismPart>
   </PrismPart></Field>;
 }
@@ -351,22 +353,8 @@ function Avatar(p: PrimitiveProps) {
   return <PrismPart as="span" slotProps={{ model: p.model, primitive: p }} {...p.part('avatar')} {...tokens(p.props)} data-hue={hue} title={name} role="img" aria-label={name}>{/^https:\/\//.test(src) ? <img src={src} alt="" loading="lazy" /> : initials}</PrismPart>;
 }
 export function useViewReorder() {
-  const ref = useRef<HTMLDivElement>(null), positions = useRef(new Map<Element, DOMRect>()), { animate } = usePrism();
-  useLayoutEffect(() => {
-    const root = ref.current;
-    if (!root) return;
-    const next = new Map<Element, DOMRect>(), style = getComputedStyle(root);
-    const duration = style.getPropertyValue('--prism-view-motion-fast').trim() || style.getPropertyValue('--prism-motion-fast').trim();
-    const easing = style.getPropertyValue('--prism-view-motion-spring').trim() || style.getPropertyValue('--prism-motion-spring').trim();
-    for (const node of Array.from(root.querySelectorAll<HTMLElement>('[data-part="listItem"], tbody > [data-part="tableRow"]'))) {
-      const rect = node.getBoundingClientRect(), old = positions.current.get(node); next.set(node, rect);
-      if (animate && !root.ownerDocument.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches && old && (old.x !== rect.x || old.y !== rect.y) && duration && easing) {
-        node.animate?.([{ translate: `${old.x - rect.x}px ${old.y - rect.y}px` }, { translate: '0 0' }], { duration: parseFloat(duration) * (duration.endsWith('ms') ? 1 : 1000), easing });
-      }
-    }
-    positions.current = next;
-  });
-  return ref;
+  const { animate } = usePrism();
+  return useFlip(animate, '[data-part="listItem"], tbody > [data-part="tableRow"]');
 }
 function ListItem({ p, item, index, base }: { p: PrimitiveProps; item: unknown; index: number; base: string }) {
   const scope = useMemo(() => ({ ...p.scope, item: `${base}.${index}`, index }), [p.scope, base, index]);

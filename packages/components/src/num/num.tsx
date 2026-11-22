@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { Node } from '@prism-ui/core';
 import { s, type Infer } from '@prism-ui/schema';
-import { useStrings, PrismPart, defineComponent, registerComponent, useEmit, useFormat, useFormula, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
+import { useStrings, useSpringValue, PrismPart, defineComponent, registerComponent, useEmit, useFormat, useFormula, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
+import { Odometer } from '../shared/controls';
 
 const formatting = { format: s.enum(['number', 'currency', 'percent', 'compact']).default('number'), decimals: s.number({ min: 0, max: 20 }).optional(), currency: s.string().optional(), label: s.string().optional() };
 export const numSchema = s.object({ ...formatting, id: s.string().optional(), value: s.number().optional(), min: s.number().optional(), max: s.number().optional(), step: s.number({ min: 0 }).default(1) });
@@ -72,25 +73,19 @@ export function useNum(props: NumProps, ctx: PrismComponentProps<NumProps>) {
     else if (active.moved) commit(active.next, active.previous);
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
-  return { editing, formatted: ready ? format(value) : '\u00a0', rootProps: { ...usePart('num', 'root', ready ? 'ready' : 'loading'), role: 'slider', tabIndex: ready ? 0 : -1, 'aria-label': props.label ?? id, 'aria-valuemin': props.min, 'aria-valuemax': props.max, 'aria-valuenow': value, 'aria-valuetext': format(value), 'aria-busy': !ready, onKeyDown, onPointerDown, onPointerMove, onPointerUp: (e: PointerEvent<HTMLElement>) => endDrag(e), onPointerCancel: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onLostPointerCapture: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onClick: () => { if (!suppressClick.current) beginEdit(); suppressClick.current = false; } },
+  return { editing, value, formatted: ready ? format(value) : '\u00a0', rootProps: { ...usePart('num', 'root', ready ? 'ready' : 'loading'), role: 'slider', tabIndex: ready ? 0 : -1, 'aria-label': props.label ?? id, 'aria-valuemin': props.min, 'aria-valuemax': props.max, 'aria-valuenow': value, 'aria-valuetext': format(value), 'aria-busy': !ready, onKeyDown, onPointerDown, onPointerMove, onPointerUp: (e: PointerEvent<HTMLElement>) => endDrag(e), onPointerCancel: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onLostPointerCapture: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onClick: () => { if (!suppressClick.current) beginEdit(); suppressClick.current = false; } },
     inputProps: { ...usePart('num', 'input'), type: 'number', role: 'spinbutton', 'aria-label': props.label ?? id, min: props.min, max: props.max, step, value: draft, autoFocus: true, onFocus: (e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.select(), onChange: (e: React.ChangeEvent<HTMLInputElement>) => setDraft(e.target.value), onBlur: (e: React.FocusEvent<HTMLInputElement>) => finishEdit(false, e.currentTarget.value), onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); finishEdit(e.key === 'Escape', e.currentTarget.value); } } } };
 }
 
 export function Num(ctx: PrismComponentProps<NumProps>) {
   const num = useNum(ctx.props, ctx), Value = useSlot('num', 'value', useSlot('num', 'root', 'span' as any));
-  return num.editing ? <PrismPart as="input" {...num.inputProps} /> : <Value {...num.rootProps}>{num.formatted}</Value>;
+  return num.editing ? <PrismPart as="input" {...num.inputProps} /> : <Value {...num.rootProps}><Odometer value={num.value} format={() => num.formatted} /></Value>;
 }
 
 export function useCalc(props: CalcProps, ctx: PrismComponentProps<CalcProps>) {
   props = { ...props, ...useStrings('calc') };
   const { animate } = usePrism(), expr = props.expr ?? rawText(ctx.node), result = useFormula(expr), format = useNumberFormat(props);
-  const [display, setDisplay] = useState(result), shown = useRef(result);
-  useEffect(() => {
-    if (!animate || !Number.isFinite(result) || !Number.isFinite(shown.current)) { shown.current = result; setDisplay(result); return; }
-    const start = performance.now(), from = shown.current; let frame: number;
-    const tick = (now: number) => { const progress = Math.min(1, (now - start) / 250); shown.current = progress === 1 ? result : from + (result - from) * (1 - (1 - progress) ** 3); setDisplay(shown.current); if (progress < 1) frame = requestAnimationFrame(tick); };
-    frame = requestAnimationFrame(tick); return () => cancelAnimationFrame(frame);
-  }, [result, animate]);
+  const display = useSpringValue(Number.isFinite(result) ? result : 0);
   const error = !Number.isFinite(result);
   return { text: error ? props.errorLabel : format(animate && Number.isFinite(display) ? display : result), rootProps: { ...usePart('calc', 'root', error ? 'error' : 'ready'), 'aria-label': [props.label, error ? props.errorLabel : format(result)].filter(Boolean).join(': '), title: error ? expr : undefined } };
 }

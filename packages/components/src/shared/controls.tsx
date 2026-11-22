@@ -1,5 +1,5 @@
-import { forwardRef, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
-import { PrismPart, Icon, cx } from '@prism-ui/react';
+import { forwardRef, type ComponentPropsWithoutRef, type ReactNode } from 'react';
+import { PrismPart, Icon, cx, useReducedMotion } from '@prism-ui/react';
 
 type ButtonProps = ComponentPropsWithoutRef<'button'>;
 type InputProps = ComponentPropsWithoutRef<'input'>;
@@ -80,12 +80,8 @@ export interface OdometerProps extends SpanProps {
 const isDigit = (character: string) => /\p{Decimal_Number}/u.test(character);
 export function Odometer({ value, format = String, animate = true, className, ...props }: OdometerProps) {
   const text = format(value);
-  const [roll, setRoll] = useState({ text, value, previous: '', direction: 'up', revision: 0 });
-  if (roll.text !== text || !Object.is(roll.value, value)) {
-    setRoll({ text, value, previous: roll.text, direction: value < roll.value ? 'down' : 'up', revision: roll.revision + 1 });
-  }
-  const previous = Array.from(roll.previous).filter(isDigit);
-  if (!animate || previous.length === 0) {
+  const reduced = useReducedMotion();
+  if (!animate || reduced) {
     return <PrismPart as="span" {...props} className={cx('prism-odometer', className)}>{text}</PrismPart>;
   }
   const next = Array.from(text);
@@ -94,11 +90,12 @@ export function Odometer({ value, format = String, animate = true, className, ..
     <span className="prism-odometer__label">{text}</span>
     <span aria-hidden="true">{next.map((character, index) => {
       if (!isDigit(character)) return character;
-      const before = previous[previous.length - remaining--];
-      const changed = before != null && before !== character;
-      return <span className="prism-odometer__digit" key={index} data-roll={changed ? roll.direction : undefined}>
-        <span key={changed ? roll.revision : undefined}>{character}</span>
-        {changed && <span key={`from-${roll.revision}`} className="prism-odometer__previous">{before}</span>}
+      const code = character.codePointAt(0)!;
+      let start = code;
+      while (isDigit(String.fromCodePoint(start - 1))) start--;
+      const digit = (code - start) % 10, zero = code - digit;
+      return <span className="prism-odometer__digit" key={`digit-${remaining--}`}>
+        <span className="prism-odometer__reel" style={{ transform: `translateY(${-digit * 10}%)` }}>{Array.from({ length: 10 }, (_, number) => <span key={number} data-digit={String.fromCodePoint(zero + number)} />)}</span>
       </span>;
     })}</span>
   </PrismPart>;

@@ -87,7 +87,7 @@
   block-size: var(--prism-space-3);
   border-radius: var(--prism-radius-sm);
   background: color-mix(in srgb, var(--prism-text) 8%, transparent);
-  animation: prism-artifact-pulse max(var(--prism-motion-slow), 1ms) var(--prism-motion-ease) alternate 3;
+  animation: prism-artifact-pulse var(--prism-motion-slow) var(--prism-motion-ease) alternate 3;
 }
 .prism-artifact__skeleton-line:first-child { inline-size: min(40%, calc(var(--prism-space-8) * 4)); block-size: var(--prism-space-5); }
 .prism-artifact__skeleton-line:last-child { inline-size: min(49%, calc(var(--prism-space-8) * 6)); }

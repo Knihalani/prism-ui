@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useLayoutEffect, useMemo, type KeyboardEvent } from 'react';
 import { s, type Infer } from '@prism-ui/schema';
-import { defineComponent, registerComponent, Icon, PrismPart, useFormat, usePart, usePrism, useSent, useSlot, useStrings, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
+import { defineComponent, registerComponent, Icon, PrismPart, useFormat, usePart, usePrism, useSent, useSlot, useSpringValue, useStrings, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
 import { setRecordPath } from '../store-record';
 
@@ -22,16 +22,6 @@ function calculate(props: EstimateProps, readItem: (id: string) => ItemState | u
   });
   const subtotal = rows.reduce((sum, row) => sum + row.amount, 0), discount = subtotal * props.discount, tax = (subtotal - discount) * props.taxRate;
   return { rows, subtotal, discount, tax, total: subtotal - discount + tax };
-}
-function useTween(value: number, animate: boolean) {
-  const [display, setDisplay] = useState(value), shown = useRef(value);
-  useEffect(() => {
-    if (!animate) { shown.current = value; setDisplay(value); return; }
-    const from = shown.current, start = performance.now(); let frame: number;
-    const tick = (now: number) => { const t = Math.min(1, (now - start) / 250); shown.current = t === 1 ? value : from + (value - from) * (1 - (1 - t) ** 3); setDisplay(shown.current); if (t < 1) frame = requestAnimationFrame(tick); };
-    frame = requestAnimationFrame(tick); return () => cancelAnimationFrame(frame);
-  }, [value, animate]);
-  return animate ? display : value;
 }
 export function useEstimate(props: EstimateProps, ctx: PrismComponentProps<EstimateProps>) {
   const { store, animate } = usePrism(), format = useFormat(), { send, sent, reset } = useSent(), strings = useStrings('estimate'), id = props.id ?? ctx.id;
@@ -75,7 +65,7 @@ export function useEstimate(props: EstimateProps, ctx: PrismComponentProps<Estim
     const items = current.rows.filter(row => row.enabled && row.ready).map(({ id, label, qty, price, amount }) => ({ id, label, qty, price: price!, amount }));
     send('use', { items, total: current.total }, `${strings.submit}: ${format.number(items.length)} ${strings.itemCountLabel}, ${strings.totalLabel.toLowerCase()} ${money(current.total)}`);
   };
-  const displayedTotal = useTween(totals.total, animate);
+  const displayedTotal = useSpringValue(totals.total);
   const parts = { list: usePart('estimate', 'list'), empty: usePart('estimate', 'empty'), summary: usePart('estimate', 'summary'), summaryRow: usePart('estimate', 'summary-row'), summaryLabel: usePart('estimate', 'summary-label'), summaryValue: usePart('estimate', 'summary-value'), total: usePart('estimate', 'total'), totalLabel: usePart('estimate', 'total-label'), totalValue: usePart('estimate', 'total-value'), live: usePart('estimate', 'live'), actions: usePart('estimate', 'actions'), submit: usePart('estimate', 'submit') };
   return { rows, parts, title: strings.title, emptyLabel: strings.emptyLabel, submit: strings.submit, sentLabel: strings.sentLabel, sent: !!sent, total: totals.total, displayedTotal, formatMoney: money, onUse, canUse: rows.length > 0 && rows.every(row => row.ready), totalText: money(displayedTotal), finalTotalText: money(totals.total), totalLabel: strings.totalLabel,
     summary: [{ label: strings.subtotalLabel, value: money(totals.subtotal) }, ...(props.discount ? [{ label: strings.discountLabel, value: `−${money(totals.discount)}` }] : []), ...(props.taxRate ? [{ label: strings.taxLabel, value: money(totals.tax) }] : [])] };

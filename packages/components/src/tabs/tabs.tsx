@@ -79,7 +79,7 @@ export function useTabs(props: TabsProps, ctx: Pick<PrismComponentProps, 'node' 
   const rendered = Children.toArray(ctx.children).filter((_, index) => ctx.node.children?.[index]?.type === 'component' && ctx.node.children[index].name === 'tab');
   return { parts, strings, title: strings.title, label: strings.label ?? strings.title ?? strings.tablistLabel, tabs, active, group, rendered, listRef, select, onKeyDown, indicator,
     rootProps: { ...parts.root, ...presentation, 'data-variant': props.variant ?? 'underline', 'data-size': props.size ?? 'md', 'data-fitted': props.fitted ? '' : undefined },
-    indicatorStyle: { ...parts.indicator.style, '--prism-tabs-indicator-left': indicator.left + 'px', '--prism-tabs-indicator-width': indicator.width + 'px' } as CSSProperties };
+    indicatorStyle: { ...parts.indicator.style, '--prism-tabs-indicator-left': indicator.left + 'px', '--prism-tabs-indicator-width': indicator.width + 'px', '--prism-tabs-indicator-size': indicator.width } as CSSProperties };
 }
 export type TabsModel = ReturnType<typeof useTabs>;
 export interface TabsSlotProps { tabs: TabsModel; tab?: TabsModel['tabs'][number] }

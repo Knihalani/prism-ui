@@ -50,7 +50,7 @@
 .prism-root :is(.prism-view__card, .prism-view__box)[data-tone] { border-color: color-mix(in oklab, var(--prism-view-tone) 30%, var(--prism-view-border, var(--prism-border))); background: color-mix(in oklab, var(--prism-view-tone) 7%, var(--prism-view-surface, var(--prism-surface))); }
 .prism-root [data-prism="view"][data-interactive] { cursor: pointer; user-select: none; }
 .prism-root [data-prism="view"][data-interactive]:hover { border-color: color-mix(in oklab, var(--prism-view-accent, var(--prism-accent-text)) 40%, var(--prism-view-border, var(--prism-border))); box-shadow: var(--prism-view-elevation-2, var(--prism-elevation-2)); }
-.prism-root [data-prism="view"][data-interactive]:active { transform: translateY(1px); }
+.prism-root [data-prism="view"][data-interactive]:active { background: color-mix(in srgb, var(--prism-accent) 4%, transparent); }
 .prism-root [data-prism="view"][data-selected] { border-color: var(--prism-view-accent, var(--prism-accent-text)); box-shadow: 0 0 0 1px var(--prism-view-accent, var(--prism-accent-text)), var(--prism-view-elevation-2, var(--prism-elevation-2)); background: color-mix(in oklab, var(--prism-view-accent, var(--prism-accent-text)) 4%, var(--prism-view-surface, var(--prism-surface))); }
 .prism-root .prism-view__cardHeader { display: flex; align-items: flex-start; gap: var(--prism-view-space-3, var(--prism-space-3)); }
 .prism-root .prism-view__cardIcon { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: var(--prism-view-radius-sm, var(--prism-radius-sm)); background: color-mix(in srgb, var(--prism-view-accent, var(--prism-accent-text)) 8%, transparent); color: var(--prism-view-accent-text, var(--prism-accent-text, var(--prism-view-accent, var(--prism-accent-text)))); font-size: var(--prism-view-text-base, var(--prism-text-base)); }
@@ -176,11 +176,11 @@
 .prism-root .prism-view__slider::-moz-range-track { height: 4px; border-radius: var(--prism-view-radius-pill, var(--prism-radius-pill)); background: linear-gradient(to right, var(--prism-view-accent, var(--prism-accent-text)) var(--prism-view-fill), color-mix(in srgb, var(--prism-view-text-muted, var(--prism-text-muted)) 8%, transparent) var(--prism-view-fill)); }
 .prism-root .prism-view__slider::-webkit-slider-thumb { width: 16px; height: 16px; margin-top: -6px; border: 2px solid var(--prism-view-accent, var(--prism-accent-text)); border-radius: var(--prism-view-radius-pill, var(--prism-radius-pill)); background: var(--prism-view-surface, var(--prism-surface)); box-shadow: var(--prism-view-elevation-1, var(--prism-elevation-1)); appearance: none; transition: transform var(--prism-view-motion-fast, var(--prism-motion-fast)) var(--prism-view-motion-ease, var(--prism-motion-ease)); }
 .prism-root .prism-view__slider::-moz-range-thumb { width: 12px; height: 12px; border: 2px solid var(--prism-view-accent, var(--prism-accent-text)); border-radius: var(--prism-view-radius-pill, var(--prism-radius-pill)); background: var(--prism-view-surface, var(--prism-surface)); }
-.prism-root .prism-view__slider:active::-webkit-slider-thumb { transform: scale(1.15); }
+
 .prism-root .prism-view__sliderValue { min-width: 3.5ch; color: var(--prism-view-text, var(--prism-text)); font-size: var(--prism-view-text-sm, var(--prism-text-sm)); font-weight: var(--prism-view-weight-semibold, var(--prism-weight-semibold)); font-variant-numeric: tabular-nums; text-align: end; white-space: nowrap; }
 .prism-root .prism-view__button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: fit-content; min-height: 34px; padding: 0 var(--prism-view-space-4, var(--prism-space-4)); border: 1px solid var(--prism-view-border, var(--prism-border)); border-radius: var(--prism-view-radius-sm, var(--prism-radius-sm)); background: var(--prism-view-surface, var(--prism-surface)); color: var(--prism-view-text, var(--prism-text)); font-family: var(--prism-view-font-body, var(--prism-font-body)); font-size: var(--prism-view-text-sm, var(--prism-text-sm)); line-height: 1; font-weight: var(--prism-view-weight-medium, var(--prism-weight-medium)); white-space: nowrap; cursor: pointer; box-shadow: var(--prism-view-elevation-1, var(--prism-elevation-1)); transition: background var(--prism-view-motion-fast, var(--prism-motion-fast)) var(--prism-view-motion-ease, var(--prism-motion-ease)), border-color var(--prism-view-motion-fast, var(--prism-motion-fast)) var(--prism-view-motion-ease, var(--prism-motion-ease)), transform var(--prism-view-motion-fast, var(--prism-motion-fast)) var(--prism-view-motion-ease, var(--prism-motion-ease)), opacity var(--prism-view-motion-fast, var(--prism-motion-fast)) var(--prism-view-motion-ease, var(--prism-motion-ease)); }
 .prism-root .prism-view__button:hover:not(:disabled) { background: color-mix(in srgb, var(--prism-view-bg, var(--prism-bg)) 60%, transparent); }
-.prism-root .prism-view__button:active:not(:disabled) { transform: translateY(1px); }
+
 .prism-root .prism-view__button:disabled { opacity: .45; cursor: not-allowed; }
 .prism-root .prism-view__button[data-variant="primary"] { border-color: transparent; background: var(--prism-view-accent, var(--prism-accent-text)); color: var(--prism-view-on-accent, var(--prism-on-accent)); box-shadow: var(--prism-view-elevation-1, var(--prism-elevation-1)), inset 0 1px 0 color-mix(in srgb, var(--prism-view-on-accent, var(--prism-on-accent)) 12%, transparent); }
 .prism-root .prism-view__button[data-variant="primary"]:hover:not(:disabled) { background: color-mix(in oklab, var(--prism-view-accent, var(--prism-accent-text)) 88%, var(--prism-view-text, var(--prism-text))); }
@@ -220,10 +220,9 @@
 .prism-root .prism-view__skeleton:is([data-type="button"], [data-type="badge"], [data-type="icon"], [data-type="avatar"]) [data-prism-skeleton-line] { height: 32px; width: 96px; }
 .prism-root .prism-view__skeleton[data-type="heading"] [data-prism-skeleton-line] { height: 22px; width: 45%; }
 @media (prefers-reduced-motion: no-preference) {
-  .prism-root:not([data-animate="false"]) .prism-view__content[data-streaming] [data-prism="view"]:not(.prism-view__skeleton) { animation: prism-view-in var(--prism-view-motion-base, var(--prism-motion-base)) var(--prism-view-motion-spring, var(--prism-motion-spring)) both; }
   .prism-root:not([data-animate="false"]) .prism-view__skeleton [data-prism-skeleton-line] { animation: prism-view-pulse calc(var(--prism-view-motion-slow, var(--prism-motion-slow)) * 3) var(--prism-view-motion-ease, var(--prism-motion-ease)) infinite; }
 }
-@keyframes prism-view-in { from { opacity: 0; transform: translateY(3px); } }
+
 @keyframes prism-view-pulse { 50% { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) { .prism-root [data-prism="view"] { transition: none !important; } }
 

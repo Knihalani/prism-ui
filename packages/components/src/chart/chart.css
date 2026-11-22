@@ -20,12 +20,11 @@
 .prism-chart__pivot[aria-pressed="true"] { color: var(--prism-accent-text, var(--prism-accent, #525252)); border-color: var(--prism-accent, #525252); background: color-mix(in srgb, var(--prism-accent, #525252) 8%, transparent); }
 .prism-chart__svg { display: block; overflow: visible; touch-action: pan-y; }
 .prism-chart__grid { stroke: color-mix(in srgb, var(--prism-border) 50%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.prism-chart__tick { fill: var(--prism-text-muted); font-family: var(--prism-font-body); font-size: var(--prism-text-xs); font-weight: var(--prism-weight-regular); font-variant-numeric: tabular-nums; transition: x var(--prism-motion-base) var(--prism-motion-ease); }
+.prism-chart__tick { fill: var(--prism-text-muted); font-family: var(--prism-font-body); font-size: var(--prism-text-xs); font-weight: var(--prism-weight-regular); font-variant-numeric: tabular-nums;  }
 .prism-chart__line { stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; animation: prism-chart-draw var(--prism-motion-slow) var(--prism-motion-ease) both; }
 .prism-chart__line, .prism-chart__area, .prism-chart__bar, .prism-chart__slice { transition: opacity var(--prism-motion-base) var(--prism-motion-ease); }
-.prism-chart__plot { animation: prism-chart-fade var(--prism-motion-base) var(--prism-motion-ease) both; }
-.prism-chart__point { cursor: pointer; stroke: var(--prism-surface); stroke-width: 1.5; transition: cx var(--prism-motion-base) var(--prism-motion-ease); }
-.prism-chart__bar { transform-box: fill-box; transform-origin: center bottom; animation: prism-chart-grow var(--prism-motion-slow) var(--prism-motion-ease) both; cursor: pointer; }
+.prism-chart__point { cursor: pointer; stroke: var(--prism-surface); stroke-width: 1.5;  }
+.prism-chart__bar { transform-box: fill-box; transform-origin: center bottom; transform: scaleY(1); transition: transform var(--prism-motion-spring-duration) var(--prism-motion-spring); cursor: pointer; }
 .prism-chart__slice { stroke: var(--prism-surface); stroke-width: 2; cursor: pointer; }
 .prism-chart__slice:hover, .prism-chart__bar:hover { opacity: .8; }
 .prism-chart__leader { fill: none; stroke: var(--prism-border); stroke-width: 1; }
@@ -49,8 +48,8 @@
 .prism-chart__skeleton { fill: color-mix(in srgb, var(--prism-text-muted) 8%, transparent); animation: prism-chart-shimmer calc(var(--prism-motion-slow) * 3) var(--prism-motion-ease) infinite alternate; }
 .prism-chart__empty { position: absolute; inset: 45% 0 auto; text-align: center; color: var(--prism-text-muted); font-size: var(--prism-text-sm); pointer-events: none; }
 @keyframes prism-chart-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-@keyframes prism-chart-grow { from { transform: scaleY(.02); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
-@keyframes prism-chart-fade { from { opacity: 0; } to { opacity: 1; } }
+@starting-style { .prism-root[data-prism-presentation] .prism-chart__bar { transform: scaleY(0); opacity: 0; } }
+
 @keyframes prism-chart-shimmer { from { opacity: .3; } to { opacity: .8; } }
 [data-animate="false"] .prism-chart__root *, .prism-chart__root[data-animate="false"] * { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-chart__root * { animation: none; transition: none; } }

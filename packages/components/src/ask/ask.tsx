@@ -1,7 +1,7 @@
 import { componentStrings } from '../strings';
 import { useContext, useId, useMemo, useRef, type HTMLAttributes, type KeyboardEvent, type ReactNode } from 'react';
 import { s } from '@prism-ui/schema';
-import { useStrings, PrismPart, ComponentContext, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, useSlot, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
+import { useStrings, PrismPart, StreamSkeleton, ComponentContext, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, useSlot, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
 
 export type AskValue = string | number | boolean | null;
@@ -70,7 +70,7 @@ export function useAsk(props: AskProps, ctx: PrismContextValue) {
 }
 type Model = ReturnType<typeof useAsk>;
 function Box(props: HTMLAttributes<HTMLDivElement>) { return <PrismPart as="div" {...props} />; }
-function Empty({ label }: { label: string }) { const root = usePart('ask', 'empty'), part = usePart('ask', 'skeleton'); return <PrismPart as="div" {...root} role="status" aria-label={label}><PrismPart as="div" {...part} /></PrismPart>; }
+function Empty({ label }: { label: string }) { const root = usePart('ask', 'empty'), part = usePart('ask', 'skeleton'); return <PrismPart as="div" {...root} role="status" aria-label={label}><PrismPart as={StreamSkeleton} {...part} /></PrismPart>; }
 function Field({ field, index, vm }: { field: AskField; index: number; vm: Model }) {
   const themeStrings = useStrings('ask', componentStrings.ask);
   const unique = useId(), id = `ask-${unique}`, errorId = `${id}-error`, hintId = `${id}-hint`;
@@ -82,7 +82,7 @@ function Field({ field, index, vm }: { field: AskField; index: number; vm: Model
   const ref = (element: HTMLElement | null) => { if (element) vm.controls.current.set(key, element); else vm.controls.current.delete(key); };
   const onBlur = () => vm.blur(key);
   let input: ReactNode;
-  if (vm.loading(index)) input = <PrismPart as="div" {...skeleton} aria-hidden="true" />;
+  if (vm.loading(index)) input = <PrismPart as={StreamSkeleton} {...skeleton} aria-hidden="true" />;
   else if (field.type === 'toggle') input = <PrismPart as="button" {...switchPart} {...attrs} ref={ref} type="button" role="switch" aria-checked={value === true} data-state={value === true ? 'on' : 'off'} onClick={() => vm.change(key, value !== true)} onBlur={onBlur}><PrismPart as="span" {...thumb} /></PrismPart>;
   else if (smallSelect) input = <PrismPart as="div" {...segments} {...attrs} ref={ref} role="radiogroup" tabIndex={-1} onBlur={onBlur}>{options.map((option, optionIndex) => <PrismPart as="button" {...segment} key={option.value} type="button" role="radio" aria-checked={value === option.value} tabIndex={value === option.value || (value === null && optionIndex === 0) ? 0 : -1} onClick={() => vm.change(key, option.value)} onKeyDown={event => {
     let next: number | undefined;

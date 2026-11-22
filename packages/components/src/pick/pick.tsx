@@ -1,6 +1,6 @@
-import { useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { s, type Infer } from '@prism-ui/schema';
-import { useStrings, Icon, PrismPart, defineComponent, registerComponent, useEmit, useFormat, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
+import { useSpringValue, useFormat, useStrings, Icon, PrismPart, defineComponent, registerComponent, useEmit, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
 import { setRecordPath } from '../store-record';
 import { useFlip } from './flip';
@@ -61,13 +61,14 @@ export function usePick(props: PickProps, ctx: PrismComponentProps<PickProps>) {
 }
 type Row = ReturnType<typeof usePick>['rows'][number];
 function PickItem({ row }: { row: Row }) {
+  const format = useFormat(), match = useSpringValue(row.match);
   const parts = { item: usePart('pick', 'item', !row.ready ? 'loading' : row.chosen ? 'chosen' : row.top ? 'top' : 'ready'), header: usePart('pick', 'card-header'), rank: usePart('pick', 'rank'), match: usePart('pick', 'match'), top: usePart('pick', 'top'), value: usePart('pick', 'value'), title: usePart('pick', 'title'), subtitle: usePart('pick', 'subtitle'), tag: usePart('pick', 'tag'), reason: usePart('pick', 'reason'), bars: usePart('pick', 'bars'), criterion: usePart('pick', 'criterion'), criterionLabel: usePart('pick', 'criterion-label'), bar: usePart('pick', 'bar'), pros: usePart('pick', 'pros'), cons: usePart('pick', 'cons'), pro: usePart('pick', 'pro'), con: usePart('pick', 'con'), actions: usePart('pick', 'actions'), choose: usePart('pick', 'choose'), check: usePart('pick', 'check') };
   const Actions = useSlot('pick', 'actions', 'div' as any);
   return <PrismPart as="article" {...parts.item} data-option={row.id} data-top={row.top || undefined} aria-busy={!row.ready}>
-    <PrismPart as="div" {...parts.header}><PrismPart as="span" {...parts.rank}>#{row.rankText}</PrismPart><PrismPart as="span" {...parts.match}>{row.ready ? `${row.matchText} ${row.matchLabel}` : '—'}</PrismPart>{row.top && <PrismPart as="span" {...parts.top}>{row.topLabel}</PrismPart>}{row.tag && <PrismPart as="span" {...parts.tag}>{row.tag}</PrismPart>}{row.chosen && <PrismPart as="span" {...parts.check}><Icon name="check" /> {row.chosenLabel}</PrismPart>}</PrismPart>
+    <PrismPart as="div" {...parts.header}><PrismPart as="span" {...parts.rank}>#{row.rankText}</PrismPart><PrismPart as="span" {...parts.match}>{row.ready ? `${format.percent(match)} ${row.matchLabel}` : '—'}</PrismPart>{row.top && <PrismPart as="span" {...parts.top}>{row.topLabel}</PrismPart>}{row.tag && <PrismPart as="span" {...parts.tag}>{row.tag}</PrismPart>}{row.chosen && <PrismPart as="span" {...parts.check}><Icon name="check" /> {row.chosenLabel}</PrismPart>}</PrismPart>
     <PrismPart as="h4" {...parts.title}>{row.title}</PrismPart>{row.subtitle && <PrismPart as="p" {...parts.subtitle}>{row.subtitle}</PrismPart>}
     {row.reason && <PrismPart as="p" {...parts.reason}>{row.reason}</PrismPart>}
-    <PrismPart as="div" {...parts.bars}>{row.bars.map(bar => <PrismPart as="div" key={bar.id} {...parts.criterion} data-state={bar.weight ? 'active' : 'off'}><PrismPart as="span" {...parts.criterionLabel}>{bar.label}</PrismPart><PrismPart as="meter" {...parts.bar} min={0} max={1} value={bar.score} aria-label={bar.label}>{bar.text}</PrismPart><PrismPart as="span" {...parts.value}>{bar.text}</PrismPart></PrismPart>)}</PrismPart>
+    <PrismPart as="div" {...parts.bars}>{row.bars.map(bar => <PrismPart as="div" key={bar.id} {...parts.criterion} data-state={bar.weight ? 'active' : 'off'}><PrismPart as="span" {...parts.criterionLabel}>{bar.label}</PrismPart><PrismPart as="meter" {...parts.bar} min={0} max={1} value={bar.score} style={{ ...parts.bar.style, '--prism-pick-score': bar.score } as CSSProperties} aria-label={bar.label}>{bar.text}</PrismPart><PrismPart as="span" {...parts.value}>{bar.text}</PrismPart></PrismPart>)}</PrismPart>
     {!!row.pros.length && <PrismPart as="ul" {...parts.pros}>{row.pros.map((pro, index) => <PrismPart as="li" key={index} {...parts.pro}><Icon name="check" /> {pro}</PrismPart>)}</PrismPart>}
     {!!row.cons.length && <PrismPart as="ul" {...parts.cons}>{row.cons.map((con, index) => <PrismPart as="li" key={index} {...parts.con}>– {con}</PrismPart>)}</PrismPart>}
     <Actions {...parts.actions}><PrismPart as="button" {...parts.choose} type="button" disabled={!row.ready} onClick={row.onChoose}>{row.chooseLabel}</PrismPart></Actions>

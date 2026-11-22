@@ -131,7 +131,7 @@
   background: var(--prism-accent, #525252);
   opacity: .35;
   pointer-events: none;
-  transition: width var(--prism-motion-fast) var(--prism-motion-ease);
+  transition: transform var(--prism-motion-spring-duration) var(--prism-motion-spring);
 }
 .prism-datatable__magnitude[data-max] { background: var(--prism-datatable-highlight, var(--prism-accent, #525252)); opacity: .6; }
 .prism-datatable__badge.prism-chip { min-block-size: 22px; padding: 0 8px; font-weight: var(--prism-weight-regular); }

@@ -1,13 +1,39 @@
 import './setup';
 import { afterEach, expect, test } from 'bun:test';
 import { act, cleanup, fireEvent, render, waitFor, within } from '@testing-library/react';
+import type { CSSProperties, ReactNode } from 'react';
 import { createStore } from '@prism-ui/state';
 import {
-  createRegistry, Prism, StreamCaret, StreamSkeleton, useComponentState, useEmit, useFlash,
+  createRegistry, Prism, StreamCaret, StreamSkeleton, ThemeScope, useComponentState, useEmit, useFlash,
   useLocalWrite, usePresentation, useSent, useSettled, type Action, type Middleware, type PrismComponentProps,
 } from '../src';
 
 afterEach(cleanup);
+
+test('skeleton exits preserve a measured inert image without duplicate ids or layout', async () => {
+  const skeleton = <StreamSkeleton id="loading" style={{ '--prism-motion-fast': '20ms' } as CSSProperties}><span id="line">Loading</span></StreamSkeleton>;
+  const host = (children: ReactNode) => <div className="prism-root" data-prism-presentation="">{children}</div>;
+  const view = render(host(skeleton));
+  view.container.querySelector<HTMLElement>('#loading')!.getBoundingClientRect = () => ({ width: 100, height: 20, left: 10, top: 30 } as DOMRect);
+  await act(async () => { view.rerender(host(<p>Content</p>)); });
+  const ghost = view.container.querySelector<HTMLElement>('[data-prism-skeleton-exit]')!;
+  expect(ghost).not.toBeNull(); expect(ghost.inert).toBe(true);
+  expect(ghost.getAttribute('aria-hidden')).toBe('true');
+  expect(ghost.querySelector('[id]')).toBeNull(); expect(ghost.hasAttribute('id')).toBe(false);
+  expect(ghost.style.position).toBe('absolute'); expect(ghost.style.width).toBe('100px'); expect(ghost.style.opacity).toBe('0');
+  await waitFor(() => expect(view.container.querySelector('[data-prism-skeleton-exit]')).toBeNull());
+});
+
+test('empty and animate=false skeletons leave no exit artifacts', async () => {
+  const host = (visible: boolean, animate = true) => <ThemeScope animate={animate}><div className="prism-root" data-prism-presentation="">{visible && <StreamSkeleton />}</div></ThemeScope>;
+  const view = render(host(true));
+  await act(async () => { view.rerender(host(false)); });
+  expect(view.container.querySelector('[data-prism-skeleton-exit]')).toBeNull();
+  view.rerender(host(true, false));
+  view.container.querySelector<HTMLElement>('[data-prism-skeleton]')!.getBoundingClientRect = () => ({ width: 100, height: 20, left: 0, top: 0 } as DOMRect);
+  await act(async () => { view.rerender(host(false, false)); });
+  expect(view.container.querySelector('[data-prism-skeleton-exit]')).toBeNull();
+});
 
 const fence = '```ui:preview\n';
 const closeFence = '\n```';
