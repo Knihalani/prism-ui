@@ -6,6 +6,24 @@ import { createStore } from '@prism-ui/state';
 import { pick } from '../src/pick';
 
 afterEach(cleanup);
+
+test('streamed criteria do not persist defaults ahead of explicit weights', () => {
+  const store = createStore();
+  const prefix = '```ui:pick\n{"id":"plans","criteria":[{"id":"price","label":"Price"},{"id":"quality","label":"Quality"}]';
+  const view = render(<Prism source={prefix} done={false} store={store} animate={false} />);
+  expect(view.getByRole('button', { name: 'Price, weight 1 of 3' })).toBeDefined();
+  expect(store.get('plans.weights')).toBeUndefined();
+  view.rerender(<Prism source={prefix + ',"weights":{"price":3,"quality":0}'} done={false} store={store} animate={false} />);
+  expect(view.getByRole('button', { name: 'Price, weight 3 of 3' })).toBeDefined();
+  expect(view.getByRole('button', { name: 'Quality, weight 0 of 3' }).getAttribute('aria-pressed')).toBe('false');
+  expect(store.get('plans.weights')).toBeUndefined();
+  view.rerender(<Prism source={prefix + ',"weights":{"price":3,"quality":0}}\n```'} done={true} store={store} animate={false} />);
+  expect(store.get('plans.weights')).toEqual({ price: 3, quality: 0 });
+  fireEvent.click(view.getByRole('button', { name: 'Price, weight 3 of 3' }));
+  expect(store.get('plans.weights.price')).toBe(0);
+  act(() => store.undo());
+  expect(view.getByRole('button', { name: 'Price, weight 3 of 3' })).toBeDefined();
+});
 const criteria = [{ id: 'price', label: 'Price' }, { id: 'quality', label: 'Quality' }];
 const options = [{ id: 'budget', title: 'Budget', subtitle: 'Save more', scores: { price: 1, quality: 0 }, pros: ['Low cost'], cons: ['Basic features'], tag: 'Value' }, { id: 'premium', title: 'Premium', scores: { price: 0, quality: 0.9 } }];
 function source(props: object = {}) { return '```ui:pick\n' + JSON.stringify({ id: 'plans', question: 'Which plan?', criteria, options, ...props }) + '\n```'; }

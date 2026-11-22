@@ -17,9 +17,10 @@ export function usePick(props: PickProps, ctx: PrismComponentProps<PickProps>) {
   const saved = useStoreValue<Weights | undefined>(`${id}.weights`), chosen = useStoreValue<string | undefined>(`${id}.chosen`);
   const weights = useMemo(() => weightsFor(props, saved), [props, saved]);
   useLayoutEffect(() => {
+    if (!ctx.complete) return;
     const current = store.get(`${id}.weights`);
     if (Object.keys(weights).some(key => current?.[key] === undefined)) store.set(`${id}.weights`, { ...current, ...weights });
-  }, [store, id, weights]);
+  }, [store, id, weights, ctx.complete]);
   const [focused, setFocused] = useState<string>(), chips = useRef(new Map<string, HTMLButtonElement>());
   const criteria = props.criteria.filter(c => c.id), active = criteria.some(c => c.id === focused) ? focused : criteria[0]?.id;
   const setWeight = (criterion: string, value: number) => store.set(`${id}.weights.${criterion}`, clamp(value, 1));
