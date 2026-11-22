@@ -23,8 +23,8 @@ export function useRunbook(props: RunbookProps, ctx: PrismContextValue) {
   return useMemo(() => ({ steps, done, current, count, labels, title: props.title ?? labels.title, animate: ctx.animate,
     complete: steps.length > 0 && count === steps.length,
     progress: `${format.number(count)} ${labels.of} ${format.number(steps.length)}`,
-    toggle(key: string) { setDone(old => ({ ...old, [key]: !old[key] })); },
-    stuck(step: Node, index: number, title: string) { emit('stuck', { step: stepKey(step), index, title, text: text(step), done: !!done[stepKey(step)] }); },
+    toggle(key: string) { if (steps.some(step => stepKey(step) === key && step.complete === false)) return; setDone(old => ({ ...old, [key]: !old[key] })); },
+    stuck(step: Node, index: number, title: string) { if (step.complete === false) return; emit('stuck', { step: stepKey(step), index, title, text: text(step), done: !!done[stepKey(step)] }); },
   }), [steps, done, current, count, labels, props.title, ctx.animate, format, setDone, emit]);
 }
 const RunbookContext = createContext<ReturnType<typeof useRunbook> | null>(null);
@@ -51,11 +51,11 @@ export function useStep(props: StepProps, ctx: PrismContextValue, node: Node) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
-  return { index, done, labels, title: props.title, animate: ctx.animate, commands, copyState,
+  return { index, done, labels, title: props.title, animate: ctx.animate, commands, copyState, disabled: node.complete === false,
     number: index < 0 ? '' : format.number(index + 1), state: done ? 'done' : index >= 0 && book?.current === index ? 'current' : 'todo',
-    toggle() { book?.toggle(stepKey(node)); }, stuck() { book?.stuck(node, index, props.title ?? ''); },
+    toggle() { if (node.complete !== false) book?.toggle(stepKey(node)); }, stuck() { if (node.complete !== false) book?.stuck(node, index, props.title ?? ''); },
     onKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
-      if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); book?.toggle(stepKey(node)); }
+      if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); if (node.complete !== false) book?.toggle(stepKey(node)); }
       if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
         event.preventDefault(); const buttons = event.currentTarget.closest('[data-prism="runbook"][data-part="root"]')?.querySelectorAll<HTMLButtonElement>('[data-part="check"]');
         buttons?.[Math.max(0, Math.min(buttons.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)))]?.focus();
@@ -73,11 +73,11 @@ export function Step({ props, node, children, complete }: PrismComponentProps<St
   const root = usePart('runbook', 'step', vm.state), header = usePart('runbook', 'stepHeader'), badge = usePart('runbook', 'check', vm.state), title = usePart('runbook', 'stepTitle', props.title ? undefined : 'loading'), body = usePart('runbook', 'stepBody', vm.state), actions = usePart('runbook', 'actions'), copy = usePart('runbook', 'copy'), stuck = usePart('runbook', 'stuck');
   const Item = useSlot('runbook', 'step', Box), Actions = useSlot('runbook', 'actions', Box);
   return <Item {...root} data-complete={complete} data-numbered={vm.index >= 0}><div {...header}>
-    {vm.index >= 0 && <button {...badge} type="button" role="checkbox" aria-checked={vm.done} aria-label={props.title ?? vm.number} onClick={vm.toggle} onKeyDown={vm.onKeyDown} data-streaming={!complete}>{vm.done ? <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m3 8 3 3 7-7" /></svg> : vm.number}</button>}
+    {vm.index >= 0 && <button {...badge} type="button" role="checkbox" aria-checked={vm.done} aria-disabled={vm.disabled} disabled={vm.disabled} aria-label={props.title ?? vm.number} onClick={vm.toggle} onKeyDown={vm.onKeyDown} data-streaming={!complete}>{vm.done ? <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m3 8 3 3 7-7" /></svg> : vm.number}</button>}
     <h4 {...title}>{vm.title ?? <span aria-hidden="true">&nbsp;</span>}</h4>
   <Actions {...actions}>
     {vm.commands && <button {...copy} type="button" onClick={vm.copy} aria-live="polite">{vm.copyState === 'copied' ? vm.labels.copied : vm.copyState === 'error' ? vm.labels.copyError : vm.labels.copy}</button>}
-    {vm.index >= 0 && <button {...stuck} type="button" onClick={vm.stuck}>{vm.labels.stuck}</button>}
+    {vm.index >= 0 && <button {...stuck} type="button" disabled={vm.disabled} aria-disabled={vm.disabled} onClick={vm.stuck}>{vm.labels.stuck}</button>}
   </Actions></div><div {...body}>{children}</div></Item>;
 }
 const labelsSchema = s.object({

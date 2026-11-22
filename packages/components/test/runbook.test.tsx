@@ -63,6 +63,24 @@ test('streaming grows from empty skeleton through missing title and partial body
   expect(view.getByRole('progressbar').getAttribute('aria-valuemax')).toBe('1');
 });
 
+test('streaming step actions stay disabled until the step closes, while frame ask remains enabled', () => {
+  const actions: Action[] = [], store = createStore();
+  const partial = '::::runbook{id=gate title="Deploy"}\n:::step{id=install title="Install"}\nInstalling\n';
+  const view = render(<Prism source={partial} done={false} registry={registry} store={store} onAction={action => actions.push(action)} />);
+  const check = view.getByRole('checkbox') as HTMLButtonElement, stuck = view.getByRole('button', { name: 'Stuck here?' }) as HTMLButtonElement;
+  expect(check.disabled).toBe(true); expect(check.getAttribute('aria-disabled')).toBe('true');
+  expect(stuck.disabled).toBe(true); expect(stuck.getAttribute('aria-disabled')).toBe('true');
+  fireEvent.click(check); fireEvent.keyDown(check, { key: ' ' }); fireEvent.keyDown(check, { key: 'Enter' }); fireEvent.click(stuck);
+  expect(check.getAttribute('aria-checked')).toBe('false'); expect(store.get('gate.done')).toEqual({}); expect(actions).toEqual([]);
+  const ask = view.getByRole('button', { name: 'Ask about this' }) as HTMLButtonElement;
+  expect(ask.disabled).toBe(false); fireEvent.click(ask); expect(actions.map(action => action.type)).toEqual(['ask']);
+  view.rerender(<Prism source={partial + ':::\n'} done={false} registry={registry} store={store} onAction={action => actions.push(action)} />);
+  expect((view.getByRole('checkbox') as HTMLButtonElement).disabled).toBe(false);
+  expect((view.getByRole('button', { name: 'Stuck here?' }) as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.keyDown(view.getByRole('checkbox'), { key: 'Enter' }); fireEvent.click(view.getByRole('button', { name: 'Stuck here?' }));
+  expect(store.get('gate.done')).toEqual({ install: true }); expect(actions.map(action => action.type)).toEqual(['ask', 'stuck']);
+});
+
 test('unstyled parts, slots, labels and standalone or three-colon steps degrade gracefully', () => {
   const view = render(<Prism source={source} registry={registry} unstyled slots={{ runbook: { step: props => <article {...props} data-custom="yes" />, title: ({ children }) => <h2>{children}</h2>, actions: props => <footer {...props} /> } }} />);
   expect(view.container.querySelector('[class*="prism-runbook"]')).toBeNull();

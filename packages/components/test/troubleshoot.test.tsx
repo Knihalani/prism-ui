@@ -106,8 +106,29 @@ test('streaming skeleton stays safe until text and branch targets arrive', () =>
   expect(view.getByRole('status', { name: 'Loading step' })).toBeDefined();
   expect((view.getByRole('button', { name: 'Yes' }) as HTMLButtonElement).disabled).toBe(true);
   view.rerender(<Prism source={partial + ' the adapter.","no":"b"},"b":{"text":"Next"}}}'} done={false} registry={registry} />);
+  expect((view.getByRole('button', { name: 'No' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'No' }));
+  fireEvent.keyDown(view.getByRole('button', { name: 'Yes' }), { key: 'y' });
+  expect(view.getByText('Step 1')).toBeDefined();
+  expect((view.getByRole('button', { name: 'Ask about this' }) as HTMLButtonElement).disabled).toBe(false);
+  view.rerender(<Prism source={partial + ' the adapter.","no":"b"},"b":{"text":"Next"},"c":{'} done={false} registry={registry} />);
   expect(view.getByText('Restart the adapter.')).toBeDefined();
   expect((view.getByRole('button', { name: 'No' }) as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: 'No' })); expect(view.getByText('Step 2')).toBeDefined();
+});
+
+test.each([
+  { yes: '$fixed', no: '$escalate', ready: true },
+  { yes: undefined, no: '$escalate', ready: true },
+  { yes: 'unknown', no: '$escalate', ready: false },
+  { yes: '$fixed', no: undefined, ready: false },
+])('streaming terminal targets: $yes / $no', ({ yes, no, ready }) => {
+  const source = fence({ start: 'a', steps: { a: { text: 'Try this.', yes, no } } });
+  const view = render(<Prism source={source.slice(0, -5)} done={false} registry={registry} />);
+  expect((view.getByRole('button', { name: 'Yes' }) as HTMLButtonElement).disabled).toBe(!ready);
+  expect((view.getByRole('button', { name: 'No' }) as HTMLButtonElement).disabled).toBe(!ready);
+  view.rerender(<Prism source={source} registry={registry} />);
+  expect((view.getByRole('button', { name: 'Yes' }) as HTMLButtonElement).disabled).toBe(false);
 });
 
 test('unstyled mode, labels, slots, prompt docs and malformed steps', () => {
