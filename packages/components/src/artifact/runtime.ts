@@ -32,6 +32,12 @@ function installArtifact(id: string, strings: typeof artifactStrings, exported?:
     for (const key of Object.keys(theme)) if (!Object.hasOwn(tokens, key)) delete theme[key];
     Object.assign(theme, tokens);
     document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+    for (const key of Array.from(document.documentElement.style)) if (key.startsWith('--prism-') && !Object.hasOwn(tokens, key)) document.documentElement.style.removeProperty(key);
+    for (const [key, value] of Object.entries(tokens)) document.documentElement.style.setProperty(key, value);
+    document.documentElement.toggleAttribute('data-reduced-motion', tokens['--prism-reduced-motion'] === '1');
+    document.documentElement.style.fontFamily = tokens['--prism-font-body'] || '';
+    document.documentElement.style.fontSize = tokens['--prism-host-font-size'] || '';
+    document.dispatchEvent(new CustomEvent('prism:theme', { detail: { tokens: theme, dark } }));
   };
   const initial = standalone ? exported?.render : undefined;
   if (standalone && exported) {
@@ -91,6 +97,7 @@ function installArtifact(id: string, strings: typeof artifactStrings, exported?:
     theme,
     resize,
     send: (action: string, payload: unknown) => send({ type: 'send', action, payload }),
+    emit: (action: string, payload: unknown) => send({ type: 'send', action, payload }),
     state: Object.freeze({
       get,
       set(path: string, value: unknown) { if (standalone) adopt(path, value); else send({ type: 'set', path, value }); },
@@ -217,7 +224,7 @@ export function artifactDocument(id: string, imports: Record<string, string>, ex
   const nonce = id.replace(/[^\w-]/g, '');
   const scriptSources = [...new Set(Object.values(imports).map(value => value.split('?')[0]))].join(' ');
   const csp = `default-src 'none'; script-src 'nonce-${nonce}' blob: ${scriptSources}; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'`;
-  const head = `<style>html{background:var(--prism-surface,#fff);color:var(--prism-text,#242832);font-family:var(--prism-font-body,system-ui,sans-serif)}html[data-prism-artifact-fit]{overflow-y:hidden}button,input,select,textarea{font:inherit}</style><script nonce="${nonce}" type="importmap">${json({ imports })}</script>`;
+  const head = `<style>html{background:transparent;color:var(--prism-text,#242832);font-family:var(--prism-font-body,system-ui,sans-serif);container-type:inline-size}body{margin:0;min-width:0}*,*::before,*::after{box-sizing:border-box}html[data-prism-artifact-fit]{overflow:hidden}img,svg,canvas,video{max-width:100%;height:auto}button,input,select,textarea{font:inherit}html[data-reduced-motion] *,html[data-reduced-motion] *::before,html[data-reduced-motion] *::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}</style><script nonce="${nonce}" type="importmap">${json({ imports })}</script>`;
   const srcdoc = buildSrcdoc({ id, csp, head, runtimeOptions: { interactive: true } }).replace('<script>', `<script nonce="${nonce}">`);
   const runtime = `(${installArtifact.toString()})(${json(id)},${json(artifactStrings)}${exported ? ',' + json(exported) : ''})`.replace(/<\/script/gi, '<\\/script');
   return srcdoc.replace('</head>', () => `<script nonce="${nonce}">${runtime}</script></head>`);

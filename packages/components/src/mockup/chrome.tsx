@@ -17,7 +17,7 @@ export function MockupToolbar({ vm, model }: { model: MockupModel | MockupGroupM
 }
 export function MockupPenTools({ vm, model }: { model: MockupModel | MockupGroupModel; vm: Pick<MockupModel, 'labels' | 'pen' | 'setPen' | 'color' | 'setColor'> }) {
   const toolbar = usePart('mockup', 'tools'), button = usePart('mockup', 'button');
-  return <PrismPart slotProps={{ model }} as="div" {...toolbar}><PrismPart slotProps={{ model }} as="button" {...button} aria-pressed={vm.pen} onClick={() => vm.setPen(!vm.pen)}><Icon name="pen" />{vm.labels.draw}</PrismPart>{vm.pen && ['var(--prism-mockup-accent, var(--prism-accent))', 'var(--prism-danger)', 'var(--prism-positive)', 'var(--prism-warning)'].map((color, i) => <PrismPart slotProps={{ model }} as="button" key={color} {...button} title={vm.labels.colorOption.replace('{n}', String(i + 1))} aria-label={vm.labels.colorOption.replace('{n}', String(i + 1))} aria-pressed={vm.color === color} onClick={() => vm.setColor(color)} style={{ ...button.style, color }}><Icon name="circle" /></PrismPart>)}</PrismPart>;
+  return <PrismPart slotProps={{ model }} as="span" {...toolbar}><PrismPart slotProps={{ model }} as="button" {...button} aria-pressed={vm.pen} onClick={() => vm.setPen(!vm.pen)}><Icon name="pen" />{vm.labels.draw}</PrismPart>{vm.pen && ['var(--prism-mockup-accent, var(--prism-accent))', 'var(--prism-danger)', 'var(--prism-positive)', 'var(--prism-warning)'].map((color, i) => <PrismPart slotProps={{ model }} as="button" key={color} {...button} title={vm.labels.colorOption.replace('{n}', String(i + 1))} aria-label={vm.labels.colorOption.replace('{n}', String(i + 1))} aria-pressed={vm.color === color} onClick={() => vm.setColor(color)} style={{ ...button.style, color }}><Icon name="circle" /></PrismPart>)}</PrismPart>;
 }
 export function MockupSource({ vm, model }: { model: MockupModel | MockupGroupModel; vm: Pick<MockupModel, 'labels' | 'source' | 'copy'> }) {
   const source = usePart('mockup', 'source'), button = usePart('mockup', 'button');
@@ -31,12 +31,13 @@ export interface MockupFooterModel {
   model?: MockupModel | MockupGroupModel;
   labels: MockupModel['labels']; locale?: string; count: number; submitted: boolean; edit(): void;
   canUndo: boolean; canRedo: boolean; undo(): void; redo(): void; canSubmit: boolean; submit(): void;
+  commitOverall?(): void;
 }
 export function MockupFooter(vm: MockupFooterModel) {
   const model = vm.model ?? vm;
   const { labels, locale, count, submitted, edit, canUndo, canRedo, undo, redo, canSubmit, submit } = vm;
   const countPart = usePart('mockup', 'count');
   const footer = usePart('mockup', 'feedbackFooter'), button = usePart('mockup', 'button'), primary = usePart('mockup', 'primary');
-  return submitted ? <PrismPart slotProps={{ model }} as="div" {...footer} role="status">{commentCount(labels, locale, count, true)}<PrismPart slotProps={{ model }} as="button" {...button} onClick={edit}>{labels.editFeedback}</PrismPart></PrismPart> :
-    <PrismPart slotProps={{ model }} as="div" {...footer}><PrismPart slotProps={{ model }} as="button" {...button} data-secondary="" disabled={!canUndo} onClick={undo}><Icon name="undo" />{labels.undo}</PrismPart><PrismPart slotProps={{ model }} as="button" {...button} data-secondary="" disabled={!canRedo} onClick={redo}><Icon name="redo" />{labels.redo}</PrismPart><PrismPart slotProps={{ model }} as="span" {...countPart}>{commentCount(labels, locale, count)}</PrismPart><PrismPart slotProps={{ model }} as="button" {...primary} disabled={!canSubmit} onClick={submit}>{labels.submit}</PrismPart></PrismPart>;
+  return submitted ? <PrismPart slotProps={{ model }} as="span" {...footer} role="status">{commentCount(labels, locale, count, true)}<PrismPart slotProps={{ model }} as="button" {...button} onClick={edit}>{labels.editFeedback}</PrismPart></PrismPart> :
+    <PrismPart slotProps={{ model }} as="span" {...footer}><PrismPart slotProps={{ model }} as="button" {...button} data-secondary="" disabled={!canUndo} onClick={undo}><Icon name="undo" />{labels.undo}</PrismPart><PrismPart slotProps={{ model }} as="button" {...button} data-secondary="" disabled={!canRedo} onClick={redo}><Icon name="redo" />{labels.redo}</PrismPart><PrismPart slotProps={{ model }} as="span" {...countPart}>{commentCount(labels, locale, count)}</PrismPart><PrismPart slotProps={{ model }} as="button" {...primary} data-feedback-submit="" disabled={!canSubmit} onBlur={() => vm.commitOverall?.()} onClick={submit}>{labels.submit}</PrismPart></PrismPart>;
 }
