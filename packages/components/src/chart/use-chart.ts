@@ -3,6 +3,8 @@ import { useComponentState, useEmit, type PrismContextValue } from '@prism-ui/re
 import { s } from '@prism-ui/schema';
 import { arcLabel, arcPath, areaPath, barPath, createExtentTracker, createStableDomain, linePath, niceTicks, pie, pivotLongToWide, pivotWideToLong, placeLabels, relaxPieLabels, scaleBand, scaleLinear, stack, thinAxisLabels, type DataRow, type Point } from '../lib/chart';
 import { format } from '../lib/format';
+import { streamProps } from './stream-props';
+import { useDomain } from './use-domain';
 
 export type ChartType = 'line' | 'bar' | 'area' | 'pie';
 export interface ChartSeries { key: string; label?: string; color?: string }
@@ -37,7 +39,8 @@ export const chartSchema = s.object({
 const empty: DataRow[] = [];
 export const seriesColor = (series: ChartSeries, index: number) => series.color ?? `var(--prism-chart-${index % 8 + 1})`;
 const number = (value: unknown): number | null => typeof value === 'number' && Number.isFinite(value) ? value : null;
-export function useChart(props: ChartProps, ctx: PrismContextValue, width = 640) {
+export function useChart(inputProps: ChartProps, ctx: PrismContextValue, width = 640, duration = 180) {
+  const props = useMemo(() => streamProps(inputProps), [inputProps]);
   const [pivot, setPivot] = useComponentState('pivot', -1), [hidden, setHidden] = useComponentState<string[]>('hidden', []);
   const [interaction, setInteraction] = useState<{ index: number; series: number } | null>(null), emit = useEmit();
   const input = useMemo(() => (props.data ?? empty).filter(row => row && typeof row === 'object' && !Array.isArray(row)), [props.data]);
@@ -53,21 +56,27 @@ export function useChart(props: ChartProps, ctx: PrismContextValue, width = 640)
   const signature = JSON.stringify([pivot, type, x, shown.map(item => item.key), !!props.stacked]);
   const domains = useMemo(() => {
     const extent = (row: DataRow, max: boolean) => {
-      const values = shown.map(item => number(row[item.key]) ?? 0);
+      const values = shown.map(item => number(row[item.key])).filter((value): value is number => value !== null);
+      if (!values.length) return null;
       return props.stacked && type !== 'line' ? values.filter(value => max ? value > 0 : value < 0).reduce((a, b) => a + b, 0) : (max ? Math.max : Math.min)(0, ...values);
     };
-    return { stable: createStableDomain({ hysteresis: .15, includeZero: true }), min: createExtentTracker<DataRow>(row => extent(row, false)), max: createExtentTracker<DataRow>(row => extent(row, true)), previous: [] as DataRow[], tail: '', capacity: 4 };
+    return { stable: createStableDomain({ hysteresis: .5, includeZero: true }), min: createExtentTracker<DataRow>(row => extent(row, false)), max: createExtentTracker<DataRow>(row => extent(row, true)), previous: [] as DataRow[], tail: '', capacity: 4 };
   }, [signature]);
   const valueFormat = useCallback((value: unknown) => format(value, props.format ?? 'number', { locale: ctx.format.locale, currency: props.currency ?? ctx.format.currencyCode, fallback: '—' }), [props.format, props.currency, ctx.format]);
   const height = props.height ?? 300;
-  const geometry = useMemo(() => {
+  const targetDomain = useMemo(() => {
     const tailSignature = (row: DataRow | undefined) => JSON.stringify(shown.map(item => row?.[item.key]));
     if (domains.previous !== data && (props.complete !== false || data.length < domains.previous.length || domains.tail !== tailSignature(data[domains.previous.length - 1]))) { domains.min.reset(); domains.max.reset(); }
     const lo = domains.min.update(data), hi = domains.max.update(data);
     domains.previous = data; domains.tail = tailSignature(data.at(-1));
-    const domain = lo && hi ? domains.stable.update(lo[0], hi[1]) : domains.stable.update([]);
+    if (!lo || !hi) return null;
+    return (props.complete === false ? domains.stable : createStableDomain({ hysteresis: 0, includeZero: true })).update(lo[0], hi[1]);
+  }, [data, domains, shown, props.complete]);
+  const displayDomain = useDomain(targetDomain, ctx.animate, duration);
+  const geometry = useMemo(() => {
+    const domain = targetDomain ?? [0, 1] as [number, number];
     const left = 70, right = Math.max(left + 40, width - 26), top = 42, bottom = height - 38;
-    const yScale = scaleLinear({ domain, range: [bottom, top] });
+    const yScale = scaleLinear({ domain: displayDomain, range: [bottom, top] });
     while (domains.capacity < data.length) domains.capacity *= 2;
     const band = scaleBand({ domain: Array.from({ length: props.complete === false ? domains.capacity : data.length }, (_, i) => i), range: [left, right], paddingInner: .28, paddingOuter: .15 });
     const xs = data.map((_, i) => band.map(i) + band.bandwidth / 2);
@@ -99,7 +108,7 @@ export function useChart(props: ChartProps, ctx: PrismContextValue, width = 640)
       const formatted = valueFormat(slice.value);
       return { ...slice, formatted, w: (slice.text.length + formatted.length + 3) * 6, h: 16, priority: slice.value };
     }), { minY: -height / 2 + 28, maxY: height / 2 - 28 });
-    const ticks = niceTicks(...domain, 5).filter(value => value >= domain[0] && value <= domain[1]).map(value => ({ value, y: yScale.map(value), label: valueFormat(value) }));
+    const ticks = targetDomain ? niceTicks(...domain, 5).filter(value => value >= domain[0] && value <= domain[1]).map(value => ({ value, y: yScale.map(value), label: valueFormat(value) })) : [];
     const labels = thinAxisLabels(data.map((row, i) => { const label = String(row[x] ?? i + 1); return { x: xs[i] - label.length * 3, y: bottom + 12, w: label.length * 6, h: 16, index: i, text: label }; }));
     const annotations = placeLabels((props.annotations ?? []).flatMap((annotation, i) => {
       const index = data.findIndex(row => String(row[x]) === String(annotation.x));
@@ -107,8 +116,8 @@ export function useChart(props: ChartProps, ctx: PrismContextValue, width = 640)
       const w = Math.min(right - left, annotation.label.length * 6 + 16);
       return [{ x: Math.max(left, Math.min(right - w, xs[index] - w / 2)), y: top - 30, w, h: 22, index, label: annotation.label, priority: -i }];
     }), { bounds: { x: left, y: 0, w: right - left, h: height - 40 } }).placed;
-    return { width, height, type, domain, left, right, top, bottom, xs, yScale, layers, ticks, labels, annotations, slices, pieLabels, cx, cy, total: slices.reduce((sum, slice) => sum + slice.value, 0) };
-  }, [data, shown, series, type, props.stacked, props.curve, props.annotations, props.complete, domains, width, height, x, valueFormat]);
+    return { width, height, type, domain, displayDomain, hasValues: !!targetDomain, left, right, top, bottom, xs, yScale, layers, ticks, labels, annotations, slices, pieLabels, cx, cy, total: slices.reduce((sum, slice) => sum + slice.value, 0) };
+  }, [data, shown, series, type, props.stacked, props.curve, props.annotations, props.complete, domains, width, height, x, valueFormat, targetDomain, displayDomain]);
   const annotated = props.annotations?.map(annotation => data.findIndex(row => String(row[x]) === String(annotation.x))).find(index => index >= 0) ?? (props.insight && data.length ? 0 : -1);
   const activeIndex = data.length ? Math.max(0, Math.min(data.length - 1, interaction?.index ?? (annotated >= 0 ? annotated : 0))) : -1;
   const activeSeries = type === 'pie' ? 0 : Math.max(0, Math.min(shown.length - 1, interaction?.series ?? 0));

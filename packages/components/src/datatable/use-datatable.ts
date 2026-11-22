@@ -45,14 +45,18 @@ export function inferType(values: unknown[]): DataTableColumn['type'] {
   return 'text';
 }
 function numeric(value: unknown) { return typeof value === 'number' ? value : Number(String(value).replace(/[$€£¥,%\s]/g, '')); }
+function scalar(value: unknown) { return value == null || ['string', 'number', 'boolean'].includes(typeof value) ? value : undefined; }
 function inferCurrency(value: unknown) { return ({ '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY' } as Record<string, string>)[String(value)[0]]; }
 export function useDataTable(props: DataTableProps, ctx: PrismContextValue) {
-  const rows = props.rows ?? emptyRows, complete = props.complete !== false;
+  const rows = Array.isArray(props.rows) ? props.rows : emptyRows, complete = props.complete !== false;
   const columns = useMemo(() => {
     const first = rows.find(row => row && typeof row === 'object' && !Array.isArray(row));
-    return (props.columns?.filter(column => column?.key) ?? Object.keys(first ?? {}).map(key => ({ key } as DataTableColumn))).map(column => {
-      const type = column.type ?? inferType(rows.map(row => row?.[column.key]));
-      return { ...column, type, label: column.label ?? column.key, align: column.align ?? (type === 'number' || type === 'currency' ? 'right' : 'left') };
+    return (Array.isArray(props.columns) ? props.columns.filter(column => column && typeof column.key === 'string' && column.key) : Object.keys(first ?? {}).map(key => ({ key } as DataTableColumn))).map(column => {
+      const type = ['text', 'number', 'currency', 'date'].includes(column.type!) ? column.type : inferType(rows.map(row => scalar(row?.[column.key])));
+      return { key: column.key, type, label: typeof column.label === 'string' ? column.label : column.key,
+        align: ['left', 'center', 'right'].includes(column.align!) ? column.align : type === 'number' || type === 'currency' ? 'right' : 'left',
+        format: ['text', 'number', 'currency', 'percent', 'compact', 'date', 'datetime'].includes(column.format!) ? column.format : undefined,
+        currency: typeof column.currency === 'string' ? column.currency : undefined };
     });
   }, [rows, props.columns]);
   const [sort, setSort] = useComponentState<{ key: string; direction: 'asc' | 'desc' } | null>('sort', null);
@@ -64,7 +68,7 @@ export function useDataTable(props: DataTableProps, ctx: PrismContextValue) {
   const entries = useMemo(() => rows.flatMap((row, index) => {
     if (!row || typeof row !== 'object' || Array.isArray(row)) return [];
     const cells = columns.map(column => {
-      const value = row[column.key], kind = column.format ?? column.type ?? 'text';
+      const value = scalar(row[column.key]), kind = column.format ?? column.type ?? 'text';
       return format(['number', 'currency', 'compact', 'percent'].includes(kind) && value != null && value !== '' ? numeric(value) : value, kind, {
         locale: ctx.format.locale, currency: column.currency ?? (column.type === 'currency' ? inferCurrency(value) : undefined) ?? ctx.format.currencyCode,
         fallback: value == null ? '' : String(value),
@@ -79,18 +83,19 @@ export function useDataTable(props: DataTableProps, ctx: PrismContextValue) {
     if (complete && sort) {
       const column = columns.find(column => column.key === sort.key);
       if (column) result = [...result].sort((a, b) => {
-        const av = a.row[sort.key], bv = b.row[sort.key];
+        const av = scalar(a.row[sort.key]), bv = scalar(b.row[sort.key]);
         const comparison = column.type === 'date' ? Date.parse(String(av)) - Date.parse(String(bv)) : column.type === 'number' || column.type === 'currency' ? numeric(av) - numeric(bv) : String(av ?? '').localeCompare(String(bv ?? ''), ctx.format.locale, { numeric: true });
         return (Number.isNaN(comparison) ? 0 : comparison) * (sort.direction === 'asc' ? 1 : -1) || a.index - b.index;
       });
     }
     return result;
   }, [entries, search, query, sort, complete, columns, ctx.format.locale]);
-  const pageSize = Math.max(0, Math.floor(props.pageSize ?? 0)), pageCount = pageSize ? Math.max(1, Math.ceil(ordered.length / pageSize)) : 1;
-  const currentPage = Math.min(Math.max(0, page), pageCount - 1), offset = pageSize ? currentPage * pageSize : 0;
-  const paged = useMemo(() => pageSize ? ordered.slice(offset, offset + pageSize) : ordered, [ordered, offset, pageSize]);
+  const pageSize = Math.max(0, Math.floor(Number.isFinite(props.pageSize) ? props.pageSize! : 0)), pageCount = pageSize ? Math.max(1, Math.ceil(ordered.length / pageSize)) : 1;
+  const currentPage = complete ? Math.min(Math.max(0, page), pageCount - 1) : 0, offset = pageSize ? currentPage * pageSize : 0;
+  const limit = pageSize || (!complete && props.pageSize !== 0 ? 8 : 0);
+  const paged = useMemo(() => limit ? ordered.slice(offset, offset + limit) : ordered, [ordered, offset, limit]);
   const rowHeight = props.density === 'compact' ? 32 : props.density === 'spacious' ? 48 : 40;
-  const height = props.height ?? 360, virtual = !pageSize && ordered.length > 200;
+  const height = typeof props.height === 'number' && Number.isFinite(props.height) ? Math.max(80, props.height) : 360, virtual = !pageSize && ordered.length > 200;
   const start = virtual ? Math.min(Math.max(0, ordered.length - 1), Math.max(0, Math.floor(scrollTop / rowHeight) - 5)) : 0;
   const end = virtual ? Math.min(ordered.length, start + Math.ceil(height / rowHeight) + 10) : paged.length;
   const visible = virtual ? ordered.slice(start, end) : paged;
@@ -100,7 +105,7 @@ export function useDataTable(props: DataTableProps, ctx: PrismContextValue) {
   const resetPage = (change: () => void) => { ctx.store.batch(() => { change(); setPage(0); }); setScrollTop(0); };
   return { columns, entries, ordered, visible, selected, selection, mode, sort, query, complete, currentPage, pageCount, paged, pageSize, offset,
     rowHeight, height, virtual, start, end, focusIndex, setFocusIndex, setScrollTop, pageSelected, selectedOnPage,
-    count: ordered.length, range: ordered.length ? `${offset + 1}–${pageSize ? Math.min(offset + pageSize, ordered.length) : ordered.length} of ${ordered.length}` : '0 of 0',
+    count: ordered.length, range: ordered.length ? `${offset + 1}–${limit && !virtual ? Math.min(offset + limit, ordered.length) : ordered.length} of ${ordered.length}` : '0 of 0',
     announcement: `${ordered.length} rows${complete && query ? ` matching ${query}` : ''}. ${complete && sort ? `Sorted by ${columns.find(column => column.key === sort.key)?.label ?? sort.key} ${sort.direction === 'asc' ? 'ascending' : 'descending'}.` : complete ? 'Original order.' : 'Loading rows.'}`,
     changeQuery(value: string) { resetPage(() => setQuery(value)); },
     changePage(value: number) { setPage(Math.min(pageCount - 1, Math.max(0, value))); },

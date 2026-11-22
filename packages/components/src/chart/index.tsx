@@ -1,8 +1,9 @@
-import { createElement, memo, useEffect, useId, useRef, useState, type ElementType, type HTMLAttributes, type KeyboardEvent, type PointerEvent } from 'react';
+import { createElement, memo, useEffect, useId, useMemo, useRef, useState, type ElementType, type HTMLAttributes, type KeyboardEvent, type PointerEvent } from 'react';
 import { defineComponent, registerComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
 import { nearestX, pointX, pointY } from '../lib/chart';
 import { useFrame } from '../frame';
 import { chartSchema, seriesColor, useChart, type ChartModel, type ChartProps } from './use-chart';
+import { streamProps } from './stream-props';
 
 export { chartSchema, useChart } from './use-chart';
 export type { ChartProps, ChartSeries, ChartType, ChartPivot, ChartAnnotation, ChartModel, ChartSelectPayload, ChartPivotPayload } from './use-chart';
@@ -46,15 +47,20 @@ function ActiveMark({ vm }: { vm: ChartModel }) {
     {vm.type === 'bar' ? <Part part="highlight" as="path" d={layer?.bars[active.index]} fill={layer?.color} /> : point && <Part part="highlight" as="circle" cx={pointX(point)} cy={pointY(point)} r="5" fill={layer.color} />}
   </g>;
 }
-export function Chart({ props, complete }: PrismComponentProps<ChartProps>) {
-  const ctx = usePrism(), container = useRef<HTMLDivElement>(null), [width, setWidth] = useState(640);
+export function Chart({ props: inputProps, complete }: PrismComponentProps<ChartProps>) {
+  const props = useMemo(() => streamProps(inputProps), [inputProps]);
+  const ctx = usePrism(), container = useRef<HTMLDivElement>(null), [width, setWidth] = useState(640), [duration, setDuration] = useState(180);
   const id = `prism-chart-${useId().replace(/[^a-zA-Z0-9-]/g, '')}`;
   useEffect(() => {
     const element = container.current; if (!element || typeof ResizeObserver === 'undefined') return;
+    const token = getComputedStyle(element).getPropertyValue('--prism-duration-base').trim();
+    const milliseconds = parseFloat(token) * (token.endsWith('ms') ? 1 : 1000);
+    if (Number.isFinite(milliseconds)) setDuration(milliseconds);
     const observer = new ResizeObserver(entries => { const next = entries[0]?.contentRect.width; if (next && next > 0) setWidth(Math.max(280, Math.round(next))); });
     observer.observe(element); return () => observer.disconnect();
   }, []);
-  const vm = useChart({ ...props, complete }, ctx, width), g = vm.geometry;
+  const modelProps = useMemo(() => ({ ...props, complete }), [props, complete]);
+  const vm = useChart(modelProps, ctx, width, duration), g = vm.geometry;
   const frame = useFrame({ component: 'chart', title: props.title, undo: true });
   const onKeyDown = (event: KeyboardEvent<SVGSVGElement>) => {
     if (!vm.data.length || !vm.shown.length) return;
@@ -86,16 +92,15 @@ export function Chart({ props, complete }: PrismComponentProps<ChartProps>) {
     </Part>
     {!!props.pivots?.length && <Part part="pivots" role="group" aria-label="Chart views">{props.pivots.map((pivot, index) => <Part key={index} part="pivot" as="button" type="button" aria-pressed={vm.pivot === index} onClick={() => vm.choosePivot(index)}>{pivot.label}</Part>)}</Part>}
     <div ref={container} {...usePart('chart', 'viewport')} style={{ position: 'relative', height: g.height, ...ctx.styles.chart?.viewport }}>
-      <svg {...usePart('chart', 'svg')} width="100%" height={g.height} viewBox={`0 0 ${width} ${g.height}`} data-y-domain={g.domain.join(',')} role="img" aria-label={`${props.title ?? 'Chart'}. Use arrow keys to explore; Enter selects a point.`} tabIndex={0} onKeyDown={onKeyDown} onFocus={() => { if (!vm.active && vm.data.length) vm.activate({ index: vm.activeIndex, series: 0 }); }} onPointerMove={event => { const next = pointer(event); if (next && (next.index !== vm.active?.index || next.series !== vm.active?.series)) vm.activate(next); }} onPointerLeave={() => { if (document.activeElement !== container.current?.querySelector('svg')) vm.activate(null); }} onClick={event => { const next = pointer(event); if (next) { vm.activate(next); vm.selectPoint(next.index, next.series); } }}>
+      <svg {...usePart('chart', 'svg')} width="100%" height={g.height} viewBox={`0 0 ${width} ${g.height}`} data-y-domain={g.hasValues ? g.domain.join(',') : undefined} data-y-display-domain={g.hasValues ? g.displayDomain.join(',') : undefined} role="img" aria-label={`${props.title ?? 'Chart'}. Use arrow keys to explore; Enter selects a point.`} tabIndex={0} onKeyDown={onKeyDown} onFocus={() => { if (!vm.active && vm.data.length) vm.activate({ index: vm.activeIndex, series: 0 }); }} onPointerMove={event => { const next = pointer(event); if (next && (next.index !== vm.active?.index || next.series !== vm.active?.series)) vm.activate(next); }} onPointerLeave={() => { if (document.activeElement !== container.current?.querySelector('svg')) vm.activate(null); }} onClick={event => { const next = pointer(event); if (next) { vm.activate(next); vm.selectPoint(next.index, next.series); } }}>
         <title>{props.title ?? props.insight ?? 'Chart'}</title><desc>{props.subtitle ?? props.yLabel ?? 'Interactive chart. A data table follows for screen readers.'}</desc>
-        <Plot geometry={g} id={id} pivot={vm.pivot} />
-        <ActiveMark vm={vm} />
+        {g.hasValues && <><Plot geometry={g} id={id} pivot={vm.pivot} /><ActiveMark vm={vm} /></>}
         {vm.type === 'pie' && <><Part part="total" as="text" x={g.cx} y={g.cy - 2} textAnchor="middle">{vm.valueFormat(g.total)}</Part><Part part="total-caption" as="text" x={g.cx} y={g.cy + 18} textAnchor="middle">{vm.shown[0]?.label ?? 'Total'}</Part></>}
         {props.yLabel && vm.type !== 'pie' && <Part part="tick" as="text" x={g.left} y={14}>{props.yLabel}</Part>}
-        {!vm.data.length && <Part part="skeleton" as="rect" x={g.left} y={g.top} width={g.right - g.left} height={g.bottom - g.top} rx="8" />}
+        {!g.hasValues && <><Part part="skeleton" as="rect" x={g.left} y={g.top} width={g.right - g.left} height={g.bottom - g.top} rx="8" />{[0, .5, 1].map(position => <Part key={position} part="grid" as="line" x1={g.left} x2={g.right} y1={g.top + (g.bottom - g.top) * position} y2={g.top + (g.bottom - g.top) * position} />)}</>}
       </svg>
       {active && <Part part="tooltip" role="tooltip" style={{ left: `${tooltipX}%`, top: 42, transform: tooltipX > 50 ? 'translateX(calc(-100% - 12px))' : 'translateX(12px)' }}><Part part="tooltip-title">{String(vm.data[active.index][vm.x] ?? active.index + 1)}</Part>{vm.type === 'pie' && props.annotations?.filter(annotation => String(annotation.x) === String(vm.data[active.index][vm.x])).map((annotation, index) => <Part key={index} part="tooltip-annotation">{annotation.label}</Part>)}{vm.shown.map((series, index) => <Part key={series.key} part="tooltip-row" state={index === active.series ? 'active' : undefined}><span>{series.label}</span><strong>{vm.valueFormat(vm.data[active.index][series.key])}</strong></Part>)}</Part>}
-      {!vm.data.length && <Part part="empty">{complete ? 'No chart data' : 'Loading chart…'}</Part>}
+      {!g.hasValues && <Part part="empty">{complete ? 'No chart data' : 'Loading chart…'}</Part>}
     </div>
     {props.legend !== false && <Part part="legend" aria-label="Series">{vm.series.map((series, index) => <Part key={series.key} part="legend-item" as="button" type="button" aria-pressed={vm.shown.some(item => item.key === series.key)} aria-label={`Toggle ${series.label}`} onClick={() => vm.toggleSeries(series.key)} onKeyDown={(event: KeyboardEvent) => { if (event.key === 'Enter') { event.preventDefault(); vm.toggleSeries(series.key); } }}><Part part="swatch" as="span" style={{ background: seriesColor(series, index) }} />{series.label}</Part>)}</Part>}
     <Part part="summary"><table><caption>{props.title ?? 'Chart'} data</caption><thead><tr><th scope="col">{vm.x}</th>{vm.series.map(series => <th key={series.key} scope="col">{series.label}</th>)}</tr></thead><tbody>{vm.data.map((row, index) => <tr key={index}><th scope="row">{String(row[vm.x] ?? index + 1)}</th>{vm.series.map(series => <td key={series.key}>{vm.valueFormat(row[series.key])}</td>)}</tr>)}</tbody></table></Part>

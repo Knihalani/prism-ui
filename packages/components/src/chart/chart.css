@@ -20,11 +20,11 @@
 .prism-chart__pivot[aria-pressed="true"] { color: var(--prism-accent); border-color: var(--prism-accent); background: var(--prism-accent-soft); }
 .prism-chart__svg { display: block; overflow: visible; touch-action: pan-y; }
 .prism-chart__grid { stroke: var(--prism-border-soft); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.prism-chart__tick { fill: var(--prism-muted); font: 400 11px var(--prism-font-sans); font-variant-numeric: tabular-nums; transition: x var(--prism-duration-slow) var(--prism-ease), y var(--prism-duration-slow) var(--prism-ease); }
+.prism-chart__tick { fill: var(--prism-muted); font: 400 11px var(--prism-font-sans); font-variant-numeric: tabular-nums; transition: x var(--prism-duration-base) var(--prism-ease); }
 .prism-chart__line { stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; animation: prism-chart-draw var(--prism-duration-slow) var(--prism-ease) both; }
-.prism-chart__line, .prism-chart__area, .prism-chart__bar, .prism-chart__slice { transition: d var(--prism-duration-slow) var(--prism-ease), opacity var(--prism-duration-base) var(--prism-ease); }
+.prism-chart__line, .prism-chart__area, .prism-chart__bar, .prism-chart__slice { transition: opacity var(--prism-duration-base) var(--prism-ease); }
 .prism-chart__plot { animation: prism-chart-fade var(--prism-duration-base) var(--prism-ease) both; }
-.prism-chart__point { cursor: pointer; stroke: var(--prism-surface); stroke-width: 1.5; transition: cx var(--prism-duration-slow) var(--prism-ease), cy var(--prism-duration-slow) var(--prism-ease); }
+.prism-chart__point { cursor: pointer; stroke: var(--prism-surface); stroke-width: 1.5; transition: cx var(--prism-duration-base) var(--prism-ease); }
 .prism-chart__bar { transform-box: fill-box; transform-origin: center bottom; animation: prism-chart-grow var(--prism-duration-slow) var(--prism-ease) both; cursor: pointer; }
 .prism-chart__slice { stroke: var(--prism-surface); stroke-width: 2; cursor: pointer; }
 .prism-chart__slice:hover, .prism-chart__bar:hover { opacity: .8; }

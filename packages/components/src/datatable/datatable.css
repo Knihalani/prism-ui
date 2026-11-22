@@ -24,7 +24,7 @@
 .prism-datatable__sort span { color: var(--prism-muted); font-size: var(--prism-text-xs); }
 .prism-datatable__heading[aria-sort="ascending"], .prism-datatable__heading[aria-sort="descending"] { color: var(--prism-text); }
 .prism-datatable__checkbox { accent-color: var(--prism-accent); width: 14px; height: 14px; vertical-align: middle; margin: 0; cursor: pointer; }
-.prism-datatable__footer { border-top: 1px solid var(--prism-border-soft); min-height: 48px; justify-content: space-between; flex-wrap: wrap; }
+.prism-datatable__footer { border-top: 1px solid var(--prism-border-soft); min-height: 56px; justify-content: space-between; flex-wrap: wrap; }
 .prism-datatable__actions { display: flex; align-items: center; gap: var(--prism-space2); }
 :is(.prism-datatable__ask, .prism-datatable__undo, .prism-datatable__previous, .prism-datatable__next, .prism-datatable__clear, .prism-datatable__submit) { min-width: 30px; min-height: 30px; border: 1px solid var(--prism-border); border-radius: var(--prism-radius-sm); padding: var(--prism-space1) var(--prism-space2); background: var(--prism-surface); color: var(--prism-muted); font: 500 var(--prism-text-xs)/1.4 var(--prism-font-sans); cursor: pointer; transition: background var(--prism-duration-fast) var(--prism-ease), color var(--prism-duration-fast) var(--prism-ease); }
 .prism-datatable__ask, .prism-datatable__undo { border-color: transparent; }

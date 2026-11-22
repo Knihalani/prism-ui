@@ -189,3 +189,29 @@ test('x pivots retain category fields named like intermediate pivot keys', () =>
   fireEvent.click(view.getByRole('button', { name: 'Group' }));
   expect(view.getByRole('table').textContent).toContain('East5');
 });
+
+test('streaming domains reserve headroom, stay absent before finite values, and settle tightly once complete', () => {
+  let text = '```ui:chart\n{"x":"month","series":[{"key":"revenue"}],"data":[';
+  const view = render(<Prism registry={registry} source={text} done={false} animate={false} />);
+  const svg = view.getByRole('img');
+  expect(svg.getAttribute('data-y-domain')).toBeNull();
+  expect(view.container.querySelector('[data-part="tick"]')).toBeNull();
+  text += '{"month":"Jan","revenue":"invalid"},';
+  view.rerender(<Prism registry={registry} source={text} done={false} animate={false} />);
+  expect(svg.getAttribute('data-y-domain')).toBeNull();
+  expect(view.container.querySelector('[data-part="skeleton"]')).toBeTruthy();
+  const domains: string[] = [];
+  for (const [index, value] of [24000, 28000, 42000, 84000].entries()) {
+    text += `${index ? ',' : ''}{"month":"${index}","revenue":${value}}`;
+    view.rerender(<Prism registry={registry} source={text} done={false} animate={false} />);
+    const domain = svg.getAttribute('data-y-domain')!;
+    if (domain !== domains.at(-1)) domains.push(domain);
+    expect(Number(domain.split(',')[1])).toBeGreaterThanOrEqual(value);
+  }
+  expect(domains.length).toBeLessThanOrEqual(3);
+  const padded = Number(domains.at(-1)!.split(',')[1]);
+  expect(padded).toBeGreaterThanOrEqual(84000 * 1.5);
+  view.rerender(<Prism registry={registry} source={text + ']}\n```'} animate={false} />);
+  expect(Number(svg.getAttribute('data-y-domain')!.split(',')[1])).toBeLessThan(padded);
+  expect(svg.getAttribute('data-y-display-domain')).toBe(svg.getAttribute('data-y-domain'));
+});

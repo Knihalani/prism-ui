@@ -149,6 +149,39 @@ test('currency and number columns share right alignment in headers and cells', (
   expect(Array.from(view.container.querySelectorAll('th, td')).map(cell => cell.getAttribute('data-align'))).toEqual(['right', 'right', 'right', 'right']);
 });
 
+test('streaming pagination caps page one and reserves missing rows', () => {
+  let text = '```ui:table\n{"pageSize":8,"columns":[{"key":"name"}],"rows":[';
+  const view = render(<Prism registry={registry} source={text} done={false} />);
+  expect(view.container.querySelectorAll('[data-part="skeleton"]').length).toBe(8);
+  const many = Array.from({ length: 40 }, (_, index) => ({ name: `Row ${index}` }));
+  text += many.map(row => JSON.stringify(row)).join(',');
+  view.rerender(<Prism registry={registry} source={text} done={false} />);
+  expect(bodyRows(view.container).length).toBe(8);
+  expect(view.getByText('40 rows')).toBeTruthy();
+  expect(view.getByText('1–8 of 40')).toBeTruthy();
+  const header = view.container.querySelector('thead');
+  view.rerender(<Prism registry={registry} source={text + ']}\n```'} />);
+  expect(bodyRows(view.container).length).toBe(8);
+  expect(view.container.querySelector('thead')).toBe(header);
+});
+
+test('pagination metadata arriving after rows cannot expose the whole streaming table', () => {
+  const rows = Array.from({ length: 40 }, (_, index) => ({ name: `Row ${index}` }));
+  const prefix = '```ui:table\n' + JSON.stringify({ rows }).slice(0, -1);
+  const view = render(<Prism registry={registry} source={prefix} done={false} />);
+  expect(bodyRows(view.container).length).toBe(8);
+  expect(view.getByText('1–8 of 40')).toBeTruthy();
+  view.rerender(<Prism registry={registry} source={prefix + ',"pageSize":8}\n```'} />);
+  expect(bodyRows(view.container).length).toBe(8);
+});
+
+test('empty completed pages reuse the reserved page height without an additional spacer', () => {
+  const view = render(<Prism registry={registry} source={source({ columns, rows: [], pageSize: 8 })} />);
+  const empty = view.container.querySelector('[data-part="empty"]')!;
+  expect((empty.parentElement as HTMLElement).style.height).toBe('320px');
+  expect(view.container.querySelectorAll('tbody tr').length).toBe(1);
+});
+
 test('Intl formatting uses Prism locale/currency and per-column formats, invalid values stay readable', () => {
   const view = render(<Prism registry={registry} locale="de-DE" currency="EUR" source={source({ rows: [{ cost: 1234.5, rate: .25, when: '2025-01-02', invalid: 'not a date', text: '<script>' }], columns: [
     { key: 'cost', type: 'currency' }, { key: 'rate', type: 'number', format: 'percent' }, { key: 'when', type: 'date' }, { key: 'invalid', type: 'date' }, { key: 'text' },

@@ -28,16 +28,17 @@ function Checkbox({ mixed, ...props }: React.InputHTMLAttributes<HTMLInputElemen
   useLayoutEffect(() => { if (ref.current) ref.current.indeterminate = !!mixed; }, [mixed]);
   return <input {...part} {...props} ref={ref} type="checkbox" />;
 }
-export function DataTable({ node, props, complete }: PrismComponentProps<DataTableProps>) {
+export function DataTable({ node, props: inputProps, complete }: PrismComponentProps<DataTableProps>) {
+  const props = { ...inputProps, title: typeof inputProps.title === 'string' ? inputProps.title : undefined, caption: typeof inputProps.caption === 'string' ? inputProps.caption : undefined };
   const ctx = usePrism(), ast = node.type === 'table';
   const converted = useMemo(() => ast ? markdownTable(node) : undefined, [ast, node]);
-  const vm = useDataTable({ ...props, ...converted, complete }, ctx);
+  const vm = useDataTable({ ...props, ...converted, pageSize: ast ? 0 : props.pageSize, complete }, ctx);
   const frame = useFrame({ component: 'datatable', title: props.title, undo: true });
   const scroll = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (vm.focusIndex !== null) scroll.current?.querySelector<HTMLElement>(`tr[data-index="${vm.focusIndex}"]`)?.focus({ preventScroll: true });
   }, [vm.focusIndex, vm.start]);
-  const columns = vm.columns.length + (vm.mode ? 1 : 0), skeletonCount = complete ? 0 : Math.max(0, 3 - vm.visible.length);
+  const columns = vm.columns.length + (vm.mode ? 1 : 0), missing = Math.max(0, (vm.pageSize || 3) - vm.visible.length), skeletonCount = complete ? 0 : missing;
   const onRowKeyDown = (event: React.KeyboardEvent<HTMLElement>, index: number) => {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
@@ -66,7 +67,7 @@ export function DataTable({ node, props, complete }: PrismComponentProps<DataTab
       <Part part="ask" as="button" type="button" onClick={frame.onAsk} aria-label="Ask about this table">?</Part>
       <Part part="undo" as="button" type="button" onClick={frame.onUndo} disabled={!frame.canUndo} aria-label="Undo table change" aria-keyshortcuts="Control+Z Meta+Z">↶</Part>
     </Part>
-    <div ref={scroll} {...usePart('datatable', 'scroll')} style={{ maxHeight: props.height ?? (vm.virtual ? vm.height : undefined), ...ctx.styles.datatable?.scroll }} onScroll={event => vm.setScrollTop(event.currentTarget.scrollTop)}>
+    <div ref={scroll} {...usePart('datatable', 'scroll')} style={{ maxHeight: typeof props.height === 'number' && Number.isFinite(props.height) || vm.virtual ? vm.height : undefined, ...ctx.styles.datatable?.scroll }} onScroll={event => vm.setScrollTop(event.currentTarget.scrollTop)}>
       <Part part="table" as="table" aria-label={props.caption ?? props.title ?? 'Data table'} aria-rowcount={vm.virtual ? vm.count + 1 : undefined} aria-colcount={columns || undefined} aria-busy={!complete}>
         {props.caption && <Part part="caption" as="caption">{props.caption}</Part>}
         <Part part="header" as="thead"><tr>
@@ -85,7 +86,8 @@ export function DataTable({ node, props, complete }: PrismComponentProps<DataTab
           </Part>)}
           {vm.virtual && vm.end < vm.count && <tr aria-hidden="true"><td colSpan={columns} style={{ height: (vm.count - vm.end) * vm.rowHeight, padding: 0, border: 0 }} /></tr>}
           {Array.from({ length: skeletonCount }, (_, index) => <tr key={`skeleton-${index}`} aria-hidden="true" style={{ height: vm.rowHeight }}>{Array.from({ length: Math.max(1, columns) }, (_, cell) => <Part key={cell} part="cell" as="td"><Part part="skeleton">&nbsp;</Part></Part>)}</tr>)}
-          {!skeletonCount && !vm.count && <tr><td colSpan={Math.max(1, columns)}><Part part="empty">{vm.query ? `No rows match “${vm.query}”` : 'No rows yet'}{vm.query && <Part part="clear" as="button" type="button" onClick={() => vm.changeQuery('')}>Clear filter</Part>}</Part></td></tr>}
+          {complete && vm.count > 0 && vm.pageSize > 0 && missing > 0 && <tr aria-hidden="true"><td colSpan={Math.max(1, columns)} style={{ height: missing * vm.rowHeight, padding: 0 }} /></tr>}
+          {!skeletonCount && !vm.count && <tr><td colSpan={Math.max(1, columns)} style={{ height: vm.pageSize ? vm.pageSize * vm.rowHeight : undefined }}><Part part="empty">{vm.query ? `No rows match “${vm.query}”` : 'No rows yet'}{vm.query && <Part part="clear" as="button" type="button" onClick={() => vm.changeQuery('')}>Clear filter</Part>}</Part></td></tr>}
         </tbody>
       </Part>
     </div>

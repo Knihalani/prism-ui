@@ -1,0 +1,18 @@
+const fence = (lang: string, content: string) => `\`\`\`${lang}\n${content}\n\`\`\``;
+const ui = (name: string, props: unknown) => fence(`ui:${name}`, JSON.stringify(props));
+const code = ['import { createClient } from "@acme/sdk";', '', 'const client = createClient({ region: "us-east-1" });', '', 'export async function deploy() {', '  const project = await client.projects.create({', '    name: "prism-production",', '    framework: "react",', '  });', '', ...Array.from({ length: 18 }, (_, i) => `  await project.configure("${['cache', 'edge', 'assets', 'logs', 'metrics', 'traces'][i % 6]}.${i + 1}", true);`), '', '  return project.deploy({ production: true });', '}'].join('\n');
+const rows = Array.from({ length: 40 }, (_, i) => ({ name: ['Atlas', 'Orbit', 'Prism', 'Nova', 'Linear'][i % 5] + ` ${String(i + 1).padStart(2, '0')}`, revenue: 1240 + i * 137.5, customers: 120 + i * 13, date: `2026-01-${String(i % 28 + 1).padStart(2, '0')}` }));
+const data = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, i) => ({ month, quarter: `Q${Math.floor(i / 3) + 1}`, revenue: [24, 28, 26, 36, 42, 39, 48, 54, 51, 64, 72, 84][i] * 1000, cost: [18, 20, 19, 22, 25, 24, 27, 31, 30, 34, 38, 41][i] * 1000 }));
+const series = [{ key: 'revenue', label: 'Revenue' }, { key: 'cost', label: 'Operating cost' }];
+export const replayFixtures = [
+  ['typescript', fence('ts {lines filename="deploy.ts"}', code)],
+  ['bash', fence('bash {lines}', 'bun install\nbun run build\nbun run deploy --production')],
+  ['diff', fence('diff', '--- a/config.ts\n+++ b/config.ts\n@@ -1,3 +1,3 @@\n-export const region = "us-west-1";\n+export const region = "us-east-1";\n export const cache = true;')],
+  ['markdown table', '| Environment | Status | Requests |\n| --- | --- | ---: |\n| **Production** | Healthy | 128400 |\n| Staging | Ready | 8200 |\n| Development | Active | 340 |'],
+  ['accounts', ui('table', { id: 'accounts', title: 'Accounts', caption: 'Account performance', columns: [{ key: 'name', label: 'Account' }, { key: 'revenue', label: 'Revenue', type: 'currency' }, { key: 'customers', label: 'Customers', type: 'number' }, { key: 'date', label: 'Created', type: 'date' }], rows, pageSize: 8, selectable: true })],
+  ['ledger', ui('table', { id: 'events', title: 'Event ledger', filter: false, height: 280, columns: [{ key: 'event', label: 'Event' }, { key: 'duration', label: 'Duration (ms)', type: 'number' }, { key: 'region', label: 'Region' }], rows: Array.from({ length: 1000 }, (_, i) => ({ event: `request_${String(i + 1).padStart(5, '0')}`, duration: 12 + i % 121, region: ['iad1', 'sfo1', 'fra1'][i % 3] })) })],
+  ['line', ui('chart', { id: 'revenue', type: 'line', title: 'Revenue & operating cost', subtitle: '2026 · USD', x: 'month', series, data, format: 'compact', insight: 'Revenue outpaced costs by 2× in December', annotations: [{ x: 'Sep', label: 'New pricing' }], pivots: [{ label: 'Monthly bars', type: 'bar' }, { label: 'By quarter', type: 'area', x: 'quarter' }] })],
+  ['bar', ui('chart', { id: 'stacked', type: 'bar', title: 'Monthly composition', x: 'month', series, data, stacked: true, format: 'compact' })],
+  ['area', ui('chart', { id: 'area', type: 'area', title: 'Revenue trajectory', x: 'month', series: [series[0]], data, format: 'compact' })],
+  ['pie', ui('chart', { id: 'mix', type: 'pie', title: 'Revenue by region', x: 'region', series: [series[0]], format: 'compact', height: 320, data: [{ region: 'North America', revenue: 42000 }, { region: 'Europe', revenue: 28000 }, { region: 'Asia Pacific', revenue: 19000 }, { region: 'Other', revenue: 11000 }] })],
+] as const;

@@ -90,6 +90,21 @@ test('diff metadata stays neutral and change prefixes only appear once in the gu
   expect(lines[4].querySelector('[data-part="content"]')?.textContent).toBe('added');
 });
 
+test('streaming long blocks cap the body, retain all tail lines, and reserve the collapse footer', () => {
+  const code = Array.from({ length: 31 }, (_, index) => `const n${index} = ${index};`).join('\n');
+  const view = render(<Prism registry={registry} source={'```ts\n' + code} done={false} />);
+  const body = view.container.querySelector('[data-part="body"]') as HTMLElement;
+  expect(body.style.height).toBe('464px');
+  expect(body.getAttribute('data-tail')).toBe('true');
+  expect(view.container.querySelectorAll('[data-part="line"]').length).toBe(31);
+  expect((view.getByRole('button', { name: 'Streaming…' }) as HTMLButtonElement).disabled).toBe(true);
+  view.rerender(<Prism registry={registry} source={fence(code)} />);
+  expect(body.style.height).toBe('464px');
+  expect(body.getAttribute('data-tail')).toBeNull();
+  expect(view.container.querySelectorAll('[data-part="line"]').length).toBe(20);
+  expect(view.getByRole('button', { name: 'Show all 31 lines' })).toBeTruthy();
+});
+
 test('clipboard fallback cleans up and reports failure without action', async () => {
   const previous = Object.getOwnPropertyDescriptor(navigator, 'clipboard'), exec = document.execCommand;
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw Error('Denied'); } } });
