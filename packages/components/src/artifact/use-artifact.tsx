@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { ComponentContext, useEmit, useStrings, type PrismContextValue } from '@prism-ui/react';
+import { ComponentContext, useEmit, useStrings, useTheme, type PrismContextValue } from '@prism-ui/react';
 import { artifactStrings, artifactError } from './strings';
 import { sanitizeSvg } from '../mockup/engine/sanitize-svg';
 import { compileArtifact } from './compiler';
@@ -51,6 +51,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   const [chosen, selectVersion] = useState(0);
   const version = versions.find(version => version.number === chosen) ?? versions.at(-1);
   const selected = version ?? props;
+  const title = useTheme().theme.components.artifact?.strings?.title ?? selected.title ?? strings[selected.kind] ?? strings.title;
   const { kind, source } = selected;
   const autoMax = selected.height === 'auto' ? maxAutoHeight : undefined;
   const readySource = !!version || complete;
@@ -64,8 +65,8 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   const [reloadKey, setReload] = useState(0);
   const sessionRef = useRef<ReturnType<typeof mountArtifactFrame> | null>(null);
   const revision = useRef(0);
-  const current = useRef({ emit, title: strings.title !== artifactStrings.title ? strings.title : selected.title ?? strings[selected.kind] ?? strings.title, autoMax });
-  current.current = { emit, title: strings.title !== artifactStrings.title ? strings.title : selected.title ?? strings[selected.kind] ?? strings.title, autoMax };
+  const current = useRef({ emit, title, autoMax });
+  current.current = { emit, title, autoMax };
   const [failure, setFailure] = useState<{ source: string; kind: string; error: string }>();
   const [notice, setNotice] = useState('');
   const [fullscreen, setFullscreen] = useState(false);
@@ -168,7 +169,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
     return () => { observer.disconnect(); media?.removeEventListener('change', updateTheme); };
   }, [container, visible, updateTheme]);
 
-  useEffect(() => { if (sessionRef.current) sessionRef.current.frame.title = current.current.title; }, [selected.title]);
+  useEffect(() => { if (sessionRef.current) sessionRef.current.frame.title = current.current.title; }, [title]);
   useEffect(() => { sessionRef.current?.sizeMode(autoMax); }, [autoMax]);
 
   async function copy() {
