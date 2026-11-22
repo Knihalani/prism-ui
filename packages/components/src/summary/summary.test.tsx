@@ -6,6 +6,16 @@ import { createStore } from '@prism-ui/state';
 import './index';
 
 afterEach(cleanup);
+test('summary receipt stays mounted and resets after an edit', () => {
+  const view = render(<Prism source={'```ui:summary\n{"id":"receipt","actions":[{"text":"Follow up"}]}\n```'} onAction={() => {}} />);
+  const button = view.getByRole('button', { name: 'Send action items' });
+  fireEvent.click(button);
+  expect(view.getByRole('button', { name: 'Sent · 1 action items' })).toBe(button);
+  fireEvent.click(view.getByRole('checkbox', { name: 'Follow up' }));
+  expect(view.getByRole('button', { name: 'Send action items' })).toBe(button);
+  fireEvent.click(button);
+  expect(view.getByRole('button', { name: 'Sent · 1 action items' })).toBe(button);
+});
 const props = {
   id: 'review', title: 'Launch review',
   points: [{ text: 'Ready to launch', source: { quote: 'All checks passed.', title: 'Readiness report', url: 'https://example.com/report' } }, { text: 'Roll out gradually', source: { quote: 'Three waves.', title: 'Rollout plan', url: 'https://docs.example.com/plan' } }, { text: 'Keep current pricing' }],

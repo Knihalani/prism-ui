@@ -1,7 +1,7 @@
 import { useContext, useEffect, useMemo, useRef, useState, type HTMLAttributes, type KeyboardEvent } from 'react';
 import type { Node } from '@prism-ui/core';
 import { s } from '@prism-ui/schema';
-import { ComponentContext, defaultRenderers, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, useSlot, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
+import { ComponentContext, defaultRenderers, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePresentation, usePrism, useSlot, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
 
 export interface TroubleshootStep { title?: string; text: string; command?: string; yes?: string; no?: string; hint?: string }
@@ -9,6 +9,9 @@ export interface TroubleshootAnswer { step: string; answer: 'yes' | 'no' }
 const defaults = { title: 'Troubleshoot', step: 'Step', question: 'Did this fix it?', yes: 'Yes', no: 'No', fixed: 'Fixed after {count} steps', fixedOne: 'Fixed after {count} step', fixedOther: 'Fixed after {count} steps', notFixed: 'Not fixed yet', report: 'Send report', restart: 'Start over', sent: 'Report sent', copy: 'Copy', copied: 'Copied', copyError: 'Could not copy', loading: 'Loading step', history: 'Previous steps' };
 export type TroubleshootLabels = Partial<typeof defaults>;
 export interface TroubleshootProps { id?: string; title?: string; start?: string; steps?: unknown; labels?: TroubleshootLabels }
+export function TroubleshootSkeleton(input: PrismComponentProps<TroubleshootProps>) {
+  return <Troubleshooter {...input} />;
+}
 function validateSteps(raw: unknown): Record<string, TroubleshootStep> {
   const result: Record<string, TroubleshootStep> = Object.create(null);
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return result;
@@ -69,7 +72,7 @@ export function useTroubleshoot(props: TroubleshootProps, ctx: PrismContextValue
   };
 }
 function Box(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
-function Empty(props: HTMLAttributes<HTMLDivElement>) { return <div {...usePart('troubleshoot', 'skeleton')} {...props} role="status" />; }
+function Empty(props: HTMLAttributes<HTMLDivElement>) { return <div {...usePart('troubleshoot', 'skeleton')} {...props} role="status" data-prism-skeleton-line="" />; }
 function Command({ node }: { node: Node }) {
   const ctx = usePrism(), definition = ctx.registry.get('code');
   const View = ctx.components.code ?? definition?.component ?? defaultRenderers.code;
@@ -78,20 +81,20 @@ function Command({ node }: { node: Node }) {
   return <ComponentContext.Provider value={value}><View node={node} props={props} id={node.key} complete partial={false} issues={[]}>{node.value}</View></ComponentContext.Provider>;
 }
 export function Troubleshooter({ props }: PrismComponentProps<TroubleshootProps>) {
-  const vm = useTroubleshoot(props, usePrism());
+  const vm = useTroubleshoot(props, usePrism()), presentation = usePresentation(), { unstyled } = usePrism();
   const body = usePart('troubleshoot', 'conversation'), history = usePart('troubleshoot', 'history'), item = usePart('troubleshoot', 'historyItem'), chip = usePart('troubleshoot', 'chip'), card = usePart('troubleshoot', 'step', vm.state), position = usePart('troubleshoot', 'position'), title = usePart('troubleshoot', 'stepTitle'), text = usePart('troubleshoot', 'text'), hint = usePart('troubleshoot', 'hint'), question = usePart('troubleshoot', 'question'), actions = usePart('troubleshoot', 'actions'), primary = usePart('troubleshoot', 'primary'), ghost = usePart('troubleshoot', 'ghost'), result = usePart('troubleshoot', 'result', vm.state);
   const command = usePart('troubleshoot', 'command');
   const Item = useSlot('troubleshoot', 'historyItem', Box), Card = useSlot('troubleshoot', 'step', Box), EmptyState = useSlot('troubleshoot', 'empty', Empty), Actions = useSlot('troubleshoot', 'actions', Box);
-  return <div {...body} onKeyDown={vm.onKeyDown}><ComponentFrame component="troubleshoot" title={vm.title} state={vm.state} ask undo>
-    {vm.path.length > 0 && <div {...history} aria-label={vm.labels.history}>{vm.path.map((entry, index) => <Item {...item} key={`${index}.${entry.step}`}><button {...ghost} type="button" onClick={() => vm.back(index)}><span {...text}>{vm.steps[entry.step]?.text ?? entry.step}</span><span {...chip} data-state={entry.answer}>{vm.labels[entry.answer]}</span></button></Item>)}</div>}
-    {vm.ended ? <div {...result} role="status"><h4 {...title}>{vm.result}</h4>{vm.sent && <p {...text}>{vm.labels.sent}</p>}<Actions {...actions}><button {...primary} type="button" onClick={vm.report} disabled={vm.sent}>{vm.labels.report}</button><button {...ghost} type="button" onClick={vm.restart}>{vm.labels.restart}</button></Actions></div> : <Card {...card}>
-      <h4 {...title}><span {...position} aria-live="polite">{vm.position}</span>{vm.step?.title}</h4>
+  return <div {...body} data-presentation={presentation['data-state']} data-entering={presentation['data-entering']} onKeyDown={vm.onKeyDown}><ComponentFrame component="troubleshoot" title={vm.title} state={vm.state} ask undo>
+    {vm.path.length > 0 && <div {...history} aria-label={vm.labels.history}>{vm.path.map((entry, index) => <Item {...item} key={`${index}.${entry.step}`}><button {...ghost} type="button" onClick={() => vm.back(index)}><span {...text}>{vm.steps[entry.step]?.text ?? entry.step}</span><span {...chip} className={[chip.className, !unstyled && 'prism-chip'].filter(Boolean).join(' ')} data-state={entry.answer}>{vm.labels[entry.answer]}</span></button></Item>)}</div>}
+    {vm.ended ? <div {...result} role="status">{vm.resolved && <svg className="prism-troubleshoot__success prism-check" aria-hidden="true" width="44" height="44" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="22" r="21" fill="currentColor" opacity=".1" /><path d="m13 22 6 6 13-14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}<h4 {...title}>{vm.result}</h4>{vm.sent && <p {...text}>{vm.labels.sent}</p>}<Actions {...actions}><button {...primary} className={[primary.className, !unstyled && 'prism-pill'].filter(Boolean).join(' ')} type="button" onClick={vm.report} disabled={vm.sent}>{vm.sent ? '✓ ' + vm.labels.sent : vm.labels.report}</button><button {...ghost} type="button" onClick={vm.restart}>{vm.labels.restart}</button></Actions></div> : <Card {...card}>
+      <h4 {...title}><span {...position} aria-live="polite">{vm.position}</span>{vm.step?.title ?? vm.step?.text}</h4>
       {!vm.step || vm.loading ? <EmptyState aria-label={vm.labels.loading} /> : <>
-        <p {...text}>{vm.step.text}</p>
+        {vm.step.title && <p {...text}>{vm.step.text}</p>}
         {vm.commandNode && <div {...command}><Command node={vm.commandNode} /><button {...ghost} type="button" onClick={vm.copy} aria-live="polite">{vm.copyState === 'copied' ? vm.labels.copied : vm.copyState === 'error' ? vm.labels.copyError : vm.labels.copy}</button></div>}
         {vm.step.hint && <p {...hint}>{vm.step.hint}</p>}
       </>}
-      <p {...question}>{vm.labels.question}</p><Actions {...actions}><button {...primary} type="button" disabled={!vm.ready} onClick={() => vm.answer('yes')} aria-keyshortcuts="Y">{vm.labels.yes}</button><button {...ghost} type="button" disabled={!vm.ready} onClick={() => vm.answer('no')} aria-keyshortcuts="N">{vm.labels.no}</button></Actions>
+      <p {...question}>{vm.labels.question}</p><Actions {...actions}><button {...primary} type="button" disabled={!vm.ready} onClick={() => vm.answer('yes')} aria-keyshortcuts="Y">{vm.labels.yes}<kbd aria-hidden="true">Y</kbd></button><button {...ghost} type="button" disabled={!vm.ready} onClick={() => vm.answer('no')} aria-keyshortcuts="N">{vm.labels.no}<kbd aria-hidden="true">N</kbd></button></Actions>
     </Card>}
   </ComponentFrame></div>;
 }
@@ -102,7 +105,7 @@ export const troubleshootDefinition = defineComponent({ name: 'troubleshoot', sc
   start: s.string().describe('First step id').example('restart'),
   steps: s.any().describe('Record of step id to {title?: string, text: string, command?: string, yes?: string, no?: string, hint?: string}. Targets are step ids, $fixed, or $escalate. Missing yes defaults to $fixed; missing or unknown no ends unresolved.').example({ restart: { text: 'Restart the Wi-Fi adapter.', command: 'nmcli radio wifi off && nmcli radio wifi on', yes: '$fixed', no: '$escalate' } }),
   labels: labelsSchema,
-}), component: Troubleshooter, syntax: 'fence', docs: 'A guided troubleshooting checklist with branching answers, editable history and a final report. Use Y/N to answer and Backspace or ArrowLeft to go back.', examples: ['```ui:troubleshoot\n{"id":"wifi","title":"Wi-Fi drops","start":"restart","steps":{"restart":{"text":"Restart the Wi-Fi adapter.","command":"nmcli radio wifi off && nmcli radio wifi on","yes":"$fixed","no":"$escalate"}}}\n```'],
+}), component: Troubleshooter, skeleton: TroubleshootSkeleton, syntax: 'fence', docs: 'A guided troubleshooting checklist with branching answers, editable history and a final report. Use Y/N to answer and Backspace or ArrowLeft to go back.', examples: ['```ui:troubleshoot\n{"id":"wifi","title":"Wi-Fi drops","start":"restart","steps":{"restart":{"text":"Restart the Wi-Fi adapter.","command":"nmcli radio wifi off && nmcli radio wifi on","yes":"$fixed","no":"$escalate"}}}\n```'],
   message(action) { if (action.type !== 'troubleshoot') return 'Tell me more about this troubleshooter…'; const payload = action.payload as { resolved: boolean; path: TroubleshootAnswer[] }; return reportMessage(action.context.props.title, payload.resolved, payload.path, String(payload.path.length)); },
 });
 registerComponent(troubleshootDefinition);
