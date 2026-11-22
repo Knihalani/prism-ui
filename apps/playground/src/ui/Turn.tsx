@@ -17,7 +17,7 @@ function EstimateActions({ children, ...props }: HTMLAttributes<HTMLDivElement>)
   return <div {...props} data-state={sent ? 'sent' : 'ready'}>{Children.map(children, child => isValidElement<ButtonHTMLAttributes<HTMLButtonElement>>(child) && child.type === 'button' ? cloneElement(child, { disabled: child.props.disabled || sent, 'aria-label': sent ? 'Estimate saved' : child.props['aria-label'] }, sent ? 'Estimate saved' : child.props.children) : child)}</div>;
 }
 const slots = { estimate: { actions: EstimateActions } };
-export function AssistantTurn({ text, streaming, error, store, theme, animate, onAction, regenerate, last }: { text: string; streaming: boolean; error?: string; store: Store; theme: 'light' | 'dark'; animate: boolean; onAction(action: Action): void; regenerate?: () => void; last: boolean }) {
+export function AssistantTurn({ text, streaming, error, store, theme, animate, onAction, regenerate, last, continued }: { text: string; streaming: boolean; error?: string; store: Store; theme: 'light' | 'dark'; animate: boolean; onAction(action: Action): void; regenerate?: () => void; last: boolean; continued?: boolean }) {
   const [copied, setCopied] = useState(false), [copyError, setCopyError] = useState(false);
   return <article className={'assistant-turn' + (last ? ' last-turn' : '')} data-message="assistant" data-state={streaming ? 'streaming' : 'ready'} aria-label="Assistant reply" aria-busy={streaming}>
     <MessageBoundary>
@@ -26,7 +26,7 @@ export function AssistantTurn({ text, streaming, error, store, theme, animate, o
       </div>}
     </MessageBoundary>
     {error && <p className="turn-error" role="alert">{error}</p>}
-    {!streaming && <div className="turn-actions" aria-label="Reply actions"><button className="icon-btn" title={copied ? 'Copied' : 'Copy reply'} aria-label={copied ? 'Copied' : 'Copy reply'} onClick={async () => {
+    {!streaming && !continued && <div className="turn-actions" aria-label="Reply actions"><button className="icon-btn" title={copied ? 'Copied' : 'Copy reply'} aria-label={copied ? 'Copied' : 'Copy reply'} onClick={async () => {
       try { await navigator.clipboard.writeText(plainProse(text)); setCopied(true); setCopyError(false); }
       catch { setCopyError(true); }
     }}><Icon name={copied ? 'check' : 'copy'} /></button>{regenerate && <button className="icon-btn" title="Regenerate reply" aria-label="Regenerate reply" onClick={regenerate}><Icon name="refresh" /></button>}{copyError && <span role="status">Copy unavailable in this browser.</span>}</div>}

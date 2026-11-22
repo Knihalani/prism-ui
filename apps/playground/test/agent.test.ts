@@ -53,7 +53,7 @@ test('empty and unknown messages fall back, catalogue remains accessible', async
 
 test('each main action reacts to payload, and offsite patches its existing estimate', () => {
   const [laptop, kyoto, deploy, landing, offsite, research] = scenarios;
-  expect(laptop.onAction(action('pick', 'choose', { option: 'thinkpad', weights: { power: 3 } }), ctx)?.text).toContain('ThinkPad T14');
+  expect(laptop.onAction(action('pick', 'choose', { option: 'thinkpad', weights: { performance: 3 } }), ctx)?.text).toContain('ThinkPad X1 Carbon');
   expect(kyoto.onAction(action('ask', 'submit', { values: { dates: '2027-04-12', pace: 'Active', budget: 220 } }), ctx)?.text).toContain('$880');
   expect(deploy.onAction(action('troubleshoot', 'troubleshoot', { resolved: false, path: [] }), ctx)?.text).toContain('runbook');
   const revised = landing.onAction(action('mockup', 'feedback', { variant: 'B', overall: 'More contrast' }), ctx)?.text;
@@ -67,6 +67,61 @@ test('each main action reacts to payload, and offsite patches its existing estim
     expect(scenario.onAction(action('code', 'copy', {}), ctx)).toBeUndefined();
     expect(scenario.onAction(action('frame', 'ask', null), ctx)?.text.length).toBeGreaterThan(0);
   }
+});
+
+test('laptop recommendations use named priorities, handle every model and reject unknown choices', () => {
+  const laptop = scenarios[0], opening = laptop.opening('test');
+  const props = JSON.parse(opening.split('```ui:pick\n')[1].split('\n```')[0]);
+  expect(props.options).toHaveLength(3); expect(props.criteria).toHaveLength(4);
+  for (const option of ['air', 'thinkpad', 'framework']) {
+    const reply = laptop.onAction(action('pick', 'choose', { option, weights: { battery: 3, performance: 1, portability: 0, value: 3, unknown: 99 } }), ctx)!.text;
+    expect(reply).toContain('battery life and value'); expect(reply).not.toContain('unknown');
+    expect(reply).toContain('512 GB'); expect(reply).toContain('What to skip');
+    expect(reply).toMatch(/\$1,\d{3}/);
+  }
+  expect(laptop.onAction(action('pick', 'choose', { option: 'air', weights: {} }), ctx)!.text).toContain('everyday comfort');
+  expect(laptop.onAction(action('pick', 'choose', {}), ctx)!.text).toContain('couldn’t identify');
+  expect(laptop.onAction(action('pick', 'choose', { option: 'air', weights: { power: 3 } }), ctx)!.text).toContain('performance');
+});
+
+test('deploy branches produce cause-specific recovery commands without guessing on an empty path', () => {
+  const deploy = scenarios[2];
+  const opening = JSON.parse(deploy.opening('test').split('```ui:troubleshoot\n')[1].split('\n```')[0]);
+  expect(Object.keys(opening.steps)).toHaveLength(5);
+  const reply = (path: unknown) => deploy.onAction(action('troubleshoot', 'troubleshoot', { path }), ctx)!.text;
+  const env = reply([{ step: 'env', answer: 'no' }]);
+  expect(env).toContain('secret reference'); expect(env).toContain('rollout restart');
+  const migration = reply([{ step: 'env', answer: 'yes' }, { step: 'migration', answer: 'no' }]);
+  expect(migration).toContain('migration failed'); expect(migration).toContain('job/web-migrate'); expect(migration).not.toContain('rollout restart');
+  const health = reply([{ step: 'env', answer: 'yes' }, { step: 'migration', answer: 'yes' }, { step: 'health', answer: 'no' }]);
+  expect(health).toContain('readiness timeout'); expect(health).toContain('curl -i');
+  expect(reply([])).toContain('haven’t isolated'); expect(reply(null)).toContain('haven’t isolated');
+  expect(reply([{ step: 'traffic', answer: 'yes' }])).toContain('no reason to change configuration');
+});
+
+test('offsite confirms edited totals and never adds contingency twice or prints invalid currency', () => {
+  const offsite = scenarios[4];
+  const reply = offsite.onAction(action('estimate', 'use', { total: 1830, items: [{ id: 'seats', qty: 9 }, { id: 'buffer', enabled: false, price: 200, qty: 1 }] }), ctx)!;
+  expect(reply.text).toContain('$1,830 for 9 people'); expect(reply.text).toContain('$2,030');
+  const included = offsite.onAction(action('estimate', 'use', { total: 1520, items: [{ id: 'buffer', price: 200, qty: 1, amount: 200 }] }), ctx)!.text;
+  expect(included).toContain('already included'); expect(included).not.toContain('$1,720');
+  const empty = offsite.onAction(action('estimate', 'use', {}), ctx)!.text;
+  expect(empty).toContain('6 people'); expect(empty).not.toMatch(/NaN|undefined|\$0/);
+  expect(offsite.onAction(action('estimate', 'use', { total: 'broken', items: [] }), ctx)!.text).not.toContain('NaN');
+});
+
+test('Kyoto, landing and research replies reflect preferences, notes and action owners', () => {
+  const [, kyoto, , landing, , research] = scenarios;
+  const trip = kyoto.onAction(action('ask', 'submit', { values: { dates: '2027-04-12', pace: 'Active', budget: 350 } }), ctx)!.text;
+  expect(trip).toContain('April 12'); expect(trip).toContain('full Fushimi Inari'); expect(trip).toContain('$1,400');
+  expect(kyoto.onAction(action('ask', 'submit', { values: { dates: 'invalid', budget: -1 } }), ctx)!.text).toContain('$600');
+  const design = landing.onAction(action('mockup', 'feedback', { preferred: 'B', overall: 'More contrast' }), ctx)!.text;
+  expect(design).toContain('direction B'); expect(design).toContain('More contrast');
+  expect(landing.onAction(action('mockup', 'feedback', { variant: 'A', items: [{ comment: 'Keep it calm' }] }), ctx)!.text).toContain('Keep it calm');
+  const handoff = research.onAction(action('summary', 'send', { actions: [{ text: 'Interview five teams', owner: 'Sam', due: 'Friday', done: true }] }), ctx)!.text;
+  expect(handoff).toContain('Interview five teams — Sam, Friday (complete)');
+  expect(research.onAction(action('summary', 'send', {}), ctx)!.text).toContain('aren’t any action items');
+  expect(research.onAction(action('summary', 'ask', { text: 'Scattered updates', source: { quote: 'Too many tabs' } }), ctx)!.text).toContain('Too many tabs');
 });
 
 test('actions route to old owning scenario, follow-up ids remain owned, mid-turn text continues', async () => {

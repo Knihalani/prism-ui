@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState }
 import { ThemeScope, type Action } from '@prism-ui/react';
 import { makeStore } from './store';
 import { createAgent, loadAgentConfig, saveAgentConfig, type AgentConfig } from './agent/config';
-import { createScriptedAgent } from './agent/scripted';
+import { createScriptedAgent, routeMessage } from './agent/scripted';
 import { realistic, type Pace } from './agent/pace';
 import { scenarios } from './agent/scenarios';
 import type { Agent, AgentInput, Turn } from './agent/types';
@@ -124,7 +124,10 @@ export function App({ pace = realistic, agentFactory }: AppProps) {
   }
   function send(text: string, demoId?: string) {
     if (!text.trim()) return;
-    if (!current.messages.length && !demoId) current.originScenario = scenarios.find(item => item.prompt === text)?.id;
+    if (!current.messages.length && !demoId) {
+      const route = routeMessage(text);
+      if (route.kind === 'scenario') current.originScenario = route.scenario.id;
+    }
     current.draft = ''; current.following = true;
     void run(current, { text: text.trim(), demoId }); notify();
   }
@@ -149,7 +152,8 @@ export function App({ pace = realistic, agentFactory }: AppProps) {
   }
   const busy = !!current.controller, empty = !current.messages.length;
   const lastAssistant = [...current.messages].reverse().find(message => message.role === 'assistant');
-  const ownChats = [...conversations.current.values()].filter(c => !c.scenario && c.messages.length).reverse();
+  const ownChats = [...conversations.current.values()].filter(c => c.messages.length).reverse();
+  const earlierScenarios = scenarios.filter(item => !ownChats.some(c => c.scenario === item.id || c.originScenario === item.id));
   const live = config.current.provider !== 'scripted' && !!config.current.apiKey?.trim();
   const providerName = config.current.provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
   const composer = <div className="composer-area"><form className="composer" onSubmit={event => { event.preventDefault(); if (!busy) send(current.draft); }}>
@@ -163,7 +167,7 @@ export function App({ pace = realistic, agentFactory }: AppProps) {
     <aside ref={sidebarRef} inert={overlay ? true : undefined} className={'sidebar' + (sidebar ? '' : ' collapsed') + (drawer ? ' drawer-open' : '')} aria-label="Conversations" role={drawer && mobile ? 'dialog' : undefined} aria-modal={drawer && mobile ? true : undefined}>
       <div className="sidebar-top"><button className="new-chat" onClick={newChat}><Icon name="plus" />New chat</button><button className="icon-btn" aria-label="Close sidebar" title="Close sidebar" onClick={() => { if (mobile) setDrawer(false); else setSidebar(false); }}><Icon name="sidebar" /></button></div>
       <nav className="chat-list" aria-label="Chat history">{ownChats.length > 0 && <div className="list-heading">Today</div>}{ownChats.map(c => <button key={c.id} className={'history-item' + (current.id === c.id ? ' selected' : '')} aria-current={current.id === c.id ? 'page' : undefined} onClick={() => switchTo(c)}>{c.title}</button>)}
-        <div className="list-heading earlier">Earlier</div>{scenarios.map(item => <button key={item.id} className={'history-item' + (current.scenario === item.id ? ' selected' : '')} onClick={() => openScenario(item.id)}>{item.title}</button>)}
+        {earlierScenarios.length > 0 && <div className="list-heading earlier">Earlier</div>}{earlierScenarios.map(item => <button key={item.id} className="history-item" onClick={() => openScenario(item.id)}>{item.title}</button>)}
       </nav>
       <div className="sidebar-bottom"><button className="sidebar-link" onClick={() => setOverlay('palette')}><Icon name="grid" /><span>Components</span><kbd>Ctrl K</kbd></button><div className="sidebar-tools"><button className="sidebar-link" aria-label={'Theme: ' + themeChoice} title={'Theme: ' + themeChoice} onClick={() => { const next = themeChoice === 'system' ? 'light' : themeChoice === 'light' ? 'dark' : 'system'; setThemeChoice(next); try { localStorage.setItem('prism-theme', next); } catch {} }}><Icon name={themeChoice === 'system' ? 'monitor' : themeChoice === 'light' ? 'sun' : 'moon'} /><span>{themeChoice[0].toUpperCase() + themeChoice.slice(1)}</span></button><button className="icon-btn" aria-label="Settings" title="Settings" onClick={() => setOverlay('settings')}><Icon name="settings" /></button></div></div>
     </aside>
@@ -172,7 +176,7 @@ export function App({ pace = realistic, agentFactory }: AppProps) {
       {empty ? <div className="landing"><div className="landing-inner"><h1>What are we working on?</h1>{composer}<div className="suggestions" aria-label="Suggestions">{scenarios.map((scenario, index) => <button key={scenario.id} className="suggestion" onClick={() => send(scenario.prompt)}><Icon name={scenarioIcons[index]} /><strong>{scenarioTitles[index]}</strong><span>{descriptions[index]}</span></button>)}</div></div></div> : <>
         <div ref={scroll} className="thread-scroll" onScroll={() => { const element = scroll.current!; current.scroll = element.scrollTop; const following = element.scrollHeight - element.scrollTop - element.clientHeight < 72; if (following !== current.following) { current.following = following; notify(); } }}>
           <div className="thread" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions text" aria-busy={busy}>
-            {current.messages.map(message => message.role === 'user' ? <div key={message.id} className="user-turn" data-message="user"><div>{message.text}</div></div> : <AssistantTurn key={message.id} text={message.text} streaming={!!message.streaming} error={message.error} store={current.store} theme={theme} animate={!reduced} onAction={onAction} last={message === lastAssistant} regenerate={message === lastAssistant && !busy ? () => regenerate(message) : undefined} />)}
+            {current.messages.map((message, index) => message.role === 'user' ? <div key={message.id} className="user-turn" data-message="user"><div>{message.text}</div></div> : <AssistantTurn key={message.id} text={message.text} streaming={!!message.streaming} error={message.error} store={current.store} theme={theme} animate={!reduced} onAction={onAction} continued={current.messages[index + 1]?.role === 'assistant'} last={message === lastAssistant} regenerate={message === lastAssistant && !busy ? () => regenerate(message) : undefined} />)}
           </div>
         </div>
         <footer className="composer-footer">{!current.following && <button className="jump-latest icon-btn" title="Jump to latest" aria-label="Jump to latest" onClick={() => { current.following = true; const element = scroll.current!; element.scrollTo?.({ top: element.scrollHeight, behavior: reduced ? 'instant' : 'smooth' }); notify(); }}><Icon name="down" /></button>}{composer}</footer>

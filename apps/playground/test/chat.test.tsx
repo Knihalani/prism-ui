@@ -30,16 +30,20 @@ test('landing has six natural suggestions and clicking one renders a streamed co
   expect(users(view.container)).toHaveLength(1); expect(replies(view.container)).toHaveLength(1);
   expect(view.getByText('Help me pick a laptop')).toBeDefined();
   expect(view.container.querySelector('[data-prism="pick"]')).not.toBeNull();
+  expect(view.getAllByRole('button', { name: 'Your next laptop' })).toHaveLength(1);
   expect(view.getByRole('log').getAttribute('aria-busy')).toBe('false');
 });
 
 test('pick action adds only an assistant continuation and no payload or syntax', async () => {
   const view = render(<App pace={fast} />); send(view, 'which laptop should I buy'); await done(view);
+  expect(view.getAllByRole('button', { name: 'Your next laptop' })).toHaveLength(1);
   fireEvent.click(view.getAllByRole('button', { name: /Choose/ })[0]); await done(view);
   expect(users(view.container)).toHaveLength(1); expect(replies(view.container)).toHaveLength(2);
   expect(view.getByRole('table')).toBeDefined();
   expect(view.container.querySelector('.payload')).toBeNull();
   expect(view.container.textContent).not.toContain('```ui:');
+  expect(replies(view.container)[0].querySelector('.turn-actions')).toBeNull();
+  expect(replies(view.container)[1].querySelector('.turn-actions')).not.toBeNull();
 });
 
 test('estimate action confirms in place, appends assistant and patches earlier estimate', async () => {
@@ -104,6 +108,7 @@ test('new chat is empty and conversation switching preserves component state and
   fireEvent.click(view.getAllByRole('button', { name: 'Your next laptop' })[0]);
   expect(users(view.container)).toHaveLength(1); expect(replies(view.container)).toHaveLength(2);
   expect(view.getByRole('main').getAttribute('data-conversation')).toBe(original);
+  expect(view.getAllByRole('button', { name: 'Your next laptop' })).toHaveLength(1);
   expect((view.getByRole('textbox', { name: 'Message Prism' }) as HTMLTextAreaElement).value).toBe('Keep this draft');
   fireEvent.click(view.getByRole('button', { name: 'Four days in Kyoto' })); await done(view);
   fireEvent.click(view.getAllByRole('button', { name: 'Your next laptop' })[0]);
