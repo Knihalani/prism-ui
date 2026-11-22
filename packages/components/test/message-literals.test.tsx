@@ -3,10 +3,15 @@ import { afterEach, expect, test } from 'bun:test';
 import { cleanup, fireEvent, render } from '@testing-library/react';
 import { Prism, type Action } from '@prism-ui/react';
 import '../src';
+import { formatComponentMessage } from '../src/strings';
 
 afterEach(cleanup);
 const literal = '$& $$ $` $\' {items} {answers}';
 const fence = (name: string, props: object) => '```ui:' + name + '\n' + JSON.stringify(props) + '\n```';
+
+test('message formatting preserves unknown placeholders and empty values', () => {
+  expect(formatComponentMessage('{text}|{empty}|{missing}|{constructor}', { text: literal, empty: '' })).toBe(literal + '||{missing}|{constructor}');
+});
 
 test('Summary point and action messages preserve literal replacement characters', () => {
   const actions: Action[] = [];

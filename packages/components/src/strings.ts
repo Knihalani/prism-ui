@@ -1,5 +1,5 @@
 export function formatComponentMessage(template: string, values: Record<string, string>): string {
-  return template.replace(/\{(\w+)\}/g, (placeholder, key: string) => values[key] ?? placeholder);
+  return template.replace(/\{(\w+)\}/g, (placeholder, key: string) => Object.hasOwn(values, key) ? values[key] : placeholder);
 }
 
 export const componentStrings = {
