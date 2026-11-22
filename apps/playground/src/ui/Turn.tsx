@@ -17,12 +17,12 @@ function EstimateActions({ children, ...props }: HTMLAttributes<HTMLDivElement>)
   return <div {...props} data-state={sent ? 'sent' : 'ready'}>{Children.map(children, child => isValidElement<ButtonHTMLAttributes<HTMLButtonElement>>(child) && child.type === 'button' ? cloneElement(child, { disabled: child.props.disabled || sent, 'aria-label': sent ? 'Estimate saved' : child.props['aria-label'] }, sent ? 'Estimate saved' : child.props.children) : child)}</div>;
 }
 const slots = { estimate: { actions: EstimateActions } };
-export function AssistantTurn({ text, streaming, error, store, theme, animate, onAction, regenerate, last, continued }: { text: string; streaming: boolean; error?: string; store: Store; theme: 'light' | 'dark'; animate: boolean; onAction(action: Action): void; regenerate?: () => void; last: boolean; continued?: boolean }) {
+export function AssistantTurn({ scope, text, streaming, error, store, theme, animate, onAction, regenerate, last, continued }: { scope: string; text: string; streaming: boolean; error?: string; store: Store; theme: 'light' | 'dark'; animate: boolean; onAction(action: Action): void; regenerate?: () => void; last: boolean; continued?: boolean }) {
   const [copied, setCopied] = useState(false), [copyError, setCopyError] = useState(false);
   return <article className={'assistant-turn' + (last ? ' last-turn' : '')} data-message="assistant" data-state={streaming ? 'streaming' : 'ready'} aria-label="Assistant reply" aria-busy={streaming}>
     <MessageBoundary>
       {!text && streaming ? <div className="thinking" aria-label="Thinking"><span>Thinking</span></div> : <div className="reply-content">
-        <Prism source={text} done={!streaming} store={store} plugins={playgroundPlugins} mode={theme} animate={animate} onAction={onAction} slots={slots} />
+        <Prism scope={scope} source={text} done={!streaming} store={store} plugins={playgroundPlugins} mode={theme} animate={animate} onAction={onAction} slots={slots} />
       </div>}
     </MessageBoundary>
     {error && <p className="turn-error" role="alert">{error}</p>}
