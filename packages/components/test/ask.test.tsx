@@ -1,9 +1,10 @@
 import '../../react/test/setup';
 import { afterEach, expect, test } from 'bun:test';
-import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { Prism, createRegistry, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { askDefinition } from '../src/ask';
+
+const { act, cleanup, fireEvent, render } = await import('@testing-library/react');
 
 afterEach(cleanup);
 const registry = createRegistry([askDefinition]);
