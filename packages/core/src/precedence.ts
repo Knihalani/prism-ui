@@ -5,7 +5,7 @@ export class Precedence {
   private code?: Map<number, { length: number; close: number }>;
   private brackets?: Map<number, number>;
   private links = new Map<number, LinkBoundary | null>();
-  constructor(private text: string) {}
+  constructor(private text: string, private atomEnd?: (pos: number) => number | undefined) {}
 
   codeAt(start: number): { length: number; close: number } {
     if (!this.code) {
@@ -68,6 +68,8 @@ export class Precedence {
 
   find(marker: string, from: number): number {
     for (let i = from; i < this.text.length; i++) {
+      const end = this.atomEnd?.(i);
+      if (end !== undefined) { i = end - 1; continue; }
       const c = this.text.charCodeAt(i);
       if (c === 92) { i++; continue; }
       if (c === 96) { const span = this.codeAt(i); if (span.close >= 0) i = span.close + span.length - 1; else i += span.length - 1; continue; }

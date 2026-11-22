@@ -1,25 +1,20 @@
 import type { Node } from './ast';
 import { attributes, safeUrl } from './values';
 import { Precedence } from './precedence';
-import { pluginNode, type InlineExtensions } from './plugins';
+import { matchInline, pluginNode, type InlineExtensions } from './plugins';
 
 export function inline(text: string, path: string, resolve?: (node: Node) => void, extensions?: InlineExtensions): Node[] {
   const out: Node[] = []; let i = 0; let buffer = '';
   let precedence: Precedence | undefined;
-  const boundaries = () => precedence ??= new Precedence(text);
+  const boundaries = () => precedence ??= new Precedence(text, extensions ? pos => matchInline(extensions, text, pos)?.end : undefined);
   const add = (node: Omit<Node, 'key'>) => { flush(); const n = node as Node; n.key = `${path}.${out.length}`; if (resolve && (n.type === 'reference' || n.type === 'imageReference')) resolve(n); out.push(n); };
   const flush = () => { if (buffer) { out.push({ type: 'text', value: buffer, key: `${path}.${out.length}` }); buffer = ''; } };
   const childPath = () => `${path}.${out.length + (buffer ? 1 : 0)}`;
   while (i < text.length) {
     const c = text[i];
     if (extensions?.triggers.has(c)) {
-      let matched = false;
-      for (const ext of extensions.triggers.get(c)!) {
-        const result = ext.parse(text, i);
-        if (!result || result.end <= i || result.end > text.length || !Number.isInteger(result.end)) continue;
-        add(pluginNode(result.node, childPath())); i = result.end; matched = true; break;
-      }
-      if (matched) continue;
+      const result = matchInline(extensions, text, i);
+      if (result) { add(pluginNode(result.node, childPath())); i = result.end; continue; }
     }
     if (c === '\\' && i + 1 < text.length && /[!"#$%&'()*+,\-./:;<=>?@[\]\\^_`{|}~\n]/.test(text[i + 1])) {
       if (text[i + 1] === '\n') add({ type: 'break' }); else buffer += text[i + 1]; i += 2; continue;

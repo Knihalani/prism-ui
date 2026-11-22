@@ -22,6 +22,13 @@ export interface InlineExtensions {
   triggers: Map<string, InlineExt[]>;
   codes: Set<number>;
 }
+export function matchInline(extensions: InlineExtensions, text: string, pos: number) {
+  for (const ext of extensions.triggers.get(text[pos]) ?? []) {
+    const result = ext.parse(text, pos);
+    if (result && result.end > pos && result.end <= text.length && Number.isInteger(result.end)) return result;
+  }
+  return null;
+}
 export function pluginNode(node: PluginNode, key: string): Node {
   return { ...node, key, ...(node.children ? { children: node.children.map((child, i) => pluginNode(child, `${key}.${i}`)) } : {}) };
 }
