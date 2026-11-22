@@ -15,7 +15,8 @@ export function installRuntime(win: Window, opts: RuntimeOptions): () => void {
   };
   const dimensions = () => ({
     width: Math.max(doc.body.scrollWidth, doc.documentElement.scrollWidth, 1),
-    height: Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight, 1),
+    height: Math.ceil(Math.max(doc.body.scrollHeight, doc.documentElement.getBoundingClientRect().height,
+      doc.documentElement.scrollHeight > doc.documentElement.clientHeight ? doc.documentElement.scrollHeight : 0, 1)),
   });
   const box = (el: Element): Box => {
     const rect = el.getBoundingClientRect(), size = dimensions();
