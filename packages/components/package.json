@@ -5,5 +5,8 @@
   "./badge": "./src/badge/index.ts", "./badge.css": "./src/badge/badge.css",
   "./tabs": "./src/tabs/index.ts", "./tabs.css": "./src/tabs/tabs.css",
   "./table": "./src/table/index.ts", "./table.css": "./src/table/table.css",
-  "./summary": "./src/summary/index.ts", "./summary.css": "./src/summary/summary.css"
+  "./summary": "./src/summary/index.ts", "./summary.css": "./src/summary/summary.css",
+  "./num": "./src/num/index.ts", "./num.css": "./src/num/num.css",
+  "./estimate": "./src/estimate/index.ts", "./estimate.css": "./src/estimate/estimate.css",
+  "./pick": "./src/pick/index.ts", "./pick.css": "./src/pick/pick.css"
 }}
