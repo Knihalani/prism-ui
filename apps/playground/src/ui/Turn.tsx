@@ -1,6 +1,8 @@
 import { Children, Component, cloneElement, isValidElement, useState, type ButtonHTMLAttributes, type HTMLAttributes, type ReactNode } from 'react';
 import { Prism, useComponentState, type Action } from '@prism-ui/react';
 import type { Store } from '@prism-ui/state';
+import { ArtifactProvider } from '@prism-ui/components/artifact';
+import { adaptiveArtifactOptions } from '../adaptive-source';
 import { playgroundPlugins } from '../plugins';
 import { Icon } from './Icon';
 
@@ -22,7 +24,7 @@ export function AssistantTurn({ scope, text, streaming, error, store, theme, ani
   return <article className={'assistant-turn' + (last ? ' last-turn' : '')} data-message="assistant" data-state={streaming ? 'streaming' : 'ready'} aria-label="Assistant reply" aria-busy={streaming}>
     <MessageBoundary>
       {!text && streaming ? <div className="thinking" aria-label="Thinking"><span>Thinking</span></div> : <div className="reply-content">
-        <Prism scope={scope} source={text} done={!streaming} store={store} plugins={playgroundPlugins} mode={theme} animate={animate} onAction={onAction} slots={slots} />
+        <ArtifactProvider options={adaptiveArtifactOptions}><Prism scope={scope} source={text} done={!streaming} store={store} plugins={playgroundPlugins} mode={theme} animate={animate} onAction={onAction} slots={slots} /></ArtifactProvider>
       </div>}
     </MessageBoundary>
     {error && <p className="turn-error" role="alert">{error}</p>}

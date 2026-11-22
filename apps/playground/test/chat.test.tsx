@@ -39,10 +39,10 @@ test.each(['Settings', 'Components'])('opening %s from the mobile drawer closes 
   } finally { window.matchMedia = previous; }
 });
 
-test('landing has six natural suggestions and clicking one renders a streamed conversation', async () => {
+test('landing has seven natural suggestions and clicking one renders a streamed conversation', async () => {
   const view = render(<App pace={fast} />);
   expect(view.getByRole('heading', { name: 'What are we working on?' })).toBeDefined();
-  expect(view.getByLabelText('Suggestions').querySelectorAll('button')).toHaveLength(6);
+  expect(view.getByLabelText('Suggestions').querySelectorAll('button')).toHaveLength(7);
   fireEvent.click(view.getByRole('button', { name: /Pick a laptop Find/ }));
   await done(view);
   expect(users(view.container)).toHaveLength(1); expect(replies(view.container)).toHaveLength(1);
