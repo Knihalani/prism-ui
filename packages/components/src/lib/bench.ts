@@ -7,6 +7,7 @@ import 'prismjs/components/prism-typescript';
 import 'prismjs/components/prism-python';
 import 'prismjs/components/prism-json';
 import { createHighlighter } from './highlight';
+import { linePath, nearestX, stack, type Point } from './chart';
 
 hljs.registerLanguage('typescript', hljsTS);
 hljs.registerLanguage('python', hljsPython);
@@ -70,3 +71,22 @@ if (!process.argv.includes('--oneshot') && !profiling) {
   }
 }
 console.log(`\nOutput checksum: ${checksum}`);
+
+if (!profiling) {
+  console.log('\n# Chart geometry benchmark');
+  const points: Point[] = Array.from({ length: 100000 }, (_, i) => [i / 10, Math.sin(i / 100) * 100 + i / 1000]);
+  const xs = Float64Array.from({ length: 100000 }, (_, i) => i / 10);
+  const keys = Array.from({ length: 50 }, (_, i) => `series${i}`);
+  const rows = Array.from({ length: 1000 }, (_, i) => Object.fromEntries(keys.map((key, k) => [key, Math.sin(i + k) * 10])));
+  const pathMs = median(() => linePath(points, { curve: 'monotone' }));
+  let lookupChecksum = 0;
+  const lookup = () => { for (let i = 0; i < 100000; i++) lookupChecksum += nearestX(xs, (Math.imul(i, 16807) >>> 0) % 100000 / 10); return ''; };
+  const nearestMs = median(lookup);
+  const stackMs = median(() => { const result = stack(rows, keys, { offset: 'diverging' }); checksum += result[49][999][1]; return ''; });
+  console.log('| Operation | Size | Median ms | Throughput |');
+  console.log('|---|---:|---:|---:|');
+  console.log(`| Monotone SVG path | 100000 points | ${pathMs.toFixed(2)} | ${(100000 / pathMs * 1000).toFixed(0)} points/s |`);
+  console.log(`| Binary nearest x | 100000 lookups / 100000 points | ${nearestMs.toFixed(2)} | ${(100000 / nearestMs * 1000).toFixed(0)} ops/s |`);
+  console.log(`| Diverging stack | 50 series × 1000 rows | ${stackMs.toFixed(2)} | ${(50000 / stackMs * 1000).toFixed(0)} cells/s |`);
+  console.log(`Chart checksum: ${checksum + lookupChecksum}`);
+}
