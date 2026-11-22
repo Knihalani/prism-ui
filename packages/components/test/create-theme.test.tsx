@@ -75,6 +75,8 @@ test('theme strings beat mockup props, icons replace, and an accessible custom c
     expect(rendered.getByRole('group', { name: 'Studio' })).toBeDefined();
     expect(rendered.getByRole('button', { name: 'Closer' }).querySelector('[data-custom-plus]')).not.toBeNull();
     expect(rendered.getByRole('button', { name: 'Discuss' })).toBeDefined();
+    act(() => canvas!.focus());
+    expect(canvas!.querySelector('[data-custom-plus]')).not.toBeNull();
     fireEvent.keyDown(canvas!, { key: 'Enter' });
     const input = rendered.getByRole('textbox', { name: 'A note' });
     act(() => input.focus()); fireEvent.change(input, { target: { value: 'More space' } }); fireEvent.keyUp(input);
