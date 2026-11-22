@@ -14,9 +14,14 @@ async function done(view: ReturnType<typeof render>) {
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
   await waitFor(() => expect(view.container.querySelector('button[aria-label="Stop response"]') === null).toBe(true));
 }
+function change(input: HTMLElement, text: string) {
+  act(() => input.focus());
+  fireEvent.change(input, { target: { value: text } });
+  fireEvent.keyUp(input, { key: 'Unidentified' });
+}
 function type(view: ReturnType<typeof render>, text: string) {
   const input = view.getByRole('textbox', { name: 'Message Prism' });
-  fireEvent.change(input, { target: { value: text } });
+  change(input, text);
   return input;
 }
 function send(view: ReturnType<typeof render>, text: string) { const input = type(view, text); fireEvent.keyDown(input, { key: 'Enter' }); }
@@ -179,7 +184,7 @@ test('command palette filters demos, keyboard Enter sends natural prompt, and Es
   act(() => trigger.focus()); fireEvent.keyDown(document, { key: 'k', ctrlKey: true });
   const search = view.getByRole('combobox', { name: 'Search scenarios and components' });
   expect(document.activeElement).toBe(search);
-  fireEvent.change(search, { target: { value: 'callout' } });
+  change(search, 'callout');
   fireEvent.keyDown(search, { key: 'Enter' }); await done(view);
   expect(view.queryByRole('dialog')).toBeNull(); expect(view.getByText('Make the pilot feel personal')).toBeDefined();
   expect(view.getByText('What should we keep in mind before launch?')).toBeDefined();
@@ -194,14 +199,14 @@ test('settings apply injected live agent to next turn; gallery still uses script
   const view = render(<App pace={fast} agentFactory={() => live} />);
   fireEvent.click(view.getByRole('button', { name: 'Settings' }));
   fireEvent.change(view.getByLabelText('Assistant'), { target: { value: 'openai' } });
-  fireEvent.change(view.getByLabelText('API key'), { target: { value: 'test-only' } });
-  fireEvent.change(view.getByLabelText('Model'), { target: { value: 'mock-model' } });
+  change(view.getByLabelText('API key'), 'test-only');
+  change(view.getByLabelText('Model'), 'mock-model');
   fireEvent.click(view.getByRole('button', { name: 'Save changes' }));
   send(view, 'Hello from a real person'); await done(view);
   expect(view.getByText('A connected model replied.')).toBeDefined(); expect(calls).toEqual(['message']);
   expect(JSON.parse(localStorage.getItem('prism-agent')!).model).toBe('mock-model');
   fireEvent.click(view.getByRole('button', { name: /Components/ }));
-  const search = view.getByRole('combobox'); fireEvent.change(search, { target: { value: 'callout' } }); fireEvent.keyDown(search, { key: 'Enter' }); await done(view);
+  const search = view.getByRole('combobox'); change(search, 'callout'); fireEvent.keyDown(search, { key: 'Enter' }); await done(view);
   expect(view.getByText('Make the pilot feel personal')).toBeDefined(); expect(calls).toEqual(['message']);
 });
 
@@ -220,7 +225,7 @@ test('copy component action stays local; reply copy strips component syntax', as
 
 test('palette traps focus, exposes empty results and can be closed', () => {
   const view = render(<App pace={fast} />); fireEvent.click(view.getByRole('button', { name: /Components/ }));
-  const search = view.getByRole('combobox'); fireEvent.change(search, { target: { value: 'zzzznothing' } });
+  const search = view.getByRole('combobox'); change(search, 'zzzznothing');
   expect(view.getByText('No matches. Try a component name.')).toBeDefined();
   const close = view.getByRole('button', { name: 'Close' }); act(() => close.focus());
   fireEvent.keyDown(close, { key: 'Tab', shiftKey: true }); expect(document.activeElement).toBe(search);
