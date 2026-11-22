@@ -5,6 +5,7 @@ export type Render = { kind: ArtifactKind; source: string; complete: boolean; re
 export type HostMessage =
   | { type: 'value'; path: string; value: unknown }
   | { type: 'theme'; tokens: Record<string, string>; dark: boolean }
+  | { type: 'size-mode'; maxHeight: number | undefined }
   | { type: 'render'; render: Render; values: Record<string, unknown> };
 export type FrameMessage =
   | { type: 'ready' }
@@ -23,6 +24,7 @@ function installArtifact(id: string, initial?: Render) {
   const grants = new Set<string>();
   const theme: Record<string, string> = Object.create(null);
   let revision = 0, resizeFrame = 0, lastHeight = 0;
+  let maxHeight: number | undefined;
   let reactRoot: { render(node: unknown): void } | undefined;
   let react: typeof import('react') | undefined;
   const send = (message: FrameMessage) => {
@@ -35,7 +37,10 @@ function installArtifact(id: string, initial?: Render) {
     if (resizeFrame) return;
     resizeFrame = requestAnimationFrame(() => {
       resizeFrame = 0;
+      const root = document.documentElement;
+      root.toggleAttribute('data-prism-artifact-fit', maxHeight !== undefined);
       const height = Math.ceil(Math.max(document.body.scrollHeight, document.body.getBoundingClientRect().bottom + scrollY));
+      if (maxHeight !== undefined && height > maxHeight) root.removeAttribute('data-prism-artifact-fit');
       if (height !== lastHeight) { lastHeight = height; send({ type: 'size', height }); }
     });
   };
@@ -151,6 +156,9 @@ function installArtifact(id: string, initial?: Render) {
       for (const key of Object.keys(theme)) if (!Object.hasOwn(data.tokens, key)) delete theme[key];
       Object.assign(theme, data.tokens);
       document.documentElement.style.colorScheme = data.dark ? 'dark' : 'light';
+    } else if (data.type === 'size-mode') {
+      maxHeight = data.maxHeight;
+      resize();
     } else if (data.type === 'render') {
       for (const [path, value] of Object.entries(data.values)) { grants.add(path); adopt(path, value); }
       void run(data.render);
@@ -176,7 +184,7 @@ export function artifactDocument(id: string, imports: Record<string, string>, in
   const nonce = id.replace(/[^\w-]/g, '');
   const scriptSources = [...new Set(Object.values(imports).map(value => value.split('?')[0]))].join(' ');
   const csp = `default-src 'none'; script-src 'nonce-${nonce}' blob: ${scriptSources}; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'`;
-  const head = `<style>html{background:var(--prism-surface,#fff);color:var(--prism-text,#242832);font-family:var(--prism-font-sans,system-ui,sans-serif)}button,input,select,textarea{font:inherit}</style><script nonce="${nonce}" type="importmap">${json({ imports })}</script>`;
+  const head = `<style>html{background:var(--prism-surface,#fff);color:var(--prism-text,#242832);font-family:var(--prism-font-sans,system-ui,sans-serif)}html[data-prism-artifact-fit]{overflow-y:hidden}button,input,select,textarea{font:inherit}</style><script nonce="${nonce}" type="importmap">${json({ imports })}</script>`;
   const srcdoc = buildSrcdoc({ id, csp, head, runtimeOptions: { interactive: true } }).replace('<script>', `<script nonce="${nonce}">`);
   const runtime = `(${installArtifact.toString()})(${json(id)}${initial ? ',' + json(initial) : ''})`.replace(/<\/script/gi, '<\\/script');
   return srcdoc.replace('</head>', () => `<script nonce="${nonce}">${runtime}</script></head>`);

@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { parse, renderToString } from '@prism-ui/core';
 import { useEmit, type PrismContextValue } from '@prism-ui/react';
 import { sanitizeSvg } from '../mockup/engine/sanitize-svg';
 import { compileArtifact } from './compiler';
 import { mountArtifactFrame } from './frame';
+import { renderArtifactMarkdown } from './markdown';
 import { historyFor, sourceDiff, type ArtifactProps } from './model';
 import { allowedPath, importMap, type ArtifactOptions } from './policy';
 import { artifactDocument, markup } from './runtime';
@@ -16,8 +16,9 @@ export function ArtifactProvider({ options, children }: { options: ArtifactOptio
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
 const suffix = { html: 'html', svg: 'svg', js: 'js', markdown: 'md', react: 'tsx' } as const;
 const present = (kind: ArtifactProps['kind'], text: string) => kind === 'svg' ? sanitizeSvg(text) :
-  kind === 'markdown' ? '<main style="padding:var(--prism-space6,24px)">' + renderToString(parse(text)) + '</main>' : text;
+  kind === 'markdown' ? renderArtifactMarkdown(text) : text;
 const heights = { sm: 160, md: 252, lg: 384 };
+const maxAutoHeight = 4096;
 
 export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, complete = true) {
   const options = useContext(Options), emit = useEmit();
@@ -29,6 +30,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   const version = versions.find(version => version.number === chosen) ?? versions.at(-1);
   const selected = version ?? props;
   const { kind, source } = selected;
+  const autoMax = selected.height === 'auto' ? maxAutoHeight : undefined;
   const readySource = !!version || complete;
   const runnable = enabled && !!kind && (markup(kind) ? source.length > 0 || readySource : readySource);
   const [mode, setMode] = useState<'preview' | 'source' | 'diff'>('preview');
@@ -39,8 +41,8 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   const [reloadKey, setReload] = useState(0);
   const sessionRef = useRef<ReturnType<typeof mountArtifactFrame> | null>(null);
   const revision = useRef(0);
-  const current = useRef({ emit, title: selected.title ?? 'Artifact' });
-  current.current = { emit, title: selected.title ?? 'Artifact' };
+  const current = useRef({ emit, title: selected.title ?? 'Artifact', autoMax });
+  current.current = { emit, title: selected.title ?? 'Artifact', autoMax };
   const [failure, setFailure] = useState<{ source: string; kind: string; error: string }>();
   const [notice, setNotice] = useState('');
   const [fullscreen, setFullscreen] = useState(false);
@@ -96,7 +98,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
     };
     const mount = () => {
       const session = mountArtifactFrame(container, importMap(imports, container.ownerDocument.baseURI), store, grants, {
-        height: value => setHeight(Math.min(4096, value)),
+        height: value => setHeight(Math.min(maxAutoHeight, value)),
         rendered: value => { if (value === revision.current) setRendered(true); },
         error: (text, value) => {
           if (value === revision.current) {
@@ -111,6 +113,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
       session.frame.setAttribute('data-prism', 'artifact');
       session.frame.setAttribute('data-part', 'iframe');
       sessionRef.current = session;
+      session.sizeMode(current.current.autoMax);
       updateTheme();
       return session;
     };
@@ -145,6 +148,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   }, [container, visible, updateTheme]);
 
   useEffect(() => { if (sessionRef.current) sessionRef.current.frame.title = current.current.title; }, [selected.title]);
+  useEffect(() => { sessionRef.current?.sizeMode(autoMax); }, [autoMax]);
 
   async function copy() {
     try { await navigator.clipboard.writeText(source); setNotice('Copied'); }

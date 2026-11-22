@@ -1,5 +1,5 @@
 const reactStyle = `<style>{\`
-  main{padding:24px}section{max-width:610px;margin:auto}h2,p{margin:0}
+  main{padding:var(--prism-space6,24px)}h2,p{margin:0}
   h2{font-size:26px;letter-spacing:-.045em}small, label,p{color:var(--prism-muted)}
   .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
   .tag{border:1px solid var(--prism-border);border-radius:30px;padding:5px 10px;font-size:11px}
@@ -16,7 +16,7 @@ export default function Calculator() {
   const amount = 24000, rate = .065/12;
   const payment = amount * rate / (1 - (1 + rate) ** -months);
   return <><section>
-    <div className="bar"><div><small>FINANCING</small><h2>Loan calculator</h2></div><span className="tag">6.5% APR</span></div>
+    <div className="bar"><h2>Loan calculator</h2><span className="tag">6.5% APR</span></div>
     <div className="stats"><div className="stat"><small>Monthly payment</small><output>{money(payment)}</output></div>
     <div className="stat"><small>Lifetime interest</small><b>{money(payment * months - amount)}</b></div></div>
     <label htmlFor="term">Term: {months} months</label>
@@ -33,7 +33,7 @@ export default function Dashboard() {
   const budget = useSyncExternalStore(state.subscribe.bind(null,path), () => state.get(path) ?? 1600);
   const paid = 980, remaining = budget - paid;
   return <><section>
-    <div className="bar"><div><small>PERSONAL FINANCE</small><h2>September spending</h2></div><span className="tag">Current month</span></div>
+    <div className="bar"><h2>September spending</h2><span className="tag">Current month</span></div>
     <div className="stats"><div className="stat"><small>Monthly budget</small><output>{currency(budget)}</output></div>
       <div className="stat"><small>Left to spend</small><b>{currency(remaining)}</b></div></div>
     <p style={{margin:'12px 0'}}>{Math.round(paid / budget * 100)}% of budget used</p>
@@ -48,7 +48,7 @@ export const landing = `<!doctype html><html><head><style>
   p{color:#d2c9ee;font-size:14px}button{border:0;padding:9px 14px;border-radius:7px;background:#d2bdff;color:#211941;font-weight:650;cursor:pointer}
   small{color:#d1bfed;margin-left:9px}
 </style></head><body>
-  <header><b>◉ Orbit Studio</b><span>Field notes / 01</span></header>
+  <header><b>◉ Orbit Studio</b></header>
   <h1>Make room for better ideas.</h1>
   <p>A quiet workspace for your most ambitious projects.</p>
   <button id="access">Request access</button><small id="confirmation"></small>
@@ -58,22 +58,21 @@ export const landing = `<!doctype html><html><head><style>
   };</script>
 </body></html>`;
 
-export const infographic = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 260" role="img" aria-label="Clean energy shares by source: wind 42%, solar 31%, hydro 19%, other 8%">
-  <rect width="660" height="260" fill="var(--prism-surface)" />
+export const infographic = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 234" style="display:block;width:100%" role="img" aria-label="Clean energy shares by source: wind 42%, solar 31%, hydro 19%, other 8%">
+  <rect width="660" height="234" fill="var(--prism-surface)" />
   <g font-family="system-ui,sans-serif" fill="var(--prism-text)">
-    <text x="27" y="31" font-size="12" letter-spacing="2" fill="var(--prism-muted)">REGIONAL POWER MIX · 2025</text>
-    <text x="26" y="65" font-size="31" font-weight="710" letter-spacing="-1">Where clean power comes from</text>
+    <text x="26" y="43" font-size="31" font-weight="710" letter-spacing="-1">Where clean power comes from</text>
     <g font-size="15">
-      <text x="28" y="112">Wind</text><rect x="112" y="97" width="383" height="19" rx="5" fill="var(--prism-accent)"/><text x="509" y="112">42%</text>
-      <text x="28" y="153">Solar</text><rect x="112" y="138" width="283" height="19" rx="5" fill="var(--prism-success)"/><text x="409" y="153">31%</text>
-      <text x="28" y="194">Hydro</text><rect x="112" y="179" width="173" height="19" rx="5" fill="var(--prism-info)"/><text x="299" y="194">19%</text>
-      <text x="28" y="235">Other</text><rect x="112" y="220" width="73" height="19" rx="5" fill="var(--prism-muted)"/><text x="199" y="235">8%</text>
+      <text x="28" y="90">Wind</text><rect x="112" y="75" width="383" height="19" rx="5" fill="var(--prism-accent)"/><text x="509" y="90">42%</text>
+      <text x="28" y="131">Solar</text><rect x="112" y="116" width="283" height="19" rx="5" fill="var(--prism-success)"/><text x="409" y="131">31%</text>
+      <text x="28" y="172">Hydro</text><rect x="112" y="157" width="173" height="19" rx="5" fill="var(--prism-info)"/><text x="299" y="172">19%</text>
+      <text x="28" y="213">Other</text><rect x="112" y="198" width="73" height="19" rx="5" fill="var(--prism-muted)"/><text x="199" y="213">8%</text>
     </g>
   </g>
 </svg>`;
 
 export const canvasGame = `const root = document.querySelector('#app');
-root.innerHTML = '<section style="padding:16px 24px"><header style="display:flex;justify-content:space-between;align-items:center"><div><b>Moonhop</b><p style="margin:4px 0 8px;color:var(--prism-muted)">Collect the stars before you run out of hops.</p></div><button type="button">New game</button></header><canvas width="580" height="150" tabindex="0" aria-label="Moonhop game; arrow keys to move" style="display:block;max-width:100%;border-radius:10px"></canvas><p role="status" style="margin:8px 0 0">0 of 5 stars collected</p></section>';
+root.innerHTML = '<style>.moonhop{padding:var(--prism-space6,24px)}.moonhop header{display:flex;justify-content:space-between;align-items:center;gap:var(--prism-space3,12px)}.moonhop button{flex:none;border:0;border-radius:var(--prism-radius-sm);padding:8px 12px;color:var(--prism-surface);background:var(--prism-accent);cursor:pointer}.moonhop canvas{display:block;width:100%;height:auto;border-radius:var(--prism-radius-md)}</style><section class="moonhop"><header><div><b>Moonhop</b><p style="margin:4px 0 8px;color:var(--prism-muted)">Collect the stars before you run out of hops.</p></div><button type="button">New game</button></header><canvas width="580" height="150" tabindex="0" aria-label="Moonhop game; arrow keys to move"></canvas><p role="status" style="margin:8px 0 0">0 of 5 stars collected</p></section>';
 const canvas = root.querySelector('canvas'), ctx = canvas.getContext('2d'), status = root.querySelector('[role=status]');
 const stars = [1, 4, 6, 9, 11];
 let cursor, collected, hops;
@@ -112,9 +111,9 @@ Check these points before publishing the **September report**:
 export const fence = (kind: string, meta: string, source: string) => '```artifact:' + kind + ' {' + meta + '}\n' + source + '\n```\n';
 export const fixtureSources = [
   fence('react', 'title="Loan calculator" id=loan height=290', calculator),
-  fence('js', 'title="Moonhop" height=260', canvasGame),
+  fence('js', 'title="Moonhop" height=auto', canvasGame),
   fence('html', 'title="Orbit Studio" height=290', landing),
-  fence('svg', 'title="Clean power mix" height=310', infographic),
+  fence('svg', 'title="Clean power mix" height=auto', infographic),
   'Adjust the monthly budget in this reply: :num[1600]{id=monthlyBudget min=500 max=5000 step=100 format=currency}\n\n' +
     fence('react', 'title="September dashboard" id=dashboard height=280', dashboard),
   fence('markdown', 'title="Launch checklist" size=sm', markdown),

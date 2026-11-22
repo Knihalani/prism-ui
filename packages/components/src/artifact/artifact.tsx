@@ -12,14 +12,16 @@ type Slot = { model: VM } & HTMLAttributes<HTMLDivElement>;
 function Controls({ model, ...part }: Slot) {
   const button = usePart('artifact', 'button'), select = usePart('artifact', 'version'), format = useFormat();
   const modelVersion = model.version?.number ?? 0;
+  const viewingCode = model.mode === 'source';
+  const codeLabel = viewingCode ? 'Preview' : 'Code';
   return <div {...part}>
     {!!model.versions.length && model.versions.length > 1 && <select {...select} aria-label="Artifact version" value={modelVersion} onChange={event => model.selectVersion(Number(event.currentTarget.value))}>
       {[...model.versions].reverse().map(version => <option key={version.number} value={version.number}>v{format.number(version.number)}</option>)}
     </select>}
     {model.previous && <button {...button} type="button" aria-pressed={model.mode === 'diff'} onClick={() => model.setMode(model.mode === 'diff' ? 'preview' : 'diff')}>Changes</button>}
-    <button {...button} type="button" aria-pressed={model.mode === 'source'} onClick={() => model.setMode(model.mode === 'source' ? 'preview' : 'source')}>{model.mode === 'source' ? 'Preview' : 'Code'}</button>
-    <button {...button} type="button" onClick={() => void model.copy()}>Copy</button>
-    <button {...button} type="button" onClick={() => model.download(model.selected.kind !== 'react')}>Download</button>
+    <button {...button} type="button" data-state={viewingCode ? 'active' : undefined} aria-label={codeLabel} title={codeLabel} onClick={() => model.setMode(viewingCode ? 'preview' : 'source')}><Icon kind={viewingCode ? 'preview' : 'code'} /></button>
+    <button {...button} type="button" aria-label="Copy" title="Copy" onClick={() => void model.copy()}><Icon kind="copy" /></button>
+    <button {...button} type="button" aria-label="Download" title="Download" onClick={() => model.download(model.selected.kind !== 'react')}><Icon kind="download" /></button>
     {model.enabled && <>
       <button {...button} type="button" aria-label="Reload preview" title="Reload preview" onClick={model.reload}><Icon kind="reload" /></button>
       <button {...button} type="button" aria-label={model.fullscreen ? 'Exit fullscreen' : 'Open fullscreen'} title={model.fullscreen ? 'Exit fullscreen' : 'Open fullscreen'} onClick={() => void model.toggleFullscreen()}><Icon kind={model.fullscreen ? 'close' : 'fullscreen'} /></button>
@@ -27,8 +29,12 @@ function Controls({ model, ...part }: Slot) {
   </div>;
 }
 
-function Icon({ kind }: { kind: 'reload' | 'fullscreen' | 'close' }) {
+function Icon({ kind }: { kind: 'code' | 'preview' | 'copy' | 'download' | 'reload' | 'fullscreen' | 'close' }) {
   const paths = {
+    code: 'M5 4.5 1.5 8 5 11.5m6-7L14.5 8 11 11.5M9.25 3l-2.5 10',
+    preview: 'M1.5 4h13v8h-13zM1.5 6.5h13',
+    copy: 'M5.5 5.5h7.5v8h-7.5zM10.5 3H3v8',
+    download: 'M8 2.5v7m-3-3 3 3 3-3m-8 4v3h10v-3',
     reload: 'M13.6 7a5.7 5.7 0 1 0-.6 4.2M13.7 3v4h-4',
     fullscreen: 'M6 2.5H2.5V6m7.5-3.5h3.5V6M2.5 10v3.5H6m7.5-3.5v3.5H10',
     close: 'M2.5 6H6V2.5M13.5 6H10V2.5M6 13.5V10H2.5m11 0H10v3.5',

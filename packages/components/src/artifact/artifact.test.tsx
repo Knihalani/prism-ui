@@ -1,5 +1,5 @@
 import '../../../react/test/setup';
-import { afterEach, expect, test } from 'bun:test';
+import { afterEach, expect, spyOn, test } from 'bun:test';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createRegistry, Prism, type Action } from '@prism-ui/react';
@@ -8,6 +8,7 @@ import { ArtifactProvider, artifact, artifactPlugin } from './index';
 import { fence } from './fixtures';
 import { allowedPath, importMap } from './policy';
 import { sourceDiff } from './model';
+import { renderArtifactMarkdown } from './markdown';
 
 afterEach(cleanup);
 const plugins = [artifactPlugin], registry = createRegistry([artifact]);
@@ -44,6 +45,13 @@ test('same-id revisions switch and show a line diff; controls are native keyboar
   expect(view.getByLabelText('Source changes').textContent).toBe('− <p>First version</p>\n+ <p>Second version</p>\n');
   fireEvent.change(selector, { target: { value: '1' } });
   expect(view.getByLabelText('Artifact source').textContent).toBe(html);
+  for (const name of ['Code', 'Copy', 'Download']) {
+    const button = view.getByRole('button', { name });
+    expect(button.getAttribute('title')).toBe(name);
+    expect(button.textContent).toBe('');
+  }
+  fireEvent.click(view.getByRole('button', { name: 'Code' }));
+  expect(view.getByRole('button', { name: 'Preview' }).getAttribute('title')).toBe('Preview');
 });
 
 test('frame messages are scoped by channel, opaque origin, and explicit store permissions', async () => {
@@ -82,6 +90,19 @@ test('frame messages are scoped by channel, opaque origin, and explicit store pe
       { type: 'choose', component: 'artifact', id: 'report', payload: { option: 'alpha' } },
       { type: 'fix', component: 'artifact', id: 'report', payload: { error: 'Broken preview', source: html, kind: 'html', version: 1 } },
     ]);
+    const viewport = view.container.querySelector<HTMLElement>('[data-part=viewport]')!;
+    act(() => post({ type: 'size', height: 320 }));
+    expect(viewport.style.height).toBe('180px');
+    const sent = spyOn(frame.contentWindow!, 'postMessage');
+    try {
+      view.rerender(<ArtifactProvider options={{ statePaths: ['budget'] }}>
+        <Prism source={snippet.replace('height=180px', 'height=auto')} plugins={plugins} registry={registry} store={store} onAction={action => actions.push(action)} />
+      </ArtifactProvider>);
+      expect(sent).toHaveBeenCalledWith({ type: 'size-mode', maxHeight: 4096, ns: 'prism-artifact', id }, '*');
+      expect(viewport.style.height).toBe('320px');
+      act(() => post({ type: 'size', height: 4500 }));
+      expect(viewport.style.height).toBe('4096px');
+    } finally { sent.mockRestore(); }
   } finally { globalThis.IntersectionObserver = Observer; }
 });
 
@@ -93,4 +114,11 @@ test('disabled artifacts do not mount frames; unstyled mode retains data parts',
   expect(allowedPath('x.__proto__.test', ['x'])).toBe(false);
   expect(() => importMap({ x: 'data:text/javascript,11' }, 'https://app.test')).toThrow();
   expect(sourceDiff('one\ntwo\nlast', 'one\nnew\nlast').map(line => line.type)).toEqual(['same', 'delete', 'insert', 'same']);
+});
+
+test('Markdown artifact tasks wrap escaped inline content in labels without changing regular list items', () => {
+  const html = renderArtifactMarkdown('- [x] **Reviewed**\n- [ ] Publish <copy>\n- Keep the original');
+  expect(html).toContain('<li data-task><label><input type="checkbox" disabled checked><span><strong>Reviewed</strong></span></label></li>');
+  expect(html).toContain('<li data-task><label><input type="checkbox" disabled><span>Publish &lt;copy&gt;</span></label></li>');
+  expect(html).toContain('<li><p>Keep the original</p></li>');
 });

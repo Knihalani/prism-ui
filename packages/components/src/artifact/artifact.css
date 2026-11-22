@@ -51,7 +51,7 @@
   cursor: pointer;
   transition: background var(--prism-duration-fast) var(--prism-ease), color var(--prism-duration-fast) var(--prism-ease);
 }
-.prism-artifact__button:hover, .prism-artifact__button[aria-pressed="true"], .prism-artifact__version:hover {
+.prism-artifact__button:hover, .prism-artifact__button[aria-pressed="true"], .prism-artifact__button[data-state="active"], .prism-artifact__version:hover {
   color: var(--prism-text);
   background: var(--prism-text-soft);
 }

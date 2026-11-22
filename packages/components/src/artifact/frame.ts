@@ -60,6 +60,7 @@ export function mountArtifactFrame(container: HTMLElement, imports: Record<strin
   const subscriptions = new Map<string, () => void>();
   let render: Render | undefined;
   let theme: Extract<HostMessage, { type: 'theme' }> | undefined;
+  let maxHeight: number | undefined;
   let ready = false;
   const post = (message: HostMessage) => frame.contentWindow?.postMessage({ ...message, ns: 'prism-artifact', id }, '*');
   const engine = (message: HostPayload) => frame.contentWindow?.postMessage({ ...message, ns: 'prism-mockup', id, v: 1 }, '*');
@@ -83,6 +84,7 @@ export function mountArtifactFrame(container: HTMLElement, imports: Record<strin
       if (data.type === 'ready' && !ready) {
         ready = true;
         for (const path of grants) watch(path);
+        post({ type: 'size-mode', maxHeight });
         sendTheme(); sendRender();
       } else if (data.type === 'error' && 'message' in data && typeof data.message === 'string') events.error(data.message, render?.revision ?? 0);
       return;
@@ -103,6 +105,11 @@ export function mountArtifactFrame(container: HTMLElement, imports: Record<strin
   return {
     frame,
     render(value: Render) { render = value; if (ready) sendRender(); },
+    sizeMode(value: number | undefined) {
+      if (maxHeight === value) return;
+      maxHeight = value;
+      if (ready) post({ type: 'size-mode', maxHeight });
+    },
     theme(tokens: Record<string, string>, dark: boolean) { theme = { type: 'theme', tokens, dark }; if (ready) sendTheme(); },
     destroy() {
       win.removeEventListener('message', receive);
