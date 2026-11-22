@@ -1,11 +1,11 @@
-import { useContext, useEffect, useMemo, useRef, type KeyboardEvent } from 'react';
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
 import { ComponentContext, useComponentState, useEmit, useFlash, useFormat, useLocalWrite, useSent, useSettled, useStrings, type Format, type PrismContextValue } from '@prism-ui/react';
 import { useFrame } from '../frame';
 import { interpolate } from '../interpolate';
 
 export type AskValue = string | number | boolean | null;
 export interface AskField { id?: string; label?: string; type?: 'text' | 'number' | 'select' | 'date' | 'toggle' | 'textarea'; options?: (string | { value: string; label: string })[]; value?: AskValue; required?: boolean; hint?: string; placeholder?: string; min?: number; max?: number; step?: number; unit?: string }
-export const askStrings = { title: 'Details', send: 'Send', edit: 'Edit', sentLabel: 'Sent', suggested: 'Suggested', required: 'Required', requiredMark: '*', minimum: 'Enter at least {min}', maximum: 'Enter no more than {max}', stepMismatch: 'Use steps of {step}', invalidNumber: 'Enter a number', empty: 'Not provided', loading: 'Loading fields', yes: 'Yes', no: 'No', select: 'Select an option', nbsp: '\u00a0', sentence: '', undoLabel: 'Undo', askLabel: 'Ask about this', askMessage: 'Tell me more about these details…', submitMessage: 'Here are the details for "{title}": {details}.', detail: '{label}: {value}', detailSeparator: ', ', numberUnit: '{value} {unit}' };
+export const askStrings = { title: 'Details', send: 'Send', edit: 'Edit', sentLabel: 'Sent', editValue: 'Edit {label}: {value}', suggested: 'Suggested', required: 'Required', requiredMark: '*', minimum: 'Enter at least {min}', maximum: 'Enter no more than {max}', stepMismatch: 'Use steps of {step}', invalidNumber: 'Enter a number', empty: 'Not provided', loading: 'Loading fields', yes: 'Yes', no: 'No', select: 'Select an option', nbsp: '\u00a0', sentence: '', undoLabel: 'Undo', askLabel: 'Ask about this', askMessage: 'Tell me more about these details…', submitMessage: 'Here are the details for "{title}": {details}.', detail: '{label}: {value}', detailSeparator: ', ', numberUnit: '{value} {unit}' };
 export type AskLabels = Partial<typeof askStrings>;
 export interface AskProps { id?: string; title?: string; submit?: string; sentence?: string; fields?: (AskField | null)[]; labels?: AskLabels }
 export function normalize(field: AskField, value: unknown): AskValue {
@@ -51,6 +51,8 @@ export function useAsk(props: AskProps, ctx: PrismContextValue) {
   const signature = JSON.stringify([fields, current]), previous = useRef(signature);
   useEffect(() => { if (previous.current !== signature) { reset(); setSubmitted(false); } previous.current = signature; }, [signature, reset]);
   const frame = useFrame({ component: 'ask', title: strings.title, ask: true, undo: true }), flashing = useFlash(`${component?.id}.values`), controls = useRef(new Map<string, HTMLElement>());
+  const focus = useRef<string | undefined>(undefined);
+  useLayoutEffect(() => { if (!sent && focus.current) { controls.current.get(focus.current)?.focus(); focus.current = undefined; } }, [sent]);
   const errors = Object.fromEntries(fields.filter(field => field.id).map(field => {
     const value = current[field.id!]; let error = '';
     if (field.required && (value === null || (typeof value === 'string' && !value.trim()))) error = strings.required;
@@ -80,7 +82,7 @@ export function useAsk(props: AskProps, ctx: PrismContextValue) {
   return { fields, values: current, touched, submitted: !!sent, sent, receiptFields, receiptValues, labels, strings, errors, controls, complete, title: strings.title, submitLabel: strings.submit ?? strings.send, canSubmit, sentence, frame, flashing,
     suggested(field: AskField) { return field.value !== undefined && field.value !== null && !Object.hasOwn(values, field.id ?? ''); },
     loading(index: number) { return !complete && (index === fields.length - 1 || !fields[index]?.type || !fields[index]?.id); },
-    change, blur, submit, edit() { setValues(receiptValues); reset(); setSubmitted(false); }, onAsk() { emit('ask', undefined, strings.askMessage); },
+    change, blur, submit, edit(id?: string) { focus.current = id ?? fields[0]?.id; setValues(receiptValues); reset(); setSubmitted(false); }, onAsk() { emit('ask', undefined, strings.askMessage); },
     display(field: AskField) { return formatted(field, (sent ? receiptValues : current)[field.id ?? ''] ?? null, format, strings); },
     onKeyDown(event: KeyboardEvent<HTMLElement>) { const element = event.target as HTMLElement; if (event.defaultPrevented || event.key !== 'Enter' || event.nativeEvent.isComposing) return; if ((element.tagName === 'TEXTAREA' && (event.ctrlKey || event.metaKey)) || (element.tagName === 'INPUT' && !event.ctrlKey && !event.metaKey)) { event.preventDefault(); submit(); } },
   };

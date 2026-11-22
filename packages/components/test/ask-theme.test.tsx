@@ -53,11 +53,21 @@ test('theme strings, typed slots and central icons preserve aria, validation, co
   const control = view.getByRole('spinbutton'); expect(control.closest('[data-part="field"]')?.getAttribute('data-suggested')).toBe('true');
   fireEvent.blur(control); expect(control.closest('[data-part="field"]')?.hasAttribute('data-suggested')).toBe(false);
   change(control, '0'); fireEvent.click(view.getByRole('button', { name: 'Envoyer' })); expect(view.getByRole('alert').textContent).toBe('Au moins 1'); expect(control.getAttribute('aria-invalid')).toBe('true');
-  change(control, '3'); fireEvent.keyDown(control, { key: 'Enter' }); expect(actions.at(-1)?.message).toBe('Détails → Party = 3 people'); expect(view.getByRole('group').dataset.state).toBe('sent'); expect(view.getByRole('button', { name: 'Reçu' })).toBeDefined(); expect(view.container.querySelector('[aria-live="polite"]')?.textContent).toContain('3 people');
+  change(control, '3'); fireEvent.keyDown(control, { key: 'Enter' }); expect(actions.at(-1)?.message).toBe('Détails → Party = 3 people'); expect(view.getByRole('group').dataset.state).toBe('sent'); expect(view.getByRole('button', { name: 'Reçu' })).toBeDefined(); expect(view.container.textContent).toContain('3 people');
   fireEvent.click(view.getByRole('button', { name: 'Modifier' })); expect((view.getByRole('spinbutton') as HTMLInputElement).value).toBe('3'); fireEvent.click(view.getByRole('button', { name: 'Envoyer' })); expect(actions.length).toBe(2);
   fireEvent.click(view.getByRole('button', { name: 'Question' })); expect(actions.at(-1)?.message).toBe('Une question');
   expect(view.getByRole('group').hasAttribute('data-prism-flash')).toBe(false);
   act(() => store.set('translated.values', { party: 4 })); expect(view.getByRole('group').hasAttribute('data-prism-flash')).toBe(true); expect(view.getByRole('group').dataset.state).toBe('ready'); expect((view.getByRole('spinbutton') as HTMLInputElement).value).toBe('4');
+});
+
+test('sent answers keep sentence and controls mounted and clicking a confirmed answer returns focus for resend', () => {
+  const view = render(<Prism source={source({ id: 'in-place', sentence: 'Meet {name}.', fields: [{ id: 'name', label: 'Name', type: 'text', value: 'Ada' }] })} registry={registry} animate={false} onAction={() => {}} />);
+  const input = view.getByRole('textbox', { name: /^Name/ }), sentence = view.container.querySelector('[data-part="sentence"]'), form = view.container.querySelector('form');
+  fireEvent.click(view.getByRole('button', { name: 'Send' }));
+  expect(view.container.querySelector('form')).toBe(form); expect(view.container.querySelector('[data-part="sentence"]')).toBe(sentence); expect(input.isConnected).toBe(true); expect(input.getAttribute('aria-hidden')).toBe('true');
+  expect(view.container.querySelector('[data-part="summary"]')).toBeNull();
+  fireEvent.click(view.getByRole('button', { name: 'Edit Name: Ada' })); expect(document.activeElement).toBe(input);
+  change(input, 'Grace'); fireEvent.click(view.getByRole('button', { name: 'Send' })); expect(view.getByRole('button', { name: 'Edit Name: Grace' })).toBeTruthy();
 });
 
 test('resolved fields bindings tolerate nulls, duplicates, missing and malformed arrays and remain reactive', () => {
@@ -82,8 +92,8 @@ test.each(['replace', 'mutate'])('receipt and edits reflect cleared, filled and 
   }];
   const view = render(<Prism source={source({ id: 'receipt', fields })} registry={registry} middleware={middleware} onAction={action => actions.push(action)} />);
   fireEvent.click(view.getByRole('button', { name: 'Send' }));
-  const rows = Array.from(view.container.querySelectorAll('[data-part="summaryRow"]')).map(row => row.textContent);
-  expect(rows).toContain('PartyNot provided'); expect(rows).toContain('NameMiddleware'); expect(rows).toContain('NotesFilled after submit'); expect(rows).toContain('extraNo'); expect(rows.some(row => row === 'Date12 Dec 2026')).toBe(false);
+  const rows = Array.from(view.container.querySelectorAll('[data-part="confirmed-value"]')).map(row => row.getAttribute('aria-label'));
+  expect(rows).toContain('Edit Party: Not provided'); expect(rows).toContain('Edit Name: Middleware'); expect(rows).toContain('Edit Notes: Filled after submit'); expect(rows).toContain('Edit extra: No'); expect(rows.some(row => row === 'Edit Date: 12 Dec 2026')).toBe(false);
   expect((actions[0].payload as any).values.party).toBeNull();
   fireEvent.click(view.getByRole('button', { name: 'Edit' })); expect((view.getByRole('spinbutton') as HTMLInputElement).value).toBe(''); expect((view.getByRole('textbox', { name: 'Name' }) as HTMLInputElement).value).toBe('Middleware');
 });

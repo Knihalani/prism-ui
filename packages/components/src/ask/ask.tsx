@@ -1,4 +1,5 @@
 import { createElement, useId, type ElementType, type ReactNode } from 'react';
+import { interpolate } from '../interpolate';
 import { s } from '@prism-ui/schema';
 import { Icon, PrismPart, defineComponent, registerComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
 import { type FramePart } from '../frame';
@@ -12,9 +13,9 @@ function Field({ field, index, vm, inline = false }: { field: AskField; index: n
   const themeStrings = vm.strings;
   const unique = useId(), id = `ask-${unique}`, errorId = `${id}-error`, hintId = `${id}-hint`;
   const root = usePart('ask', 'field', vm.loading(index) ? 'loading' : undefined), label = usePart('ask', 'label', field.label ? undefined : 'loading'), required = usePart('ask', 'required'), suggested = usePart('ask', 'suggested'), control = usePart('ask', 'control'), hint = usePart('ask', 'hint'), errorPart = usePart('ask', 'error'), skeleton = usePart('ask', 'skeleton'), unit = usePart('ask', 'unit'), wrap = usePart('ask', 'inputWrap'), segments = usePart('ask', 'segments'), segment = usePart('ask', 'segment'), switchPart = usePart('ask', 'switch'), thumb = usePart('ask', 'thumb'), optionPart = usePart('ask', 'option');
-  const placeholder = usePart('ask', 'placeholder');
+  const placeholder = usePart('ask', 'placeholder'), confirmed = usePart('ask', 'confirmed-value');
   const key = field.id ?? '', value = vm.values[key] ?? null, error = vm.touched[key] ? vm.errors[key] : '';
-  const attrs = { id, 'aria-required': field.required || undefined, 'aria-invalid': !!error, 'aria-describedby': [field.hint && hintId, error && errorId].filter(Boolean).join(' ') || undefined, 'aria-labelledby': `${id}-label` };
+  const attrs = { id, 'aria-hidden': vm.submitted || undefined, 'aria-required': field.required || undefined, 'aria-invalid': !!error, 'aria-describedby': [field.hint && hintId, error && errorId].filter(Boolean).join(' ') || undefined, 'aria-labelledby': `${id}-label` };
   const options = field.options?.filter(option => !!option).map(option => typeof option === 'string' ? { value: option, label: option } : option) ?? [];
   const smallSelect = field.type === 'select' && options.length > 0 && options.length <= 4;
   const ref = (element: HTMLElement | null) => { if (element) vm.controls.current.set(key, element); else vm.controls.current.delete(key); };
@@ -32,9 +33,9 @@ function Field({ field, index, vm, inline = false }: { field: AskField; index: n
   else if (field.type === 'select') input = <PrismPart slotProps={model} as="select" {...control} {...attrs} ref={ref} value={String(value ?? '')} onChange={event => vm.change(key, event.target.value || null)} onBlur={onBlur}><PrismPart slotProps={model} as="option" {...optionPart} value="">{field.placeholder ?? vm.labels.select}</PrismPart>{options.map(option => <PrismPart slotProps={model} as="option" {...optionPart} key={option.value} value={option.value}>{option.label}</PrismPart>)}</PrismPart>;
   else if (field.type === 'textarea') input = <PrismPart slotProps={model} as="textarea" {...control} {...attrs} ref={ref} value={String(value ?? '')} placeholder={field.placeholder} rows={3} onChange={event => vm.change(key, event.target.value || null)} onBlur={onBlur} />;
   else input = <PrismPart slotProps={model} as="input" {...control} {...attrs} ref={ref} type={field.type ?? 'text'} value={typeof value === 'boolean' ? String(value) : value ?? ''} min={field.min} max={field.max} step={field.step} placeholder={field.placeholder} onChange={event => vm.change(key, normalize(field, event.target.value))} onBlur={onBlur} />;
-  return <PrismPart slotProps={model} as={inline ? "span" : "div"} {...root} data-inline={inline || undefined} data-suggested={vm.suggested(field) || undefined} data-type={field.type} data-wide={field.type === 'text' || field.type === 'textarea' || undefined}>
-    <PrismPart slotProps={model} as="label" {...label} id={`${id}-label`} htmlFor={id} data-prism-skeleton={!field.label ? '' : undefined}>{field.label ?? <PrismPart as="span" {...placeholder} slotProps={model} aria-hidden="true">{themeStrings.nbsp}</PrismPart>}{field.required && <PrismPart slotProps={model} as="span" {...required} aria-hidden="true">{vm.strings.requiredMark}</PrismPart>}{vm.suggested(field) && <PrismPart slotProps={model} as="span" {...suggested}>{vm.labels.suggested}</PrismPart>}</PrismPart>
-    {field.type && <PrismPart slotProps={model} as="span" {...wrap}>{input}{field.unit && <PrismPart slotProps={model} as="span" {...unit}>{field.unit}</PrismPart>}</PrismPart>}
+  return <PrismPart slotProps={model} as={inline ? "span" : "div"} {...root} data-inline={inline || undefined} data-suggested={!vm.submitted && vm.suggested(field) || undefined} data-type={field.type} data-wide={field.type === 'text' || field.type === 'textarea' || undefined}>
+    <PrismPart slotProps={model} as="label" {...label} id={`${id}-label`} htmlFor={id} data-prism-skeleton={!field.label ? '' : undefined}>{field.label ?? <PrismPart as="span" {...placeholder} slotProps={model} aria-hidden="true">{themeStrings.nbsp}</PrismPart>}{field.required && <PrismPart slotProps={model} as="span" {...required} aria-hidden="true">{vm.strings.requiredMark}</PrismPart>}{!vm.submitted && vm.suggested(field) && <PrismPart slotProps={model} as="span" {...suggested}>{vm.labels.suggested}</PrismPart>}</PrismPart>
+    {field.type && <PrismPart slotProps={model} as="span" {...wrap} data-sent={vm.submitted || undefined}>{input}{vm.submitted && <PrismPart as="button" {...confirmed} slotProps={model} type="button" aria-label={interpolate(vm.strings.editValue, { label: field.label ?? key, value: vm.display(field) })} onClick={() => vm.edit(key)}>{vm.display(field)}</PrismPart>}{field.unit && <PrismPart slotProps={model} as="span" {...unit}>{field.unit}</PrismPart>}</PrismPart>}
     {field.hint && <PrismPart slotProps={model} as="span" {...hint} id={hintId}>{field.hint}</PrismPart>}{error && <PrismPart slotProps={model} as="span" {...errorPart} id={errorId} role="alert">{error}</PrismPart>}
   </PrismPart>;
 }
@@ -48,16 +49,16 @@ function AskIcon({ name, ask }: { name: 'check' | 'send' | 'undo' | 'ask'; ask: 
 function AskActions({ ask }: { ask: AskModel }) {
   const actions = usePart('ask', 'actions'), primary = usePart('ask', 'submit'), edit = usePart('ask', 'edit');
   return <AskFramePart part="footer" as="footer" ask={ask} {...ask.frame.parts.footer}><PrismPart as="div" {...actions} slotProps={{ ask }}>
-    {ask.submitted && <PrismPart as="button" {...edit} slotProps={{ ask }} type="button" onClick={ask.edit}>{ask.strings.edit}</PrismPart>}
+    {ask.submitted && <PrismPart as="button" {...edit} slotProps={{ ask }} type="button" onClick={() => ask.edit()}>{ask.strings.edit}</PrismPart>}
     <PrismPart as="button" {...primary} slotProps={{ ask }} type={ask.submitted ? 'button' : 'submit'} disabled={ask.submitted || !ask.canSubmit} data-sent={ask.submitted || undefined}><AskIcon name={ask.submitted ? 'check' : 'send'} ask={ask} />{ask.submitted ? ask.strings.sentLabel : ask.submitLabel}</PrismPart>
   </PrismPart></AskFramePart>;
 }
 export function Ask({ props }: PrismComponentProps<AskProps>) {
   const ask = useAsk(props, usePrism()), { frame } = ask, model = { ask };
-  const form = usePart('ask', 'form'), grid = usePart('ask', 'fields'), summary = usePart('ask', 'summary'), row = usePart('ask', 'summaryRow'), label = usePart('ask', 'summaryLabel'), value = usePart('ask', 'summaryValue');
+  const form = usePart('ask', 'form'), grid = usePart('ask', 'fields');
   const sentence = usePart('ask', 'sentence'), chunk = usePart('ask', 'sentence-chunk'), text = usePart('ask', 'sentence-text'), punctuation = usePart('ask', 'sentence-punctuation');
   const renderField = (field: AskField, inline = false) => <Field key={field.id ?? ask.fields.indexOf(field)} field={field} index={ask.fields.indexOf(field)} vm={ask} inline={inline} />;
-  const remaining = ask.sentence?.remaining ?? ask.fields;
+  const remaining = [...(ask.sentence?.remaining ?? ask.fields), ...(ask.submitted ? ask.receiptFields.filter(field => !ask.fields.some(item => item.id === field.id)) : [])];
   return <AskFramePart part="root" as="section" ask={ask} {...frame.rootProps} data-status={ask.submitted ? 'submitted' : 'editing'} data-prism-flash={ask.flashing ? '' : undefined}>
     <AskFramePart part="header" as="header" ask={ask} {...frame.parts.header}>
       <AskFramePart part="title" as="h3" ask={ask} {...frame.parts.title}>{ask.title}</AskFramePart>
@@ -67,20 +68,19 @@ export function Ask({ props }: PrismComponentProps<AskProps>) {
       </AskFramePart>
     </AskFramePart>
     <AskFramePart part="body" ask={ask} {...frame.parts.body}>
-      {ask.submitted ? <PrismPart as="div" {...summary} slotProps={model} aria-live="polite">{ask.receiptFields.map((field, index) => <PrismPart as="div" {...row} slotProps={{ ask, field }} key={field.id ?? index}><PrismPart as="span" {...label} slotProps={{ ask, field }}>{field.label}</PrismPart><PrismPart as="span" {...value} slotProps={{ ask, field }}>{ask.display(field)}</PrismPart></PrismPart>)}<AskActions ask={ask} /></PrismPart> :
-      <PrismPart as="form" {...form} slotProps={model} noValidate onKeyDown={ask.onKeyDown} onSubmit={event => { event.preventDefault(); ask.submit(); }}>
+      <PrismPart as="form" {...form} slotProps={model} aria-live="polite" noValidate onKeyDown={ask.onKeyDown} onSubmit={event => { event.preventDefault(); ask.submit(); }}>
         {ask.sentence && <PrismPart as="div" {...sentence} slotProps={model}>{ask.sentence.chunks.map((item, index) => <PrismPart as="span" {...text} slotProps={{ ask, field: item.field }} key={index}>{item.text}<PrismPart as="span" {...chunk} slotProps={{ ask, field: item.field }}>{item.lead && <PrismPart as="span" {...text} slotProps={{ ask, field: item.field }}>{item.lead}</PrismPart>}{renderField(item.field, true)}{item.punctuation && <PrismPart as="span" {...punctuation} slotProps={{ ask, field: item.field }}>{item.punctuation}</PrismPart>}</PrismPart></PrismPart>)}{ask.sentence.tail && <PrismPart as="span" {...text} slotProps={model}>{ask.sentence.tail}</PrismPart>}</PrismPart>}
         <PrismPart as="div" {...grid} slotProps={model}>{remaining.length ? remaining.map(field => renderField(field)) : !ask.fields.length ? <Empty ask={ask} /> : null}</PrismPart>
         <AskActions ask={ask} />
-      </PrismPart>}
+      </PrismPart>
     </AskFramePart>
   </AskFramePart>;
 }
-export type AskPart = 'actions' | 'ask' | 'body' | 'control' | 'edit' | 'empty' | 'error' | 'field' | 'fields' | 'footer' | 'form' | 'header' | 'hint' | 'inputWrap' | 'label' | 'option' | 'required' | 'root' | 'segment' | 'segments' | 'skeleton' | 'submit' | 'suggested' | 'summary' | 'summaryLabel' | 'summaryRow' | 'summaryValue' | 'switch' | 'thumb' | 'title' | 'toolbar' | 'undo' | 'unit' | 'placeholder' | 'icon' | 'sentence' | 'sentence-chunk' | 'sentence-text' | 'sentence-punctuation';
-type FieldPart = 'field' | 'control' | 'label' | 'required' | 'suggested' | 'inputWrap' | 'unit' | 'hint' | 'error' | 'segments' | 'segment' | 'switch' | 'thumb' | 'option' | 'placeholder';
+export type AskPart = 'actions' | 'ask' | 'body' | 'control' | 'edit' | 'empty' | 'error' | 'field' | 'fields' | 'footer' | 'form' | 'header' | 'hint' | 'inputWrap' | 'label' | 'option' | 'required' | 'root' | 'segment' | 'segments' | 'skeleton' | 'submit' | 'suggested' | 'confirmed-value' | 'switch' | 'thumb' | 'title' | 'toolbar' | 'undo' | 'unit' | 'placeholder' | 'icon' | 'sentence' | 'sentence-chunk' | 'sentence-text' | 'sentence-punctuation';
+type FieldPart = 'field' | 'control' | 'label' | 'required' | 'suggested' | 'inputWrap' | 'unit' | 'hint' | 'error' | 'segments' | 'segment' | 'switch' | 'thumb' | 'option' | 'placeholder' | 'confirmed-value';
 export type AskSlotProps = { [Part in AskPart]: { ask: AskModel; field?: AskField } }
   & { [Part in FieldPart]: { ask: AskModel; field: AskField; index: number; vm: AskModel } }
-  & { [Part in 'summaryRow' | 'summaryLabel' | 'summaryValue' | 'sentence-chunk' | 'sentence-punctuation']: { ask: AskModel; field: AskField } };
+  & { [Part in 'sentence-chunk' | 'sentence-punctuation']: { ask: AskModel; field: AskField } };
 const optionSchema = s.union(s.string().describe('Option value and label').example('Indoor'), s.object({ value: s.string().describe('Submitted value').example('outdoor'), label: s.string().describe('Visible option label').example('Outdoor') }).describe('Option with distinct label').example({ value: 'outdoor', label: 'Outdoor' }));
 const fieldSchema = s.object({
   id: s.string().describe('Unique field identifier').example('party'),
@@ -97,7 +97,7 @@ const fieldSchema = s.object({
   unit: s.string().optional().describe('Visible suffix for the input and summary').example('guests'),
 });
 const labelsSchema = s.object(Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, s.string().optional().describe(`Override ${key} text; keep any {min} or {max} placeholder`).example(value)]))).optional().describe('Translated interface labels and validation messages').example(defaults);
-export const askDefinition = defineComponent({ name: 'ask', parts: ["actions","ask","body","control","edit","empty","error","field","fields","footer","form","header","hint","inputWrap","label","option","required","root","segment","segments","skeleton","submit","suggested","summary","summaryLabel","summaryRow","summaryValue","switch","thumb","title","toolbar","undo","unit","placeholder","icon","sentence","sentence-chunk","sentence-text","sentence-punctuation"], strings: defaults, schema: s.object({
+export const askDefinition = defineComponent({ name: 'ask', parts: ["actions","ask","body","control","edit","empty","error","field","fields","footer","form","header","hint","inputWrap","label","option","required","root","segment","segments","skeleton","submit","suggested","confirmed-value","switch","thumb","title","toolbar","undo","unit","placeholder","icon","sentence","sentence-chunk","sentence-text","sentence-punctuation"], strings: defaults, schema: s.object({
   id: s.string().optional().describe('Persistent component state identifier').example('reservation'),
   title: s.string().optional().describe('Form title').example('Book a table'),
   submit: s.string().optional().describe('Primary submit label').example('Book table'),
