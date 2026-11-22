@@ -60,10 +60,10 @@ export function createStore({ persist, namespace = '', initial = {} }: { persist
     redo() { travel(future, past); },
     get canUndo() { return !!past.length; },
     get canRedo() { return !!future.length; },
-    apply(patch: Patch) { store.batch(() => {
-      for (const [p, v] of Object.entries(patch.set ?? {})) store.set(p, v);
-      for (const [p, v] of Object.entries(patch.merge ?? {})) change(p, merge(store.get(p), clean(v)));
-      for (const p of patch.delete ?? []) change(p, undefined, true);
+    apply(patch: Patch) { if (!plain(patch)) return; store.batch(() => {
+      for (const [p, v] of Object.entries(plain(patch.set) ? patch.set! : {})) store.set(p, v);
+      for (const [p, v] of Object.entries(plain(patch.merge) ? patch.merge! : {})) change(p, merge(store.get(p), clean(v)));
+      for (const p of Array.isArray(patch.delete) ? patch.delete : []) if (typeof p === 'string') change(p, undefined, true);
     }); },
     snapshot() { return copy(state); },
     ready: Promise.resolve(),
