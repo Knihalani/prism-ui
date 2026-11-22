@@ -10,6 +10,28 @@ import { pick } from '../../components/src/pick';
 
 afterEach(cleanup);
 
+test('async hydration preserves saved final fields when a stream finishes before load', async () => {
+  let resolve!: (value: object) => void;
+  const saved: object[] = [];
+  const store = createStore({ persist: { load: () => new Promise<object>(done => { resolve = done; }), save: (_, data) => saved.push(data) } });
+  const registry = createRegistry([{ name: 'counter', component: OwnedCounter }]);
+  const view = render(<Prism scope="hydrating" store={store} registry={registry} source={'```ui:counter\n{"initial":1,"id":"fi'} done={false}/>);
+  view.rerender(<Prism scope="hydrating" store={store} registry={registry} source={'```ui:counter\n{"initial":1,"id":"final"}\n```'}/>);
+  await act(async () => { resolve({ final: { count: 9, saved: true } }); await store.ready; });
+  expect(store.snapshot()).toEqual({ final: { count: 9, saved: true } });
+  expect(saved.at(-1)).toEqual(store.snapshot());
+});
+
+test('failed async hydration still completes migration', async () => {
+  const store = createStore({ persist: { load: () => Promise.reject(new Error('offline')), save() {} } });
+  expect(store.hydrated).toBe(false);
+  store.set('pending', { count: 2 }, { history: false });
+  migrateComponentState(store, 'pending', 'final');
+  await store.ready;
+  expect(store.hydrated).toBe(true);
+  expect(store.snapshot()).toEqual({ final: { count: 2 } });
+});
+
 function OwnedCounter({ props, id }: PrismComponentProps) {
   const [count, set] = useComponentState('count', Number(props.initial));
   return <button aria-label={id} onClick={() => set(value => value + 1)}>{count}</button>;

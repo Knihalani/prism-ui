@@ -10,6 +10,7 @@ function fillMissing(source: unknown, destination: unknown): unknown {
 }
 
 export function migrateComponentState(store: Store, from: string, to: string) {
+  if (!store.hydrated) { void store.ready.then(() => migrateComponentState(store, from, to)); return; }
   if (from === to || to.split('.').some(key => ['__proto__', 'constructor', 'prototype'].includes(key))) return;
   const source = store.get(from);
   if (source === undefined) return;
@@ -33,9 +34,17 @@ export function useComponentId(node: Node, requested: unknown, store: Store, sco
   const previous = useRef(target), [, refresh] = useState(0);
   const migrating = previous.current === provisional && target !== provisional;
   useLayoutEffect(() => {
-    if (migrating) migrateComponentState(store, provisional, target);
-    previous.current = target;
-    if (migrating) refresh(value => value + 1);
+    if (!migrating) { previous.current = target; return; }
+    let active = true;
+    const finish = () => {
+      if (!active) return;
+      migrateComponentState(store, provisional, target);
+      previous.current = target;
+      refresh(value => value + 1);
+    };
+    if (store.hydrated) finish();
+    else void store.ready.then(finish);
+    return () => { active = false; };
   }, [target, provisional, store, migrating]);
   return { id: target, ready: !migrating };
 }
