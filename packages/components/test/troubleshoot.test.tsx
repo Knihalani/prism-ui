@@ -160,6 +160,26 @@ test('streaming skeleton stays safe until text and branch targets arrive', () =>
   fireEvent.click(view.getByRole('button', { name: 'No' })); expect(view.getByText('Step 2')).toBeDefined();
 });
 
+test('an unfinished current step cannot resolve through an implicit yes target', () => {
+  const store = createStore();
+  const partial = '```ui:troubleshoot\n{"id":"stream","start":"adapter","steps":{"adapter":{"title":"Reconnect","text":"Reconnect the adapter.","command":"nmcli radio wifi on","no":"$escalate"';
+  const view = render(<Prism source={partial} done={false} registry={registry} store={store} />);
+  expect((view.getByRole('button', { name: 'Yes' }) as HTMLButtonElement).disabled).toBe(true);
+  expect((view.getByRole('button', { name: 'No' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Yes' }));
+  fireEvent.keyDown(view.getByRole('button', { name: 'Yes' }), { key: 'y' });
+  expect(store.get('stream.path')).toEqual([]);
+  expect(view.queryByText('Fixed after 1 step')).toBeNull();
+  const full = partial + ',"yes":"router"},"router":{"text":"Restart the router.","no":"$escalate"}}}\n```\n';
+  view.rerender(<Prism source={full} registry={registry} store={store} />);
+  expect((view.getByRole('button', { name: 'Yes' }) as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: 'Yes' }));
+  expect(store.get('stream.path')).toEqual([{ step: 'adapter', answer: 'yes' }]);
+  expect(view.getByText('Restart the router.')).toBeDefined();
+  expect(view.getByText('Step 2')).toBeDefined();
+  expect(view.queryByText('Fixed after 1 step')).toBeNull();
+});
+
 test.each([
   { yes: '$fixed', no: '$escalate', ready: true },
   { yes: undefined, no: '$escalate', ready: true },
@@ -168,6 +188,10 @@ test.each([
 ])('streaming terminal targets: $yes / $no', ({ yes, no, ready }) => {
   const source = fence({ start: 'a', steps: { a: { text: 'Try this.', yes, no } } });
   const view = render(<Prism source={source.slice(0, -5)} done={false} registry={registry} />);
+  expect((view.getByRole('button', { name: 'Yes' }) as HTMLButtonElement).disabled).toBe(true);
+  expect((view.getByRole('button', { name: 'No' }) as HTMLButtonElement).disabled).toBe(true);
+  const streamed = '```ui:troubleshoot\n' + JSON.stringify({ start: 'a', steps: { a: { text: 'Try this.', yes, no } } }).slice(0, -2) + ',"later":{';
+  view.rerender(<Prism source={streamed} done={false} registry={registry} />);
   expect((view.getByRole('button', { name: 'Yes' }) as HTMLButtonElement).disabled).toBe(!ready);
   expect((view.getByRole('button', { name: 'No' }) as HTMLButtonElement).disabled).toBe(!ready);
   view.rerender(<Prism source={source} registry={registry} />);

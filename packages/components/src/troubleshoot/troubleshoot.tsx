@@ -41,8 +41,9 @@ export function useTroubleshoot(props: TroubleshootProps, ctx: PrismContextValue
   const pluralRules = useMemo(() => new Intl.PluralRules(format.locale), [format.locale]);
   const resultLabel = pluralRules.select(path.length) === 'one' ? props.labels?.fixedOne ?? props.labels?.fixed ?? labels.fixedOne : props.labels?.fixedOther ?? props.labels?.fixed ?? labels.fixedOther;
   const streamedKeys = props.steps && typeof props.steps === 'object' && !Array.isArray(props.steps) ? Object.keys(props.steps) : [];
+  const currentReady = component?.node.complete !== false || !!(derived.current && streamedKeys.indexOf(derived.current) >= 0 && streamedKeys.indexOf(derived.current) < streamedKeys.length - 1);
   const readyTarget = (value: string | undefined) => value === '$fixed' || value === '$escalate' || !!(value && steps[value]?.text.trim() && streamedKeys.indexOf(value) < streamedKeys.length - 1);
-  const ready = !!derived.step?.text.trim() && (component?.node.complete !== false || (readyTarget(target(derived.step, 'yes')) && readyTarget(target(derived.step, 'no'))));
+  const ready = currentReady && !!derived.step?.text.trim() && (component?.node.complete !== false || (readyTarget(target(derived.step, 'yes')) && readyTarget(target(derived.step, 'no'))));
   const commandNode = useMemo<Node | undefined>(() => derived.step?.command ? Object.freeze({ type: 'code', key: `${component?.id}.cmd.${derived.current}`, lang: 'bash', value: derived.step.command, complete: true }) : undefined, [component?.id, derived.current, derived.step?.command]);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
