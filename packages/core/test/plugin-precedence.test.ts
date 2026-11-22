@@ -6,6 +6,18 @@ const token: Plugin = { name: 'token', inline: [{ trigger: '@', parse(src, pos) 
   return value ? { node: { type: 'component', name: 'token', props: { value: value[0] } }, end: pos + value[0].length } : null;
 } }] };
 
+test('a streamed leaf directive prefix cannot finalize before its attributes arrive', () => {
+  const parser = createParser({ plugins: [token] });
+  parser.push('::mockup');
+  expect(parser.root.children[0].complete).toBe(false);
+  expect(parser.root.children[0].idComplete).toBe(false);
+  parser.push('{id="rev');
+  expect(parser.root.children[0].complete).toBe(false);
+  parser.push('iew"}\n');
+  expect(parser.root.children[0].complete).toBe(true);
+  expect(parser.root.children[0].props?.id).toBe('review');
+});
+
 test('emphasis cannot close inside an inline plugin token', () => {
   const source = '*before @foo_bar* after*';
   const root = parse(source, { plugins: [token] }), emphasis = root.children[0].children![0];

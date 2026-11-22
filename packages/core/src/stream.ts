@@ -130,6 +130,7 @@ export function streamParser(previews = true, path = '', references = new Refere
     if (plugins?.inline && a.mode !== 'code' && a.mode !== 'container') {
       const lines = line ? [...a.lines, line] : a.lines.slice();
       const node = blocks(lines, path, a.index, undefined, plugins.inline)[0] ?? { type: 'paragraph', key: a.node.key, children: [] };
+      if (!a.lines.length && /^ {0,3}:{2,}[\w-]+(?:\{.*)?$/.test(line)) { node.complete = false; node.idComplete = false; }
       return plugins.transform(node);
     }
     if (a.node.type === 'paragraph') {
