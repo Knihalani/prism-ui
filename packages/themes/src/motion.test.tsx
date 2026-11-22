@@ -7,6 +7,13 @@ import { instrument, objects, print } from './index';
 
 const source = '```ui:estimate\n{"id":"quote","items":[{"id":"one","label":"One","price":12}]}\n```';
 
+test('native estimate checkmark rules leave themed switch slots intact', async () => {
+  const css = await Bun.file(new URL('../../components/src/shared/controls.css', import.meta.url)).text();
+  const selectors = [...css.matchAll(/\.prism-root input\.prism-estimate__checkbox[^,{]*/g)];
+  expect(selectors.length).toBeGreaterThan(0);
+  for (const [selector] of selectors) expect(selector).toContain(':not([role="switch"])');
+});
+
 for (const theme of [print, objects, instrument]) {
   test(`${theme.name} defines shared motion tokens and reserves both receipt labels`, () => {
     for (const key of ['motionInstant', 'motionFast', 'motionBase', 'motionSlow', 'motionEase', 'motionSpring', 'motionSpringDuration', 'motionSpringBouncy', 'motionSpringBouncyDuration', 'motionDistance', 'motionScale', 'motionBlur'] as const) expect(theme.tokens?.[key]).toBeDefined();
