@@ -1,6 +1,6 @@
 import '../../../react/test/setup';
 import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { Prism, createRegistry, usePrism, type Action, type PrismComponentProps } from '@prism-ui/react';
+import { Prism, createRegistry, defineTheme, usePrism, type Action, type PrismComponentProps } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { replayStart } from './harness/replay';
 import { MockupView, createFeedback, mockupDefinition, mockupPlugin, parseMockupMeta, useMockup, toMessage, type FrameController, type FrameMessage, type HitRect, type MockupProps } from './index';
@@ -23,6 +23,32 @@ function setup(props: MockupProps = {}, done = true, store = createStore()) {
   function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); }
   return { view, actions, store, renders, target, hits, canvas, pointer, change, send(message: FrameMessage) { act(() => { listeners.forEach(fn => fn(message)); }); }, rerender(props: MockupProps, done = true, nextStore = store) { view.rerender(<Prism source={source(props)} done={done} registry={registry} store={nextStore} onAction={a => actions.push(a)} />); } };
 }
+test('headless props replace enclosing labels and titles below theme overrides', () => {
+  const cases: MockupProps[] = [
+    { title: 'Headless title', labels: { title: 'Label title', submit: 'Headless submit', source: 'Headless source' } },
+    { title: undefined, labels: {} },
+    { title: undefined, labels: { title: 'Label title' } },
+  ];
+  for (const themed of [false, true]) for (const overrides of cases) {
+    const actions: Action[] = [];
+    function Custom({ props }: PrismComponentProps<MockupProps>) {
+      const model = useMockup({ ...props, ...overrides }, usePrism(), { enabled: false });
+      return <button title={model.title} aria-label={model.labels.source} onClick={() => { model.feedback.setOverall('Review note'); model.submit(); }}>{model.labels.submit}</button>;
+    }
+    const registry = createRegistry([{ ...mockupDefinition, component: Custom, strings: { ...mockupDefinition.strings, submit: 'Registry submit', source: 'Registry source' } }]);
+    const theme = defineTheme({ name: 'headless-labels', components: { mockup: { strings: themed ? { title: 'Theme title', submit: 'Theme submit', source: 'Theme source' } : {} } } });
+    const view = render(<Prism source={source({ title: 'Enclosing title', labels: { submit: 'Enclosing submit', source: 'Enclosing source' } })} registry={registry} theme={theme} onAction={action => actions.push(action)} />);
+    const title = themed ? 'Theme title' : overrides.title ?? overrides.labels?.title ?? 'Mockup';
+    const button = view.getByRole('button', { name: themed ? 'Theme source' : overrides.labels?.source ?? 'Registry source' });
+    expect(button.title).toBe(title);
+    expect(button.textContent).toBe(themed ? 'Theme submit' : overrides.labels?.submit ?? 'Registry submit');
+    fireEvent.click(button);
+    expect((actions[0].payload as { mockup: string }).mockup).toBe(title);
+    expect(actions[0].message).toContain('"' + title + '"');
+    view.unmount();
+  }
+});
+
 test('recreating the playground store does not resurrect an old feedback draft', () => {
   const props = { source: '<h1>Review</h1>' }, x = setup(props);
   x.change(x.view.getByRole('textbox', { name: 'Overall feedback' }), 'Old draft');

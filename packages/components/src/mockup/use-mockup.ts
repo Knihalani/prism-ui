@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent } from 'react';
-import { ComponentContext, useComponentState, useSent, useFlash, useStrings, useTheme, type PrismContextValue } from '@prism-ui/react';
+import { ComponentContext, useComponentState, useSent, useFlash, usePrism, useTheme, type PrismContextValue } from '@prism-ui/react';
 import { createFeedback, createFrameController, previousAsResolved, sanitizeSvg, toMessage, wireframeDocument, feedbackMessageStrings, type FeedbackPayload, type FeedbackState, type FeedbackPoint, type FrameController, type HitRect } from './engine';
 
 export type MockupDevice = 'desktop' | 'tablet' | 'mobile';
@@ -12,8 +12,8 @@ const widths = { desktop: 1280, tablet: 834, mobile: 390 };
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
 
 export function useMockupStrings(props: MockupProps): typeof mockupLabels {
-  const strings = useStrings('mockup', mockupLabels), theme = useTheme().theme.components.mockup?.strings;
-  return { ...strings, source: theme?.source ?? props.labels?.source ?? mockupLabels.source } as typeof mockupLabels;
+  const defaults = { ...mockupLabels, ...usePrism().registry.get('mockup')?.strings }, theme = useTheme().theme.components.mockup?.strings;
+  return { ...defaults, ...props.labels, title: props.title ?? props.labels?.title ?? defaults.title, ...theme } as typeof mockupLabels;
 }
 export function useMockup(props: MockupProps, ctx: PrismContextValue, options: MockupOptions = {}) {
   const component = useContext(ComponentContext), receipt = useSent(), flash = useFlash('feedback');
