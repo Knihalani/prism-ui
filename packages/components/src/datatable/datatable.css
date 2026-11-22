@@ -1,0 +1,43 @@
+.prism-datatable__root { margin-block: var(--prism-space5); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-lg); background: var(--prism-surface); color: var(--prism-text); box-shadow: var(--prism-shadow-sm); overflow: hidden; }
+.prism-datatable__toolbar, .prism-datatable__footer { display: flex; align-items: center; gap: var(--prism-space2); padding: var(--prism-space3) var(--prism-space4); }
+.prism-datatable__toolbar { border-bottom: 1px solid var(--prism-border-soft); flex-wrap: wrap; }
+.prism-datatable__title { margin: 0 var(--prism-space2) 0 0; font: 600 var(--prism-text-sm)/1.5 var(--prism-font-sans); letter-spacing: -.01em; }
+.prism-datatable__filter { min-width: 100px; width: 180px; max-width: 100%; padding: var(--prism-space2) var(--prism-space3); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-sm); background: var(--prism-bg); color: var(--prism-text); font: 400 var(--prism-text-xs)/1.4 var(--prism-font-sans); }
+.prism-datatable__filter::placeholder { color: var(--prism-muted); }
+.prism-datatable__count { margin-left: auto; white-space: nowrap; }
+.prism-datatable__count, .prism-datatable__range { color: var(--prism-muted); font: 400 var(--prism-text-xs)/1.5 var(--prism-font-sans); font-variant-numeric: tabular-nums; }
+.prism-datatable__scroll { overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--prism-border) transparent; }
+.prism-datatable__table { width: 100%; border-spacing: 0; border-collapse: separate; table-layout: fixed; font: 400 var(--prism-text-sm)/20px var(--prism-font-sans); }
+.prism-datatable__caption { text-align: left; padding: var(--prism-space3) var(--prism-space4); color: var(--prism-muted); font-size: var(--prism-text-xs); }
+.prism-datatable__heading { position: sticky; top: 0; z-index: 1; background: var(--prism-surface-soft); color: var(--prism-muted); border-bottom: 1px solid var(--prism-border); font-weight: 500; height: 40px; text-align: left; }
+.prism-datatable__heading, .prism-datatable__cell { padding: 0 var(--prism-space4); box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prism-datatable__heading:has(.prism-datatable__checkbox), .prism-datatable__cell:has(.prism-datatable__checkbox) { width: 48px; padding-inline: var(--prism-space4) var(--prism-space2); }
+.prism-datatable__cell { background: var(--prism-surface); border-bottom: 1px solid var(--prism-border-soft); }
+.prism-datatable__row:last-child .prism-datatable__cell { border-bottom: 0; }
+.prism-datatable__row:hover, .prism-datatable__row:hover > .prism-datatable__cell { background: var(--prism-muted-soft); }
+.prism-datatable__row[data-state="selected"], .prism-datatable__row[data-state="selected"] > .prism-datatable__cell { background: var(--prism-accent-soft); }
+.prism-datatable__row:focus-visible { outline-offset: -2px; }
+.prism-datatable__root [data-align="right"], .prism-datatable__root [data-align="right"] > .prism-datatable__sort { text-align: right; font-variant-numeric: tabular-nums; }
+.prism-datatable__root [data-align="center"] { text-align: center; }
+.prism-datatable__root [data-align="left"] { text-align: left; }
+.prism-datatable__sort { width: 100%; text-align: inherit; color: inherit; font: inherit; border: 0; background: transparent; padding: 0; height: 32px; cursor: pointer; }
+.prism-datatable__sort span { color: var(--prism-muted); font-size: var(--prism-text-xs); }
+.prism-datatable__heading[aria-sort="ascending"], .prism-datatable__heading[aria-sort="descending"] { color: var(--prism-text); }
+.prism-datatable__checkbox { accent-color: var(--prism-accent); width: 14px; height: 14px; vertical-align: middle; margin: 0; cursor: pointer; }
+.prism-datatable__footer { border-top: 1px solid var(--prism-border-soft); min-height: 56px; justify-content: space-between; flex-wrap: wrap; }
+.prism-datatable__actions { display: flex; align-items: center; gap: var(--prism-space2); }
+:is(.prism-datatable__ask, .prism-datatable__undo, .prism-datatable__previous, .prism-datatable__next, .prism-datatable__clear, .prism-datatable__submit) { min-width: 30px; min-height: 30px; border: 1px solid var(--prism-border); border-radius: var(--prism-radius-sm); padding: var(--prism-space1) var(--prism-space2); background: var(--prism-surface); color: var(--prism-muted); font: 500 var(--prism-text-xs)/1.4 var(--prism-font-sans); cursor: pointer; transition: background var(--prism-duration-fast) var(--prism-ease), color var(--prism-duration-fast) var(--prism-ease); }
+.prism-datatable__ask, .prism-datatable__undo { border-color: transparent; }
+.prism-datatable__submit { background: var(--prism-accent); color: var(--prism-bg); border-color: var(--prism-accent); }
+.prism-datatable__root button:hover:not(:disabled) { background: var(--prism-accent-soft); color: var(--prism-accent); }
+.prism-datatable__root .prism-datatable__sort:hover:not(:disabled) { background: transparent; color: var(--prism-text); }
+.prism-datatable__root :disabled { opacity: .45; cursor: not-allowed; }
+.prism-datatable__root :focus-visible { outline: 2px solid var(--prism-accent); outline-offset: -2px; }
+.prism-datatable__empty { padding: var(--prism-space7) var(--prism-space4); text-align: center; color: var(--prism-muted); font-size: var(--prism-text-sm); }
+.prism-datatable__clear { margin-left: var(--prism-space3); }
+.prism-datatable__skeleton { height: 10px; border-radius: var(--prism-radius-sm); background: linear-gradient(90deg, var(--prism-muted-soft), var(--prism-border-soft), var(--prism-muted-soft)); background-size: 200% 100%; animation: prism-datatable-shimmer 1.5s linear infinite; }
+.prism-datatable__status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@keyframes prism-datatable-shimmer { to { background-position: -200% 0; } }
+[data-animate="false"] .prism-datatable__skeleton { animation: none; }
+[data-animate="false"] .prism-datatable__root button, .prism-datatable__root[data-animate="false"] button { transition: none; }
+@media (prefers-reduced-motion: reduce) { .prism-datatable__skeleton { animation: none; } .prism-datatable__root button { transition: none; } }
