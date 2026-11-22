@@ -42,10 +42,10 @@ export function useSlot<T extends ComponentType<any>>(component: string, part: s
   const prism = usePrism(), theme = useContext(ThemeContext).theme;
   return (prism.customization ? prism.customization.slots[component]?.[part] ?? theme.components[component]?.slots?.[part] ?? Default : prism.slots[component]?.[part] ?? Default) as T;
 }
-export function useStrings(component: string, fallback: Record<string, string> = {}): Record<string, string> {
+export function useStrings(component: string, fallback: Record<string, string> = {}, suppliedProps?: object): Record<string, string> {
   const prism = useContext(PrismContext), current = useContext(ComponentContext), theme = useContext(ThemeContext).theme;
   const defaults = { ...fallback, ...prism?.registry.get(component)?.strings };
-  const props = current?.name === component ? current.props : {};
+  const props = (suppliedProps ?? (current?.name === component ? current.props : {})) as Record<string, unknown>;
   const labels = props.labels && typeof props.labels === 'object' ? props.labels : {};
   return { ...defaults, ...labels, ...Object.fromEntries(Object.entries(props).filter(([, value]) => typeof value === 'string')), ...theme.components[component]?.strings } as Record<string, string>;
 }

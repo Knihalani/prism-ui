@@ -17,7 +17,7 @@ function safeHref(value?: string) {
   } catch { return undefined; }
 }
 export function useCard(props: CardProps, ctx: Context) {
-  const strings = useStrings('card', componentStrings.card);
+  const strings = useStrings('card', componentStrings.card, props);
   const { sent, send, reset } = useSent(), state = ctx.complete ? 'done' : 'streaming';
   const frame = useFrame({ component: 'card', title: strings.title, ask: true, undo: false });
   const previous = useRef({ action: props.action, title: props.title, href: props.href });

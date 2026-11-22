@@ -45,7 +45,7 @@ async function clipboard(code: string) {
   finally { input.remove(); previous?.focus(); }
 }
 export function useCodeBlock(props: CodeBlockProps, ctx: PrismContextValue) {
-  const strings = { ...useStrings('code', componentStrings.codeblock), ...useStrings('codeblock') }, format = useFormat();
+  const strings = { ...useStrings('code', componentStrings.codeblock, props), ...useStrings('codeblock') }, format = useFormat();
   const inherited = useContext(CodeBlockHighlighterContext), backend = typeof props.highlighter === 'function' ? props.highlighter : inherited;
   const meta = useMemo(() => metadata(props.meta), [props.meta]);
   const code = typeof props.code === 'string' ? props.code : '', lang = typeof props.lang === 'string' ? props.lang : '', complete = props.complete !== false;

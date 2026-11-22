@@ -32,7 +32,7 @@ function useTabValues(node: PrismComponentProps['node']) {
 }
 
 export function useTabs(props: TabsProps, ctx: Pick<PrismComponentProps, 'node' | 'complete' | 'children'>) {
-  const strings = useStrings('tabs', componentStrings.tabs);
+  const strings = useStrings('tabs', componentStrings.tabs, props);
   const presentation = usePresentation(), prefix = useId(), [stored, setActive] = useComponentState<number>('active', 0);
   const values = useTabValues(ctx.node);
   const tabs = (ctx.node.children ?? []).filter(node => node.type === 'component' && node.name === 'tab').map((tab, index) => ({

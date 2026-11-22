@@ -16,7 +16,7 @@ function ownerDetails(owner: string) {
   return { initials, hue: Math.abs(hash % 360) + 'deg' };
 }
 export function useSummary(props: SummaryProps, ctx: Pick<PrismComponentProps, 'complete'>) {
-  const { sent, send, reset } = useSent(), strings = useStrings('summary', componentStrings.summary);
+  const { sent, send, reset } = useSent(), strings = useStrings('summary', componentStrings.summary, props);
   const emit = useEmit(), format = useFormat(), prefix = useId(), pointListRef = useRef<HTMLUListElement>(null);
   const [done, setDone] = useComponentState<Record<string, boolean>>('done', {}), [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const points = props.points ?? [], actions = props.actions ?? [], state = sent ? 'sent' : ctx.complete ? 'done' : 'streaming';

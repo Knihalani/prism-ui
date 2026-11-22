@@ -4,7 +4,7 @@ import { PrismPart, useStrings, usePart, usePresentation, type PrismComponentPro
 
 export interface GridProps { id?: string; title?: string; meta?: string; cols?: number; gap?: 'sm' | 'md' | 'lg'; min?: number }
 export function useGrid(props: GridProps, ctx: Pick<PrismComponentProps, 'complete'>) {
-  const strings = useStrings('grid', componentStrings.grid);
+  const strings = useStrings('grid', componentStrings.grid, props);
   const presentation = usePresentation(), state = ctx.complete ? 'done' : 'streaming', root = usePart('grid', 'root', state), body = usePart('grid', 'body', state);
   return { titleLabel: strings.title, metaLabel: strings.meta, rootProps: { ...root, ...presentation, role: 'group', 'aria-label': strings.title || strings.label, 'data-size': props.gap ?? 'md', style: { ...root.style, '--prism-grid-cols': props.cols ?? 2, '--prism-grid-min': (props.min ?? 190) + 'px' } as CSSProperties }, body,
     header: usePart('grid', 'header', state), title: usePart('grid', 'title', state), meta: usePart('grid', 'meta', state) };

@@ -4,7 +4,7 @@ import { useStrings, Icon as ThemeIcon, PrismPart, cx, StreamSkeleton, useEmit, 
 export interface CalloutProps { id?: string; tone?: 'info' | 'success' | 'warning' | 'danger' | 'note' | 'tip'; title?: string; variant?: 'soft' | 'outline'; icon?: boolean }
 type Context = Pick<PrismComponentProps, 'complete' | 'children'>;
 export function useCallout(props: CalloutProps, ctx: Context) {
-  const strings = useStrings('callout', componentStrings.callout);
+  const strings = useStrings('callout', componentStrings.callout, props);
   const { unstyled } = usePrism(), emit = useEmit(), presentation = usePresentation(), state = ctx.complete ? 'done' : 'streaming';
   const parts = { root: usePart('callout', 'root', state), header: usePart('callout', 'header', state), title: usePart('callout', 'title', state), icon: usePart('callout', 'icon', state), body: usePart('callout', 'body', state), ask: usePart('callout', 'ask', state), skeleton: usePart('callout', 'skeleton', state) };
   return { parts, strings, title: strings.title, icon: props.tone === 'success' || props.tone === 'tip' ? 'check' as const : props.tone === 'note' ? 'info' as const : props.tone ?? 'info', unstyled, tone: props.tone ?? 'info', variant: props.variant ?? 'soft', showIcon: props.icon ?? true, empty: !ctx.children || Array.isArray(ctx.children) && !ctx.children.length, onAsk: () => emit('ask'), rootProps: { ...parts.root, ...presentation, role: 'note', 'aria-label': strings.title ?? strings.label } };
