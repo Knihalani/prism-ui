@@ -48,5 +48,5 @@ export function useComponentId(node: Node, requested: unknown, store: Store, sco
     return () => { active = false; };
   }, [target, provisional, store, preparing]);
   const id = preparing ? provisional : target;
-  return { id, key: `${storeKey}:${id}`, ready: store.hydrated && awaiting.current !== store && (!requiresFinalId || final && !preparing) };
+  return { id, key: `${storeKey}:${id}`, owner: `${storeKey}:${provisional}`, ready: store.hydrated && awaiting.current !== store && (!requiresFinalId || final && !preparing) };
 }

@@ -25,8 +25,11 @@ export function useMotion(animate = true): boolean {
   }, []);
   return animate && !reduced;
 }
-export interface ThemeScopeProps { theme?: Theme; density?: Density; animate?: boolean; as?: ElementType; className?: string; style?: CSSProperties; children?: ReactNode }
-export function ThemeScope({ theme = 'auto', density = 'comfortable', animate = true, as = 'div', className, style, children }: ThemeScopeProps) {
+export interface ThemeScopeProps {
+  theme?: Theme; density?: Density; animate?: boolean; as?: ElementType; className?: string;
+  style?: CSSProperties; children?: ReactNode; 'data-state'?: string; 'data-prism-presentation'?: '';
+}
+export function ThemeScope({ theme = 'auto', density = 'comfortable', animate = true, as = 'div', className, style, children, ...attributes }: ThemeScopeProps) {
   const motion = useMotion(animate);
-  return createElement(as, { className, style: { ...(typeof theme === 'object' ? theme : {}), ...style }, 'data-prism-theme': typeof theme === 'string' ? theme : 'auto', 'data-density': density, 'data-animate': motion ? undefined : 'false' }, children);
+  return createElement(as, { className, style: { ...(typeof theme === 'object' ? theme : {}), ...style }, 'data-prism-theme': typeof theme === 'string' ? theme : 'auto', 'data-density': density, 'data-animate': motion ? undefined : 'false', ...attributes }, children);
 }
