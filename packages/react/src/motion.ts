@@ -67,6 +67,7 @@ export function useCollapse<T extends HTMLElement = HTMLDivElement>(open: boolea
     const from = element.getBoundingClientRect().height;
     element.inert = !open && !collapsedHeight;
     animation.current?.cancel(); animation.current = null;
+    element.style.overflow = open ? '' : 'hidden';
     const style = element.ownerDocument.defaultView!.getComputedStyle(element);
     const duration = motionDuration(style.getPropertyValue(open ? '--prism-motion-base' : '--prism-motion-fast'), open ? 240 : 160);
     const easing = style.getPropertyValue(open ? '--prism-motion-ease' : '--prism-motion-ease-exit').trim() || (open ? 'cubic-bezier(.23,1,.32,1)' : 'cubic-bezier(.4,0,1,1)');
@@ -74,13 +75,14 @@ export function useCollapse<T extends HTMLElement = HTMLDivElement>(open: boolea
     element.style.height = height;
     const to = open ? element.getBoundingClientRect().height : collapsedHeight;
     if (initialized.current && !reduced && duration && from !== to && element.animate) {
+      element.style.overflow = 'hidden';
       const current = element.animate([{ height: `${from}px`, opacity: from === 0 ? 0 : 1 }, { height: `${to}px`, opacity: open || collapsedHeight ? 1 : 0 }], { duration, easing });
       current.finished?.catch(() => {});
       animation.current = current;
-      current.onfinish = () => { if (animation.current === current) { animation.current = null; current.cancel(); element.style.height = height; } };
+      current.onfinish = () => { if (animation.current === current) { animation.current = null; current.cancel(); element.style.height = height; if (open) element.style.overflow = ''; } };
     }
     initialized.current = true;
   }, [open, collapsedHeight, reduced]);
   useEffect(() => () => { animation.current?.cancel(); }, []);
-  return { ref, style: { overflow: 'hidden' as const, height: initialHeight.current }, 'aria-hidden': !open && !collapsedHeight };
+  return { ref, style: { overflow: open ? undefined : 'hidden' as const, height: initialHeight.current }, 'aria-hidden': !open && !collapsedHeight };
 }

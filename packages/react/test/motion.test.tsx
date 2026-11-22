@@ -104,6 +104,7 @@ test('collapse measures visual height before cancel, reverses and restores auto 
   expect(node.inert).toBe(true);
   animations.at(-1)!.onfinish!(); expect(node.style.height).toBe('0px');
   view.rerender(<Collapse open />); animations.at(-1)!.onfinish!(); expect(node.style.height).toBe('auto');
+  expect(node.style.overflow).toBe('');
   expect(node.inert).toBe(false);
   view.unmount();
 });
