@@ -1,3 +1,4 @@
+import { formatComponentMessage } from '../strings';
 import { useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { Node } from '@prism-ui/core';
 import { s } from '@prism-ui/schema';
@@ -23,7 +24,7 @@ function validateSteps(raw: unknown): Record<string, TroubleshootStep> {
 }
 function target(step: TroubleshootStep, answer: 'yes' | 'no') { return answer === 'yes' ? step.yes ?? '$fixed' : step.no; }
 function reportMessage(title: unknown, resolved: boolean, path: TroubleshootAnswer[], count: string, strings = defaults) {
-  return strings.reportMessage.replace('{title}', String(title ?? strings.title)).replace('{result}', resolved ? strings.fixedMessage : strings.unresolvedMessage).replace('{count}', count).replace('{steps}', resolved ? '' : strings.stepsMessage).replace('{answers}', path.map(entry => strings[entry.answer]).join(strings.answerSeparator));
+  return formatComponentMessage(strings.reportMessage, { title: String(title ?? strings.title), result: resolved ? strings.fixedMessage : strings.unresolvedMessage, count, steps: resolved ? '' : strings.stepsMessage, answers: path.map(entry => strings[entry.answer]).join(strings.answerSeparator) });
 }
 function breadcrumb(step: TroubleshootStep | undefined, fallback: string) {
   if (step?.title?.trim()) return step.title.trim();
@@ -66,7 +67,7 @@ export function useTroubleshoot(props: TroubleshootProps, ctx: PrismContextValue
     loading: !derived.step?.text.trim() || (component?.node.complete === false && !ready),
     state: sent ? 'sent' : derived.ended ? derived.resolved ? 'resolved' : 'dead-end' : 'active',
     position: `${labels.step} ${format.number(path.length + 1)}`,
-    result: derived.resolved ? resultLabel.replace('{count}', format.number(path.length)) : labels.notFixed,
+    result: derived.resolved ? formatComponentMessage(resultLabel, { count: format.number(path.length) }) : labels.notFixed,
     answer, back, restart() { edit([]); },
     report() { if (!derived.ended || sent) return; ctx.store.batch(() => { if (path.length !== storedPath.length) setPath(path); emit('troubleshoot', { resolved: derived.resolved, path }, reportMessage(labels.title, derived.resolved, path, format.number(path.length), labels)); setSent(true); }); },
     onKeyDown(event: KeyboardEvent<HTMLElement>) {

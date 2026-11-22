@@ -1,4 +1,4 @@
-import { componentStrings } from '../strings';
+import { componentStrings, formatComponentMessage } from '../strings';
 import { useLayoutEffect, useRef } from 'react';
 import { useStrings, Icon, PrismPart, cx, StreamSkeleton, usePart, useSent, type PrismComponentProps } from '@prism-ui/react';
 import { Badge } from '../badge/badge';
@@ -31,7 +31,7 @@ export function useCard(props: CardProps, ctx: Context) {
   }, [props.action, props.title, props.href, reset]);
   const parts = { ...frame.parts, header: usePart('card', 'header', state), title: usePart('card', 'title', state), toolbar: usePart('card', 'toolbar', state), body: usePart('card', 'body', state), ask: usePart('card', 'ask', state), subtitle: usePart('card', 'subtitle', state), image: usePart('card', 'image', state), action: usePart('card', 'action', state), actions: usePart('card', 'actions', state), skeleton: usePart('card', 'skeleton', state), link: usePart('card', 'link', state), linkIcon: usePart('card', 'linkIcon', state), actionLabel: usePart('card', 'actionLabel', state), receipt: usePart('card', 'receipt', state) };
   const empty = !ctx.children || Array.isArray(ctx.children) && !ctx.children.length;
-  return { ...frame, parts, sent, strings, title: strings.title, subtitle: strings.subtitle, action: strings.action, badge: strings.badge, href: safeHref(props.href), variant: props.variant ?? 'outline', size: props.size ?? 'md', empty: empty && (!ctx.complete || !props.title), onSelect: () => send('select', { title: props.title, href: props.href }, strings.selectMessage.replace('{payload}', JSON.stringify({ title: props.title, href: props.href }))) };
+  return { ...frame, parts, sent, strings, title: strings.title, subtitle: strings.subtitle, action: strings.action, badge: strings.badge, href: safeHref(props.href), variant: props.variant ?? 'outline', size: props.size ?? 'md', empty: empty && (!ctx.complete || !props.title), onSelect: () => send('select', { title: props.title, href: props.href }, formatComponentMessage(strings.selectMessage, { payload: JSON.stringify({ title: props.title, href: props.href }) })) };
 }
 export type CardModel = ReturnType<typeof useCard>;
 export interface CardSlotProps { card: CardModel }

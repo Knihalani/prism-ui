@@ -1,4 +1,4 @@
-import { componentStrings } from '../strings';
+import { componentStrings, formatComponentMessage } from '../strings';
 import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { useStrings, Icon, PrismPart, StreamSkeleton, useSent, useComponentState, useEmit, useFormat, usePart, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
@@ -52,9 +52,9 @@ export function useSummary(props: SummaryProps, ctx: Pick<PrismComponentProps, '
     loadingPoints: !ctx.complete && props.points === undefined, loadingActions: !ctx.complete && props.actions === undefined,
     togglePoint: (index: number) => setExpanded(old => ({ ...old, [index]: !old[index] })),
     toggleAction: (index: number) => { setDone(old => ({ ...old, [index]: !old?.[index] })); },
-    askPoint: (index: number) => { const point = points[index]; if (point) emit('ask', { point: index, text: point.text, source: point.source }, strings.askPointMessage.replace('{text}', point.text)); },
+    askPoint: (index: number) => { const point = points[index]; if (point) emit('ask', { point: index, text: point.text, source: point.source }, formatComponentMessage(strings.askPointMessage, { text: point.text })); },
     canSend: ctx.complete && actions.length > 0 && !sent,
-    send: () => { if (ctx.complete && actions.length && !sent) { submitted.current = signature; send('send', payload, strings.sendMessage.replace('{count}', format.number(actions.length)).replace('{items}', actionModels.map(action => action.text).join('; '))); } },
+    send: () => { if (ctx.complete && actions.length && !sent) { submitted.current = signature; send('send', payload, formatComponentMessage(strings.sendMessage, { count: format.number(actions.length), items: actionModels.map(action => action.text).join('; ') })); } },
   };
 }
 export type SummaryModel = ReturnType<typeof useSummary>;

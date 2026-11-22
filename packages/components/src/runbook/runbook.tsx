@@ -1,4 +1,4 @@
-import { componentStrings } from '../strings';
+import { componentStrings, formatComponentMessage } from '../strings';
 import { Children, createContext, isValidElement, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ComponentType } from 'react';
 import type { Node } from '@prism-ui/core';
 import { s } from '@prism-ui/schema';
@@ -25,7 +25,7 @@ export function useRunbook(props: RunbookProps, ctx: PrismContextValue) {
     complete: steps.length > 0 && count === steps.length,
     progress: `${format.number(count)} ${labels.of} ${format.number(steps.length)}`,
     toggle(key: string) { if (steps.some(step => stepKey(step) === key && step.complete === false)) return; setDone(old => ({ ...old, [key]: !old[key] })); },
-    stuck(step: Node, index: number, title: string) { if (step.complete === false) return; emit('stuck', { step: stepKey(step), index, title, text: text(step), done: !!done[stepKey(step)] }, labels.stuckMessage.replace('{step}', format.number(index + 1)).replace('{title}', labels.title).replace('{text}', title)); },
+    stuck(step: Node, index: number, title: string) { if (step.complete === false) return; emit('stuck', { step: stepKey(step), index, title, text: text(step), done: !!done[stepKey(step)] }, formatComponentMessage(labels.stuckMessage, { step: format.number(index + 1), title: labels.title, text: title })); },
   }), [steps, done, current, count, labels, props.title, ctx.animate, format, setDone, emit]);
 }
 const RunbookContext = createContext<ReturnType<typeof useRunbook> | null>(null);

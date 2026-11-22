@@ -1,4 +1,4 @@
-import { componentStrings } from '../strings';
+import { componentStrings, formatComponentMessage } from '../strings';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useStrings, useFormat, Icon, PrismPart, cx, defineComponent, registerComponent, StreamSkeleton, useComponentState, useEmit, usePart, usePrism, type PrismContextValue, type PrismComponentProps } from '@prism-ui/react';
 import { s } from '@prism-ui/schema';
@@ -88,13 +88,13 @@ export function useCodeBlock(props: CodeBlockProps, ctx: PrismContextValue) {
     complete, animate: ctx.animate, unstyled: ctx.unstyled, label, lines: props.lines ?? !!meta.lines,
     feedback: copyState === 'copied' ? strings.copied : copyState === 'error' ? strings.copyFailed : '',
     heading: ctx.unstyled || !lang ? label : label === lang ? language : label + ' · ' + language,
-    collapseLabel: !complete ? strings.streaming : collapsed ? strings.showAll.replace('{count}', format.number(count)) : strings.showLess,
+    collapseLabel: !complete ? strings.streaming : collapsed ? formatComponentMessage(strings.showAll, { count: format.number(count) }) : strings.showLess,
     bodyStyle: { '--prism-codeblock-visible-lines': collapsed ? threshold : undefined, ...parts.body.style } as CSSProperties,
     rootProps: { ...parts.root, onKeyDown: frame.rootProps.onKeyDown, 'data-state': frame.rootProps['data-state'], 'data-entering': frame.rootProps['data-entering'], 'data-animate': ctx.animate ? undefined : 'false' },
     onAsk: () => emit('ask'),
     toggleWrap: () => setWrap(value => !value), toggleCollapse: () => setExpanded(value => !value),
     async copy() {
-      try { await clipboard(code); if (!mounted.current) return; setCopyState('copied'); emit('copy', { lang, lines: count }, strings.copyMessage.replace('{payload}', JSON.stringify({ lang, lines: count }))); }
+      try { await clipboard(code); if (!mounted.current) return; setCopyState('copied'); emit('copy', { lang, lines: count }, formatComponentMessage(strings.copyMessage, { payload: JSON.stringify({ lang, lines: count }) })); }
       catch { if (mounted.current) setCopyState('error'); }
       if (mounted.current) { clearTimeout(timer.current); timer.current = setTimeout(() => setCopyState('idle'), 1500); }
     },
