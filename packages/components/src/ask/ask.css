@@ -1,13 +1,16 @@
 .prism-root .prism-ask__form { container-type: inline-size; }
-.prism-root .prism-ask__fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--prism-space4); }
+.prism-root .prism-ask__fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--prism-space4); }
+@container (min-width: 464px) {
+  .prism-root .prism-ask__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .prism-root .prism-ask__field { min-width: 0; }
 .prism-root .prism-ask__field[data-wide="true"] { grid-column: 1 / -1; }
 .prism-root .prism-ask__label { display: flex; align-items: center; flex-wrap: wrap; gap: var(--prism-space1); min-height: var(--prism-space6); margin-bottom: var(--prism-space1); color: var(--prism-text); font-size: var(--prism-text-sm); font-weight: 550; }
 .prism-root .prism-ask__required { color: var(--prism-muted); }
 .prism-root .prism-ask__suggested { display: inline-flex; align-items: center; gap: var(--prism-space1); margin-left: auto; padding: 0 var(--prism-space1); color: var(--prism-muted); font-size: var(--prism-text-xs); font-weight: 400; }
 .prism-root .prism-ask__suggested::before { content: ""; width: var(--prism-space1); height: var(--prism-space1); border-radius: 50%; background: var(--prism-muted); opacity: .6; }
-.prism-root .prism-ask__inputWrap { display: flex; align-items: center; gap: var(--prism-space2); min-height: var(--prism-space8); }
-.prism-root .prism-ask__control { width: 100%; min-width: 0; min-height: var(--prism-space8); padding: var(--prism-space2) var(--prism-space3); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-sm); background: var(--prism-surface); color: var(--prism-text); font: 400 var(--prism-text-sm)/1.5 var(--prism-font-sans); box-shadow: var(--prism-shadow-sm); transition: border-color var(--prism-duration-fast) var(--prism-ease), box-shadow var(--prism-duration-fast) var(--prism-ease); }
+.prism-root .prism-ask__inputWrap { display: flex; align-items: center; gap: var(--prism-space2); min-height: calc(var(--prism-space7) + var(--prism-space1)); }
+.prism-root .prism-ask__control { width: 100%; min-width: 0; min-height: calc(var(--prism-space7) + var(--prism-space1)); padding: var(--prism-space1) var(--prism-space3); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-sm); background: var(--prism-surface); color: var(--prism-text); font: 400 var(--prism-text-sm)/1.5 var(--prism-font-sans); box-shadow: var(--prism-shadow-sm); transition: border-color var(--prism-duration-fast) var(--prism-ease), box-shadow var(--prism-duration-fast) var(--prism-ease); }
 .prism-root .prism-ask__control::placeholder { color: var(--prism-muted); opacity: .7; }
 .prism-root .prism-ask__control:hover { border-color: var(--prism-muted); }
 .prism-root textarea.prism-ask__control { resize: vertical; min-height: calc(var(--prism-space8) * 2); }
@@ -16,7 +19,7 @@
 .prism-root .prism-ask__hint { margin-top: var(--prism-space1); color: var(--prism-muted); font-size: var(--prism-text-xs); }
 .prism-root .prism-ask__error { margin-top: var(--prism-space1); color: var(--prism-danger); font-size: var(--prism-text-xs); }
 .prism-root .prism-ask__segments { display: flex; flex: 1; flex-wrap: wrap; gap: var(--prism-space1); padding: var(--prism-space1); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-sm); background: var(--prism-muted-soft); }
-.prism-root .prism-ask__segment { flex: 1; padding: var(--prism-space1) var(--prism-space2); min-height: var(--prism-space7); border: 1px solid transparent; border-radius: var(--prism-radius-sm); color: var(--prism-muted); background: transparent; font: 500 var(--prism-text-sm)/1.4 var(--prism-font-sans); cursor: pointer; transition: background var(--prism-duration-fast) var(--prism-ease); }
+.prism-root .prism-ask__segment { flex: 1; padding: 0 var(--prism-space2); min-height: calc(var(--prism-space7) - var(--prism-space1) - 2px); border: 1px solid transparent; border-radius: var(--prism-radius-sm); color: var(--prism-muted); background: transparent; font: 500 var(--prism-text-sm)/1.4 var(--prism-font-sans); cursor: pointer; transition: background var(--prism-duration-fast) var(--prism-ease); }
 .prism-root .prism-ask__segment[aria-checked="true"] { background: var(--prism-surface); border-color: var(--prism-border-soft); color: var(--prism-text); box-shadow: var(--prism-shadow-sm); }
 .prism-root .prism-ask__switch { display: inline-flex; align-items: center; width: calc(var(--prism-space6) * 2); height: var(--prism-space6); padding: var(--prism-space1); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-lg); background: var(--prism-muted-soft); cursor: pointer; transition: background var(--prism-duration-fast) var(--prism-ease); }
 .prism-root .prism-ask__thumb { display: block; width: calc(var(--prism-space4) - 2px); height: calc(var(--prism-space4) - 2px); border-radius: 50%; background: var(--prism-muted); box-shadow: var(--prism-shadow-sm); transition: transform var(--prism-duration-fast) var(--prism-ease); }
@@ -25,6 +28,8 @@
 .prism-root .prism-ask__actions { display: flex; justify-content: flex-end; gap: var(--prism-space2); margin-top: var(--prism-space5); }
 .prism-root :is(.prism-ask__submit, .prism-ask__edit) { min-height: var(--prism-space7); padding: var(--prism-space2) var(--prism-space4); border: 1px solid transparent; border-radius: var(--prism-radius-sm); font: 550 var(--prism-text-sm)/1.4 var(--prism-font-sans); cursor: pointer; }
 .prism-root .prism-ask__submit { background: var(--prism-accent); color: var(--prism-bg); box-shadow: var(--prism-shadow-sm); }
+.prism-root .prism-ask__submit { transition: background var(--prism-duration-fast) var(--prism-ease); }
+.prism-root .prism-ask__submit:hover:not(:disabled) { background: color-mix(in srgb, var(--prism-accent) 90%, var(--prism-text)); }
 .prism-root .prism-ask__submit:disabled { opacity: .45; cursor: not-allowed; }
 .prism-root .prism-ask__edit { color: var(--prism-muted); background: transparent; }
 .prism-root .prism-ask__edit:hover { background: var(--prism-muted-soft); color: var(--prism-text); }

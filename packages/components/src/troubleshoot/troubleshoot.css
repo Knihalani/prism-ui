@@ -16,6 +16,7 @@
 .prism-root .prism-troubleshoot__primary { background: var(--prism-accent); color: var(--prism-bg); box-shadow: var(--prism-shadow-sm); }
 .prism-root .prism-troubleshoot__primary:hover:not(:disabled) { background: color-mix(in srgb, var(--prism-accent) 90%, var(--prism-text)); }
 .prism-root .prism-troubleshoot__ghost { background: transparent; color: var(--prism-muted); }
+.prism-root .prism-troubleshoot__step > .prism-troubleshoot__ghost { display: flex; margin-left: auto; padding: var(--prism-space1) var(--prism-space2); }
 .prism-root .prism-troubleshoot__ghost:hover:not(:disabled) { color: var(--prism-text); background: var(--prism-muted-soft); border-color: var(--prism-border-soft); }
 .prism-root .prism-troubleshoot__actions > .prism-troubleshoot__ghost { border-color: var(--prism-border); }
 .prism-root :is(.prism-troubleshoot__primary, .prism-troubleshoot__ghost):disabled { opacity: .45; cursor: not-allowed; }
