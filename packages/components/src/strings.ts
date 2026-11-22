@@ -47,6 +47,14 @@ export const componentStrings = {
     "data": "data"
   },
   "codeblock": {
+    "copyFailed": "Copy failed",
+    "plainText": "Plain text",
+    "showAll": "Show all {count} lines",
+    "copyMessage": "User copy in code: {payload}",
+    "languageJs": "JavaScript",
+    "languageTs": "TypeScript",
+    "languagePy": "Python",
+    "languageSh": "Shell",
     "copyCode": "Copy code",
     "copied": "Copied",
     "copy": "Copy",
