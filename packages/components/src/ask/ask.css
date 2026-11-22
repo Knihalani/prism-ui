@@ -44,7 +44,7 @@
 .prism-root .prism-ask__summary { padding: var(--prism-space-1) 0; }
 .prism-root .prism-ask__summaryRow { display: grid; grid-template-columns: minmax(100px, 1fr) 2fr; align-items: baseline; gap: var(--prism-space-4); padding: var(--prism-space-2) 0; border-bottom: 1px solid color-mix(in srgb, var(--prism-border) 50%, transparent); font-size: var(--prism-text-sm); }
 .prism-root .prism-ask__summaryLabel { color: var(--prism-text-muted); }
-.prism-root .prism-ask__summaryValue { white-space: pre-wrap; font-variant-numeric: tabular-nums; }
+.prism-root .prism-ask__summaryValue { white-space: pre-wrap; }
 .prism-root .prism-ask__skeleton { min-height: calc(var(--prism-space-7) + var(--prism-space-1)); height: calc(var(--prism-space-7) + var(--prism-space-1)); width: 100%; border-radius: var(--prism-radius-sm); background: linear-gradient(100deg, color-mix(in srgb, var(--prism-text-muted) 8%, transparent) 20%, color-mix(in srgb, var(--prism-surface) 70%, transparent) 45%, color-mix(in srgb, var(--prism-text-muted) 8%, transparent) 70%); background-size: 220% 100%; animation: prism-ask-shimmer calc(var(--prism-motion-base) * 6) var(--prism-motion-ease-in-out) infinite; }
 .prism-root .prism-ask__empty { grid-column: 1 / -1; }
 .prism-root .prism-ask__empty .prism-ask__skeleton { min-height: var(--prism-space-6); height: var(--prism-space-6); }

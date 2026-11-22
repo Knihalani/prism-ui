@@ -83,7 +83,6 @@
   background: color-mix(in srgb, var(--prism-text) 3.5%, transparent);
   color: var(--prism-text-muted);
   font-family: var(--prism-font-body); font-size: var(--prism-text-xs); line-height: 1.35; font-weight: var(--prism-weight-medium);
-  font-variant-numeric: tabular-nums;
 }
 button.prism-chip { min-block-size: 30px; padding-inline: 10px; cursor: pointer; }
 .prism-chip:is([data-active], [aria-pressed="true"], [aria-selected="true"]) {
@@ -149,7 +148,8 @@ button.prism-chip { min-block-size: 30px; padding-inline: 10px; cursor: pointer;
   background: var(--prism-on-accent);
 }
 
-:is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]) {
+:is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]),
+.prism-root input.prism-estimate__checkbox {
   appearance: none;
   display: inline-grid;
   place-items: center;
@@ -163,11 +163,13 @@ button.prism-chip { min-block-size: 30px; padding-inline: 10px; cursor: pointer;
   color: var(--prism-on-accent);
   vertical-align: middle;
 }
-:is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]):is(:checked, :indeterminate) {
+:is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]):is(:checked, :indeterminate),
+.prism-root input.prism-estimate__checkbox:is(:checked, :indeterminate) {
   background: var(--prism-accent, #525252);
   border-color: var(--prism-accent, #525252);
 }
-:is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"])::after {
+:is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"])::after,
+.prism-root input.prism-estimate__checkbox::after {
   content: "";
   inline-size: 12px;
   block-size: 12px;
@@ -179,11 +181,13 @@ button.prism-chip { min-block-size: 30px; padding-inline: 10px; cursor: pointer;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='m2.5 6 2.2 2.2 4.8-4.6' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain;
 
 }
-:is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]):checked::after {
+:is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]):checked::after,
+.prism-root input.prism-estimate__checkbox:checked::after {
   opacity: 1; transform: scaleX(1);
   animation: prism-check-stroke var(--prism-motion-slow) var(--prism-motion-ease) var(--prism-motion-instant) both;
 }
-:is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]) { transition: background-color var(--prism-motion-fast) var(--prism-motion-ease), border-color var(--prism-motion-fast) var(--prism-motion-ease); }
+:is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]),
+.prism-root input.prism-estimate__checkbox { transition: background-color var(--prism-motion-fast) var(--prism-motion-ease), border-color var(--prism-motion-fast) var(--prism-motion-ease); }
 .prism-view__checkBox svg { opacity: 0; transition: opacity var(--prism-motion-fast) var(--prism-motion-ease-exit); }
 .prism-view__checkBox path { stroke-dasharray: 20; stroke-dashoffset: 0; }
 .prism-view__checkbox[data-checked] .prism-view__checkBox svg { opacity: 1; }
@@ -198,8 +202,10 @@ input.prism-check:indeterminate::after { content: ""; inline-size: 8px; block-si
 [data-sent] .prism-check-mark path { animation-duration: var(--prism-motion-spring-bouncy-duration); }
 @keyframes prism-draw-check { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
 @media (forced-colors: active) {
-  :is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]) { appearance: auto; }
-  :is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"])::after { display: none; }
+  :is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]),
+  .prism-root input.prism-estimate__checkbox { appearance: auto; }
+  :is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"])::after,
+  .prism-root input.prism-estimate__checkbox::after { display: none; }
   .prism-switch { border: 1px solid ButtonText; }
   .prism-switch::after { forced-color-adjust: none; background: ButtonText; }
 }
