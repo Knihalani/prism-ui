@@ -117,6 +117,7 @@ export function streamParser(previews = true, path = '', references = new Refere
     return cachedRoot;
   }
   let active: Active | undefined;
+  let openFencePreview: Node | undefined;
   let line = ''; let routed = false; let candidate = true; let candidateCount = 0; let candidateSpaces = 0; let candidateTrailing = false;
   let ended = false; let pendingCR = false;
   let hasReferences = false;
@@ -126,6 +127,10 @@ export function streamParser(previews = true, path = '', references = new Refere
     if (a.extension) {
       const lines = line ? [...a.lines, line] : a.lines.slice();
       return plugins!.transform({ ...pluginNode(a.extension.finish(lines), a.node.key), complete: false });
+    }
+    if (a.mode === 'paragraph' && /^ {0,3}(?:`{1,2}$|~{1,2}$|`{3}|~{3})/.test(line)) {
+      const node = openFencePreview ??= a.lines.length ? blocks(a.lines, path, a.index, undefined, plugins?.inline)[0] : { type: 'code', key: a.node.key, value: '', complete: false };
+      return plugins ? plugins.transform(node) : node;
     }
     if (plugins?.inline && a.mode !== 'code' && a.mode !== 'container') {
       const lines = line ? [...a.lines, line] : a.lines.slice();
@@ -216,7 +221,7 @@ export function streamParser(previews = true, path = '', references = new Refere
     }
   }
   function fragmentPlugin(value: string) { if (!active?.extension) fragment(value); }
-  function resetLine() { line = ''; routed = false; candidate = true; candidateCount = 0; candidateSpaces = 0; candidateTrailing = false; }
+  function resetLine() { line = ''; openFencePreview = undefined; routed = false; candidate = true; candidateCount = 0; candidateSpaces = 0; candidateTrailing = false; }
   function accept(value: string) {
     if (active?.mode === 'code' || active?.mode === 'container') {
       const a = active;

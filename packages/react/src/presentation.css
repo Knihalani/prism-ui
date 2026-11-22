@@ -1,0 +1,87 @@
+/* Only follow the last rendered branch of built-in prose. A directive or
+ * custom block ends that branch unless its view supplies an explicit caret. */
+.prism-root[data-prism-presentation] { --prism-stream-tail: none; }
+.prism-root[data-prism-presentation][data-state="streaming"] {
+  --prism-stream-tail: "";
+}
+.prism-root[data-prism-presentation] > :not(:is(.prism-paragraph__root, .prism-heading__root, .prism-list__root, .prism-blockquote__root, .prism-code__root):last-child),
+.prism-root[data-prism-presentation] :is(.prism-list__root, .prism-listItem__root, .prism-blockquote__root) > :not(:is(.prism-paragraph__root, .prism-heading__root, .prism-list__root, .prism-listItem__root, .prism-blockquote__root, .prism-code__root):last-child) {
+  --prism-stream-tail: none;
+}
+.prism-root[data-prism-presentation] :where(.prism-paragraph__root:not(:empty), .prism-heading__root, .prism-code__root > code):not(:has(.prism-stream-caret))::after {
+  content: var(--prism-stream-tail, none);
+}
+.prism-root[data-prism-presentation][data-state="streaming"]:empty {
+  min-block-size: 1lh;
+}
+.prism-root[data-prism-presentation][data-state="streaming"]:empty::after {
+  content: "";
+}
+.prism-root[data-prism-presentation] :where(.prism-paragraph__root, .prism-heading__root, .prism-code__root > code)::after,
+.prism-root[data-prism-presentation][data-state="streaming"]:empty::after,
+.prism-stream-caret {
+  position: absolute;
+  inline-size: 2px;
+  block-size: .88em;
+  margin-inline-start: .18em;
+  border-radius: var(--prism-radius-pill, 999px);
+  background: var(--prism-accent, currentColor);
+  opacity: .68;
+  transform: translateY(.32em);
+  pointer-events: none;
+}
+
+.prism-root[data-prism-presentation] [data-prism-skeleton] {
+  display: block;
+  pointer-events: none;
+}
+.prism-root[data-prism-presentation] [data-prism-skeleton-line] {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  inline-size: var(--prism-skeleton-width, 100%);
+  block-size: var(--prism-skeleton-height, .75em);
+  border-radius: var(--prism-radius-md, .375rem);
+  background: var(--prism-fill, color-mix(in oklab, currentColor 7%, transparent));
+}
+.prism-root[data-prism-presentation] [data-prism-skeleton-line]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent, var(--prism-fill-strong, color-mix(in oklab, currentColor 8%, transparent)), transparent);
+  transform: translateX(-100%);
+}
+.prism-root[data-prism-presentation] [data-prism-flash] {
+  background-color: var(--prism-accent-soft, color-mix(in oklab, var(--prism-accent, currentColor) 14%, transparent));
+  box-shadow: 0 0 .75rem var(--prism-accent-glow, color-mix(in oklab, var(--prism-accent, currentColor) 18%, transparent));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .prism-root[data-prism-presentation]:not([data-animate="false"]) :where(.prism-paragraph__root, .prism-heading__root, .prism-code__root > code)::after,
+  .prism-root[data-prism-presentation][data-state="streaming"]:not([data-animate="false"]):empty::after,
+  .prism-root[data-prism-presentation]:not([data-animate="false"]) .prism-stream-caret {
+    animation: prism-caret-breathe 1.4s ease-in-out infinite;
+  }
+  .prism-root[data-prism-presentation]:not([data-animate="false"]) [data-prism-skeleton-line]::after {
+    animation: prism-skeleton-sweep 1.65s ease-in-out infinite;
+  }
+  .prism-root[data-prism-presentation]:not([data-animate="false"]) [data-entering]:not([data-prism-enter]) {
+    animation: prism-presentation-enter var(--prism-duration, 240ms) var(--prism-ease-spring, cubic-bezier(.2, .8, .25, 1)) var(--prism-enter-delay, 0ms) backwards;
+  }
+  .prism-root[data-prism-presentation]:not([data-animate="false"]) [data-exiting] {
+    animation: prism-presentation-exit var(--prism-duration-fast, 150ms) ease-out both;
+  }
+}
+@keyframes prism-caret-breathe {
+  50% { opacity: .32; }
+}
+@keyframes prism-skeleton-sweep {
+  70%, 100% { transform: translateX(100%); }
+}
+@keyframes prism-presentation-enter {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes prism-presentation-exit {
+  to { opacity: 0; transform: translateY(-2px); }
+}

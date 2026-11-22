@@ -57,7 +57,7 @@ const theme = createTheme({ accent: '#2563eb', accentSoft: '#dbeafe', radiusMd: 
   styles={{ card: { root: { borderWidth: 2 } } }} slots={{ card: { title: MyTitle } }} />;
 ```
 
-`createTheme(partialTokens, base?)` merges a token base or an existing CSS-variable style object. Camel-case tokens become `--prism-kebab-case` variables. `ThemeTokens` lists colors (`bg`, `surface`, `border`, `text`, `muted`, `accent`, `success`, `warning`, `danger`, `info`, plus `Soft` variants), `radiusSm/Md/Lg`, `space1`–`space8`, `fontSans/Mono`, `textXs/Sm/Base/Lg/Xl`, `shadowSm/Md/Lg`, `durationFast/Base/Slow`, and `ease`. Values are CSS strings. Theme color values and stylesheets belong to the consuming theme/components; this package emits variables and attributes, not CSS.
+`createTheme(partialTokens, base?)` merges a token base or an existing CSS-variable style object. Camel-case tokens become `--prism-kebab-case` variables. `ThemeTokens` lists colors (`bg`, `surface`, `border`, `text`, `muted`, `accent`, `success`, `warning`, `danger`, `info`, plus `Soft` variants), `radiusSm/Md/Lg`, `space1`–`space8`, `fontSans/Mono`, `textXs/Sm/Base/Lg/Xl`, `shadowSm/Md/Lg`, `durationFast/Base/Slow`, and `ease`. Values are CSS strings. Prism imports a small presentation stylesheet. The consuming theme and component library supply the rest of the visual styles.
 
 ThemeScope emits `data-prism-theme`, `data-density`, and `data-animate="false"` when disabled. Reduced-motion preference also disables motion. Prism's wrapper always has `prism-root`, including in unstyled mode.
 
@@ -75,6 +75,19 @@ ThemeScope emits `data-prism-theme`, `data-density`, and `data-animate="false"` 
 ```
 
 Middleware runs in order. Not calling next swallows the action; passing a replacement transforms it. The final next calls onAction.
+
+## Streaming and presentation
+
+Prism marks the reply root with `data-state="streaming"` while input is open and `data-state="ready"` at completion. The default Markdown caret is decorative and follows the last rendered prose block without changing its measure. Empty open code fences wait for content or completion before rendering. A code renderer override, registered skeleton, or registered fallback can show a placeholder. With a custom Markdown renderer, use `<StreamCaret />` at the text tail when that view is streaming.
+
+- `useSettled()` becomes true when the directive is final and its store identity is ready. A directive can be settled while the rest of the reply is streaming.
+- `usePresentation()` gives the existing component root `data-state="streaming|ready|sent"` and a CSS entrance marker `data-entering`. Spread it onto the root or let a shared frame forward it. Where a root already uses `data-state` for other semantics, expose the presentation state on an adjacent element or use a separate attribute in that view.
+- Set `--prism-enter-delay` on items with their own `data-entering` to stagger a batch. Use a bounded delay from the item's insertion index and keep React keys stable as new items arrive. A view that owns its removal can pass `{ exiting: true }` to emit `data-exiting` while it is still mounted. The renderer removes blocks as soon as they leave the parsed document.
+- Define `skeleton` to reserve a directive's layout while its props or state identity settle. It receives the same view props with empty children. Give it the same width, responsive row slots, gaps and intrinsic height as the real view. `StreamSkeleton` marks decorative markup as hidden from assistive technology. Use `data-prism-skeleton-line` on each placeholder with `--prism-skeleton-width` and `--prism-skeleton-height` to size it. Keep controls and state initialization in the real component. The existing `fallback` option is still available for schema-partial previews.
+- `useSent()` exposes `{ sent, send, reset }`. Call `send(type, payload, message?)` for the primary action. The component and its frame share a receipt after the final `onAction` handler runs. The receipt contains the action delivered through middleware. Use its payload for a stable past-tense label such as “Sent · 6 seats, $324”, then call `reset()` on edit. Keep the primary pill and inputs mounted so focus and layout are preserved. `sent` records dispatch to the application handler, independent of any asynchronous delivery confirmation the app owns. Ordinary `useEmit()` actions (such as Ask) can continue independently.
+- `useFlash(path)` is true for about 600ms after another component or the host changes a subscribed value. Set `data-prism-flash={flash ? '' : undefined}` on the value. Pair this with the component's animated value and honor `usePrism().animate` for tweening. `useComponentState` marks its own writes automatically. For custom synchronous store writes, call `useLocalWrite()` during render and wrap the outer write or batch with the function it returns.
+
+Use the surrounding prose's typography and flow spacing. Keep skeletons and nested components flush to that same edge. Use the shared component primitives for pills, chips, switches, steppers, checkboxes and icon buttons. With reduced motion or `animate={false}`, the caret, skeleton and highlight render as static cues.
 
 ## Store, formulas and agent patches
 

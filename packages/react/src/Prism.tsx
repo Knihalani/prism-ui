@@ -8,6 +8,8 @@ import { ThemeScope, useMotion, type Theme, type Density } from './theme';
 import { createFormat } from './format';
 import { usePrismStream, type PrismStream } from './stream';
 import { useComponentId } from './identity';
+import { createReceipt } from './presentation';
+import './presentation.css';
 
 const empty = {};
 function equal(a: any, b: any, depth: number): boolean {
@@ -57,20 +59,29 @@ function Directive({ node }: { node: Node }) {
   const def = context.registry.get(name), raw = useBindings(node, context.store);
   const result = def?.schema?.coerce(raw) ?? { value: raw, issues: [], partial: false };
   const coerced = result.value ?? {}, complete = node.complete !== false;
-  const { id, ready, key: viewKey } = useComponentId(node, coerced.id ?? raw.id, context.store, context.scope, def?.requiresFinalId);
+  const { id, ready, key: viewKey, owner } = useComponentId(node, coerced.id ?? raw.id, context.store, context.scope, def?.requiresFinalId);
+  const receipt = useMemo(createReceipt, [owner]);
+  const finalized = Object.isFrozen(node), settled = ready && finalized;
   const props = coerced.id === undefined ? coerced : { ...coerced, id };
+  const Skeleton = !finalized || (complete && !ready) ? def?.skeleton : undefined;
   const View = !complete && result.partial && def?.fallback ? def.fallback : context.components[name] ?? def?.component;
-  const children = renderChildren(node);
-  const value = useMemo(() => ({ name, id, props, node, def }), [name, id, props, node, def]);
+  const value = useMemo(() => ({ name, id, props, node, def, settled, receipt }), [name, id, props, node, def, settled, receipt]);
+  const viewProps = { node, props, id, complete, partial: result.partial, issues: result.issues };
+  if (Skeleton) return <ComponentContext.Provider value={value}><Skeleton key={owner} {...viewProps} children={null} /></ComponentContext.Provider>;
   if (!ready) return null;
-  return <ComponentContext.Provider value={value}>{View ? <View key={def?.requiresFinalId ? viewKey : undefined} node={node} props={props} id={id} complete={complete} partial={result.partial} issues={result.issues}>{children}</View> : <div data-prism="unknown" data-name={name}>{children}</div>}</ComponentContext.Provider>;
+  const children = renderChildren(node);
+  return <ComponentContext.Provider value={value}>{View ? <View key={def?.requiresFinalId ? viewKey : undefined} {...viewProps}>{children}</View> : <div data-prism="unknown" data-name={name}>{children}</div>}</ComponentContext.Provider>;
 }
 function renderChildren(node: Node) { return node.children?.map(child => <NodeView key={child.key} node={Object.isFrozen(child) ? child : { ...child }} />); }
 const NodeView = memo(function NodeView({ node }: { node: Node }) {
   const context = usePrism();
   if (node.type === 'component') return node.name === 'state' ? <StatePatch node={node} /> : <Directive node={node} />;
   const override = context.components[node.type] ?? (node.type === 'thematicBreak' ? context.components.hr : undefined);
-  if (!override && context.registry.get(node.type)) return <Directive node={node} />;
+  const def = override ? undefined : context.registry.get(node.type);
+  // Keep a provisional, empty fence out of the prose flow until it has content.
+  if (node.type === 'code' && node.value === '' && node.complete === false && !Object.isFrozen(node)
+    && !override && !def?.skeleton && !def?.fallback) return null;
+  if (def) return <Directive node={node} />;
   const View = override ?? defaultRenderers[node.type as keyof typeof defaultRenderers];
   return View ? <View node={node}>{renderChildren(node)}</View> : <>{renderChildren(node) ?? node.value}</>;
 }, (previous, next) => previous.node === next.node);
@@ -90,9 +101,12 @@ export function Prism({ scope: providedScope, source = '', done = true, stream, 
   const [owned] = useState(() => provided ?? createStore({ persist, namespace })), store = provided ?? owned;
   const [applied] = useState(() => new Set<string>()), motion = useMotion(animate);
   const handlers = useRef({ onAction, middleware }); handlers.current = { onAction, middleware };
-  const emit = useCallback((action: Action) => {
+  const emit = useCallback((action: Action, delivered?: (action: Action) => void) => {
     const { middleware = [], onAction } = handlers.current;
-    const next = (index: number, action: Action): void => { if (index < middleware.length) middleware[index](action, action => next(index + 1, action)); else onAction?.(action); };
+    const next = (index: number, action: Action): void => {
+      if (index < middleware.length) middleware[index](action, action => next(index + 1, action));
+      else if (onAction) { onAction(action); delivered?.(action); }
+    };
     next(0, action);
   }, []);
   const format = useMemo(() => createFormat(locale, currency), [locale, currency]);
@@ -104,5 +118,10 @@ export function Prism({ scope: providedScope, source = '', done = true, stream, 
   if (done && !state.ended) { state.parser.end(); state.ended = true; }
   const streamed = usePrismStream(stream, { plugins }), root = stream ? streamed.root : state.parser.root;
   const context = useMemo(() => ({ registry, components, store, emit, theme, unstyled, slots, classNames, styles, format, animate: motion, applied, scope }), [registry, components, store, emit, theme, unstyled, slots, classNames, styles, format, motion, applied, scope]);
-  return <PrismContext.Provider value={context}><ThemeScope theme={theme} density={density} animate={motion} className={cx('prism-root', className)} style={style}>{root.children.map(node => <NodeView key={node.key} node={node} />)}</ThemeScope></PrismContext.Provider>;
+  const streaming = stream ? !streamed.done : !done;
+  return <PrismContext.Provider value={context}><ThemeScope theme={theme} density={density} animate={motion}
+    className={cx('prism-root', className)} style={style} data-state={streaming ? 'streaming' : 'ready'}
+    data-prism-presentation={unstyled ? undefined : ''}>
+    {root.children.map(node => <NodeView key={node.key} node={node} />)}
+  </ThemeScope></PrismContext.Provider>;
 }
