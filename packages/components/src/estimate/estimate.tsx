@@ -42,13 +42,13 @@ export function useEstimate(props: EstimateProps, ctx: PrismComponentProps<Estim
   useLayoutEffect(() => {
     store.batch(() => {
       for (const row of totals.rows) {
-        if (!row.ready) continue;
+        if (!row.ready || !ctx.complete) continue;
         if (store.get(`${id}.items.${row.id}.qty`) === undefined) store.set(`${id}.items.${row.id}.qty`, row.qty);
         if (store.get(`${id}.items.${row.id}.enabled`) === undefined) store.set(`${id}.items.${row.id}.enabled`, row.enabled);
       }
       writeTotals();
     });
-  }, [store, id, totals, storedSubtotal, storedTotal]);
+  }, [store, id, totals, storedSubtotal, storedTotal, ctx.complete]);
   const update = (item: Item, key: 'qty' | 'enabled', value: number | boolean) => store.batch(() => {
     store.set(`${id}.items.${item.id}.${key}`, key === 'qty' ? quantity(item, value as number) : value); writeTotals();
   });
@@ -90,7 +90,7 @@ export function Estimate(ctx: PrismComponentProps<EstimateProps>) {
   const Item = useSlot('estimate', 'item', EstimateItem), Empty = useSlot('estimate', 'empty', 'div' as any), Actions = useSlot('estimate', 'actions', 'div' as any);
   return <ComponentFrame component="estimate" title={estimate.title} undo ask actions={<Actions {...parts.actions}><button {...parts.submit} type="button" disabled={!estimate.canUse} onClick={estimate.onUse}>{estimate.submit}</button></Actions>}>
     <div {...parts.list}>{estimate.rows.length ? estimate.rows.map(row => <Item key={row.id} row={row} />) : <Empty {...parts.empty}>{estimate.emptyLabel}</Empty>}</div>
-    <div {...parts.summary}>{estimate.summary.map(line => <div {...parts.summaryRow} key={line.label}><span {...parts.summaryLabel}>{line.label}</span><span {...parts.summaryValue}>{line.value}</span></div>)}
+    <div {...parts.summary}>{estimate.summary.map(line => <div key={line.label} {...parts.summaryRow}><span {...parts.summaryLabel}>{line.label}</span><span {...parts.summaryValue}>{line.value}</span></div>)}
       <div {...parts.total}><span {...parts.totalLabel}>{estimate.totalLabel}</span><span {...parts.totalValue} aria-hidden="true">{estimate.totalText}</span><span {...parts.live} aria-live="polite">{estimate.finalTotalText}</span></div>
     </div>
   </ComponentFrame>;

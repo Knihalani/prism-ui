@@ -73,6 +73,8 @@ test('streaming partial price uses a skeleton with totals throughout; empty is s
   expect(view.container.querySelector('[data-part="item"]')?.getAttribute('data-state')).toBe('loading');
   expect(view.getByText('Total')).toBeDefined(); expect(store.get('quote.total')).toBe(0);
   expect(view.getByRole('button', { name: 'Use this estimate' }).hasAttribute('disabled')).toBe(true);
+  view.rerender(<Prism source={prefix + ',"price":20'} done={false} store={store} animate={false} />);
+  expect(store.get('quote.items.seats.qty')).toBeUndefined();
   view.rerender(<Prism source={prefix + ',"price":20,"qty":3}]}\n```'} done={false} store={store} animate={false} />);
   expect(view.container.querySelector('[data-part="item"]')?.getAttribute('data-state')).toBe('ready'); expect(store.get('quote.total')).toBe(60);
   view.rerender(<Prism source={source({ items: [] })} store={store} animate={false} />);

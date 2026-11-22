@@ -62,16 +62,16 @@ function PickItem({ row }: { row: Row }) {
     <div {...parts.header}><span {...parts.rank}>{row.rankText} · {row.ready ? row.matchText : '—'}</span>{row.tag && <span {...parts.tag}>{row.tag}</span>}{row.chosen && <span {...parts.check}>✓ {row.chosenLabel}</span>}</div>
     <h4 {...parts.title}>{row.title}</h4>{row.subtitle && <p {...parts.subtitle}>{row.subtitle}</p>}
     {row.reason && <p {...parts.reason}>{row.reason}</p>}
-    <div {...parts.bars}>{row.bars.map(bar => <div {...parts.criterion} key={bar.id} data-state={bar.weight ? 'active' : 'off'}><span {...parts.criterionLabel}>{bar.label}</span><meter {...parts.bar} min={0} max={1} value={bar.score} aria-label={bar.label}>{bar.text}</meter></div>)}</div>
-    {!!row.pros.length && <ul {...parts.pros}>{row.pros.map((pro, index) => <li {...parts.pro} key={index}>✓ {pro}</li>)}</ul>}
-    {!!row.cons.length && <ul {...parts.cons}>{row.cons.map((con, index) => <li {...parts.con} key={index}>– {con}</li>)}</ul>}
+    <div {...parts.bars}>{row.bars.map(bar => <div key={bar.id} {...parts.criterion} data-state={bar.weight ? 'active' : 'off'}><span {...parts.criterionLabel}>{bar.label}</span><meter {...parts.bar} min={0} max={1} value={bar.score} aria-label={bar.label}>{bar.text}</meter></div>)}</div>
+    {!!row.pros.length && <ul {...parts.pros}>{row.pros.map((pro, index) => <li key={index} {...parts.pro}>✓ {pro}</li>)}</ul>}
+    {!!row.cons.length && <ul {...parts.cons}>{row.cons.map((con, index) => <li key={index} {...parts.con}>– {con}</li>)}</ul>}
     <Actions {...parts.actions}><button {...parts.choose} type="button" disabled={!row.ready} onClick={row.onChoose}>{row.chooseLabel}</button></Actions>
   </article>;
 }
 export function Pick(ctx: PrismComponentProps<PickProps>) {
   const pick = usePick(ctx.props, ctx), { parts } = pick, Item = useSlot('pick', 'item', PickItem), Empty = useSlot('pick', 'empty', 'div' as any);
   return <ComponentFrame component="pick" title={pick.question} ask undo>
-    <div {...parts.criteria}>{pick.chips.map(chip => <button {...parts.chip} {...chip.props} key={chip.id}>{chip.label}<span {...parts.pips} aria-hidden="true">{chip.pips.map((on, index) => <span {...parts.pip} data-state={on ? 'on' : 'off'} key={index} />)}</span></button>)}</div>
+    <div {...parts.criteria}>{pick.chips.map(chip => <button key={chip.id} {...parts.chip} {...chip.props}>{chip.label}<span {...parts.pips} aria-hidden="true">{chip.pips.map((on, index) => <span key={index} {...parts.pip} data-state={on ? 'on' : 'off'} />)}</span></button>)}</div>
     <div {...parts.live} aria-live="polite">{pick.announcement}</div>
     <div {...parts.list} ref={pick.listRef}>{pick.rows.length ? pick.rows.map(row => <Item key={row.id} row={row} />) : <Empty {...parts.empty}>{pick.emptyLabel}</Empty>}</div>
   </ComponentFrame>;
