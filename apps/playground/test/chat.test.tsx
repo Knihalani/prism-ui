@@ -170,3 +170,20 @@ test('router handles specific artifact and mockup requests, fallback and distinc
   expect(html).toContain('addEventListener');
   expect(html).not.toContain('onclick=');
 });
+
+test('router gives exact catalogue names priority over keywords', () => {
+  for (const item of [kitchen, ...demos]) expect(replyFor('  ' + item.label.toUpperCase() + '  ')?.id).toBe(item.id);
+  expect(replyFor('Pick cards')?.id).toBe('pick');
+});
+
+test('router prefers whole words and specific phrases before substring matches', () => {
+  expect(replyFor('Let me adjust our workspace budget')?.id).toBe('numbers');
+  expect(replyFor('adjust the workspace budget please')?.id).toBe('numbers');
+  expect(replyFor('a quote on renting equipment')?.id).toBe('estimate');
+  expect(replyFor('chart a showcase')?.id).toBe('chart');
+  expect(replyFor('callout spreadsheeting')?.id).toBe('callout');
+  expect(replyFor('πspreadsheet chart')?.id).toBe('chart');
+  expect(replyFor('spreadsheeting')?.id).toBe('table');
+  expect(replyFor('   ')).toBeUndefined();
+  expect(replyFor('unrelated request')).toBeUndefined();
+});

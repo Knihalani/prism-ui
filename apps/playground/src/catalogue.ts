@@ -19,7 +19,7 @@ const base: Demo[] = [
   demo('chart', 'Chart', 'Basics', 'Chart our new member growth', 'New members have grown steadily across the first four months. Hover or select a point to inspect it.\n\n' + data('chart', chart), ['chart'], ['chart', 'graph', 'growth']),
   demo('pick', 'Pick cards', 'Decide', 'Help me choose a pilot approach', 'I compared the two approaches on learning, speed, and reach. Adjust the weights to reflect what matters to you, then choose a plan.\n\n' + data('pick', { id: '__SCOPE__-plans', question: 'How should we start?', criteria: [{ id: 'learning', label: 'Learning' }, { id: 'speed', label: 'Speed' }, { id: 'reach', label: 'Reach' }], weights: { learning: 2, speed: 1, reach: 1 }, options: [{ id: 'concierge', title: 'Concierge pilot', subtitle: 'Five teams, hands-on support', tag: 'Recommended', scores: { learning: .95, speed: .8, reach: .4 }, pros: ['Deeper customer insight', 'Ship in two weeks'], cons: ['More hands-on time'] }, { id: 'selfserve', title: 'Self-serve pilot', subtitle: 'Twenty teams, lighter touch', scores: { learning: .6, speed: .65, reach: .95 }, pros: ['Wider range of feedback', 'Less individual onboarding'], cons: ['Needs clearer onboarding'] }] }), ['pick'], ['pick', 'choose', 'compare', 'options']),
   demo('estimate', 'Estimate', 'Decide', 'Estimate the cost of our pilot', 'Here’s a working estimate for the team. Change the seat count or remove the optional onboarding session, then send me the version you want to use.\n\n' + data('estimate', { id: '__SCOPE__-budget', title: 'Your two-week pilot', items: [{ id: 'seats', label: 'Team seats', price: 24, qty: 5, min: 1, max: 25, unit: 'seat' }, { id: 'onboarding', label: 'Guided onboarding', price: 180, qty: 1, optional: true, enabled: true }], taxRate: .08 }), ['estimate'], ['estimate', 'budget', 'cost', 'quote']),
-  demo('numbers', 'Live numbers', 'Decide', 'Let me adjust our workspace budget', 'Your monthly workspace budget is :num[1200]{id=__SCOPE__.rent label="Workspace budget" min=0 max=5000 step=50 format=currency}.\n\nThat’s **:calc[__SCOPE__.rent * 12]{format=currency} per year**, or :calc[__SCOPE__.rent / 5]{format=currency} per person for a five-person team.\n\nClick the number to type a value, or use the arrow keys. Every total updates with you.', ['num', 'calc'], ['numbers', 'number', 'calculate', 'rent']),
+  demo('numbers', 'Live numbers', 'Decide', 'Let me adjust our workspace budget', 'Your monthly workspace budget is :num[1200]{id=__SCOPE__.rent label="Workspace budget" min=0 max=5000 step=50 format=currency}.\n\nThat’s **:calc[__SCOPE__.rent * 12]{format=currency} per year**, or :calc[__SCOPE__.rent / 5]{format=currency} per person for a five-person team.\n\nClick the number to type a value, or use the arrow keys. Every total updates with you.', ['num', 'calc'], ['numbers', 'number', 'calculate', 'rent', 'workspace budget']),
   demo('answer-chart', 'Answer chart', 'Decide', 'What changed after our March launch?', 'The launch seems to have helped — but this is a signal, not proof of causation.\n\n' + data('chart', { ...chart, id: '__SCOPE__-answer', insight: 'New members rose 50% in April, the first full month after launch.', annotations: [{ x: 'Mar', label: 'Public launch' }], pivots: [{ label: 'Trend', type: 'line' }, { label: 'By month', type: 'bar' }] }) + '\n\nTry switching views, or select a month to ask about it.', ['chart'], ['answer chart', 'changed', 'insight']),
   demo('runbook', 'Runbook', 'Do', 'Show me a runbook for launch day', 'Here’s a small launch-day checklist. Mark each step as you go; if something feels unclear, use **Help** to ask about that specific step.\n\n::::runbook{id=__SCOPE__-launch title="Launch-day checklist"}\n:::step{id=__SCOPE__-checks title="Check the release"}\nRun the automated checks and smoke-test the sign-up flow.\n```sh\nbun test\nbun run build\n```\n:::\n:::step{id=__SCOPE__-invite title="Invite the pilot team"}\nSend a personal invitation to the five teams. Include a direct link and a short explanation of what you want to learn.\n:::\n:::step{id=__SCOPE__-listen title="Make room for feedback"}\nBook a 20-minute check-in for Friday. Keep notes on what people actually do.\n:::\n::::', ['runbook', 'step'], ['runbook', 'checklist', 'deploy']),
   demo('troubleshoot', 'Troubleshooter', 'Do', 'Help me troubleshoot an invitation email', 'Let’s work out why the invitation didn’t arrive. Answer each question and I’ll narrow down the next step.\n\n' + data('troubleshoot', { id: '__SCOPE__-email', title: 'Missing invitation email', start: 'spam', steps: { spam: { text: 'Is the invitation in the spam or promotions folder?', yes: 'allow', no: 'address' }, allow: { text: 'Mark the message as safe and move it to your inbox. Did that fix it?', yes: '$fixed', no: '$escalate' }, address: { text: 'Double-check the email address and request a fresh invitation. Did it arrive?', yes: '$fixed', no: '$escalate' } } }), ['troubleshoot'], ['troubleshoot', 'broken', 'email', 'help']),
@@ -45,8 +45,23 @@ for (const fixture of examples()) if (!covered.has(fixture.id)) base.push(demo(f
 export const demos = base;
 export const kitchen: Demo = demo('kitchen-sink', 'Kitchen sink', 'Basics', 'Show me everything Prism can do', '## A conversation that can do more\n\nLet’s turn a launch plan into something you can actually use. These examples are live — not screenshots.\n\n' + base.map(item => '### ' + item.label + '\n\n' + item.source).join('\n\n---\n\n'), [...new Set(base.flatMap(item => item.components))], ['kitchen', 'everything', 'all components']);
 export function replyFor(text: string): Demo | undefined {
-  const query = text.toLowerCase();
-  return [kitchen, ...demos].filter(item => item.keywords.some(word => query.includes(word))).sort((a, b) => Math.max(...b.keywords.filter(word => query.includes(word)).map(word => word.length)) - Math.max(...a.keywords.filter(word => query.includes(word)).map(word => word.length)))[0];
+  const normalize = (value: string) => value.trim().toLowerCase().replace(/\s+/g, ' ');
+  const query = normalize(text);
+  if (!query) return;
+  let best: Demo | undefined, bestRank = 0, bestLength = 0;
+  for (const item of [kitchen, ...demos]) {
+    if (query === normalize(item.label) || query === normalize(item.id)) return item;
+    for (const keyword of [item.label, ...item.keywords].map(normalize)) {
+      if (!keyword || !query.includes(keyword)) continue;
+      const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const whole = new RegExp('(?:^|[^\\p{L}\\p{N}_])' + escaped + '(?=$|[^\\p{L}\\p{N}_])', 'u').test(query);
+      const rank = whole ? 2 : 1;
+      if (rank > bestRank || (rank === bestRank && keyword.length > bestLength)) {
+        best = item; bestRank = rank; bestLength = keyword.length;
+      }
+    }
+  }
+  return best;
 }
 export function demoSource(item: Demo, scope: string) {
   let index = 0;
