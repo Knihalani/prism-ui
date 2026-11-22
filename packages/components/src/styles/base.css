@@ -1,6 +1,7 @@
 .prism-root[data-prism-presentation], .prism-root[data-prism-presentation] * { box-sizing: border-box; }
 .prism-root :where(button, input, textarea, select) { font: inherit; }
 .prism-root[data-prism-presentation] {
+  container-type: inline-size;
   max-inline-size: var(--prism-prose-measure-wide, 760px);
   margin-inline: auto;
   color: var(--prism-text);
@@ -14,7 +15,15 @@
   overflow-wrap: break-word;
   -webkit-font-smoothing: antialiased;
 }
-.prism-root[data-prism-presentation] > :not(:where(.prism-datatable__root, div.prism-table__root, .prism-chart__root, .prism-mockup__root, .prism-artifact__root)) {
+.prism-root :where(.prism-frame__root, .prism-datatable__root, .prism-chart__root, .prism-codeblock__root, .prism-mockup__member) { container-type: inline-size; min-width: 0; }
+@container (max-width: 400px) {
+  .prism-root :where(.prism-frame__header, .prism-frame__footer, .prism-chart__header) { flex-wrap: wrap; }
+  .prism-root :where(.prism-pick__header, .prism-pick__body, .prism-estimate__header, .prism-estimate__body, .prism-chart__header) { padding-inline: var(--prism-space-3); }
+  .prism-root .prism-pick__item { min-height: 0; }
+  .prism-root .prism-pick__list { grid-auto-rows: auto; }
+  .prism-root .prism-summary__layout { grid-template-columns: minmax(0,1fr); }
+}
+.prism-root[data-prism-presentation] > :not(:where(.prism-datatable__root, div.prism-table__root, .prism-chart__root, .prism-mockup__root, .prism-artifact__root, .prism-artifact__shell, .prism-inline-feedback:not([data-inline]))) {
   max-inline-size: var(--prism-prose-measure, 680px);
   margin-inline: auto;
 }

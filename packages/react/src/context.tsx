@@ -21,6 +21,7 @@ export interface PrismContextValue {
   theme: Theme; unstyled: boolean; slots: Slots; classNames: ClassNames; styles: Styles; format: Format; animate: boolean;
   applied: Set<string>;
   scope: string;
+  feedback?: boolean;
   resolvedTheme: ResolvedTheme;
   customization?: { slots: Slots; classNames: ClassNames; styles: Styles };
 }

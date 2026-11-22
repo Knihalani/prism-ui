@@ -7,7 +7,7 @@ export const artifactSchema = s.object({
   id: s.string().optional().describe('Reuse this identifier in a later reply to publish a new version.'),
   title: s.string().optional().describe('Short title for the preview.'),
   height: s.union(s.enum(['auto']), s.number({ min: 80, max: 4096 })).default('auto').describe('Auto-size to content, or reserve a fixed height in pixels.'),
-  variant: s.enum(['panel', 'minimal']).default('panel'),
+  variant: s.enum(['inline', 'panel', 'minimal']).default('inline'),
   size: s.enum(['sm', 'md', 'lg']).default('md').describe('Initial preview size when height is auto.'),
   kind: s.enum(kinds).describe('Selected by the artifact:html|react|svg|js|markdown fence language.'),
   source: s.string().describe('Source goes inside the fence, not in the metadata.'),

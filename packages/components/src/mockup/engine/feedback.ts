@@ -223,6 +223,10 @@ export function createFeedback(init: FeedbackInit = {}) {
   return {
     getState: () => state,
     subscribe(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; },
+    load(value: FeedbackState) {
+      past.length = 0; future.length = 0; lastOperation = '';
+      publish(applyBoxes(copy(value) as FeedbackState));
+    },
     checkpoint() {
       const draft = copy(state) as FeedbackState, history = copy(past), redo = copy(future), operationName = lastOperation, operationTime = lastTime;
       let restored = false;

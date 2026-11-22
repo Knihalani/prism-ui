@@ -32,4 +32,4 @@
 
 .prism-root[data-animate="false"] .prism-estimate__item, .prism-root[data-animate="false"] .prism-estimate__increase, .prism-root[data-animate="false"] .prism-estimate__decrease { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-root .prism-estimate__item, .prism-root .prism-estimate__increase, .prism-root .prism-estimate__decrease { animation: none; transition: none; } }
-@media (max-width: 480px) { .prism-root .prism-estimate__item { flex-wrap: wrap; } .prism-root .prism-estimate__details { flex-basis: 65%; } .prism-root .prism-estimate__amount { margin-left: auto; } }
+@container (max-width: 480px) { .prism-root .prism-estimate__item { flex-wrap: wrap; } .prism-root .prism-estimate__details { flex-basis: 65%; } .prism-root .prism-estimate__amount { margin-left: auto; } }

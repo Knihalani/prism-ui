@@ -2,7 +2,8 @@ import { memo, useCallback, useId, useLayoutEffect, useMemo, useRef, useState, u
 import { createParser, type Node, type Plugin } from '@prism-ui/core';
 import { createStore, type Store, type Adapter, type Patch } from '@prism-ui/state';
 import { ComponentContext, PrismContext, cx, usePrism, type Action, type Middleware, type Components, type Slots, type ClassNames, type Styles } from './context';
-import { defaultRegistry, type Registry } from './registry';
+import { createRegistry, defaultRegistry, type Registry } from './registry';
+import { FeedbackSurface, RenderBoundary, rendererView, type Renderers } from './renderers';
 import { defaultRenderers } from './markdown';
 import { ThemeScope, useMotion, useTheme, type Theme, type Density, type Mode } from './theme';
 import { createFormat } from './format';
@@ -59,7 +60,7 @@ function Directive({ node }: { node: Node }) {
   const def = context.registry.get(name), raw = useBindings(node, context.store);
   const result = def?.schema?.coerce(raw) ?? { value: raw, issues: [], partial: false };
   const coerced = result.value ?? {}, complete = node.complete !== false;
-  const { id, ready, key: viewKey, owner } = useComponentId(node, coerced.id ?? raw.id, context.store, context.scope, def?.requiresFinalId);
+  const { id, ready, owner } = useComponentId(node, coerced.id ?? raw.id, context.store, context.scope, def?.requiresFinalId);
   const receipt = useMemo(createReceipt, [owner]);
   const finalized = Object.isFrozen(node), settled = ready && finalized;
   const props = coerced.id === undefined ? coerced : { ...coerced, id };
@@ -70,7 +71,8 @@ function Directive({ node }: { node: Node }) {
   if (Skeleton) return <ComponentContext.Provider value={value}><Skeleton key={owner} {...viewProps} children={null} /></ComponentContext.Provider>;
   if (!ready) return null;
   const children = renderChildren(node);
-  return <ComponentContext.Provider value={value}>{View ? <View key={def?.requiresFinalId ? viewKey : undefined} {...viewProps}>{children}</View> : <div data-prism="unknown" data-name={name}>{children}</div>}</ComponentContext.Provider>;
+  const rendered = View ? <RenderBoundary key={owner} name={name}><View {...viewProps}>{children}</View></RenderBoundary> : <div data-prism="unknown" data-name={name}>{children}</div>;
+  return <ComponentContext.Provider value={value}>{(def?.feedback ?? context.feedback) ? <FeedbackSurface targetKey={owner}>{rendered}</FeedbackSurface> : rendered}</ComponentContext.Provider>;
 }
 function renderChildren(node: Node) { return node.children?.map(child => <NodeView key={child.key} node={Object.isFrozen(child) ? child : { ...child }} />); }
 const NodeView = memo(function NodeView({ node }: { node: Node }) {
@@ -87,6 +89,7 @@ const NodeView = memo(function NodeView({ node }: { node: Node }) {
 }, (previous, next) => previous.node === next.node);
 
 export interface PrismProps {
+  renderers?: Renderers; feedback?: boolean;
   source?: string; done?: boolean; stream?: PrismStream; components?: Components; plugins?: Plugin[];
   store?: Store; persist?: Adapter; namespace?: string; registry?: Registry; scope?: string;
   onAction?(action: Action): void; middleware?: Middleware[];
@@ -94,9 +97,11 @@ export interface PrismProps {
   locale?: string; currency?: string; slots?: Slots; classNames?: ClassNames; styles?: Styles;
   className?: string; style?: CSSProperties;
 }
-export function Prism({ scope: providedScope, source = '', done = true, stream, plugins, store: provided, persist, namespace, registry = defaultRegistry, components = empty, onAction, middleware, theme, mode, density = 'comfortable', animate = true, unstyled = false, locale, currency = 'USD', slots = empty, classNames = empty, styles = empty, className, style }: PrismProps) {
+export function Prism({ renderers = empty, feedback, scope: providedScope, source = '', done = true, stream, plugins, store: provided, persist, namespace, registry: providedRegistry = defaultRegistry, components = empty, onAction, middleware, theme, mode, density = 'comfortable', animate = true, unstyled = false, locale, currency = 'USD', slots = empty, classNames = empty, styles = empty, className, style }: PrismProps) {
   const instance = useId(), scope = providedScope ?? instance;
   components = useStable(components); slots = useStable(slots, 1); classNames = useStable(classNames, 1);
+  renderers = useStable(renderers);
+  const registry = useMemo(() => createRegistry([...providedRegistry.list(), ...Object.entries(renderers).map(([name, renderer]) => typeof renderer === 'object' && renderer !== null && 'component' in renderer ? { ...renderer, name } : { name, component: rendererView(renderer as import('react').ComponentType<any>) })]), [providedRegistry, renderers]);
   styles = useStable(styles, 2); theme = useStable(theme); middleware = useStable(middleware);
   const themed = useTheme(theme, mode), resolvedTheme = themed.theme;
   const overrides = useMemo(() => {
@@ -129,7 +134,7 @@ export function Prism({ scope: providedScope, source = '', done = true, stream, 
   state.text = source;
   if (done && !state.ended) { state.parser.end(); state.ended = true; }
   const streamed = usePrismStream(stream, { plugins }), root = stream ? streamed.root : state.parser.root;
-  const context = useMemo(() => ({ registry, components, store, emit, theme: theme ?? resolvedTheme, resolvedTheme, unstyled, ...overrides, customization, format, animate: motion, applied, scope }), [registry, components, store, emit, theme, resolvedTheme, unstyled, overrides, customization, format, motion, applied, scope]);
+  const context = useMemo(() => ({ registry, components, store, emit, theme: theme ?? resolvedTheme, resolvedTheme, unstyled, ...overrides, customization, format, animate: motion, applied, scope, feedback }), [registry, components, store, emit, theme, resolvedTheme, unstyled, overrides, customization, format, motion, applied, scope, feedback]);
   const streaming = stream ? !streamed.done : !done;
   return <PrismContext.Provider value={context}><ThemeScope theme={theme} mode={mode} density={density} animate={animate}
     className={cx('prism-root', className)} style={style} data-state={streaming ? 'streaming' : 'ready'}
