@@ -2,7 +2,8 @@ import '../../../react/test/setup';
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { Prism, createRegistry, usePrism, type Action, type PrismComponentProps } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
-import { MockupView, mockupDefinition, mockupPlugin, parseMockupMeta, useMockup, toMessage, type FrameController, type MockupProps } from './index';
+import { replayStart } from './harness/replay';
+import { MockupView, mockupDefinition, mockupPlugin, parseMockupMeta, useMockup, toMessage, type FrameController, type FrameMessage, type HitRect, type MockupProps } from './index';
 
 const { render, cleanup, fireEvent, act } = await import('@testing-library/react');
 const observer = globalThis.IntersectionObserver;
@@ -11,16 +12,52 @@ afterEach(() => { cleanup(); Object.assign(globalThis, { IntersectionObserver: o
 const source = (props: MockupProps) => '```ui:mockup\n' + JSON.stringify({ id: 'review', ...props }) + '\n```';
 function setup(props: MockupProps = {}, done = true, store = createStore()) {
   const renders: [string, boolean | undefined][] = [], actions: Action[] = [];
+  const listeners = new Set<(message: FrameMessage) => void>(), hits: HitRect[] = [];
   const target = { selector: 'h1', text: 'Hello', html: '<h1>Hello</h1>', box: { x: 0, y: 0, w: 100, h: 40 } };
-  const factory = (): FrameController => ({ id: 'stub', srcdoc: '', attach() {}, render(html, complete) { renders.push([html, complete]); }, hit: async rect => ({ target, box: { ...rect, w: rect.w ?? 0, h: rect.h ?? 0 } }), setAnchors() {}, configure() {}, on() { return () => {}; }, destroy() {} });
+  const factory = (): FrameController => ({ id: 'stub', srcdoc: '', attach() {}, render(html, complete) { renders.push([html, complete]); }, hit: async rect => { hits.push(rect); return { target, box: { ...rect, w: rect.w ?? 0, h: rect.h ?? 0 } }; }, setAnchors() {}, configure() {}, on(type, fn) { const listener = (message: FrameMessage) => { if (message.type === type) fn(message as never); }; listeners.add(listener); return () => listeners.delete(listener); }, destroy() {} });
   function Test({ props }: PrismComponentProps<MockupProps>) { return <MockupView vm={useMockup(props, usePrism(), { createController: factory })} />; }
   const registry = createRegistry([{ ...mockupDefinition, component: Test }]);
   const view = render(<Prism source={source(props)} done={done} registry={registry} store={store} onAction={a => actions.push(a)} />);
   const canvas = () => { const element = view.getByRole('application'); element.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 1000, bottom: 500, width: 1000, height: 500, toJSON() {} }); return element; };
   const pointer = (type: string, x: number, y: number) => fireEvent(canvas(), new window.PointerEvent(type, { bubbles: true, button: 0, clientX: x, clientY: y, pointerId: 1 }));
   function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); }
-  return { view, actions, store, renders, target, canvas, pointer, change, rerender(props: MockupProps, done = true) { view.rerender(<Prism source={source(props)} done={done} registry={registry} store={store} onAction={a => actions.push(a)} />); } };
+  return { view, actions, store, renders, target, hits, canvas, pointer, change, send(message: FrameMessage) { act(() => { listeners.forEach(fn => fn(message)); }); }, rerender(props: MockupProps, done = true) { view.rerender(<Prism source={source(props)} done={done} registry={registry} store={store} onAction={a => actions.push(a)} />); } };
 }
+test('replay begins with a valid mockup and visible content past large styles without replacing its iframe', () => {
+  const markdown = '```mockup:html {id=replay}\n<style>' + 'body{margin:0}'.repeat(300) + '</style><h1>First text</h1><p>' + 'More text '.repeat(100) + '</p>\n```';
+  const initial = replayStart(markdown), plugins = [mockupPlugin];
+  expect(initial).toContain('</style><h1>First text</h1>'); expect(initial.length).toBeLessThan(markdown.length);
+  const view = render(<Prism source={markdown} plugins={plugins} done />), iframe = view.container.querySelector('iframe'), member = view.container.querySelector('.prism-mockup__member');
+  view.rerender(<Prism source={initial} plugins={plugins} done={false} />);
+  expect(view.container.querySelector('iframe')).toBe(iframe); expect(iframe!.isConnected).toBe(true);
+  expect(view.container.querySelector('.prism-mockup__member')).toBe(member); expect(member!.getAttribute('data-state')).toBe('streaming');
+});
+test('an incomplete replay retains the last measured height even through empty content and smaller sizes', () => {
+  const x = setup({ source: '<h1>Complete</h1>' });
+  const size = (height: number) => x.send({ ns: 'prism-mockup', v: 1, id: 'stub', type: 'size', width: 1280, height });
+  const stage = x.view.container.querySelector('.prism-mockup__stage') as HTMLElement, iframe = x.view.container.querySelector('iframe');
+  size(900); x.rerender({ source: '' }, false); size(1); expect(stage.style.height).toBe('900px');
+  x.rerender({ source: '<h1>Partial' }, false); size(1000); size(100); expect(stage.style.height).toBe('1000px');
+  expect(x.view.container.querySelector('iframe')).toBe(iframe);
+  x.rerender({ source: '<h1>Done</h1>' }); size(500); expect(stage.style.height).toBe('500px');
+});
+test('Escape and Enter in a comment return focus to the keyboard canvas', () => {
+  const x = setup(); const canvas = x.canvas(); act(() => canvas.focus()); fireEvent.keyDown(canvas, { key: 'Enter' });
+  fireEvent.keyDown(x.view.getByRole('textbox', { name: 'Add a comment…' }), { key: 'Escape' });
+  expect(document.activeElement).toBe(canvas); expect(x.view.queryByRole('dialog')).toBeNull();
+  fireEvent.keyDown(canvas, { key: 'Enter' }); const textarea = x.view.getByRole('textbox', { name: 'Add a comment…' }); x.change(textarea, 'Saved from keyboard'); fireEvent.keyDown(textarea, { key: 'Enter' });
+  expect(document.activeElement).toBe(canvas); expect(x.view.queryByRole('dialog')).toBeNull();
+  expect(x.view.getByRole('button', { name: 'Comment 1: Saved from keyboard' })).toBeDefined();
+});
+test('drawings hit test their bounding-box centre, follow layout and still submit their path', async () => {
+  const x = setup(); fireEvent.click(x.view.getByRole('button', { name: 'Draw' }));
+  await act(async () => { x.pointer('pointerdown', 400, 50); x.pointer('pointerup', 600, 100); });
+  expect(x.hits).toEqual([{ x: 50, y: 15 }]);
+  const draft = x.store.get('review.feedback') as any;
+  x.send({ ns: 'prism-mockup', v: 1, id: 'stub', type: 'layout', anchors: [{ key: draft.items[0].id, box: { x: 10, y: 40, w: 50, h: 20 } }] });
+  fireEvent.click(x.view.getByText('Submit feedback'));
+  expect((x.actions[0].payload as any).items[0]).toMatchObject({ kind: 'drawing', x: 30, y: 45, w: 10, h: 5, path: 'M30 45L40 50', target: { selector: 'h1' } });
+});
 test('plugin preserves identity, completion and parses safe attributes without registering code', () => {
   const node = { type: 'code', key: 'x', lang: 'mockup:html', meta: '{title="Pricing plans" device=mobile variant="A" group=g1 id=p flag}', value: '<h1>Pricing</h1>', complete: false };
   expect(mockupPlugin.transform!(node)).toEqual({ type: 'component', key: 'x', name: 'mockup', props: { title: 'Pricing plans', device: 'mobile', variant: 'A', group: 'g1', id: 'p', flag: true, kind: 'html', source: node.value }, children: [], complete: false });

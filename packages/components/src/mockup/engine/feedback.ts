@@ -185,8 +185,13 @@ export function createFeedback(init: FeedbackInit = {}) {
       const a = item.anchor, b = a && boxes[a.key];
       if (!a || !b || b.w <= 0 || b.h <= 0) continue;
       const moved = box({ x: b.x + a.fx * b.w, y: b.y + a.fy * b.h, w: (a.fw ?? 0) * b.w, h: (a.fh ?? 0) * b.h });
-      item.x = moved.x; item.y = moved.y;
-      if (item.kind === 'region') { item.w = moved.w; item.h = moved.h; }
+      if (item.kind === 'drawing' && item.path) {
+        const strokes = pathStrokes(item.path).map(stroke => stroke.map(([x, y]): FeedbackPoint => [moved.x + (x - item.x) * (item.w ? moved.w / item.w : 1), moved.y + (y - item.y) * (item.h ? moved.h / item.h : 1)]));
+        Object.assign(item, drawing({ strokes }));
+      } else {
+        item.x = moved.x; item.y = moved.y;
+        if (item.kind === 'region') { item.w = moved.w; item.h = moved.h; }
+      }
     }
     return draft;
   };
@@ -202,7 +207,7 @@ export function createFeedback(init: FeedbackInit = {}) {
   const anchor = (item: FeedbackItem, b?: Box) => {
     if (!item.target || !b || b.w <= 0 || b.h <= 0) return;
     item.anchor = { key: item.id, selector: item.target.selector, fx: (item.x - b.x) / b.w, fy: (item.y - b.y) / b.h,
-      ...(item.kind === 'region' ? { fw: (item.w ?? 0) / b.w, fh: (item.h ?? 0) / b.h } : {}) };
+      ...(item.kind !== 'pin' ? { fw: (item.w ?? 0) / b.w, fh: (item.h ?? 0) / b.h } : {}) };
     boxes[item.id] = copy(b);
   };
   const add = (kind: FeedbackKind, data: Omit<FeedbackItem, 'id' | 'n' | 'kind' | 'createdAt'>, targetBox?: Box) => {

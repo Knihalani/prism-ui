@@ -20,7 +20,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const device = options.controls?.device ?? localDevice, setDevice = options.controls?.setDevice ?? writeDevice, zoom = options.controls?.zoom ?? localZoom, setZoom = options.controls?.setZoom ?? writeZoom;
   const [feedback] = useState(() => createFeedback({ ...draft, mockup: title, variant: props.variant, device }));
   const state = useSyncExternalStore(feedback.subscribe, feedback.getState, feedback.getState);
-  const root = useRef<HTMLDivElement>(null), viewport = useRef<HTMLDivElement>(null), iframe = useRef<HTMLIFrameElement>(null), graphic = useRef<HTMLDivElement>(null), controller = useRef<FrameController | null>(null);
+  const root = useRef<HTMLDivElement>(null), viewport = useRef<HTMLDivElement>(null), canvas = useRef<HTMLDivElement>(null), iframe = useRef<HTMLIFrameElement>(null), graphic = useRef<HTMLDivElement>(null), controller = useRef<FrameController | null>(null);
   const [visible, setVisible] = useState(typeof IntersectionObserver === 'undefined'), [containerWidth, setContainerWidth] = useState(1280), [contentHeight, setContentHeight] = useState(400), [naturalWidth, setNaturalWidth] = useState(800);
   const [expanded, setExpanded] = useState(false), [showSource, setShowSource] = useState(false), [pen, setPen] = useState(false), [color, setColor] = useState('var(--prism-accent)'), [active, setActive] = useState<string | null>(null), [editing, setEditing] = useState<{ id: string; fresh: boolean; text: string } | null>(null), [comment, setComment] = useState(''), [announcement, announce] = useState(''), [reticle, setReticle] = useState<FeedbackPoint>([50, 50]), [focused, setFocused] = useState(false), [hover, setHover] = useState<FeedbackPoint | null>(null), [rubber, setRubber] = useState<FeedbackPoint[]>([]), [imageError, setImageError] = useState(false);
   const penValue = options.controls?.pen ?? pen, colorValue = options.controls?.color ?? color;
@@ -49,7 +49,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const resolved = props.previous ? previousAsResolved(props.previous) : [];
   function open(id: string, fresh = false) { const item = feedback.getState().items.find(item => item.id === id); if (!item) return; setEditing({ id, fresh, text: item.comment }); setComment(item.comment); setActive(id); }
   function remove(id: string) { feedback.remove(id); setEditing(null); announce(labels.removed); }
-  function close() { setEditing(null); }
+  function close(restoreFocus = false) { setEditing(null); if (restoreFocus) canvas.current?.focus({ preventScroll: true }); }
   function popoverPosition(x: number, y: number) {
     const popupWidth = Math.min(320, containerWidth - 24), popupHeight = 180;
     const left = Math.max(12 / scale, Math.min(width - (popupWidth + 12) / scale, x / 100 * width));
@@ -57,14 +57,14 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     const top = Math.max(12 / scale, Math.min(bottom - (popupHeight + 12) / scale, anchor + 20 / scale));
     return { left, top, width: popupWidth };
   }
-  function save() { if (editing) feedback.edit(editing.id, { comment }); close(); }
+  function save(restoreFocus = false) { if (editing) feedback.edit(editing.id, { comment }); close(restoreFocus); }
   useEffect(() => {
     if (!editing) return;
     const outside = (event: globalThis.PointerEvent) => { if (!(event.target instanceof Element) || !event.target.closest('.prism-mockup__popover')) save(); };
     document.addEventListener('pointerdown', outside, true);
     return () => document.removeEventListener('pointerdown', outside, true);
   }, [editing, comment]);
-  function cancel() { if (editing?.fresh && !editing.text) feedback.remove(editing.id); setEditing(null); }
+  function cancel() { if (editing?.fresh && !editing.text) feedback.remove(editing.id); close(!!editing); }
   async function target(id: string, rect: HitRect, client?: FeedbackPoint) {
     if (framed) { const hit = await controller.current?.hit(rect); if (hit?.target && feedback.getState().items.some(item => item.id === id)) feedback.edit(id, { target: hit.target, targetBox: hit.target.box }); }
     else if (kind === 'svg' && client) {
@@ -76,7 +76,14 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
       feedback.edit(id, { target: { selector: path.join(' > ') || 'svg', text: (element.textContent ?? '').trim().slice(0, 80), html: element.outerHTML.slice(0, 300) } });
     }
   }
-  function add(rect: HitRect, points?: FeedbackPoint[], client?: FeedbackPoint) { const item = points ? feedback.addDrawing({ points, color: colorValue }) : rect.w !== undefined ? feedback.addRegion({ ...rect, w: rect.w, h: rect.h ?? 0 }) : feedback.addPin(rect); open(item.id, true); announce(labels.added.replace('{n}', String(item.n))); if (!points) void target(item.id, rect, client); }
+  function add(rect: HitRect, points?: FeedbackPoint[], client?: FeedbackPoint) {
+    const item = points ? feedback.addDrawing({ points, color: colorValue }) : rect.w !== undefined ? feedback.addRegion({ ...rect, w: rect.w, h: rect.h ?? 0 }) : feedback.addPin(rect);
+    open(item.id, true); announce(labels.added.replace('{n}', String(item.n)));
+    if (points) {
+      const center = { x: item.x + (item.w ?? 0) / 2, y: item.y + (item.h ?? 0) / 2 }, bounds = canvas.current?.getBoundingClientRect();
+      void target(item.id, center, bounds ? [bounds.left + center.x / 100 * bounds.width, bounds.top + center.y / 100 * bounds.height] : undefined);
+    } else void target(item.id, rect, client);
+  }
   function point(event: PointerEvent<HTMLElement>): FeedbackPoint { const box = event.currentTarget.getBoundingClientRect(); return [clamp((event.clientX - box.left) / (box.width || 1) * 100), clamp((event.clientY - box.top) / (box.height || 1) * 100)]; }
   const pointer = {
     onPointerDown(event: PointerEvent<HTMLDivElement>) { if (event.button !== 0 || submitted) return; event.preventDefault(); event.currentTarget.setPointerCapture?.(event.pointerId); const p = point(event); gesture.current = { points: [p], clientX: event.clientX, clientY: event.clientY }; setRubber([p]); },
@@ -86,7 +93,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   };
   function onKeyDown(event: KeyboardEvent<HTMLElement>) { if (event.key === 'Escape') { cancel(); setPenValue(false); setExpanded(false); } if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.stopPropagation(); setEditing(null); event.shiftKey ? feedback.redo() : feedback.undo(); } }
   function canvasKey(event: KeyboardEvent<HTMLDivElement>) { if (event.target !== event.currentTarget || submitted) return; const step = event.shiftKey ? 10 : 2; if (event.key.startsWith('Arrow')) { event.preventDefault(); setReticle(([x, y]) => [clamp(x + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0)), clamp(y + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0))]); } if (event.key === 'Enter') { event.preventDefault(); add({ x: reticle[0], y: reticle[1] }); } }
-  return { props, kind, framed, complete, labels, title, source, svg, root, viewport, iframe, graphic, visible: visible && enabled, width, scale, contentHeight, device, setDevice, zoom, setZoom, expanded, showSource, setShowSource, pen: penValue, setPen: setPenValue, color: colorValue, setColor: setColorValue, active, setActive, editing, comment, setComment, announcement, reticle, focused, setFocused, hover, rubber, pointer, onKeyDown, canvasKey, feedback, state, resolved, submitted, setSubmitted, open, remove, save, cancel, close, popoverPosition, locale: ctx.format.locale, canSubmit: feedback.canSubmit || !!(editing && comment.trim()), imageError, setImageError,
+  return { props, kind, framed, complete, labels, title, source, svg, root, viewport, canvas, iframe, graphic, visible: visible && enabled, width, scale, contentHeight, device, setDevice, zoom, setZoom, expanded, showSource, setShowSource, pen: penValue, setPen: setPenValue, color: colorValue, setColor: setColorValue, active, setActive, editing, comment, setComment, announcement, reticle, focused, setFocused, hover, rubber, pointer, onKeyDown, canvasKey, feedback, state, resolved, submitted, setSubmitted, open, remove, save, cancel, close, popoverPosition, locale: ctx.format.locale, canSubmit: feedback.canSubmit || !!(editing && comment.trim()), imageError, setImageError,
     imageSrc: /^(https:|data:image\/)/i.test((props.src ?? source).trim()) ? (props.src ?? source).trim() : undefined,
     imageLoaded(width: number, height: number) { setNaturalWidth(width || 800); grow(height || 400); },
     async fullscreen() { try { if (document.fullscreenElement) await document.exitFullscreen(); else if (root.current?.requestFullscreen) await root.current.requestFullscreen(); else setExpanded(old => !old); } catch { setExpanded(old => !old); } },

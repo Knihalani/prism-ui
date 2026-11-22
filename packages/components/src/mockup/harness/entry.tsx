@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Prism, type Action } from '@prism-ui/react';
 import { mockupPlugin } from '../index';
+import { replayStart } from './replay';
 import '../../styles/styles.css';
 import '../mockup.css';
 import './harness.css';
@@ -24,7 +25,7 @@ const plugins = [mockupPlugin];
 function Demo({ index }: { index: number }) {
   const [source, setSource] = useState(demos[index]), [done, setDone] = useState(true), [actions, setActions] = useState<Action[]>([]), timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   useEffect(() => () => clearInterval(timer.current), []);
-  function stream() { clearInterval(timer.current); let position = 0; setSource(''); setDone(false); timer.current = setInterval(() => { position = Math.min(demos[index].length, position + 30); setSource(demos[index].slice(0, position)); if (position === demos[index].length) { clearInterval(timer.current); setDone(true); } }, 60); }
+  function stream() { clearInterval(timer.current); const initial = replayStart(demos[index]); let position = initial.length; setSource(initial); setDone(false); timer.current = setInterval(() => { position = Math.min(demos[index].length, position + 30); setSource(demos[index].slice(0, position)); if (position === demos[index].length) { clearInterval(timer.current); setDone(true); } }, 60); }
   return <section className="demo" data-demo={index + 1}><div className="demo-actions"><button onClick={stream} disabled={!done}>{done ? 'Stream' : 'Streaming…'}</button></div><Prism source={source} done={done} plugins={plugins} theme={dark ? 'dark' : 'light'} onAction={action => setActions(previous => [...previous, action])} /><details open={actions.length > 0}><summary>Action log</summary><pre data-testid="action-log">{JSON.stringify(actions, null, 2)}</pre></details></section>;
 }
 const only = Number(params.get('only'));
