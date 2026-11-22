@@ -127,7 +127,7 @@
   inset-inline-end: var(--prism-datatable-space-2, var(--prism-space-2));
   inset-block-end: 5px;
   block-size: 3px;
-  max-inline-size: 4rem;
+  inline-size: calc(var(--prism-datatable-magnitude, 0) * var(--prism-datatable-bar-width, 4rem));
   border-radius: var(--prism-datatable-radius-pill, var(--prism-radius-pill));
   background: var(--prism-datatable-bar, var(--prism-text-muted));
   opacity: .22;
