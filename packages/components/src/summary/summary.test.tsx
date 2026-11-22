@@ -67,12 +67,28 @@ test('checkbox state responds to undo, keyboard undo and agent patches', () => {
   expect((view.getByRole('checkbox', { name: 'Publish guide' }) as HTMLInputElement).checked).toBe(true);
 });
 
-test('arrow keys move focus between expandable point buttons without toggling', () => {
+test('arrow keys cycle all points in both directions without toggling sources', () => {
   const view = render(<Prism source={source} />), buttons = pointButtons(view);
-  act(() => buttons[0].focus()); fireEvent.keyDown(buttons[0], { key: 'ArrowDown' }); expect(document.activeElement).toBe(buttons[1]);
-  fireEvent.keyDown(buttons[1], { key: 'ArrowDown' }); expect(document.activeElement).toBe(buttons[0]);
-  fireEvent.keyDown(buttons[0], { key: 'ArrowUp' }); expect(document.activeElement).toBe(buttons[1]);
+  const plain = view.getByText('Keep current pricing');
+  expect(plain.tabIndex).toBe(0);
+  expect(plain.hasAttribute('aria-expanded')).toBe(false);
+  act(() => buttons[0].focus());
+  for (const target of [buttons[1], plain, buttons[0]]) {
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(target);
+  }
+  for (const target of [plain, buttons[1], buttons[0]]) {
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowUp' });
+    expect(document.activeElement).toBe(target);
+  }
   expect(buttons.every(button => button.getAttribute('aria-expanded') === 'false')).toBe(true);
+  view.rerender(<Prism source={'```ui:summary\n{"points":[{"text":"Only plain point"}]}\n```'} />);
+  const only = view.getByText('Only plain point');
+  act(() => only.focus());
+  fireEvent.keyDown(only, { key: 'ArrowDown' }); expect(document.activeElement).toBe(only);
+  fireEvent.keyDown(only, { key: 'ArrowUp' }); expect(document.activeElement).toBe(only);
+  view.rerender(<Prism source={'```ui:summary\n{"points":[]}\n```'} />);
+  expect(view.getByText('No summary points yet.')).toBeDefined();
 });
 
 test('streaming partial JSON progressively renders title, point text and actions with a disabled footer', () => {

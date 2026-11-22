@@ -36,9 +36,9 @@ export function useSummary(props: SummaryProps, ctx: Pick<PrismComponentProps, '
     const validDate = date && Number.isFinite(date.getTime()) ? date : undefined;
     return { ...action, index, done: done?.[index] === true, ownerDetails: action.owner ? ownerDetails(action.owner) : undefined, dateTime: validDate?.toISOString(), dueLabel: validDate ? format.date(validDate, { month: 'short', day: 'numeric', year: 'numeric' }) : action.due, overdue: !!validDate && validDate < today };
   });
-  const onPointKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+  const onPointKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
-    const buttons = Array.from(pointListRef.current?.querySelectorAll<HTMLButtonElement>('[data-part="pointButton"]') ?? []);
+    const buttons = Array.from(pointListRef.current?.querySelectorAll<HTMLElement>('[data-part="pointButton"], [data-part="pointText"][tabindex]') ?? []);
     if (!buttons.length) return;
     event.preventDefault();
     const index = buttons.indexOf(event.currentTarget), next = (index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length;
@@ -61,7 +61,7 @@ export function Summary({ props, complete }: PrismComponentProps<SummaryProps>) 
       {model.loadingPoints && [0, 1, 2].map(index => <li {...parts.skeleton} key={index} aria-hidden="true" />)}
       {model.points.map(point => <PointSlot {...parts.point} key={point.index}>
         <div {...parts.pointRow}>
-          {point.source ? <button {...parts.pointButton} type="button" id={point.buttonId} aria-expanded={point.expanded} aria-controls={point.panelId} onClick={() => model.togglePoint(point.index)} onKeyDown={model.onPointKeyDown}><span {...parts.pointText}>{point.text || (!complete ? <span {...parts.skeleton} aria-hidden="true" /> : '')}</span><span {...parts.citation}>[{point.number}]</span></button> : <p {...parts.pointText}>{point.text || (!complete ? <span {...parts.skeleton} aria-hidden="true" /> : '')}</p>}
+          {point.source ? <button {...parts.pointButton} type="button" id={point.buttonId} aria-expanded={point.expanded} aria-controls={point.panelId} onClick={() => model.togglePoint(point.index)} onKeyDown={model.onPointKeyDown}><span {...parts.pointText}>{point.text || (!complete ? <span {...parts.skeleton} aria-hidden="true" /> : '')}</span><span {...parts.citation}>[{point.number}]</span></button> : <p {...parts.pointText} tabIndex={0} onKeyDown={model.onPointKeyDown}>{point.text || (!complete ? <span {...parts.skeleton} aria-hidden="true" /> : '')}</p>}
           <button {...parts.pointAsk} type="button" aria-label={'Ask about point ' + (point.index + 1)} onClick={() => model.askPoint(point.index)}>Ask about this</button>
         </div>
         {point.source && <SourceSlot {...parts.source} id={point.panelId} role="region" aria-label={'Source ' + point.number} aria-labelledby={point.buttonId} aria-hidden={!point.expanded} inert={!point.expanded} data-expanded={point.expanded ? '' : undefined}>
