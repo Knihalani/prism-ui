@@ -6,10 +6,11 @@ import { s } from '@prism-ui/schema';
 import { chartDefinition } from './index';
 import { codeBlockDefinition } from '../codeblock';
 import { dataTableDefinition } from '../datatable';
+import { tableDef } from '../table';
 import { replayFixtures } from './replay-fixtures';
 
 afterEach(cleanup);
-const registry = createRegistry([codeBlockDefinition, dataTableDefinition, chartDefinition]);
+const registry = createRegistry([codeBlockDefinition, tableDef, dataTableDefinition, chartDefinition]);
 for (const [name, source] of replayFixtures) {
   test(`harness ${name}: every small-chunk prefix renders safely while streaming`, () => {
     const view = render(<Prism registry={registry} source="" done={false} animate={false} />);
@@ -37,7 +38,7 @@ test('partial and malformed nested items render safely at every character', () =
 });
 
 test('component hooks also tolerate malformed raw props without schema coercion', () => {
-  const raw = createRegistry([codeBlockDefinition, dataTableDefinition, chartDefinition].map(definition => ({ ...definition, schema: s.any() })));
+  const raw = createRegistry([codeBlockDefinition, tableDef, dataTableDefinition, chartDefinition].map(definition => ({ ...definition, schema: s.any() })));
   for (const [name, props] of [
     ['code', { code: {}, lang: [], meta: {}, title: {}, collapseAfter: 'bad' }],
     ['table', { title: {}, caption: [], rows: {}, columns: {} }],

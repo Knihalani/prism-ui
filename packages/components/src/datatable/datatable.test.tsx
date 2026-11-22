@@ -3,10 +3,11 @@ import { afterEach, expect, test } from 'bun:test';
 import { act, cleanup, fireEvent, render, within } from '@testing-library/react';
 import { Prism, createRegistry, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
-import { dataTableDefinition, type DataTableProps } from './index';
+import { DataTable, dataTableDefinition, type DataTableProps } from './index';
+import { tableDef, TableDispatcher } from '../table';
 
 afterEach(cleanup);
-const registry = createRegistry([dataTableDefinition]);
+const registry = createRegistry([tableDef, dataTableDefinition]);
 const source = (props: DataTableProps) => '```ui:table\n' + JSON.stringify(props) + '\n```';
 const rows = [{ name: 'Zoe', amount: 20 }, { name: 'Ada', amount: 3 }, { name: 'Ben', amount: 12 }];
 const columns = [{ key: 'name', label: 'Name' }, { key: 'amount', label: 'Amount', type: 'number' as const }];
@@ -25,17 +26,23 @@ test('ui table renders schema-defined and inferred columns, with prompt docs', (
   expect(registry.docs()).toContain('```ui:table');
 });
 
-test('markdown table infers types and keeps rich inline cell content while sorting', () => {
+test('main dispatcher owns table and preserves markdown while ui:table delegates to DataTable', () => {
+  expect(dataTableDefinition.name).toBe('dataTable');
+  expect(registry.get('table')?.component).toBe(TableDispatcher);
+  expect(registry.get('dataTable')?.component).toBe(DataTable);
   const view = render(<Prism registry={registry} locale="en-US" source={'| Name | Total | Date | Count |\n| --- | ---: | --- | --- |\n| **Zoe** | $20.00 | 2025-02-01 | 12 |\n| [Ada](https://example.com) | $3.00 | 2024-01-01 | 2 |'} />);
   expect(view.container.querySelector('strong')?.textContent).toBe('Zoe');
   expect(view.getByRole('link', { name: 'Ada' }).getAttribute('href')).toBe('https://example.com');
   expect(view.getByText('$20.00')).toBeTruthy();
-  fireEvent.click(view.getByRole('button', { name: 'Sort by Total' }));
-  expect(order(view.container)).toEqual(['1', '0']);
-  fireEvent.click(view.getByRole('button', { name: 'Sort by Date' }));
-  expect(order(view.container)).toEqual(['1', '0']);
-  fireEvent.click(view.getByRole('button', { name: 'Sort by Count' }));
-  expect(order(view.container)).toEqual(['1', '0']);
+  expect(view.container.querySelector('[data-prism="table"]')).toBeTruthy();
+  expect(view.container.querySelector('[data-prism="datatable"]')).toBeNull();
+  fireEvent.click(view.getByRole('button', { name: 'Total' }));
+  expect(view.container.querySelector('tbody tr td')?.textContent).toBe('Ada');
+  view.rerender(<Prism registry={registry} source={source({ columns, rows, pageSize: 2 })} />);
+  expect(view.container.querySelector('[data-prism="datatable"]')).toBeTruthy();
+  expect(view.container.querySelector('[data-prism="table"]')).toBeNull();
+  expect(bodyRows(view.container).length).toBe(2);
+  expect(view.getByText('1–2 of 3')).toBeTruthy();
 });
 
 test('streaming known columns immediately render stable headers and skeletons, then append rows unsorted', () => {

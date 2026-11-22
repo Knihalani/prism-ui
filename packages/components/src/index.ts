@@ -1,5 +1,18 @@
 export { ComponentFrame, useFrame } from './frame';
+export * from './runbook';
+export * from './troubleshoot';
+export * from './ask';
+export * from './num';
+export * from './estimate';
+export * from './pick';
 export type { ComponentFrameProps, FrameOptions, FrameSlotProps, FramePart } from './frame';
+export * from './callout';
+export * from './card';
+export * from './grid';
+export * from './badge';
+export * from './tabs';
+export * from './table';
+export * from './summary';
 export { CodeBlock, useCodeBlock, codeBlockDefinition, codeBlockSchema, CodeBlockHighlighterContext, setHighlighter } from './codeblock';
 export type { CodeBlockProps, CodeHighlighter } from './codeblock';
 export { DataTable, useDataTable, dataTableDefinition, dataTableSchema } from './datatable';

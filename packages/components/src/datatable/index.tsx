@@ -1,38 +1,26 @@
-import { createElement, useLayoutEffect, useMemo, useRef, type ElementType, type HTMLAttributes } from 'react';
-import type { Node } from '@prism-ui/core';
-import { defaultRenderers, defineComponent, registerComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
+import { createElement, useLayoutEffect, useRef, type ElementType, type HTMLAttributes } from 'react';
+import { defineComponent, registerComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
 import { useFrame } from '../frame';
-import { dataTableSchema, inferType, useDataTable, type DataTableProps } from './use-datatable';
+import { dataTableSchema, useDataTable, type DataTableProps } from './use-datatable';
 
 export { useDataTable, dataTableSchema } from './use-datatable';
 export type { DataTableProps, DataTableColumn, DataTableRow, DataTableSelection } from './use-datatable';
 
-function text(node: Node): string { return node.value ?? node.children?.map(text).join('') ?? ''; }
-function markdownTable(node: Node): DataTableProps {
-  const [head, ...body] = node.children ?? [];
-  const rows = body.map(row => Object.fromEntries((row.children ?? []).map((cell, index) => [String(index), text(cell)])));
-  return { columns: head?.children?.map((cell, index) => ({ key: String(index), label: text(cell), align: node.align?.[index] ?? undefined, type: inferType(rows.map(row => row[String(index)])) })), rows };
-}
 interface ElementProps extends HTMLAttributes<HTMLElement> { as?: ElementType; [key: string]: any }
 function Element({ as = 'div', ...props }: ElementProps) { return createElement(as, props); }
 function Part({ part, state, style, ...props }: ElementProps & { part: string; state?: string }) {
   const attrs = usePart('datatable', part, state), View = useSlot('datatable', part, Element);
   return <View {...attrs} {...props} style={{ ...style, ...attrs.style }} />;
 }
-function Inline({ node }: { node: Node }) {
-  const ctx = usePrism(), View = ctx.components[node.type] ?? defaultRenderers[node.type as keyof typeof defaultRenderers];
-  return View ? <View node={node}>{node.children?.map(child => <Inline key={child.key} node={child} />)}</View> : <>{text(node)}</>;
-}
 function Checkbox({ mixed, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { mixed?: boolean }) {
   const ref = useRef<HTMLInputElement>(null), part = usePart('datatable', 'checkbox');
   useLayoutEffect(() => { if (ref.current) ref.current.indeterminate = !!mixed; }, [mixed]);
   return <input {...part} {...props} ref={ref} type="checkbox" />;
 }
-export function DataTable({ node, props: inputProps, complete }: PrismComponentProps<DataTableProps>) {
+export function DataTable({ props: inputProps, complete }: PrismComponentProps<DataTableProps>) {
   const props = { ...inputProps, title: typeof inputProps.title === 'string' ? inputProps.title : undefined, caption: typeof inputProps.caption === 'string' ? inputProps.caption : undefined };
-  const ctx = usePrism(), ast = node.type === 'table';
-  const converted = useMemo(() => ast ? markdownTable(node) : undefined, [ast, node]);
-  const vm = useDataTable({ ...props, ...converted, pageSize: ast ? 0 : props.pageSize, complete }, ctx);
+  const ctx = usePrism();
+  const vm = useDataTable({ ...props, complete }, ctx);
   const frame = useFrame({ component: 'datatable', title: props.title, undo: true });
   const scroll = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -55,10 +43,6 @@ export function DataTable({ node, props: inputProps, complete }: PrismComponentP
     } else if (event.key === ' ' && event.target === event.currentTarget) { event.preventDefault(); vm.toggleRow(index); }
   };
   const resetScroll = () => { if (scroll.current) scroll.current.scrollTop = 0; };
-  const cellContent = (index: number, column: number, fallback: string) => {
-    const cell = ast ? node.children?.[index + 1]?.children?.[column] : undefined;
-    return cell?.children?.some(child => child.type !== 'text') ? cell.children.map(child => <Inline key={child.key} node={child} />) : fallback;
-  };
   return <Part part="root" state={complete ? 'done' : 'streaming'} role="region" aria-label={props.title ?? props.caption ?? 'Data table'} onKeyDown={frame.rootProps.onKeyDown} data-animate={ctx.animate ? undefined : 'false'} data-density={props.density}>
     <Part part="toolbar">
       {props.title && <Part part="title" as="h3">{props.title}</Part>}
@@ -82,7 +66,7 @@ export function DataTable({ node, props: inputProps, complete }: PrismComponentP
           {vm.virtual && vm.start > 0 && <tr aria-hidden="true"><td colSpan={columns} style={{ height: vm.start * vm.rowHeight, padding: 0, border: 0 }} /></tr>}
           {vm.visible.map((entry, position) => <Part key={entry.index} part="row" as="tr" data-index={entry.index} state={vm.selection.includes(entry.index) ? 'selected' : undefined} aria-selected={vm.mode ? vm.selection.includes(entry.index) : undefined} aria-rowindex={vm.virtual ? vm.start + position + 2 : undefined} tabIndex={vm.focusIndex === entry.index || !vm.visible.some(item => item.index === vm.focusIndex) && position === 0 ? 0 : -1} onKeyDown={(event: React.KeyboardEvent<HTMLElement>) => onRowKeyDown(event, entry.index)} onFocus={(event: React.FocusEvent<HTMLElement>) => { if (event.target === event.currentTarget) vm.setFocusIndex(entry.index); }} style={{ height: vm.rowHeight }}>
             {vm.mode && <Part part="cell" as="td"><Checkbox aria-label={`Select row ${entry.index + 1}`} checked={vm.selection.includes(entry.index)} onChange={() => vm.toggleRow(entry.index)} /></Part>}
-            {vm.columns.map((column, index) => <Part key={column.key} part="cell" as="td" data-align={column.align} title={entry.cells[index]}>{cellContent(entry.index, index, entry.cells[index])}</Part>)}
+            {vm.columns.map((column, index) => <Part key={column.key} part="cell" as="td" data-align={column.align} title={entry.cells[index]}>{entry.cells[index]}</Part>)}
           </Part>)}
           {vm.virtual && vm.end < vm.count && <tr aria-hidden="true"><td colSpan={columns} style={{ height: (vm.count - vm.end) * vm.rowHeight, padding: 0, border: 0 }} /></tr>}
           {Array.from({ length: skeletonCount }, (_, index) => <tr key={`skeleton-${index}`} aria-hidden="true" style={{ height: vm.rowHeight }}>{Array.from({ length: Math.max(1, columns) }, (_, cell) => <Part key={cell} part="cell" as="td"><Part part="skeleton">&nbsp;</Part></Part>)}</tr>)}
@@ -98,7 +82,7 @@ export function DataTable({ node, props: inputProps, complete }: PrismComponentP
     <Part part="status" role="status" aria-live="polite">{vm.announcement}</Part>
   </Part>;
 }
-export const dataTableDefinition = defineComponent({ name: 'table', schema: dataTableSchema, component: DataTable, syntax: 'fence',
+export const dataTableDefinition = defineComponent({ name: 'dataTable', schema: dataTableSchema, component: DataTable, syntax: 'fence',
   docs: 'Sortable, fuzzy-searchable, paginated/windowed table. Streaming appends unsorted/unfiltered. select emits {rows, indices}: original objects and zero-based input positions in input order. Keep input order stable. View/selection state supports undo.',
   examples: ['```ui:table\n{"columns":[{"key":"name","label":"Name"},{"key":"cost","label":"Cost","type":"currency"}],"rows":[{"name":"Pro","cost":24}],"pageSize":10,"selectable":true}\n```'] });
 registerComponent(dataTableDefinition);
