@@ -124,6 +124,15 @@ or viewport. Drawing `path` coordinates use that same space. Feedback targets th
 render as a whole, not internal cross-origin DOM selectors. Submitted feedback is
 locked until explicitly edited; empty feedback cannot be submitted.
 
+Saved feedback lives at `<target id>.feedback` in the shared store. The editor
+reacts to store patches, undo/redo and streaming ID finalization. Opening an
+editor never initializes a blank draft. Pins in progress, typed annotation text,
+tools and zoom remain local; cancelling them writes nothing. Save, Delete,
+keyboard annotation moves, the overall comment's blur and Submit are explicit
+commits, each recorded as one normal history entry. Submit stores the draft and
+its submitted state together. Comment dialogs use a viewport-bounded portal so
+short or clipped artifact previews cannot hide their actions.
+
 ## Bring an existing React component
 
 The small developer escape hatch builds on the existing directive/component

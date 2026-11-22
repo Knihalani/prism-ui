@@ -9,6 +9,19 @@ function fixture() {
 }
 
 describe('feedback state and history', () => {
+  test('loading a saved snapshot replaces its projection without replaying local history', () => {
+    const { model } = fixture();
+    model.addPin({ x: 20, y: 30, comment: 'Local' });
+    model.undo();
+    expect(model.canRedo).toBe(true);
+    const saved = createFeedback({ overall: 'Restored' }); saved.addPin({ x: 70, y: 80, comment: 'Saved' });
+    model.load(saved.toJSON());
+    expect(model.toJSON()).toEqual(saved.toJSON());
+    expect(model.canRedo).toBe(false);
+    expect(model.canUndo).toBe(false);
+    model.load(createFeedback().toJSON());
+    expect(model.getState()).toMatchObject({ items: [], overall: '' });
+  });
   test('streamed context does not enter or rewind through reviewer undo and redo history', () => {
     const { model } = fixture();
     model.setContext({ mockup: 'Part' });

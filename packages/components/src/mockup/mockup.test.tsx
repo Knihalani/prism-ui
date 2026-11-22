@@ -15,13 +15,14 @@ function setup(props: MockupProps = {}, done = true, store = createStore()) {
   const listeners = new Set<(message: FrameMessage) => void>(), hits: HitRect[] = [];
   const target = { selector: 'h1', text: 'Hello', html: '<h1>Hello</h1>', box: { x: 0, y: 0, w: 100, h: 40 } };
   const factory = (): FrameController => ({ id: 'stub', srcdoc: '', attach() {}, render(html, complete) { renders.push([html, complete]); }, hit: async rect => { hits.push(rect); return { target, box: { ...rect, w: rect.w ?? 0, h: rect.h ?? 0 } }; }, setAnchors() {}, configure() {}, on(type, fn) { const listener = (message: FrameMessage) => { if (message.type === type) fn(message as never); }; listeners.add(listener); return () => listeners.delete(listener); }, destroy() {} });
-  function Test({ props }: PrismComponentProps<MockupProps>) { return <MockupView vm={useMockup(props, usePrism(), { createController: factory })} />; }
+  let model!: ReturnType<typeof useMockup>;
+  function Test({ props }: PrismComponentProps<MockupProps>) { model = useMockup(props, usePrism(), { createController: factory }); return <MockupView vm={model} />; }
   const registry = createRegistry([{ ...mockupDefinition, component: Test }]);
   const view = render(<Prism source={source(props)} done={done} registry={registry} store={store} onAction={a => actions.push(a)} />);
   const canvas = () => { const element = view.getByRole('application'); element.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 1000, bottom: 500, width: 1000, height: 500, toJSON() {} }); return element; };
   const pointer = (type: string, x: number, y: number) => fireEvent(canvas(), new window.PointerEvent(type, { bubbles: true, button: 0, clientX: x, clientY: y, pointerId: 1 }));
-  function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); }
-  return { view, actions, store, renders, target, hits, canvas, pointer, change, send(message: FrameMessage) { act(() => { listeners.forEach(fn => fn(message)); }); }, rerender(props: MockupProps, done = true, nextStore = store) { view.rerender(<Prism source={source(props)} done={done} registry={registry} store={nextStore} onAction={a => actions.push(a)} />); } };
+  function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); if (element.getAttribute('data-part') === 'input' && element.closest('label')) fireEvent.blur(element); }
+  return { view, actions, store, renders, target, hits, canvas, pointer, change, get model() { return model; }, send(message: FrameMessage) { act(() => { listeners.forEach(fn => fn(message)); }); }, rerender(props: MockupProps, done = true, nextStore = store) { view.rerender(<Prism source={source(props)} done={done} registry={registry} store={nextStore} onAction={a => actions.push(a)} />); } };
 }
 test('headless props replace enclosing labels and titles below theme overrides', () => {
   const cases: MockupProps[] = [
@@ -55,7 +56,7 @@ test('recreating the playground store does not resurrect an old feedback draft',
   const fresh = createStore({ initial: { rent: 1200 } });
   x.rerender(props, true, fresh);
   expect((x.view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('');
-  expect(fresh.get('review.feedback.overall')).toBe('');
+  expect(fresh.get('review.feedback')).toBeUndefined();
 });
 test('replay begins with a valid mockup and visible content past large styles without replacing its iframe', () => {
   const markdown = '```mockup:html {id=replay}\n<style>' + 'body{margin:0}'.repeat(300) + '</style><h1>First text</h1><p>' + 'More text '.repeat(100) + '</p>\n```';
@@ -115,7 +116,7 @@ test('completion preserves the pending annotation rollback used by Escape', () =
   x.rerender(props);
   fireEvent.keyDown(x.view.getByRole('textbox', { name: 'Add a comment…' }), { key: 'Escape' });
   expect(x.view.queryByRole('button', { name: /^Comment 1:/ })).toBeNull();
-  expect(x.store.get('review.feedback.items')).toEqual([]);
+  expect(x.store.get('review.feedback')).toBeUndefined();
 });
 test('Escape and Enter in a comment return focus to the keyboard canvas', () => {
   const x = setup(); const canvas = x.canvas(); act(() => canvas.focus()); fireEvent.keyDown(canvas, { key: 'Enter' });
@@ -133,10 +134,10 @@ test('Escape and empty outside-cancel restore history, including a prior redo, a
     const undo = x.view.getByRole('button', { name: 'Undo' }) as HTMLButtonElement, redo = x.view.getByRole('button', { name: 'Redo' }) as HTMLButtonElement;
     expect(undo.disabled).toBe(true); expect(redo.disabled).toBe(false);
     await act(async () => { x.pointer('pointerdown', 200, 100); x.pointer('pointerup', kind === 'pin' ? 200 : 500, kind === 'pin' ? 100 : 300); });
-    expect((x.store.get('review.feedback') as any).items[0].target).toBeDefined();
+    expect(x.model.state.items[0].target).toBeDefined();
     if (outside) fireEvent.pointerDown(x.view.getByRole('textbox', { name: 'Overall feedback' }));
     else fireEvent.keyDown(x.view.getByRole('textbox', { name: 'Add a comment…' }), { key: 'Escape' });
-    expect(x.view.queryByRole('dialog')).toBeNull(); expect((x.store.get('review.feedback') as any).items).toEqual([]);
+    expect(x.view.queryByRole('dialog')).toBeNull(); expect(x.store.get('review.feedback')).toBeUndefined();
     expect(undo.disabled).toBe(true); expect(redo.disabled).toBe(false);
     fireEvent.click(redo); expect((x.view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('Keep me'); expect((x.store.get('review.feedback') as any).items).toEqual([]);
     x.view.unmount();
@@ -146,7 +147,7 @@ test('drawings hit test their bounding-box centre, follow layout and still submi
   const x = setup(); fireEvent.click(x.view.getByRole('button', { name: 'More tools' })); fireEvent.click(x.view.getByRole('button', { name: 'Draw' }));
   await act(async () => { x.pointer('pointerdown', 400, 50); x.pointer('pointerup', 600, 100); });
   expect(x.hits).toEqual([{ x: 50, y: 15 }]);
-  const draft = x.store.get('review.feedback') as any;
+  const draft = x.model.state;
   x.send({ ns: 'prism-mockup', v: 1, id: 'stub', type: 'layout', anchors: [{ key: draft.items[0].id, box: { x: 10, y: 40, w: 50, h: 20 } }] });
   fireEvent.click(x.view.getByText('Submit feedback'));
   expect((x.actions[0].payload as any).items[0]).toMatchObject({ kind: 'drawing', x: 30, y: 45, w: 10, h: 5, path: 'M30 45L40 50', target: { selector: 'h1' } });
@@ -196,14 +197,14 @@ test('open typed drafts enable submit, save before payload creation and pluraliz
   expect((x.actions[0].payload as any).items[0].comment).toBe('Keep this draft');
   expect(x.view.getByText('Feedback sent · 1 comment')).toBeDefined();
 });
-test('clicking another canvas point saves the previous draft; Escape still removes the fresh pin', () => {
+test('clicking another canvas point discards its unsaved predecessor; Escape writes nothing', () => {
   const x = setup(); x.pointer('pointerdown', 200, 100); x.pointer('pointerup', 200, 100);
   x.change(x.view.getByRole('textbox', { name: 'Add a comment…' }), 'Saved outside');
   x.pointer('pointerdown', 700, 300); x.pointer('pointerup', 700, 300);
-  expect((x.store.get('review.feedback') as any).items[0].comment).toBe('Saved outside');
+  expect(x.store.get('review.feedback')).toBeUndefined();
   x.change(x.view.getByRole('textbox', { name: 'Add a comment…' }), 'Cancel me');
   fireEvent.keyDown(x.view.getByRole('textbox', { name: 'Add a comment…' }), { key: 'Escape' });
-  expect((x.store.get('review.feedback') as any).items).toHaveLength(1);
+  expect(x.store.get('review.feedback')).toBeUndefined();
 });
 test('plural rules use the Prism locale and translated forms, including zero', () => {
   const view = render(<Prism source={source({ kind: 'image', labels: { countOne: '{n} remarque', countOther: '{n} remarques' } })} locale="fr" done />);
@@ -225,31 +226,32 @@ test('pin target, comment and overall submit an exact payload and message; edit 
   a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'Make it bigger'); fireEvent.click(a.view.getByText('Save'));
   a.change(a.view.getByRole('textbox', { name: 'Overall feedback' }), 'Looks good'); fireEvent.click(a.view.getByText('Submit feedback'));
   const payload = { mockup: 'Pricing', variant: 'A', device: 'desktop', overall: 'Looks good', items: [{ n: 1, kind: 'pin', x: 25, y: 20, comment: 'Make it bigger', target: { selector: 'h1', text: 'Hello', html: '<h1>Hello</h1>' } }] };
-  expect(a.actions.map(({ type, payload, message }) => ({ type, payload, message }))).toEqual([{ type: 'feedback', payload, message: toMessage(payload as Parameters<typeof toMessage>[0]) }]); expect(a.store.get('review.submitted')).toBe(true); fireEvent.click(a.view.getByText('Edit feedback')); expect(a.view.getByRole('textbox', { name: 'Overall feedback' })).toBeDefined();
+  expect(a.actions.map(({ type, payload, message }) => ({ type, payload, message }))).toEqual([{ type: 'feedback', payload, message: toMessage(payload as Parameters<typeof toMessage>[0]) }]); expect(a.store.get('review.feedback.submitted')).toBe(true); fireEvent.click(a.view.getByText('Edit feedback')); expect(a.view.getByRole('textbox', { name: 'Overall feedback' })).toBeDefined();
 });
 test('region, drawing, undo/redo and escape cancellation use percentage space', async () => {
   const a = setup({ kind: 'image', src: 'https://example.com/a.png' });
   a.pointer('pointerdown', 100, 50); a.pointer('pointermove', 400, 200); a.pointer('pointerup', 400, 200);
-  expect((a.store.get('review.feedback') as any).items[0]).toMatchObject({ kind: 'region', x: 10, y: 10, w: 30, h: 30 });
-  fireEvent.keyDown(a.view.getByRole('textbox', { name: 'Add a comment…' }), { key: 'Escape' }); expect((a.store.get('review.feedback') as any).items).toHaveLength(0);
+  expect(a.model.state.items[0]).toMatchObject({ kind: 'region', x: 10, y: 10, w: 30, h: 30 });
+  expect(a.store.get('review.feedback')).toBeUndefined();
+  fireEvent.keyDown(a.view.getByRole('textbox', { name: 'Add a comment…' }), { key: 'Escape' }); expect(a.store.get('review.feedback')).toBeUndefined();
   fireEvent.click(a.view.getByText('Draw', { exact: false })); a.pointer('pointerdown', 100, 50); a.pointer('pointermove', 200, 100); a.pointer('pointerup', 300, 150); fireEvent.click(a.view.getByText('Save'));
   expect((a.store.get('review.feedback') as any).items[0]).toMatchObject({ kind: 'drawing', x: 10, y: 10, path: 'M10 10L30 30' });
-  fireEvent.click(a.view.getByText('Undo')); expect((a.store.get('review.feedback') as any).items).toHaveLength(0); fireEvent.click(a.view.getByText('Redo')); expect((a.store.get('review.feedback') as any).items).toHaveLength(1);
+  fireEvent.click(a.view.getByText('Undo')); expect(a.store.get('review.feedback')).toBeUndefined(); fireEvent.click(a.view.getByText('Redo')); expect((a.store.get('review.feedback') as any).items).toHaveLength(1);
 });
 test('keyboard reticle, previous resolved items and persisted drafts exclude resolved payload', () => {
   const a = setup({ previous: { overall: '', items: [{ n: 1, kind: 'pin', x: 10, y: 10, comment: 'Old' }] } });
   fireEvent.keyDown(a.canvas(), { key: 'ArrowRight' }); fireEvent.keyDown(a.canvas(), { key: 'ArrowDown', shiftKey: true }); fireEvent.keyDown(a.canvas(), { key: 'Enter' });
-  expect((a.store.get('review.feedback') as any).items[0]).toMatchObject({ x: 52, y: 60 }); a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'New'); fireEvent.click(a.view.getByText('Save')); fireEvent.click(a.view.getByText('Submit feedback')); expect((a.actions[0].payload as any).items).toHaveLength(1); expect(a.view.getByRole('button', { name: 'Resolved 1: Old' }).getAttribute('aria-disabled')).toBe('true');
+  expect(a.model.state.items[0]).toMatchObject({ x: 52, y: 60 }); a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'New'); fireEvent.click(a.view.getByText('Save')); fireEvent.click(a.view.getByText('Submit feedback')); expect((a.actions[0].payload as any).items).toHaveLength(1); expect(a.view.getByRole('button', { name: 'Resolved 1: Old' }).getAttribute('aria-disabled')).toBe('true');
   fireEvent.click(a.view.getByText('Edit feedback')); a.rerender({ title: 'Updated' }); expect(a.view.getByText('New')).toBeDefined();
 });
 test('direct image directive and plugin fences resolve through the registry', () => {
   const registry = createRegistry([mockupDefinition]); const view = render(<Prism registry={registry} plugins={[mockupPlugin]} source={'::mockup{kind=image src="https://example.com/a.png" title="Poster"}\n\n```mockup:svg {title="Logo"}\n<svg><rect width="10"/></svg>\n```'} />); expect(view.getByRole('img', { name: 'Poster' })).toBeDefined(); expect(view.container.querySelector('rect')).not.toBeNull();
 });
-test('draft and viewport state survive a genuine unmount', () => {
+test('saved feedback survives unmount while unsaved device and zoom choices stay local', () => {
   const a = setup(); a.change(a.view.getByRole('textbox', { name: 'Overall feedback' }), 'Keep this draft');
   fireEvent.click(a.view.getByRole('button', { name: /^Mobile$/ })); fireEvent.click(a.view.getByRole('button', { name: 'Zoom in' }));
   const draft = a.store.get('review.feedback'); a.view.unmount();
-  const b = setup({}, true, a.store); expect(b.store.get('review.feedback')).toEqual(draft); expect((b.view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('Keep this draft'); expect(b.view.getByRole('button', { name: /^Mobile$/ }).getAttribute('aria-pressed')).toBe('true'); expect(b.view.getByText('125%')).toBeDefined();
+  const b = setup({}, true, a.store); expect(b.store.get('review.feedback')).toEqual(draft); expect((b.view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('Keep this draft'); expect(b.view.getByRole('button', { name: /^Desktop$/ }).getAttribute('aria-pressed')).toBe('true'); expect(b.view.getByRole('button', { name: 'Fit' })).toBeDefined();
 });
 test('image errors show a calm fallback and a changed URL can load again', () => {
   const a = setup({ kind: 'image', src: 'https://example.com/missing.png' }); fireEvent.error(a.view.getByRole('img')); expect(a.view.getByText('Image unavailable')).toBeDefined(); a.rerender({ kind: 'image', src: 'https://example.com/ok.png' }); expect(a.view.getByRole('img')).toBeDefined();

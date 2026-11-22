@@ -3,140 +3,139 @@ import { afterEach, expect, test } from 'bun:test';
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { Prism, defineRenderer, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
+import { createFeedback } from '../src/mockup/engine';
 import '../src/feedback';
 import '../src/num';
 
 afterEach(cleanup);
 const source = '```ui:feedback-test\n{"id":"target"}\n```';
 const View = () => <button>Actual input</button>;
-function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); }
+function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.focus(element); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); }
 
-test('opening and closing inline feedback preserve unrelated undo and redo', () => {
-  const store = createStore();
+test('saved feedback is store-owned through revisions, local cancellation, finalization, history and explicit commits', () => {
+  const original = createFeedback({ overall: 'Saved overall' });
+  original.addPin({ x: 20, y: 30, comment: 'Saved annotation' });
+  const saved = original.toJSON(), store = createStore({ initial: { target: { feedback: saved } } }), actions: Action[] = [];
   store.set('budget', 1); store.set('budget', 2); store.undo();
-  const view = render(<Prism store={store} renderers={{ 'feedback-test': View }} feedback source={source} />);
+  const ui = (done: boolean) => <Prism store={store} renderers={{ 'feedback-test': View }} feedback source={done ? source : source.slice(0, -3)} done={done} onAction={a => actions.push(a)} />;
+  const view = render(ui(false)), input = view.getByText('Actual input');
   fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
-  expect(store.canUndo('target')).toBe(false);
+  expect(store.get('target.feedback')).toEqual(saved);
+  const beforePin = store.snapshot();
+  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+  change(view.getByPlaceholderText('Add a comment…'), 'Cancel this');
   expect(store.canRedo()).toBe(true);
-  fireEvent.click(view.getByRole('button', { name: 'Close feedback' }));
-  expect(store.canUndo('target')).toBe(false);
-  expect(store.canRedo()).toBe(true);
-  act(() => store.redo());
-  expect(store.get('budget')).toBe(2);
-});
-
-test('user feedback saves clear stale store redo so it cannot erase the draft or submission', () => {
-  const store = createStore();
-  store.set('budget', 1); store.set('budget', 2); store.undo();
-  const view = render(<Prism store={store} renderers={{ 'feedback-test': View }} feedback source={source} />);
-  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  fireEvent.keyDown(view.getByPlaceholderText('Add a comment…'), { key: 'Escape' });
+  expect(store.snapshot()).toEqual(beforePin);
   expect(store.canRedo()).toBe(true);
   fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
-  change(view.getByPlaceholderText('Add a comment…'), 'A saved annotation');
+  const comment = view.getByPlaceholderText('Add a comment…');
+  change(comment, 'Unsaved across finalization');
+  change(view.getByRole('textbox', { name: 'Overall feedback' }), 'Unsaved overall');
+  view.rerender(ui(true));
+  expect(view.getByPlaceholderText('Add a comment…')).toBe(comment);
+  expect((comment as HTMLTextAreaElement).value).toBe('Unsaved across finalization');
+  expect(view.getByText('Actual input')).toBe(input);
+  expect(store.get('target.feedback')).toEqual(saved);
+  expect((view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('Unsaved overall');
+  change(view.getByRole('textbox', { name: 'Overall feedback' }), 'Saved overall');
+  fireEvent.blur(view.getByRole('textbox', { name: 'Overall feedback' }));
+  expect(store.canRedo()).toBe(true);
   fireEvent.click(view.getByRole('button', { name: 'Save' }));
-  change(view.getByRole('textbox', { name: 'Overall feedback' }), 'A saved overall comment');
-  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  expect(store.get('target.feedback.items')).toHaveLength(2);
   expect(store.canRedo()).toBe(false);
-  expect(store.canUndo('target')).toBe(true);
-  const saved = store.get('target.inlineFeedback');
+  act(() => store.undo('target'));
+  expect(view.queryByRole('button', { name: 'Comment 2: Unsaved across finalization' })).toBeNull();
+  act(() => store.redo('target'));
+  expect(view.getByRole('button', { name: 'Comment 2: Unsaved across finalization' })).toBeDefined();
+  const overall = view.getByRole('textbox', { name: 'Overall feedback' });
+  change(overall, 'Committed on blur');
+  expect(store.get('target.feedback.overall')).toBe('Saved overall');
+  fireEvent.blur(overall);
+  expect(store.get('target.feedback.overall')).toBe('Committed on blur');
+  act(() => store.undo('target'));
+  expect((overall as HTMLTextAreaElement).value).toBe('Saved overall');
+  act(() => store.redo('target'));
+  expect((overall as HTMLTextAreaElement).value).toBe('Committed on blur');
+  const marker = view.getByRole('button', { name: 'Comment 1: Saved annotation' });
+  fireEvent.click(marker);
+  change(view.getByPlaceholderText('Add a comment…'), 'Still typing this annotation');
+  change(overall, 'General comment while editing a pin');
+  fireEvent.blur(overall);
+  expect((view.getByPlaceholderText('Add a comment…') as HTMLTextAreaElement).value).toBe('Still typing this annotation');
+  fireEvent.keyDown(view.getByPlaceholderText('Add a comment…'), { key: 'Escape' });
+  change(overall, 'Committed on blur'); fireEvent.blur(overall);
+  fireEvent.keyDown(marker, { key: 'ArrowRight' });
+  expect(store.get('target.feedback.items.0.x')).toBe(22);
+  act(() => store.undo('target'));
+  expect(view.getByRole('button', { name: 'Comment 1: Saved annotation' }).style.left).toBe('20%');
+  fireEvent.click(marker);
+  expect(view.getByRole('dialog').closest('.prism-inline-feedback__target')).toBeNull();
+  fireEvent.click(view.getByRole('button', { name: 'Delete' }));
+  expect(store.get('target.feedback.items')).toHaveLength(1);
+  act(() => store.undo('target'));
+  expect(view.getByRole('button', { name: 'Comment 1: Saved annotation' })).toBeDefined();
+  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+  change(view.getByPlaceholderText('Add a comment…'), 'Committed with submit');
+  change(overall, 'Submitted overall');
+  expect(store.get('target.feedback.overall')).toBe('Committed on blur');
+  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  const submission = store.get('target.feedback');
+  expect(submission).toMatchObject({ submitted: true, overall: 'Submitted overall' });
+  expect(submission.items).toHaveLength(3);
+  expect(actions).toHaveLength(1);
+  expect(actions[0].payload).toMatchObject({ target: { name: 'feedback-test', id: 'target' }, coordinates: 'percent' });
+  expect(store.canRedo()).toBe(false);
   act(() => store.redo());
-  expect(store.get('budget')).toBe(1);
-  expect(store.get('target.inlineFeedback')).toEqual(saved);
-  expect(store.get('target.inlineFeedback')).toMatchObject({ submitted: true, feedback: { overall: 'A saved overall comment', items: [{ comment: 'A saved annotation' }] } });
+  expect(store.get('target.feedback')).toEqual(submission);
+  act(() => store.undo('target'));
+  expect(store.get('target.feedback.items')).toHaveLength(2);
+  expect(store.get('target.feedback.submitted')).toBe(false);
+  expect(store.get('target.feedback.overall')).toBe('Committed on blur');
+  expect(view.getByRole('textbox', { name: 'Overall feedback' })).toBeDefined();
+  act(() => store.redo('target'));
+  expect(store.get('target.feedback')).toEqual(submission);
+  expect(view.getByText('Edit feedback')).toBeDefined();
 });
 
 for (const replacement of ['id', 'store'] as const) for (const saved of [false, true]) {
-  test(`feedback reloads ${saved ? 'saved' : 'empty'} drafts when its ${replacement} changes`, () => {
+  test(`target/${replacement} replacement reads ${saved ? 'saved' : 'absent'} feedback without initializing a draft`, () => {
     const store = createStore(), nextStore = replacement === 'store' ? createStore() : store;
     const nextId = replacement === 'id' ? 'replacement' : 'target';
-    if (saved) nextStore.set(`${nextId}.inlineFeedback.feedback`, { items: [], overall: 'Saved for replacement' }, { history: false });
+    if (saved) nextStore.set(`${nextId}.feedback`, { items: [], overall: 'Saved replacement' }, { history: false });
     const ui = (text: string, activeStore = store) => <Prism store={activeStore} renderers={{ 'feedback-test': View }} feedback source={text} />;
     const view = render(ui(source));
     fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
-    fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
-    change(view.getByPlaceholderText('Add a comment…'), 'Original pin');
-    fireEvent.click(view.getByRole('button', { name: 'Save' }));
     change(view.getByRole('textbox', { name: 'Overall feedback' }), 'Original draft');
+    fireEvent.blur(view.getByRole('textbox', { name: 'Overall feedback' }));
     view.rerender(ui(source.replace('target', nextId), nextStore));
-    expect((view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe(saved ? 'Saved for replacement' : '');
-    expect(nextStore.get(`${nextId}.inlineFeedback.feedback`)).toMatchObject({ items: [], overall: saved ? 'Saved for replacement' : '' });
-    expect(store.get('target.inlineFeedback.feedback')).toMatchObject({ overall: 'Original draft', items: [{ comment: 'Original pin' }] });
+    expect((view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe(saved ? 'Saved replacement' : '');
+    expect(nextStore.get(`${nextId}.feedback`)).toEqual(saved ? { items: [], overall: 'Saved replacement' } : undefined);
+    if (replacement === 'id') expect(store.get('target.feedback.overall')).toBe('Original draft');
   });
 }
 
-test('feedback reloads migrated drafts on streaming finalization without remounting the renderer', () => {
-  const store = createStore();
-  const ui = (done: boolean) => <Prism store={store} renderers={{ 'feedback-test': View }} feedback done={done} source={done ? source : source.slice(0, -3)} />;
-  const view = render(ui(false)), input = view.getByText('Actual input');
-  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
-  change(view.getByRole('textbox', { name: 'Overall feedback' }), 'Keep this draft');
-  view.rerender(ui(true));
-  expect((view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('Keep this draft');
-  expect(store.get('target.inlineFeedback.feedback')).toMatchObject({ overall: 'Keep this draft' });
-  expect(view.getByText('Actual input')).toBe(input);
-});
-
-test('an unsaved annotation comment survives ID finalization and saves under the final target', () => {
-  const store = createStore(), actions: Action[] = [];
-  const ui = (done: boolean) => <Prism store={store} renderers={{ 'feedback-test': View }} feedback done={done} source={done ? source : source.slice(0, -3)} onAction={action => actions.push(action)} />;
-  const view = render(ui(false)), input = view.getByText('Actual input');
-  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
-  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
-  const comment = view.getByPlaceholderText('Add a comment…');
-  change(comment, 'Unsaved while streaming');
-  view.rerender(ui(true));
-  expect(view.getByPlaceholderText('Add a comment…')).toBe(comment);
-  expect((comment as HTMLTextAreaElement).value).toBe('Unsaved while streaming');
-  expect(view.getByText('Actual input')).toBe(input);
-  fireEvent.click(view.getByRole('button', { name: 'Save' }));
-  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
-  expect(store.get('target.inlineFeedback.feedback')).toMatchObject({ items: [{ comment: 'Unsaved while streaming' }] });
-  expect(actions).toHaveLength(1);
-  expect(actions[0].payload).toMatchObject({ target: { name: 'feedback-test', id: 'target' }, items: [{ comment: 'Unsaved while streaming' }] });
-});
-
-test('feedback preserves valid phrasing content for inline built-ins, including the open editor', () => {
+test('inline built-ins keep phrasing content and portal their comment editor outside the paragraph', () => {
   const view = render(<Prism feedback source="Budget :num[3]{id=quantity} per seat." />);
   const paragraph = view.container.querySelector('p')!;
-  expect(paragraph.querySelector('.prism-inline-feedback')?.tagName).toBe('SPAN');
-  expect(paragraph.querySelector('[data-inline]')).not.toBeNull();
   fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
   fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
   expect(paragraph.querySelector('div')).toBeNull();
+  expect(paragraph.querySelector('[role=dialog]')).toBeNull();
+  expect(view.getByRole('dialog')).toBeDefined();
   expect(paragraph.textContent).toContain('per seat.');
 });
 
-test('inline feedback reuses keyboard pin/comment UI and submits one targeted percent-space payload', () => {
-  const actions: Action[] = [];
-  const view = render(<Prism renderers={{ 'feedback-test': View }} feedback source={source} onAction={action => actions.push(action)} />);
-  const input = view.getByText('Actual input');
-  expect(view.queryByRole('application')).toBeNull();
-  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
-  expect(view.getByRole('button', { name: 'Submit feedback' }).hasAttribute('disabled')).toBe(true);
-  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
-  change(view.getByPlaceholderText('Add a comment…'), 'Make this easier to see');
-  fireEvent.click(view.getByRole('button', { name: 'Save' }));
-  change(view.getByRole('textbox', { name: 'Overall feedback' }), 'A good first direction');
-  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
-  expect(actions).toHaveLength(1);
-  expect(actions[0]).toMatchObject({ type: 'feedback', component: 'feedback-test', id: 'target', payload: { target: { name: 'feedback-test', id: 'target' }, coordinates: 'percent', overall: 'A good first direction', items: [{ n: 1, kind: 'pin', x: 50, y: 50, comment: 'Make this easier to see' }] } });
-  expect(view.queryByRole('button', { name: 'Submit feedback' })).toBeNull();
-  expect(view.getByText('Actual input')).toBe(input);
-  fireEvent.keyDown(view.getByText('Edit feedback'), { key: 'Escape' });
-  expect(view.queryByRole('textbox', { name: 'Overall feedback' })).toBeNull();
-  expect(document.activeElement).toBe(view.getByRole('button', { name: 'Give feedback' }));
-});
-
-test('definitions can opt in or out; empty and canceled feedback sends nothing', () => {
-  const enabled = defineRenderer('feedback-enabled-test', View, { feedback: true });
-  const disabled = defineRenderer('feedback-disabled-test', View, { feedback: false });
-  const actions: Action[] = [];
-  const view = render(<Prism renderers={{ 'feedback-test': enabled }} source={source} onAction={a => actions.push(a)} />);
+test('definitions opt in/out; empty and canceled feedback never create saved state or actions', () => {
+  const enabled = defineRenderer('feedback-enabled-test', View, { feedback: true }), disabled = defineRenderer('feedback-disabled-test', View, { feedback: false });
+  const actions: Action[] = [], store = createStore();
+  const view = render(<Prism store={store} renderers={{ 'feedback-test': enabled }} source={source} onAction={a => actions.push(a)} />);
   fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
   fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
   fireEvent.keyDown(view.getByPlaceholderText('Add a comment…'), { key: 'Escape' });
   expect(view.getByRole('button', { name: 'Submit feedback' }).hasAttribute('disabled')).toBe(true);
   expect(actions).toEqual([]);
-  view.rerender(<Prism renderers={{ 'feedback-test': disabled }} feedback source={source} />);
+  expect(store.snapshot()).toEqual({});
+  view.rerender(<Prism store={store} renderers={{ 'feedback-test': disabled }} feedback source={source} />);
   expect(view.queryByRole('button', { name: 'Give feedback' })).toBeNull();
 });

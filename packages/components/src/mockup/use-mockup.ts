@@ -1,5 +1,5 @@
-import { useContext, useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
-import { ComponentContext, useComponentState, useSent, useFlash, usePrism, useTheme, useEmit, type PrismContextValue } from '@prism-ui/react';
+import { useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
+import { ComponentContext, useStoreValue, useSent, useFlash, usePrism, useTheme, useEmit, type PrismContextValue } from '@prism-ui/react';
 import { createFeedback, createFrameController, previousAsResolved, sanitizeSvg, toMessage, wireframeDocument, feedbackMessageStrings, type FeedbackPayload, type FeedbackState, type FeedbackPoint, type FrameController, type HitRect } from './engine';
 
 export type MockupDevice = 'desktop' | 'tablet' | 'mobile';
@@ -20,9 +20,10 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const enabled = options.enabled !== false;
   const complete = component?.node.complete !== false, kind = props.kind ?? 'html', framed = kind === 'html' || kind === 'wire';
   const labels = useMockupStrings(props), title = labels.title, source = props.source ?? '';
-  const prefix = options.inline ? 'inlineFeedback.' : '';
-  const storage = options.inline ? { initialHistory: false } : undefined;
-  const [localDevice, writeDevice] = useComponentState<MockupDevice>(prefix + 'device', props.device ?? 'desktop', storage), [localZoom, writeZoom] = useComponentState(prefix + 'zoom', 1, storage), [draft] = useComponentState<FeedbackState | undefined>(prefix + 'feedback', undefined, storage), [submitted, setSubmitted] = useComponentState(prefix + 'submitted', false, storage);
+  const path = `${component!.id}.feedback`;
+  const draft = useStoreValue<(FeedbackState & { submitted?: boolean }) | undefined>(path);
+  const [localDevice, writeDevice] = useState<MockupDevice>(props.device ?? 'desktop'), [localZoom, writeZoom] = useState(1), [editSubmitted, setEditSubmitted] = useState(false);
+  const submitted = !!draft?.submitted && !editSubmitted, setSubmitted = (value: boolean) => setEditSubmitted(!value);
   const device = options.controls?.device ?? localDevice, setDevice = options.controls?.setDevice ?? writeDevice, zoom = options.controls?.zoom ?? localZoom, setZoom = options.controls?.setZoom ?? writeZoom;
   const [feedback] = useState(() => createFeedback({ ...draft, mockup: title, variant: props.variant, device }));
   const state = useSyncExternalStore(feedback.subscribe, feedback.getState, feedback.getState);
@@ -33,10 +34,21 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const penValue = options.controls?.pen ?? pen, colorValue = options.controls?.color ?? color;
   const setPenValue = options.controls?.setPen ?? setPen, setColorValue = options.controls?.setColor ?? setColor;
   const gesture = useRef<{ points: FeedbackPoint[]; clientX: number; clientY: number } | null>(null);
-  const pending = useRef<{ id: string; rollback(): void } | null>(null);
+  const pending = useRef<{ id: string } | null>(null);
+  const previousDraft = useRef({ path, draft });
   const completeRef = useRef(complete); completeRef.current = complete;
   const grow = (height: number) => setContentHeight(old => completeRef.current ? Math.max(1, height) : Math.max(old, height, 400));
-  useEffect(() => { const persist = (history = false) => ctx.store.set(`${component!.id}.${prefix}feedback`, feedback.toJSON(), { history }); persist(); return feedback.subscribe(() => persist(options.inline === true)); }, [feedback, ctx.store, component?.id, prefix, options.inline]);
+  useLayoutEffect(() => {
+    const current = feedback.getState(), fresh = pending.current && current.items.find(item => item.id === pending.current!.id);
+    const items = [...(draft?.items ?? [])];
+    if (fresh && !items.some(item => item.id === fresh.id)) items.push(fresh);
+    const before = previousDraft.current.draft?.overall ?? '', saved = draft?.overall ?? '';
+    const overall = (previousDraft.current.path !== path || before === saved) && current.overall !== before ? current.overall : saved;
+    previousDraft.current = { path, draft };
+    feedback.load(createFeedback({ ...draft, mockup: title, variant: props.variant, device, items, overall }).toJSON());
+    if (editing && !editing.fresh) { const item = items.find(item => item.id === editing.id); if (!item) { setEditing(null); setComment(''); } else if (item.comment !== editing.text) { setEditing({ ...editing, text: item.comment }); setComment(item.comment); } }
+    setEditSubmitted(false);
+  }, [draft, path, feedback]);
   useEffect(() => { feedback.setContext({ mockup: title, variant: props.variant, device }); }, [feedback, title, props.variant, device]);
   useEffect(() => { if (visible || !root.current || typeof IntersectionObserver === 'undefined') return; const observer = new IntersectionObserver(entries => { if (entries.some(e => e.isIntersecting)) { setVisible(true); observer.disconnect(); } }, { rootMargin: '200px' }); observer.observe(root.current); return () => observer.disconnect(); }, [visible]);
   useEffect(() => { if (!viewport.current || typeof ResizeObserver === 'undefined') return; const observer = new ResizeObserver(entries => setContainerWidth(entries[0].contentRect.width || 1280)); observer.observe(viewport.current); return () => observer.disconnect(); }, []);
@@ -55,8 +67,22 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   useEffect(() => { const element = graphic.current?.querySelector('svg'); if (!element) return; const box = element.getAttribute('viewBox')?.split(/[\s,]+/).map(Number); setNaturalWidth(box?.[2] || Number(element.getAttribute('width')) || 800); grow(box?.[3] || Number(element.getAttribute('height')) || 400); }, [svg, visible, enabled]);
   const width = options.inline ? containerWidth : framed ? widths[device] : naturalWidth, scale = options.inline ? 1 : (framed ? Math.min(1, containerWidth / width) : containerWidth / width) * zoom;
   const resolved = props.previous ? previousAsResolved(props.previous) : [];
-  function open(id: string, fresh = false) { const item = feedback.getState().items.find(item => item.id === id); if (!item) return; setEditing({ id, fresh, text: item.comment }); setComment(item.comment); setActive(id); }
-  function remove(id: string) { feedback.remove(id); setEditing(null); announce(labels.removed); }
+  function open(id: string, fresh = false) { const item = feedback.getState().items.find(item => item.id === id); if (!item) return; if (pending.current && pending.current.id !== id) { feedback.remove(pending.current.id); pending.current = null; } setEditing({ id, fresh, text: item.comment }); setComment(item.comment); setActive(id); }
+  function commit(change: (value: FeedbackState) => FeedbackState, sent = false) {
+    let result!: FeedbackState;
+    ctx.store.update(path, (saved: (FeedbackState & { submitted?: boolean }) | undefined) => {
+      result = createFeedback(change(createFeedback({ ...saved, mockup: title, variant: props.variant, device }).toJSON())).toJSON();
+      const next = { ...result, submitted: sent };
+      return JSON.stringify(saved) === JSON.stringify(next) ? saved : next;
+    });
+    return result;
+  }
+  function withItem(value: FeedbackState, id: string, text: string) {
+    const item = feedback.getState().items.find(item => item.id === id);
+    if (!item) return value;
+    return { ...value, items: value.items.some(item => item.id === id) ? value.items.map(old => old.id === id ? { ...item, comment: text } : old) : [...value.items, { ...item, comment: text }] };
+  }
+  function remove(id: string) { const fresh = pending.current?.id === id, saved = ctx.store.get(path)?.items.some((item: { id: string }) => item.id === id); feedback.remove(id); close(); if (!fresh && saved) commit(value => ({ ...value, items: value.items.filter(item => item.id !== id) })); announce(labels.removed); }
   function close(restoreFocus = false) { pending.current = null; setEditing(null); if (restoreFocus) canvas.current?.focus({ preventScroll: true }); }
   function popoverPosition(x: number, y: number) {
     if (options.inline) {
@@ -76,18 +102,23 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     const top = Math.max(12, Math.min(availableHeight - popupHeight - 12, anchorY + 20));
     return { left, top, width: popupWidth };
   }
-  function save(restoreFocus = false) { if (editing) feedback.edit(editing.id, { comment }); close(restoreFocus); }
+  function save(restoreFocus = false) { const edit = editing; close(restoreFocus); if (edit) { feedback.edit(edit.id, { comment }); commit(value => withItem(value, edit.id, comment)); } }
+  function saveOverall(event?: { relatedTarget: EventTarget | null }) { if (event?.relatedTarget instanceof Element && event.relatedTarget.closest('[data-feedback-submit]')) return; const overall = feedback.getState().overall; if (overall !== (ctx.store.get(path)?.overall ?? '')) commit(value => ({ ...value, overall })); }
+  const subscribeHistory = (fn: () => void) => ctx.store.subscribe('*', fn);
+  const canUndo = useSyncExternalStore(subscribeHistory, () => ctx.store.canUndo(path), () => false), canRedo = useSyncExternalStore(subscribeHistory, () => ctx.store.canRedo(path), () => false);
+  function undo() { cancel(false); ctx.store.undo(path); }
+  function redo() { cancel(false); ctx.store.redo(path); }
+  function move(id: string, x: number, y: number) { if (!feedback.getState().items.some(item => item.id === id)) return; feedback.edit(id, { x: clamp(x), y: clamp(y) }); if (pending.current?.id !== id) commit(value => withItem(value, id, feedback.getState().items.find(item => item.id === id)?.comment ?? '')); }
   useEffect(() => {
     if (!editing) return;
     const outside = (event: globalThis.PointerEvent) => {
       if (event.target instanceof Element && event.target.closest('[data-prism="mockup"][data-part="popover"]')) return;
       if (editing.fresh && !comment.trim() && feedback.getState().items.find(item => item.id === editing.id)?.kind !== 'drawing') cancel(false);
-      else save();
     };
     document.addEventListener('pointerdown', outside, true);
     return () => document.removeEventListener('pointerdown', outside, true);
-  }, [editing, comment]);
-  function cancel(restoreFocus = true) { if (editing?.fresh && !editing.text && pending.current?.id === editing.id) pending.current.rollback(); close(restoreFocus && !!editing); }
+  }, [editing, comment, feedback]);
+  function cancel(restoreFocus = true) { if (pending.current) feedback.remove(pending.current.id); close(restoreFocus && !!editing); }
   async function target(id: string, rect: HitRect, client?: FeedbackPoint) {
     if (framed) { const hit = await controller.current?.hit(rect); if (hit?.target && feedback.getState().items.some(item => item.id === id)) feedback.edit(id, { target: hit.target, targetBox: hit.target.box }); }
     else if (kind === 'svg' && client) {
@@ -100,9 +131,9 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     }
   }
   function add(rect: HitRect, points?: FeedbackPoint[], client?: FeedbackPoint) {
-    const rollback = feedback.checkpoint();
+    if (pending.current) feedback.remove(pending.current.id);
     const item = points ? feedback.addDrawing({ points, color: colorValue }) : rect.w !== undefined ? feedback.addRegion({ ...rect, w: rect.w, h: rect.h ?? 0 }) : feedback.addPin(rect);
-    pending.current = { id: item.id, rollback };
+    pending.current = { id: item.id };
     open(item.id, true); announce(labels.added.replace('{n}', String(item.n)));
     if (points) {
       const center = { x: item.x + (item.w ?? 0) / 2, y: item.y + (item.h ?? 0) / 2 }, bounds = canvas.current?.getBoundingClientRect();
@@ -116,14 +147,14 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     onPointerUp(event: PointerEvent<HTMLDivElement>) { const g = gesture.current; if (!g) return; gesture.current = null; setRubber([]); event.currentTarget.releasePointerCapture?.(event.pointerId); const p = point(event), first = g.points[0]; if (penValue) add({ x: first[0], y: first[1] }, [...g.points, p]); else if (Math.hypot(event.clientX - g.clientX, event.clientY - g.clientY) < 5) add({ x: p[0], y: p[1] }, undefined, [event.clientX, event.clientY]); else add({ x: Math.min(first[0], p[0]), y: Math.min(first[1], p[1]), w: Math.abs(first[0] - p[0]), h: Math.abs(first[1] - p[1]) }, undefined, [event.clientX, event.clientY]); },
     onPointerCancel() { gesture.current = null; setRubber([]); }, onPointerLeave() { setHover(null); },
   };
-  function onKeyDown(event: KeyboardEvent<HTMLElement>) { if (event.key === 'Escape') { cancel(); setPenValue(false); setExpanded(false); } if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.stopPropagation(); setEditing(null); event.shiftKey ? feedback.redo() : feedback.undo(); } }
+  function onKeyDown(event: KeyboardEvent<HTMLElement>) { if (event.key === 'Escape') { cancel(); setPenValue(false); setExpanded(false); } if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.stopPropagation(); event.shiftKey ? redo() : undo(); } }
   function canvasKey(event: KeyboardEvent<HTMLDivElement>) { if (event.target !== event.currentTarget || submitted) return; const step = event.shiftKey ? 10 : 2; if (event.key.startsWith('Arrow')) { event.preventDefault(); setReticle(([x, y]) => [clamp(x + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0)), clamp(y + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0))]); } if (event.key === 'Enter') { event.preventDefault(); add({ x: reticle[0], y: reticle[1] }); } }
-  return { flash, props, kind, framed, complete, labels, title, source, svg, root, viewport, canvas, iframe, graphic, visible: visible && enabled, width, scale, contentHeight, device, setDevice, zoom, setZoom, expanded, showSource, setShowSource, pen: penValue, setPen: setPenValue, color: colorValue, setColor: setColorValue, active, setActive, editing, comment, setComment, announcement, reticle, focused, setFocused, hover, rubber, pointer, onKeyDown, canvasKey, feedback, state, resolved, submitted, setSubmitted, open, remove, save, cancel, close, popoverPosition, locale: ctx.format.locale, canSubmit: feedback.canSubmit || !!(editing && comment.trim()), imageError, setImageError,
+  return { flash, props, kind, framed, complete, labels, title, source, svg, root, viewport, canvas, iframe, graphic, visible: visible && enabled, width, scale, contentHeight, device, setDevice, zoom, setZoom, expanded, showSource, setShowSource, pen: penValue, setPen: setPenValue, color: colorValue, setColor: setColorValue, active, setActive, editing, comment, setComment, announcement, reticle, focused, setFocused, hover, rubber, pointer, onKeyDown, canvasKey, feedback: { ...feedback, canUndo, canRedo, undo, redo }, state, resolved, submitted, setSubmitted, open, remove, save, saveOverall, move, cancel, close, popoverPosition, locale: ctx.format.locale, canSubmit: feedback.canSubmit || !!(editing && comment.trim()), imageError, setImageError,
     imageSrc: /^(https:|data:image\/)/i.test((props.src ?? source).trim()) ? (props.src ?? source).trim() : undefined,
     imageLoaded(width: number, height: number) { setNaturalWidth(width || 800); grow(height || 400); },
     async fullscreen() { try { if (document.fullscreenElement) await document.exitFullscreen(); else if (root.current?.requestFullscreen) await root.current.requestFullscreen(); else setExpanded(old => !old); } catch { setExpanded(old => !old); } },
     async copy() { try { await navigator.clipboard?.writeText(source); } catch {} },
-    submit() { save(); if (!feedback.canSubmit || submitted) return; const payload = feedback.toPayload(), message = toMessage(payload, { strings: labels }); if (options.inline) emit('feedback', { ...payload, target: { name: component!.name, id: component!.id }, coordinates: 'percent' }, message); else receipt.send('feedback', payload, message); setSubmitted(true); setEditing(null); },
+    submit() { if (submitted || !(feedback.canSubmit || editing && comment.trim())) return; const edit = editing, working = feedback.getState(); close(); const saved = commit(value => { const projected = { ...value, overall: working.overall, items: value.items.map(item => working.items.find(current => current.id === item.id) ?? item) }; return edit ? withItem(projected, edit.id, comment) : projected; }, true); const payload = createFeedback(saved).toPayload(), message = toMessage(payload, { strings: labels }); if (options.inline) emit('feedback', { ...payload, target: { name: component!.name, id: component!.id }, coordinates: 'percent' }, message); else receipt.send('feedback', payload, message); setEditing(null); },
   };
 }
 export type MockupModel = ReturnType<typeof useMockup>;

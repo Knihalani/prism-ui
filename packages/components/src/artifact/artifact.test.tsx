@@ -79,6 +79,7 @@ test('reloading migrated artifact feedback preserves its iframe and document on 
     act(() => overall.focus());
     fireEvent.change(overall, { target: { value: 'Keep this artifact draft' } });
     fireEvent.keyUp(overall, { key: 'Unidentified' });
+    fireEvent.blur(overall);
     fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
     const comment = view.getByPlaceholderText('Add a comment…');
     act(() => comment.focus());
@@ -86,7 +87,7 @@ test('reloading migrated artifact feedback preserves its iframe and document on 
     fireEvent.keyUp(comment, { key: 'Unidentified' });
     view.rerender(ui(true));
     expect((view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('Keep this artifact draft');
-    expect(store.get('feedback-migration.inlineFeedback.feedback')).toMatchObject({ overall: 'Keep this artifact draft' });
+    expect(store.get('feedback-migration.feedback')).toMatchObject({ overall: 'Keep this artifact draft' });
     expect(view.container.querySelector('iframe')).toBe(frame);
     expect(frame.srcdoc).toBe(document);
     expect(view.getByPlaceholderText('Add a comment…')).toBe(comment);
@@ -94,8 +95,8 @@ test('reloading migrated artifact feedback preserves its iframe and document on 
   } finally { cleanup(); restore(); }
 });
 
-test('artifact feedback measures and annotates only preview content, excluding the toolbar', async () => {
-  const restore = observeFrames(), view = render(<Prism source={snippet} plugins={plugins} registry={registry} />);
+for (const variant of ['inline', 'panel', 'minimal']) test(`${variant} artifact feedback scopes coordinates to a short preview and portals its unclipped editor`, async () => {
+  const restore = observeFrames(), view = render(<Prism source={snippet.replace('height=180px', `height=48px variant=${variant}`)} plugins={plugins} registry={registry} />);
   try {
     await waitFor(() => { if (!view.container.querySelector('iframe')) throw Error('No frame'); });
     fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
@@ -104,7 +105,9 @@ test('artifact feedback measures and annotates only preview content, excluding t
     expect(canvas.parentElement).toBe(preview);
     expect(canvas.parentElement!.contains(view.container.querySelector('[data-part="header"]'))).toBe(false);
     fireEvent.keyDown(canvas, { key: 'Enter' });
-    expect(view.getByRole('dialog').parentElement).toBe(preview);
+    expect(preview.contains(view.getByRole('dialog'))).toBe(false);
+    expect(view.getByRole('dialog').style.display).toBe('block');
+    expect(view.getByRole('dialog').closest('.prism-inline-feedback__popover-layer')?.parentElement).toBe(document.body);
   } finally { cleanup(); restore(); }
 });
 
