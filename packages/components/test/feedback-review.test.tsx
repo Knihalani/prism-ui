@@ -66,7 +66,7 @@ for (const kind of ['pin', 'region'] as const) test(`clearing the only ${kind} c
 
 test('comment portals follow the target into fullscreen and return without losing text', () => {
   const descriptor = Object.getOwnPropertyDescriptor(document, 'fullscreenElement');
-  const { view } = setup(), target = view.container.querySelector('.prism-inline-feedback__target')!;
+  const { view } = setup(), target = view.container.querySelector<HTMLElement>('.prism-inline-feedback__target')!;
   const fullscreen = (element: Element | null) => act(() => { Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: element }); document.dispatchEvent(new Event('fullscreenchange')); });
   try {
     fullscreen(target);
