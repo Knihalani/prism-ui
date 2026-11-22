@@ -52,7 +52,7 @@
 .prism-root[data-prism-presentation] :is(.prism-pill, button.prism-chip, .prism-icon-btn, .prism-stepper > button, .prism-switch, .prism-check, .prism-estimate__increase, .prism-estimate__decrease, .prism-pick__choose, .prism-pick__chip, .prism-tabs__tab, .prism-view__tab, .prism-view__button, .prism-view__switch, .prism-view__checkWrap, .prism-ask__switch, .prism-ask__choice, .prism-view__segment, .prism-runbook__check, .prism-summary__checkbox, .prism-frame__overflowTrigger):active:not(:disabled) {
   scale: var(--prism-motion-scale); transition-duration: var(--prism-motion-instant);
 }
-.prism-root[data-prism-presentation] :is(.prism-card__root, .prism-pick__item):active { scale: 1; background: color-mix(in srgb, var(--prism-accent) 4%, var(--prism-surface)); }
+.prism-root[data-prism-presentation] :is(.prism-card__root, .prism-pick__item):active { scale: 1; background: color-mix(in srgb, var(--prism-accent, var(--prism-accent-text)) 4%, var(--prism-surface)); }
 
 .prism-root[data-prism-presentation] :is(.prism-estimate__skeleton, .prism-ask__skeleton, .prism-runbook__skeleton, .prism-troubleshoot__skeleton, .prism-summary__skeleton, .prism-skeleton) {
   animation: prism-skeleton-pulse calc(var(--prism-motion-slow) * 3) var(--prism-motion-ease-in-out) infinite alternate;
@@ -97,7 +97,7 @@
 .prism-root[data-prism-presentation] .prism-view__slider { width: 100%; }
 .prism-root[data-prism-presentation] .prism-view__sliderThumb {
   position: absolute; inset-inline-start: 0; top: 50%; width: 16px; height: 16px; pointer-events: none;
-  border: 2px solid var(--prism-view-accent, var(--prism-accent)); border-radius: var(--prism-radius-pill); background: var(--prism-surface);
+  border: 2px solid var(--prism-view-accent, var(--prism-accent, var(--prism-accent-text))); border-radius: var(--prism-radius-pill); background: var(--prism-surface);
   transform: translateX(calc((100cqw - 16px) * var(--prism-view-ratio))) translateY(-50%);
   transition: transform var(--prism-motion-spring-duration) var(--prism-motion-spring);
 }
