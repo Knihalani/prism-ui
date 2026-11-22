@@ -11,6 +11,29 @@ const two = start + ':::tab{label="Details"}\nSecond panel\n:::\n';
 const source = two + '::::';
 function buttons(view: ReturnType<typeof render>) { return view.getAllByRole('tab') as HTMLButtonElement[]; }
 
+test('tab labels and badges resolve reactive refs and coerce numeric values', () => {
+  const store = createStore({ initial: { label: 'Overview', count: 3 } });
+  const input = '::::tabs{id=bound}\n:::tab{label={"$ref":"label"} badge={"$ref":"count"}}\nFirst\n:::\n:::tab{label=0 badge=2}\nSecond\n:::\n::::';
+  const view = render(<Prism source={input} store={store} />);
+  expect(buttons(view).map(tab => tab.textContent)).toEqual(['Overview3', '02']);
+  fireEvent.click(buttons(view)[1]);
+  act(() => store.apply({ set: { label: 42, count: 0 } }));
+  expect(buttons(view).map(tab => tab.textContent)).toEqual(['420', '02']);
+  expect(buttons(view)[1].getAttribute('aria-selected')).toBe('true');
+  act(() => store.apply({ delete: ['label', 'count'] }));
+  expect(view.getByLabelText('Loading tab')).toBeDefined();
+  expect(view.container.querySelectorAll('[data-part="badge"]').length).toBe(1);
+  act(() => store.apply({ set: { label: { invalid: true }, count: { invalid: true } } }));
+  expect(view.getByLabelText('Loading tab')).toBeDefined();
+  expect(view.container.textContent).not.toContain('[object Object]');
+  act(() => store.apply({ set: { label: 'Resolved', count: 'New' } }));
+  expect(buttons(view)[0].textContent).toBe('ResolvedNew');
+  view.rerender(<Prism source={input.replaceAll('"label"', '"replacement"')} store={store} />);
+  expect(view.getByLabelText('Loading tab')).toBeDefined();
+  act(() => store.set('replacement', 'Updated'));
+  expect(buttons(view)[0].textContent).toBe('UpdatedNew');
+});
+
 test('tabs wires roles, labels, roving focus and mounted hidden panels', () => {
   const view = render(<Prism source={source} />);
   expect(view.getByRole('tablist', { name: 'Project' })).toBeDefined();

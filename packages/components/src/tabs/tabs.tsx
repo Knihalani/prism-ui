@@ -1,4 +1,4 @@
-import { Children, createContext, useContext, useId, useLayoutEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent } from 'react';
+import { Children, createContext, useContext, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type HTMLAttributes, type KeyboardEvent } from 'react';
 import { useComponentState, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
 
 export interface TabsProps { id?: string; label?: string; variant?: 'underline' | 'pill'; size?: 'sm' | 'md'; fitted?: boolean }
@@ -8,15 +8,36 @@ const TabsContext = createContext<TabGroup | null>(null);
 function Body(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
 function Title(props: HTMLAttributes<HTMLElement>) { return <h3 {...props} />; }
 function Label(props: HTMLAttributes<HTMLSpanElement>) { return <span {...props} />; }
+function reference(value: unknown) {
+  return value && typeof value === 'object' && Object.hasOwn(value, '$ref') && '$ref' in value && typeof value.$ref === 'string' ? value.$ref : undefined;
+}
+function useTabValues(node: PrismComponentProps['node']) {
+  const { store } = usePrism();
+  const watch = useMemo(() => {
+    const values = (node.children ?? []).filter(child => child.type === 'component' && child.name === 'tab').flatMap(tab => [tab.props?.label, tab.props?.badge]);
+    const paths = [...new Set(values.map(reference).filter((path): path is string => path !== undefined))];
+    return {
+      subscribe(fn: () => void) { const offs = paths.map(path => store.subscribe(path, fn)); return () => offs.forEach(off => off()); },
+      snapshot() {
+        return JSON.stringify(values.map(value => {
+          const path = reference(value), resolved = path === undefined ? value : store.get(path);
+          return typeof resolved === 'string' || typeof resolved === 'number' ? String(resolved) : null;
+        }));
+      },
+    };
+  }, [node, store]);
+  return JSON.parse(useSyncExternalStore(watch.subscribe, watch.snapshot, watch.snapshot)) as (string | null)[];
+}
 
 export function useTabs(props: TabsProps, ctx: Pick<PrismComponentProps, 'node' | 'complete' | 'children'>) {
   const { animate } = usePrism(), prefix = useId(), [stored, setActive] = useComponentState<number>('active', 0);
-  const tabs = (ctx.node.children ?? []).filter(node => node.type === 'component' && node.name === 'tab');
+  const values = useTabValues(ctx.node);
+  const tabs = (ctx.node.children ?? []).filter(node => node.type === 'component' && node.name === 'tab').map((tab, index) => ({ ...tab, props: { ...tab.props, label: values[index * 2], badge: values[index * 2 + 1] } }));
   const active = tabs.length ? Math.max(0, Math.min(tabs.length - 1, Number.isFinite(stored) ? Math.trunc(stored) : 0)) : -1;
   const state = ctx.complete ? 'done' : 'streaming';
   const parts = { root: usePart('tabs', 'root', state), list: usePart('tabs', 'list', state), tab: usePart('tabs', 'tab', state), label: usePart('tabs', 'label', state), badge: usePart('tabs', 'badge', state), body: usePart('tabs', 'body', state), indicator: usePart('tabs', 'indicator', state), skeleton: usePart('tabs', 'skeleton', state) };
   const listRef = useRef<HTMLDivElement>(null), [indicator, setIndicator] = useState({ left: 0, width: 0 });
-  const signature = tabs.map(tab => tab.key + ':' + String(tab.props?.label ?? '')).join('|');
+  const signature = JSON.stringify(tabs.map(tab => [tab.key, tab.props.label, tab.props.badge]));
   useLayoutEffect(() => { if (tabs.length && stored !== active) setActive(active); }, [tabs.length, stored, active, setActive]);
   useLayoutEffect(() => {
     const list = listRef.current;
