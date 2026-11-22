@@ -1,7 +1,10 @@
-.prism-root .prism-grid__root { --prism-grid-gap: var(--prism-space7); }
+.prism-root .prism-grid__root { --prism-grid-gap: calc(var(--prism-space8) + var(--prism-space1)); container: prism-grid / inline-size; }
 .prism-root :where(*) + .prism-grid__root { margin-block-start: var(--prism-flow-gap); }
 .prism-root .prism-grid__root[data-size="sm"] { --prism-grid-gap: var(--prism-space3); }
-.prism-root .prism-grid__root[data-size="lg"] { --prism-grid-gap: var(--prism-space8); }
+.prism-root .prism-grid__root[data-size="lg"] { --prism-grid-gap: calc(var(--prism-space8) + var(--prism-space2)); }
+.prism-root .prism-grid__header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-block-end: 28px; }
+.prism-root .prism-grid__title { margin: 0; font: 600 15px/1.65 var(--prism-font-sans); }
+.prism-root .prism-grid__meta { flex: none; max-inline-size: min(40%, 135px); color: var(--prism-muted); font-size: 12px; }
 .prism-root .prism-grid__body {
   display: grid;
   gap: var(--prism-grid-gap);
@@ -9,4 +12,25 @@
 }
 .prism-root .prism-grid__body > * { min-width: 0; }
 .prism-root .prism-grid__body > [data-part="root"] { margin-block: 0; }
-.prism-root .prism-grid__body > .prism-card__root { border-block-start: 1px solid var(--prism-hairline); padding-block-start: var(--prism-space3); }
+.prism-root .prism-grid__body > .prism-card__root { padding-block-start: var(--prism-space5); }
+.prism-root .prism-grid__body > .prism-card__root:has(.prism-card__action[data-variant="quiet"]) > .prism-card__body {
+  padding-block-end: 6px;
+}
+.prism-root .prism-grid__body > .prism-card__root + .prism-card__root::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--prism-grid-gap) / -2);
+  border-inline-start: 1px solid var(--prism-hairline);
+}
+@container prism-grid (max-width: 360px) {
+  .prism-root .prism-grid__header { align-items: flex-start; }
+  .prism-root .prism-grid__meta { flex: 0 1 auto; font-size: 11px; }
+  .prism-root .prism-grid__body { row-gap: var(--prism-space6); }
+  .prism-root .prism-grid__body > .prism-card__root:first-child { border-block-start: 1px solid var(--prism-hairline); }
+  .prism-root .prism-grid__body > .prism-card__root + .prism-card__root::before {
+    inset: 0 0 auto;
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--prism-hairline);
+  }
+}

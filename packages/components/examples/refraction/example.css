@@ -1,0 +1,30 @@
+body { margin: 0; }
+main[data-fixture-theme] { min-height: 100vh; background: #fbfaf7; color: #1a1916; display: flow-root; }
+main[data-fixture-theme=dark] { background: #0f0f11; color: #edebe6; color-scheme: dark; }
+.example-controls { max-width: 680px; margin: 16px auto; display: flex; gap: 6px; align-items: flex-start; }
+.example-controls nav { display: flex; flex-wrap: wrap; gap: 4px; }
+[aria-label="Package reply"] { width: min(680px, calc(100% - 46px)); margin: 28px auto 48px; }
+.example-quiet {
+  font: 400 13px/1.65 var(--prism-font-sans);
+  color: var(--prism-muted);
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.example-quiet:hover { text-decoration: underline; text-underline-offset: 4px; }
+.example-tones { display: flex; gap: 22px; align-items: center; margin-block-end: 28px; }
+.example-tones + .prism-callout__root { margin-block-start: 0; }
+.example-tones button { padding: 8px 0; }
+.example-tones button[aria-pressed="true"] {
+  color: var(--prism-text);
+  background: var(--prism-spectrum) bottom / 100% 2px no-repeat;
+}
+.example-action { margin-block-start: 24px; }
+.example-advice-more { margin-block-start: 15px; }
+.example-note { color: var(--prism-muted); font-size: 13px; line-height: 1.75; margin: 16px 0 0; }
+.prism-callout__body p { margin: 0; }
+.prism-callout__body .example-note { font-size: 14px; line-height: 1.85; margin-block-start: 18px; }
+@media (max-width: 760px) {
+  .example-controls { padding-inline: 23px; }
+}

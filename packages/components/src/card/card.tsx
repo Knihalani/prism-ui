@@ -1,8 +1,14 @@
 import { useLayoutEffect, useRef, type HTMLAttributes } from 'react';
 import { cx, StreamSkeleton, usePart, useSent, useSlot, type PrismComponentProps } from '@prism-ui/react';
+import { Badge } from '../badge/badge';
 import { FrameIcon, useFrame } from '../frame';
+import { CheckMark } from '../shared';
 
-export interface CardProps { id?: string; title?: string; subtitle?: string; image?: string; href?: string; action?: string; variant?: 'elevated' | 'outline' | 'ghost'; size?: 'sm' | 'md' | 'lg' }
+export interface CardProps {
+  id?: string; title?: string; subtitle?: string; image?: string; href?: string; action?: string;
+  badge?: string; actionVariant?: 'primary' | 'quiet';
+  variant?: 'elevated' | 'outline' | 'ghost'; size?: 'sm' | 'md' | 'lg';
+}
 type Context = Pick<PrismComponentProps, 'complete' | 'children'>;
 function Header(props: HTMLAttributes<HTMLElement>) { return <header {...props} />; }
 function Title(props: HTMLAttributes<HTMLHeadingElement>) { return <h3 {...props} />; }
@@ -34,9 +40,10 @@ export function Card({ props, children, ...ctx }: PrismComponentProps<CardProps>
   const model = useCard(props, { ...ctx, children }), { parts } = model;
   const sent = model.sent !== undefined;
   const HeaderSlot = useSlot('card', 'header', Header), TitleSlot = useSlot('card', 'title', Title), BodySlot = useSlot('card', 'body', Body), ActionsSlot = useSlot('card', 'actions', Actions);
-  return <article {...model.rootProps} data-variant={model.variant} data-size={model.size} data-linked={model.href ? '' : undefined}>
+  return <article {...model.rootProps} className={cx(model.rootProps.className, !model.unstyled && 'prism-materialise') || undefined} data-variant={model.variant} data-size={model.size} data-linked={model.href ? '' : undefined}>
     {props.image && <img {...parts.image} src={props.image} alt="" />}
-    <HeaderSlot {...parts.header} data-utility-only={!props.title && !props.subtitle ? '' : undefined}>
+    <HeaderSlot {...parts.header} data-utility-only={!props.title && !props.subtitle && !props.badge ? '' : undefined}>
+      {props.badge && <Badge {...ctx} props={{ tone: 'success', dot: true }}>{props.badge}</Badge>}
       <div {...parts.toolbar}>
         {props.title && <TitleSlot {...parts.title}>{model.href ? <a {...parts.link} href={model.href}>{props.title}</a> : props.title}</TitleSlot>}
         <button {...parts.ask} className={cx(parts.ask.className, !model.unstyled && 'prism-icon-btn') || undefined} type="button" onClick={model.onAsk} aria-label="Ask about this" title="Ask about this">
@@ -51,9 +58,9 @@ export function Card({ props, children, ...ctx }: PrismComponentProps<CardProps>
         ? <div {...parts.skeleton} className={cx(parts.skeleton.className, !model.unstyled && 'prism-skeleton') || undefined} aria-hidden="true" />
         : children}</BodySlot>
     {props.action && <ActionsSlot {...parts.actions}>
-      <button {...parts.action} className={cx(parts.action.className, !model.unstyled && 'prism-pill') || undefined} type="button" data-feedback="" data-sent={sent ? '' : undefined} onClick={model.onSelect}>
+      <button {...parts.action} className={cx(parts.action.className, !model.unstyled && 'prism-pill') || undefined} type="button" data-variant={props.actionVariant ?? 'primary'} data-feedback="" data-sent={sent ? '' : undefined} onClick={model.onSelect}>
         <span aria-hidden={sent || undefined} hidden={model.unstyled && sent}>{props.action}</span>
-        <span aria-hidden={!sent || undefined} hidden={model.unstyled && !sent}><FrameIcon name="check" /> Sent</span>
+        <span aria-hidden={!sent || undefined} hidden={model.unstyled && !sent}>{model.unstyled ? <FrameIcon name="check" /> : <CheckMark />} Sent</span>
       </button>
     </ActionsSlot>}
   </article>;

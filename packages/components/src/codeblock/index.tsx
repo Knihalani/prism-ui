@@ -10,11 +10,13 @@ export const CodeBlockHighlighterContext = createContext<CodeHighlighter | undef
 export interface CodeBlockProps {
   id?: string; code?: string; lang?: string; meta?: string; title?: string; filename?: string;
   lines?: boolean; wrap?: boolean; collapse?: boolean; collapseAfter?: number; complete?: boolean; highlighter?: CodeHighlighter;
+  highlight?: string;
 }
 export const codeBlockSchema = s.object({
   id: s.string().optional(), code: s.string().optional(), lang: s.string().optional(), meta: s.string().optional(),
   title: s.string().optional(), filename: s.string().optional(), lines: s.boolean().optional(), wrap: s.boolean().optional(),
   collapse: s.boolean().optional(), collapseAfter: s.number({ min: 1 }).optional(), complete: s.boolean().optional(),
+  highlight: s.string().optional().describe('Highlighted line numbers and ranges, such as 2,5-7.'),
 });
 function metadata(meta = ''): Record<string, string | boolean> {
   if (typeof meta !== 'string') return {};
@@ -24,6 +26,14 @@ function metadata(meta = ''): Record<string, string | boolean> {
   }
   return result;
 }
+function lineRanges(value: unknown) {
+  if (typeof value !== 'string') return [];
+  return value.split(',').flatMap(part => {
+    const range = /^(\d+)(?:-(\d+))?$/.exec(part.trim());
+    return range ? [[Number(range[1]), Number(range[2] ?? range[1])]] : [];
+  });
+}
+const languageLabels: Readonly<Record<string, string>> = { js: 'JavaScript', ts: 'TypeScript', py: 'Python', sh: 'Shell' };
 async function clipboard(code: string) {
   try { if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(code); return; } } catch {}
   const previous = document.activeElement as HTMLElement | null, input = document.createElement('textarea');
@@ -47,10 +57,11 @@ export function useCodeBlock(props: CodeBlockProps, ctx: PrismContextValue) {
     catch { return escapeHTML(code); }
   }, [backend, code, lang, complete, stream, ctx.unstyled]);
   const rawLines = useMemo(() => code.replace(/\n$/, '').split('\n'), [code]);
+  const highlights = useMemo(() => lineRanges(props.highlight ?? meta.highlight), [props.highlight, meta.highlight]);
   const count = code ? rawLines.length : 0, threshold = Math.max(1, Math.floor(Number.isFinite(props.collapseAfter) ? props.collapseAfter! : 20));
   const collapsible = (props.collapse ?? meta.collapse) !== false && count > threshold;
   const collapsed = collapsible && !expanded;
-  return { code, lang, html, rawLines, count, threshold, collapsed, collapsible, expanded, wrap,
+  return { code, lang, html, rawLines, highlights, count, threshold, collapsed, collapsible, expanded, wrap,
     complete, animate: ctx.animate, feedback, lines: props.lines ?? !!meta.lines,
     label: typeof props.filename === 'string' ? props.filename : typeof props.title === 'string' ? props.title : String(meta.filename ?? meta.title ?? (lang || 'Plain text')),
     toggleWrap: () => setWrap(value => !value), toggleCollapse: () => setExpanded(value => !value),
@@ -64,9 +75,6 @@ export function useCodeBlock(props: CodeBlockProps, ctx: PrismContextValue) {
 function Container(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
 function Button(props: React.ButtonHTMLAttributes<HTMLButtonElement>) { return <button type="button" {...props} />; }
 function Label(props: HTMLAttributes<HTMLSpanElement>) { return <span {...props} />; }
-function CopyIcon() {
-  return <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="5" width="8" height="8" rx="1.5" /><path d="M10 5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2" /></svg>;
-}
 function Line({ html, ...props }: HTMLAttributes<HTMLSpanElement> & { html: string }) { return <span {...props} dangerouslySetInnerHTML={{ __html: html || '\n' }} />; }
 export function CodeBlock({ node, props, complete }: PrismComponentProps<CodeBlockProps>) {
   const prism = usePrism();
@@ -86,24 +94,29 @@ export function CodeBlock({ node, props, complete }: PrismComponentProps<CodeBlo
     const body = pre.current?.parentElement;
     if (body && vm.collapsed) body.scrollTop = vm.complete ? 0 : body.scrollHeight;
   }, [vm.code, vm.complete, vm.collapsed]);
-  const iconClass = !prism.unstyled && 'prism-icon-btn';
-  return <Root {...root} role="region" aria-label={vm.label} onKeyDown={frame.rootProps.onKeyDown} data-state={frame.rootProps['data-state']} data-entering={frame.rootProps['data-entering']} data-animate={vm.animate ? undefined : 'false'} data-lines={vm.lines || vm.lang === 'diff' ? '' : undefined}>
-    <Header {...header}><Title {...label}>{vm.label}</Title>{vm.lang && vm.lang !== vm.label && <span className={!prism.unstyled ? 'prism-codeblock__language prism-chip' : undefined}>{vm.lang}</span>}<Actions {...actions}>
-      <Wrap {...wrap} aria-label="Toggle line wrap" title="Toggle line wrap" aria-pressed={vm.wrap} onClick={vm.toggleWrap}>Wrap</Wrap>
-      <Ask {...ask} className={cx(ask.className, iconClass) || undefined} aria-label="Ask about this code" title="Ask about this code" onClick={frame.onAsk}><FrameIcon name="ask" /></Ask>
-      <Copy {...copy} className={cx(copy.className, iconClass) || undefined} aria-label="Copy code" title={vm.feedback || 'Copy code'} onClick={vm.copy}>{vm.feedback === 'Copied' ? <FrameIcon name="check" /> : <CopyIcon />}</Copy>
-    </Actions></Header>
-    <Body {...body} data-tail={!vm.complete && vm.collapsed ? 'true' : undefined} data-streaming={!vm.complete ? '' : undefined} style={{ height: vm.collapsed ? vm.threshold * 22 + 24 : undefined, ...body.style }} data-wrap={vm.wrap ? 'true' : 'false'}><pre ref={pre}><code>{htmlLines.slice(0, vm.collapsed && vm.complete ? vm.threshold : undefined).map((html, index) => {
+  const language = !prism.unstyled && Object.hasOwn(languageLabels, vm.lang) ? languageLabels[vm.lang] : vm.lang;
+  const heading = prism.unstyled || !vm.lang ? vm.label : vm.label === vm.lang ? language : `${vm.label} · ${language}`;
+  return <Root {...root} className={cx(root.className, !prism.unstyled && 'prism-materialise') || undefined} role="region" aria-label={vm.label} onKeyDown={frame.rootProps.onKeyDown} data-state={frame.rootProps['data-state']} data-entering={frame.rootProps['data-entering']} data-animate={vm.animate ? undefined : 'false'} data-lines={vm.lines || vm.lang === 'diff' ? '' : undefined}>
+    <Header {...header}>
+      <Title {...label}>{heading}</Title>
+      <Copy {...copy} aria-label="Copy code" title={vm.feedback || 'Copy code'} onClick={vm.copy}>{vm.feedback === 'Copied' ? 'Copied' : 'Copy'}</Copy>
+    </Header>
+    <Body {...body} data-tail={!vm.complete && vm.collapsed ? 'true' : undefined} data-streaming={!vm.complete ? '' : undefined} style={{ height: vm.collapsed ? vm.threshold * 24.7 + 25 : undefined, ...body.style }} data-wrap={vm.wrap ? 'true' : 'false'}><pre ref={pre}><code>{htmlLines.slice(0, vm.collapsed && vm.complete ? vm.threshold : undefined).map((html, index) => {
       const raw = vm.rawLines[index] ?? '', metadata = vm.lang === 'diff' && /^(?:---|\+\+\+|@@)/.test(raw);
       const state = metadata ? undefined : raw.startsWith('+') ? 'inserted' : raw.startsWith('-') ? 'deleted' : undefined;
-      return <span key={index} {...line} data-state={state}>
+      const highlightLine = vm.highlights.some(([start, end]) => index + 1 >= start && index + 1 <= end);
+      return <span key={index} {...line} data-state={state} data-highlight={highlightLine ? '' : undefined}>
         <Gutter {...gutter} aria-hidden="true">{state ? (state === 'inserted' ? '+' : '−') : vm.lines ? index + 1 : ''}</Gutter>
         {!prism.unstyled && !vm.code && !vm.complete
           ? <StreamSkeleton as="span" className="prism-codeblock__skeleton" data-prism-skeleton-line="" />
           : <Row {...content} html={state ? html.replace(/^((?:<[^>]+>)*)[+-]/, '$1') : html} />}
       </span>;
     })}</code></pre></Body>
-    {vm.collapsible && <Collapse {...collapse} disabled={!vm.complete} aria-expanded={vm.expanded} onClick={vm.toggleCollapse}>{!vm.complete ? 'Streaming…' : vm.collapsed ? `Show all ${vm.count} lines` : 'Show less'}</Collapse>}
+    <Actions {...actions}>
+      <Wrap {...wrap} aria-label="Toggle line wrap" title="Toggle line wrap" aria-pressed={vm.wrap} onClick={vm.toggleWrap}>Wrap lines</Wrap>
+      <Ask {...ask} aria-label="Ask about this code" title="Ask about this code" onClick={frame.onAsk}><FrameIcon name="ask" /> Ask about this code</Ask>
+      {vm.collapsible && <Collapse {...collapse} disabled={!vm.complete} aria-expanded={vm.expanded} onClick={vm.toggleCollapse}>{!vm.complete ? 'Streaming…' : vm.collapsed ? `Show all ${vm.count} lines` : 'Show less'}</Collapse>}
+    </Actions>
     <Status {...status} role="status" aria-live="polite">{vm.feedback}</Status>
   </Root>;
 }

@@ -1,14 +1,33 @@
-.prism-root, .prism-root * { box-sizing: border-box; }
-.prism-root {
+.prism-root[data-prism-presentation], .prism-root[data-prism-presentation] * { box-sizing: border-box; }
+.prism-root[data-prism-presentation] {
+  max-inline-size: var(--prism-measure-wide);
+  margin-inline: auto;
   color: var(--prism-text);
   background: var(--prism-bg);
   font-family: var(--prism-font-sans);
   font-size: var(--prism-text-base);
   line-height: 1.65;
+  letter-spacing: var(--prism-letter-spacing);
+  font-feature-settings: var(--prism-font-features);
+  font-variant-numeric: tabular-nums;
   overflow-wrap: break-word;
   -webkit-font-smoothing: antialiased;
 }
-.prism-root :focus-visible { outline: 2px solid var(--prism-accent); outline-offset: 3px; }
+.prism-root[data-prism-presentation] > :not(:where(.prism-datatable__root, div.prism-table__root, .prism-chart__root, .prism-mockup__root, .prism-artifact__root)) {
+  max-inline-size: var(--prism-measure);
+  margin-inline: auto;
+}
+.prism-root[data-prism-presentation] :where(.prism-paragraph__root, .prism-list__root, .prism-blockquote__root) {
+  font-family: var(--prism-font-sans);
+  font-size: var(--prism-text-base);
+  line-height: 1.65;
+}
+.prism-root[data-prism-presentation] :where(.prism-paragraph__root, .prism-heading__root, .prism-code__root > code)::after,
+.prism-root[data-prism-presentation][data-state="streaming"]:empty::after,
+.prism-root[data-prism-presentation] .prism-stream-caret {
+  background: var(--prism-spectrum);
+  box-shadow: var(--prism-spectrum-glow);
+}
 .prism-root :is(.prism-card__body, .prism-callout__body):has(> [data-prism-skeleton]) {
   display: grid;
   min-block-size: 1lh;
@@ -21,17 +40,18 @@
 
 .prism-root .prism-heading__root {
   font-family: var(--prism-font-display);
-  font-weight: 670;
-  line-height: 1.22;
-  letter-spacing: -.035em;
+  font-weight: 400;
+  line-height: 1.13;
+  letter-spacing: -.01em;
   text-wrap: balance;
 }
 .prism-root .prism-heading__root + :where(.prism-paragraph__root, .prism-list__root) { margin-block-start: var(--prism-space2); }
-.prism-root h1.prism-heading__root { font-size: calc(var(--prism-text-xl) * 1.45); }
-.prism-root h2.prism-heading__root { font-size: calc(var(--prism-text-xl) * 1.16); }
-.prism-root h3.prism-heading__root { font-size: var(--prism-text-xl); }
-.prism-root h4.prism-heading__root { font-size: var(--prism-text-lg); }
-.prism-root :is(h5, h6).prism-heading__root { font-size: var(--prism-text-base); }
+.prism-root h1.prism-heading__root { font-size: var(--prism-text-total); }
+.prism-root h2.prism-heading__root { font-size: var(--prism-text-display); }
+.prism-root h3.prism-heading__root { font-size: 28px; }
+.prism-root :is(h4, h5, h6).prism-heading__root {
+  font: 600 var(--prism-text-base)/1.4 var(--prism-font-sans);
+}
 .prism-root .prism-strong__root { font-weight: 650; }
 .prism-root .prism-delete__root { color: var(--prism-muted); }
 .prism-root .prism-list__root { padding-inline-start: 1.45em; }
@@ -64,8 +84,8 @@
 .prism-root .prism-code__root {
   padding: var(--prism-space4);
   overflow: auto;
-  border-radius: var(--prism-radius-lg);
-  background: var(--prism-fill);
+  border-radius: var(--prism-radius-code);
+  background: var(--prism-fill-strong);
   font: var(--prism-text-sm)/1.65 var(--prism-font-mono);
   overflow-wrap: normal;
   tab-size: 2;
@@ -83,121 +103,9 @@
 .prism-root .prism-thematicBreak__root { border: 0; border-block-start: 1px solid var(--prism-hairline); }
 .prism-root .prism-image__root { display: block; max-width: 100%; height: auto; border-radius: var(--prism-radius-md); }
 
-:where(.prism-root, [data-prism-theme]) .prism-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: .45em;
-  min-height: 35px;
-  padding: .4em 1em;
-  border: 0;
-  border-radius: var(--prism-radius-pill);
-  background: var(--prism-accent);
-  color: var(--prism-accent-contrast);
-  font: 600 var(--prism-text-sm)/1.4 var(--prism-font-sans);
-  cursor: pointer;
-  transition: background var(--prism-duration-fast), color var(--prism-duration-fast), box-shadow var(--prism-duration-fast);
-}
-.prism-pill:hover:not(:disabled) { box-shadow: 0 0 0 4px var(--prism-accent-glow); }
-.prism-pill:disabled, .prism-icon-btn:disabled { opacity: .45; cursor: default; }
-.prism-pill[data-sent] { background: var(--prism-accent-soft); color: var(--prism-accent); }
-.prism-pill[data-feedback] { display: inline-grid; }
-.prism-pill[data-feedback] > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: .35em; }
-.prism-pill[data-feedback] > [aria-hidden="true"] { visibility: hidden; }
-:where(.prism-root, [data-prism-theme]) .prism-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: .4em;
-  padding: .15em .65em;
-  border-radius: var(--prism-radius-pill);
-  background: var(--prism-fill);
-  color: var(--prism-muted);
-  font-size: var(--prism-text-xs);
-  font-weight: 550;
-  font-variant-numeric: tabular-nums;
-}
-:where(.prism-root, [data-prism-theme]) .prism-icon-btn {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  inline-size: 32px;
-  block-size: 32px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--prism-radius-md);
-  background: transparent;
-  color: var(--prism-muted);
-  cursor: pointer;
-  transition: color var(--prism-duration-fast), background var(--prism-duration-fast), opacity var(--prism-duration-fast);
-}
-.prism-icon-btn:hover:not(:disabled), .prism-icon-btn[aria-pressed="true"] { background: var(--prism-fill); color: var(--prism-text); }
-:where(.prism-root, [data-prism-theme]) :is(input.prism-check, .prism-listItem__root > input[type="checkbox"]) {
-  appearance: none;
-  display: inline-grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  border: 1px solid var(--prism-muted);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--prism-accent-contrast);
-  vertical-align: middle;
-}
-:where(.prism-root, [data-prism-theme]) :is(input.prism-check, .prism-listItem__root > input[type="checkbox"]):is(:checked, :indeterminate) {
-  background: var(--prism-accent);
-  border-color: var(--prism-accent);
-}
-:where(.prism-root, [data-prism-theme]) :is(input.prism-check, .prism-listItem__root > input[type="checkbox"]):checked::after {
-  content: "";
-  width: 9px;
-  height: 9px;
-  background: currentColor;
-  clip-path: polygon(0 52%, 17% 36%, 40% 62%, 83% 11%, 100% 26%, 41% 90%);
-  animation: prism-check-draw var(--prism-duration) var(--prism-ease-spring);
-}
-input.prism-check:indeterminate::after { content: ""; width: 8px; height: 2px; background: currentColor; }
-@keyframes prism-check-draw { from { clip-path: polygon(0 52%, 17% 36%, 17% 36%, 17% 36%, 17% 36%, 0 52%); } }
-:where(.prism-root, [data-prism-theme]) .prism-switch {
-  appearance: none;
-  position: relative;
-  display: inline-block;
-  width: 36px;
-  height: 22px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--prism-radius-pill);
-  background: var(--prism-fill-strong);
-  cursor: pointer;
-  transition: background var(--prism-duration-fast);
-}
-.prism-switch::after {
-  content: "";
-  position: absolute;
-  inset-block-start: 3px;
-  inset-inline-start: 3px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--prism-surface);
-  box-shadow: var(--prism-shadow-sm);
-  transition: inset-inline-start var(--prism-duration) var(--prism-ease-spring);
-}
-.prism-switch:is(:checked, [aria-checked="true"]) { background: var(--prism-accent); }
-.prism-switch:is(:checked, [aria-checked="true"])::after { inset-inline-start: calc(100% - 19px); background: var(--prism-accent-contrast); }
-:where(.prism-root, [data-prism-theme]) .prism-stepper {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--prism-space1);
-  border-radius: var(--prism-radius-pill);
-  background: var(--prism-fill);
-  font-variant-numeric: tabular-nums;
-}
-
-@keyframes prism-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-.prism-root :is([data-prism-enter], .prism-enter) {
-  animation: prism-enter var(--prism-duration) var(--prism-ease-spring) backwards;
-  animation-delay: calc(var(--prism-duration) * var(--prism-stagger, 0) / 8);
+.prism-root :is([data-prism-enter], .prism-enter):not(.prism-materialise, .prism-frame__root) {
+  animation: prism-materialise-in var(--prism-duration-entry) var(--prism-ease) backwards;
+  animation-delay: calc(var(--prism-duration-entry) * var(--prism-stagger, 0) / 8);
 }
 @keyframes prism-shimmer { to { background-position: -200% 0; } }
 .prism-root .prism-skeleton {

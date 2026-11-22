@@ -3,7 +3,7 @@ import { afterEach, expect, test } from 'bun:test';
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import type { ComponentProps } from 'react';
-import { Prism, usePart, type Action } from '@prism-ui/react';
+import { createTheme, Prism, usePart, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { ComponentFrame, useFrame, type ComponentFrameProps } from '../src';
 
@@ -91,5 +91,5 @@ test('CSS declares every ThemeTokens name using the createTheme kebab convention
   const source = readFileSync(new URL('../../react/src/theme.tsx', import.meta.url), 'utf8');
   const tokens = source.split('export interface ThemeTokens {')[1].split('}')[0].matchAll(/(\w+): string/g);
   const css = readFileSync(new URL('../src/styles/tokens.css', import.meta.url), 'utf8');
-  for (const [, token] of tokens) expect(css).toContain('--prism-' + token.replace(/[A-Z]/g, c => '-' + c.toLowerCase()) + ':');
+  for (const [, token] of tokens) expect(css).toContain(Object.keys(createTheme({ [token]: '' }))[0] + ':');
 });

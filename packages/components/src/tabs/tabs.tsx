@@ -1,7 +1,7 @@
 import { Children, createContext, useContext, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type HTMLAttributes, type KeyboardEvent } from 'react';
 import { cx, StreamSkeleton, useComponentState, useFlash, usePart, usePresentation, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
 
-export interface TabsProps { id?: string; label?: string; variant?: 'underline' | 'pill'; size?: 'sm' | 'md'; fitted?: boolean }
+export interface TabsProps { id?: string; title?: string; label?: string; variant?: 'underline' | 'pill'; size?: 'sm' | 'md'; fitted?: boolean }
 export interface TabProps { id?: string; label?: string; badge?: string }
 interface TabGroup { keys: string[]; active: number; tabId(key: string): string; panelId(key: string): string }
 const TabsContext = createContext<TabGroup | null>(null);
@@ -86,8 +86,10 @@ export function Tabs({ props, ...ctx }: PrismComponentProps<TabsProps>) {
   const model = useTabs(props, ctx), { parts, group } = model;
   const { unstyled } = usePrism();
   const BodySlot = useSlot('tabs', 'body', Body), LabelSlot = useSlot('tabs', 'label', Label);
+  const title = usePart('tabs', 'title'), TitleSlot = useSlot('tabs', 'title', Title);
   return <TabsContext.Provider value={group}><div {...model.rootProps}>
-    <div {...parts.list} ref={model.listRef} role="tablist" aria-label={props.label ?? 'Tabs'} data-measured={model.indicator.width > 0 ? '' : undefined}>
+    {props.title && <TitleSlot {...title}>{props.title}</TitleSlot>}
+    <div {...parts.list} ref={model.listRef} role="tablist" aria-label={props.label ?? props.title ?? 'Tabs'} data-measured={model.indicator.width > 0 ? '' : undefined}>
       {model.tabs.map((tab, index) => <button {...parts.tab} type="button" role="tab" key={tab.key} id={group.tabId(tab.key)} aria-label={tab.props.label ? undefined : 'Loading tab'} aria-controls={group.panelId(tab.key)} aria-selected={index === model.active} tabIndex={index === model.active ? 0 : -1} onClick={() => model.select(index)} onKeyDown={event => model.onKeyDown(event, index)}>
         <LabelSlot {...parts.label}>{tab.props.label
           ? !unstyled && tab.labelPath !== undefined ? <LinkedTabText key={tab.labelPath} path={tab.labelPath} text={tab.props.label} /> : tab.props.label

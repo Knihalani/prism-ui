@@ -19,20 +19,22 @@
   gap: var(--prism-space2);
   margin-block-end: var(--prism-space2);
 }
+.prism-root .prism-frame__root:has(> .prism-frame__header[data-utility-only]) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--prism-space2);
+}
 .prism-root .prism-frame__header[data-utility-only] {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-end: 0;
-  z-index: 1;
+  grid-area: 1 / 2;
+  align-self: start;
   margin: 0;
 }
+.prism-root .prism-frame__header[data-utility-only] + .prism-frame__body { grid-area: 1 / 1; }
+.prism-root .prism-frame__header[data-utility-only] ~ .prism-frame__footer { grid-column: 1 / -1; }
 .prism-root .prism-frame__title {
   margin: 0;
-  font-family: var(--prism-font-display);
-  font-size: var(--prism-text-lg);
-  font-weight: 650;
-  letter-spacing: -.025em;
-  line-height: 1.3;
+  font: 600 15px/1.4 var(--prism-font-sans);
+  letter-spacing: inherit;
 }
 .prism-root .prism-frame__toolbar {
   display: flex;
@@ -49,19 +51,6 @@
   gap: var(--prism-space2);
   margin-block-start: var(--prism-space3);
 }
-.prism-root :where(.prism-frame__footer) > :where(button) {
-  padding: .5em 1em;
-  min-height: 35px;
-  border: 0;
-  border-radius: var(--prism-radius-pill);
-  background: var(--prism-accent);
-  color: var(--prism-accent-contrast);
-  font: 600 var(--prism-text-sm)/1.4 var(--prism-font-sans);
-  cursor: pointer;
-}
-.prism-root :where(.prism-frame__footer) > :where(button:hover:not(:disabled)) { box-shadow: 0 0 0 4px var(--prism-accent-glow); }
-.prism-root :where(.prism-frame__footer) > :where(button:disabled) { opacity: .45; cursor: default; }
-
 @media (hover: hover) {
   .prism-root .prism-frame__root:not(:hover, :focus-within) > .prism-frame__header .prism-icon-btn { opacity: 0; }
 }
