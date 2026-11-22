@@ -6,6 +6,55 @@ import { createStore } from '@prism-ui/state';
 import './index';
 
 afterEach(cleanup);
+
+test('send receipt stays mounted, resets after local and external edits, and is resendable', () => {
+  const actions: Action[] = [], store = createStore();
+  const view = render(<Prism source={source} store={store} onAction={action => actions.push(action)} />);
+  const send = view.getByRole('button', { name: 'Send 2 action items' });
+  fireEvent.click(send);
+  expect(view.getByRole('button', { name: 'Sent · 2 action items' })).toBe(send);
+  expect(send.hasAttribute('data-sent')).toBe(true); expect(send.hasAttribute('disabled')).toBe(true);
+  expect(view.getByRole('group').getAttribute('data-presentation-state')).toBe('sent');
+  fireEvent.click(view.getByRole('checkbox', { name: 'Publish guide' }));
+  expect(view.getByRole('button', { name: 'Send 2 action items' })).toBe(send);
+  expect(view.getByText('Sent · 2 action items').getAttribute('aria-hidden')).toBe('true');
+  fireEvent.click(send);
+  expect(actions.filter(action => action.type === 'send').length).toBe(2);
+  act(() => store.apply({ set: { 'review.done.1': true } }));
+  expect(send.hasAttribute('data-sent')).toBe(false);
+  fireEvent.click(send);
+  expect(actions.filter(action => action.type === 'send').length).toBe(3);
+});
+
+test('skeleton leaves persisted checklist untouched until hydration, including storage failure', async () => {
+  const previous = createStore(), first = render(<Prism source={source} scope="summary-restore" store={previous} />);
+  fireEvent.click(first.getByRole('checkbox', { name: 'Publish guide' }));
+  const snapshot = previous.snapshot(); first.unmount();
+  let hydrate!: (value: object) => void;
+  const store = createStore({ persist: { load: () => new Promise<object>(resolve => { hydrate = resolve; }), save() {} } });
+  const view = render(<Prism source={source} scope="summary-restore" store={store} />);
+  expect(view.queryByRole('checkbox')).toBeNull(); expect(store.snapshot()).toEqual({});
+  await act(async () => { hydrate(snapshot); await store.ready; });
+  expect(store.snapshot()).toEqual(snapshot);
+  expect((view.getByRole('checkbox', { name: 'Publish guide' }) as HTMLInputElement).checked).toBe(true);
+  view.unmount();
+  let reject!: (error: Error) => void;
+  const failed = createStore({ persist: { load: () => new Promise<object>((_, fail) => { reject = fail; }), save() {} } });
+  const next = render(<Prism source={source} store={failed} />);
+  expect(failed.snapshot()).toEqual({});
+  await act(async () => { reject(new Error('Unavailable')); await failed.ready; });
+  expect(next.getAllByRole('checkbox').length).toBe(2);
+});
+
+test('empty streams do not initialize state and editorial headings remain optional', () => {
+  const store = createStore();
+  const view = render(<Prism source={'```ui:summary\n{'} done={false} store={store} />);
+  expect(store.snapshot()).toEqual({}); expect(view.queryByRole('button')).toBeNull();
+  const input = { ...props, headline: 'A clearer next step.', actionsTitle: 'Do these next' };
+  view.rerender(<Prism source={'```ui:summary\n' + JSON.stringify(input) + '\n```'} store={store} />);
+  expect(view.getByRole('heading', { name: 'A clearer next step.' })).toBeDefined();
+  expect(view.getByRole('heading', { name: 'Do these next' })).toBeDefined();
+});
 const props = {
   id: 'review', title: 'Launch review',
   points: [{ text: 'Ready to launch', source: { quote: 'All checks passed.', title: 'Readiness report', url: 'https://example.com/report' } }, { text: 'Roll out gradually', source: { quote: 'Three waves.', title: 'Rollout plan', url: 'https://docs.example.com/plan' } }, { text: 'Keep current pricing' }],
@@ -20,12 +69,12 @@ test('summary renders frame, numbered citations, checklist owners and formatted 
   expect(view.getByRole('group').getAttribute('data-state')).toBe('done');
   expect(view.getByRole('group').hasAttribute('data-prism-enter')).toBe(true);
   expect(view.getByRole('heading', { name: 'Action items' })).toBeDefined();
-  expect(pointButtons(view).length).toBe(2); expect(pointButtons(view)[0].textContent).toBe('Ready to launch[1]');
+  expect(pointButtons(view).length).toBe(2); expect(pointButtons(view)[0].textContent).toBe('Ready to launch1');
   expect(view.getByText('Keep current pricing').tagName).toBe('P');
   expect(view.getAllByRole('checkbox').length).toBe(2); expect(view.getByText('MC').getAttribute('aria-hidden')).toBe('true');
   expect(view.getByText('Jan 15, 2020').getAttribute('data-tone')).toBe('warning'); expect(view.getByText('Next week')).toBeDefined();
   expect(view.getByRole('button', { name: 'Undo' })).toBeDefined();
-  expect((view.getByRole('button', { name: 'Send action items' }) as HTMLButtonElement).disabled).toBe(false);
+  expect((view.getByRole('button', { name: /^Send \d+ action items?$/ }) as HTMLButtonElement).disabled).toBe(false);
   view.container.querySelectorAll('[data-prism="summary"]').forEach(part => expect(part.classList.contains('prism-summary__' + part.getAttribute('data-part'))).toBe(true));
   expect(defaultRegistry.docs()).toContain('### summary'); expect(defaultRegistry.docs()).toContain('Summary bullets with optional inline citations');
 });
@@ -49,7 +98,7 @@ test('per-point ask and send emit full exact actions and human messages', () => 
   fireEvent.click(view.getByRole('button', { name: 'Ask about point 3' }));
   expect(actions[1].payload).toEqual({ point: 2, text: 'Keep current pricing', source: undefined });
   fireEvent.click(view.getByRole('checkbox', { name: 'Publish guide' }));
-  fireEvent.click(view.getByRole('button', { name: 'Send action items' }));
+  fireEvent.click(view.getByRole('button', { name: /^Send \d+ action items?$/ }));
   expect(actions[2]).toEqual({ type: 'send', component: 'summary', id: 'review', payload: { title: 'Launch review', actions: [{ ...props.actions[0], done: true }, { ...props.actions[1], done: false }] }, context: { component: 'summary', props, state: { done: { 0: true } } }, message: 'Please send these 2 action items: Publish guide; Schedule rollout.' });
   fireEvent.click(view.getByRole('button', { name: 'Ask about this' }));
   expect(actions[3].payload).toBeUndefined(); expect(actions[3].message).toBe('Tell me more about this summary…');
@@ -62,7 +111,7 @@ test('checkbox state responds to undo, keyboard undo and agent patches', () => {
   fireEvent.click(view.getByRole('button', { name: 'Undo' })); expect(checkbox.checked).toBe(false);
   fireEvent.click(checkbox); fireEvent.keyDown(checkbox, { key: 'z', ctrlKey: true }); expect(checkbox.checked).toBe(false);
   act(() => store.apply({ set: { 'review.done.0': true, 'review.done.1': true } }));
-  expect(checkbox.checked).toBe(true); expect(view.getByText('2 of 2 complete')).toBeDefined();
+  expect(checkbox.checked).toBe(true); expect(view.getByRole('status', { name: '2 of 2 complete' })).toBeDefined();
   view.rerender(<Prism source={source} store={store} theme="dark" />);
   expect((view.getByRole('checkbox', { name: 'Publish guide' }) as HTMLInputElement).checked).toBe(true);
 });
@@ -91,28 +140,27 @@ test('arrow keys cycle all points in both directions without toggling sources', 
   expect(view.getByText('No summary points yet.')).toBeDefined();
 });
 
-test('streaming partial JSON progressively renders title, point text and actions with a disabled footer', () => {
+test('streaming partial JSON renders only a decorative skeleton until ready', () => {
   const view = render(<Prism source={'```ui:summary\n{'} done={false} />);
-  expect(view.getByRole('group').getAttribute('data-state')).toBe('streaming');
+  expect(view.container.querySelector('[data-prism-skeleton]')?.getAttribute('data-state')).toBe('streaming');
   expect(view.container.querySelector('[data-part="title"]')?.textContent).toBe('');
-  expect(view.container.querySelectorAll('[data-part="skeleton"]').length).toBe(5);
+  expect(view.container.querySelectorAll('[data-part="skeleton"]').length).toBe(6);
   const prefix = '```ui:summary\n{"id":"review","title":"Live review","points":[{"text":"Ready';
   view.rerender(<Prism source={prefix} done={false} />);
-  expect(view.getByRole('heading', { name: 'Live review' })).toBeDefined(); expect(view.getByText('Ready')).toBeDefined();
+  expect(view.container.querySelector('[data-part="title"]')?.textContent).toBe('Live review'); expect(view.queryByText('Ready')).toBeNull();
   view.rerender(<Prism source={prefix + ' to launch"}],"actions":[{"text":"Publish'} done={false} />);
-  expect(view.getByText('Ready to launch')).toBeDefined(); expect(view.getByRole('checkbox', { name: 'Publish' })).toBeDefined();
-  expect((view.getByRole('button', { name: 'Send action items' }) as HTMLButtonElement).disabled).toBe(true);
+  expect(view.queryByRole('checkbox')).toBeNull(); expect(view.queryByRole('button')).toBeNull();
   view.rerender(<Prism source={source} />);
-  expect(view.getByRole('group').getAttribute('data-state')).toBe('done'); expect((view.getByRole('button', { name: 'Send action items' }) as HTMLButtonElement).disabled).toBe(false);
+  expect(view.getByRole('group').getAttribute('data-state')).toBe('done'); expect((view.getByRole('button', { name: /^Send \d+ action items?$/ }) as HTMLButtonElement).disabled).toBe(false);
 });
 
 test('empty and invalid data are safe, unsafe source URLs are not links, optional send keys are retained', () => {
   const actions: Action[] = [], view = render(<Prism source={'```ui:summary\n{"points":"bad","actions":"bad"}\n```'} />);
   expect(view.getByText('No summary points yet.')).toBeDefined(); expect(view.getByText('No action items.')).toBeDefined();
-  expect((view.getByRole('button', { name: 'Send action items' }) as HTMLButtonElement).disabled).toBe(true);
+  expect((view.getByRole('button', { name: /^Send \d+ action items?$/ }) as HTMLButtonElement).disabled).toBe(true);
   view.rerender(<Prism source={'```ui:summary\n{"id":"safe","points":[{"text":"Evidence","source":{"url":"javascript:alert(1)"}}],"actions":[{"text":"Follow up"}]}\n```'} onAction={action => actions.push(action)} />);
   fireEvent.click(pointButtons(view)[0]); expect(view.queryByRole('link')).toBeNull();
-  fireEvent.click(view.getByRole('button', { name: 'Send action items' }));
+  fireEvent.click(view.getByRole('button', { name: /^Send \d+ action items?$/ }));
   expect(actions[0].payload).toEqual({ title: undefined, actions: [{ text: 'Follow up', owner: undefined, due: undefined, done: false }] });
 });
 
