@@ -22,7 +22,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const labels = useMockupStrings(props), title = labels.title, source = props.source ?? '';
   const path = `${component!.id}.feedback`;
   const draft = useStoreValue<(FeedbackState & { submitted?: boolean }) | undefined>(path);
-  const savedSubmitted = useStoreValue<boolean | undefined>(`${component!.id}.submitted`);
+  const savedSubmitted = useStoreValue<boolean | undefined>(options.inline ? `${path}.submitted` : `${component!.id}.submitted`);
   const [localDevice, writeDevice] = useState<MockupDevice>(props.device ?? 'desktop'), [localZoom, writeZoom] = useState(1), [editSubmitted, setEditSubmitted] = useState(false);
   const submitted = !!(draft?.submitted ?? savedSubmitted) && !editSubmitted, setSubmitted = (value: boolean) => setEditSubmitted(!value);
   const device = options.controls?.device ?? localDevice, setDevice = options.controls?.setDevice ?? writeDevice, zoom = options.controls?.zoom ?? localZoom, setZoom = options.controls?.setZoom ?? writeZoom;

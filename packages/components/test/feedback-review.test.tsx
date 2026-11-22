@@ -32,6 +32,18 @@ test('native text undo wins over feedback history for focused fields and dirty d
   expect(store.get('target.feedback.overall')).toBe('Saved');
 });
 
+test('inline feedback ignores the rendered component submitted flag', () => {
+  const { view, store } = setup();
+  act(() => store.set('target.submitted', true));
+  expect(view.getByRole('textbox', { name: 'Overall feedback' })).toBeDefined();
+  expect(view.queryByText('Edit feedback')).toBeNull();
+  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  expect(store.get('target.feedback.submitted')).toBe(true);
+  act(() => store.set('target.submitted', false));
+  expect(view.getByText('Edit feedback')).toBeDefined();
+  expect(store.get('target.feedback.submitted')).toBe(true);
+});
+
 test('tabbing through Submit commits an overall comment without submitting it', () => {
   const { view, store, actions } = setup(), overall = view.getByRole('textbox', { name: 'Overall feedback' }), submit = view.getByRole('button', { name: 'Submit feedback' });
   change(overall, 'Saved when leaving the field');
