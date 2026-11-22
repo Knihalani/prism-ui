@@ -39,9 +39,12 @@ function readTheme(element: HTMLElement): ThemeSnapshot {
 
 export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, complete = true) {
   const options = useContext(Options), emit = useEmit();
-  const taskPath = markdownTaskPath(useContext(ComponentContext)!.id);
+  const component = useContext(ComponentContext)!;
+  const taskPath = markdownTaskPath(component.id);
+  const headerId = component.node.lang?.startsWith('artifact:') ? component.node.props?.id : undefined;
+  const historyId = typeof headerId === 'string' ? headerId : props.id;
   const { store } = ctx, enabled = options.enabled !== false;
-  const history = useMemo(() => historyFor(store, props.id), [store, props.id]);
+  const history = useMemo(() => historyFor(store, historyId), [store, historyId]);
   const versions = useSyncExternalStore(history.subscribe, history.snapshot, history.snapshot);
   useEffect(() => { if (complete && enabled) history.publish(props); }, [complete, enabled, history, props]);
   const [chosen, selectVersion] = useState(0);
