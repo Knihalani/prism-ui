@@ -30,7 +30,7 @@ export function formatPercent(value: unknown, locale?: Locale, options: Intl.Num
 export function formatCompact(value: unknown, locale?: Locale, options: Intl.NumberFormatOptions = {}, fallback = ''): string {
   return formatNumber(value, locale, { ...options, notation: 'compact' }, fallback);
 }
-function dateValue(value: unknown): Date { return value instanceof Date ? value : new Date(typeof value === 'string' || typeof value === 'number' ? value : NaN); }
+export function dateValue(value: unknown): Date { return value instanceof Date ? value : new Date(typeof value === 'string' || typeof value === 'number' ? value : NaN); }
 export function formatDate(value: unknown, locale?: Locale, options: Intl.DateTimeFormatOptions = {}, fallback = ''): string {
   return safe(fallback, () => {
     const date = dateValue(value);

@@ -8,6 +8,23 @@ const registry = createRegistry([tableDef]);
 const source = (props: object) => '```ui:table\n' + JSON.stringify(props) + '\n```';
 afterEach(cleanup);
 
+test.each(['date', 'datetime'])('fallback sorts mixed-format %s values chronologically with stable ties', type => {
+  const props = { columns: [{ key: 'label', label: 'Label' }, { key: 'when', label: 'When', type }], rows: [
+    { label: 'Latest', when: '2025-01-01T12:00:00Z' },
+    { label: 'Earliest', when: Date.parse('2024-01-01T12:00:00Z') },
+    { label: 'Middle', when: '2024-07-01T12:00:00Z' },
+    { label: 'Same time', when: Date.parse('2024-07-01T12:00:00Z') },
+  ] };
+  const view = render(<Prism registry={registry} source={source(props)} locale="de-DE"/>);
+  const labels = () => Array.from(view.container.querySelectorAll('tbody tr')).map(row => row.firstElementChild?.textContent);
+  fireEvent.click(view.getByRole('button', { name: 'When' }));
+  expect(labels()).toEqual(['Earliest', 'Middle', 'Same time', 'Latest']);
+  fireEvent.click(view.getByRole('button', { name: 'When' }));
+  expect(labels()).toEqual(['Latest', 'Middle', 'Same time', 'Earliest']);
+  fireEvent.click(view.getByRole('button', { name: 'When' }));
+  expect(labels()).toEqual(['Latest', 'Earliest', 'Middle', 'Same time']);
+});
+
 test('fallback formats typed columns and paginates after sorting raw values', () => {
   const props = { id: 'data', columns: [{ key: 'amount', label: 'Amount', type: 'currency' }, { key: 'ratio', label: 'Ratio', type: 'percent' }], rows: [{ amount: 10, ratio: .5 }, { amount: 2, ratio: .25 }, { amount: 1000, ratio: .75 }], pageSize: 1 };
   const view = render(<Prism registry={registry} source={source(props)} locale="de-DE" currency="EUR"/>);

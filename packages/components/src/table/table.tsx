@@ -1,7 +1,7 @@
 import { Children, createContext, useContext, useLayoutEffect, useMemo, useRef, useState, type HTMLAttributes, type ReactNode, type ThHTMLAttributes } from 'react';
 import type { Node } from '@prism-ui/core';
 import { PrismContext, useComponentState, usePart, usePrism, useSlot, type MarkdownProps, type PrismComponentProps } from '@prism-ui/react';
-import { format as formatValue, type FormatKind } from '../lib/format';
+import { dateValue, format as formatValue, type FormatKind } from '../lib/format';
 
 export interface TableColumn { key: string; label?: string; title?: string; align?: 'left' | 'right' | 'center'; type?: FormatKind }
 export interface TableProps { id?: string; label?: string; title?: string; columns?: (TableColumn | string)[]; rows?: unknown[]; pageSize?: number; [key: string]: unknown }
@@ -26,7 +26,10 @@ function fallbackRows(props: TableProps, key: string, locale: string | undefined
   const rows = Array.isArray(props.rows) ? props.rows : [];
   const columns: TableColumn[] = (Array.isArray(props.columns) ? props.columns : []).flatMap(column => typeof column === 'string' ? [{ key: column, label: column }] : column && typeof column.key === 'string' ? [column] : []);
   if (!columns.length && rows[0] && typeof rows[0] === 'object') columns.push(...Object.keys(rows[0]).map(key => ({ key, label: key })));
-  const cell = (value: unknown, cellKey: string, header: boolean, kind?: FormatKind): Node => ({ type: header ? 'tableHeader' : 'tableCell', key: cellKey, value: header ? undefined : valueText(value), children: [{ type: 'text', key: cellKey + '.0', value: !header && kind ? formatValue(value, kind, { locale, currency, fallback: valueText(value) }) : valueText(value) }] });
+  const cell = (value: unknown, cellKey: string, header: boolean, kind?: FormatKind): Node => {
+    const time = !header && (kind === 'date' || kind === 'datetime' || kind === 'relative') ? dateValue(value).getTime() : NaN;
+    return { type: header ? 'tableHeader' : 'tableCell', key: cellKey, value: header ? undefined : valueText(Number.isFinite(time) ? time : value), children: [{ type: 'text', key: cellKey + '.0', value: !header && kind ? formatValue(value, kind, { locale, currency, fallback: valueText(value) }) : valueText(value) }] };
+  };
   return [
     { type: 'tableRow', key: key + '.header', children: columns.map((column, index) => cell(column.label ?? column.title ?? column.key, key + '.header.' + index, true)) },
     ...rows.map((row, index): Node => ({ type: 'tableRow', key: key + '.row.' + index, children: columns.map((column, col) => cell(row && typeof row === 'object' ? (row as Record<string, unknown>)[column.key] : undefined, key + '.row.' + index + '.' + col, false, column.type)) })),
