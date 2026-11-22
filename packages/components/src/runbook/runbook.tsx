@@ -73,10 +73,10 @@ export function Step({ props, node, children, complete }: PrismComponentProps<St
   return <Item {...root} data-complete={complete} data-numbered={vm.index >= 0}><div {...header}>
     {vm.index >= 0 && <button {...badge} type="button" role="checkbox" aria-checked={vm.done} aria-label={props.title ?? vm.number} onClick={vm.toggle} onKeyDown={vm.onKeyDown} data-streaming={!complete}>{vm.done ? <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m3 8 3 3 7-7" /></svg> : vm.number}</button>}
     <h4 {...title}>{vm.title ?? <span aria-hidden="true">&nbsp;</span>}</h4>
-  </div><div {...body}>{children}</div><Actions {...actions}>
+  <Actions {...actions}>
     {vm.commands && <button {...copy} type="button" onClick={vm.copy} aria-live="polite">{vm.copyState === 'copied' ? vm.labels.copied : vm.copyState === 'error' ? vm.labels.copyError : vm.labels.copy}</button>}
     {vm.index >= 0 && <button {...stuck} type="button" onClick={vm.stuck}>{vm.labels.stuck}</button>}
-  </Actions></Item>;
+  </Actions></div><div {...body}>{children}</div></Item>;
 }
 const labelsSchema = s.object({
   title: s.string().optional().describe('Default runbook title').example('Runbook'),

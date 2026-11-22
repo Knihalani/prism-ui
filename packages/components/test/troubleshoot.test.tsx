@@ -15,6 +15,8 @@ const fence = (value: unknown) => '```ui:troubleshoot\n' + JSON.stringify(value)
 test('static render has a step card, command, position, question and keyboard-accessible buttons', () => {
   const view = render(<Prism source={fence(props)} registry={registry} />);
   expect(view.getByText('Step 1')).toBeDefined(); expect(view.getByText('Restart the adapter.')).toBeDefined();
+  expect(view.getByText('Step 1').parentElement).toBe(view.getByText('Restart'));
+  expect(view.getByRole('button', { name: 'Copy' }).parentElement?.dataset.part).toBe('command');
   expect(view.getByText('$ nmcli radio wifi on').tagName).toBe('CODE');
   expect(view.getByText('Did this fix it?')).toBeDefined();
   expect((view.getByRole('button', { name: 'Yes' }) as HTMLButtonElement).disabled).toBe(false);

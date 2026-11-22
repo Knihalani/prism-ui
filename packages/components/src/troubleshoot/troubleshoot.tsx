@@ -74,14 +74,15 @@ function Command({ node }: { node: Node }) {
 export function Troubleshooter({ props }: PrismComponentProps<TroubleshootProps>) {
   const vm = useTroubleshoot(props, usePrism());
   const body = usePart('troubleshoot', 'conversation'), history = usePart('troubleshoot', 'history'), item = usePart('troubleshoot', 'historyItem'), chip = usePart('troubleshoot', 'chip'), card = usePart('troubleshoot', 'step', vm.state), position = usePart('troubleshoot', 'position'), title = usePart('troubleshoot', 'stepTitle'), text = usePart('troubleshoot', 'text'), hint = usePart('troubleshoot', 'hint'), question = usePart('troubleshoot', 'question'), actions = usePart('troubleshoot', 'actions'), primary = usePart('troubleshoot', 'primary'), ghost = usePart('troubleshoot', 'ghost'), result = usePart('troubleshoot', 'result', vm.state);
+  const command = usePart('troubleshoot', 'command');
   const Item = useSlot('troubleshoot', 'historyItem', Box), Card = useSlot('troubleshoot', 'step', Box), EmptyState = useSlot('troubleshoot', 'empty', Empty), Actions = useSlot('troubleshoot', 'actions', Box);
   return <div {...body} onKeyDown={vm.onKeyDown}><ComponentFrame component="troubleshoot" title={vm.title} state={vm.state} ask undo>
     {vm.path.length > 0 && <div {...history} aria-label={vm.labels.history}>{vm.path.map((entry, index) => <Item {...item} key={`${index}.${entry.step}`}><button {...ghost} type="button" onClick={() => vm.back(index)}><span {...text}>{vm.steps[entry.step]?.text ?? entry.step}</span><span {...chip} data-state={entry.answer}>{vm.labels[entry.answer]}</span></button></Item>)}</div>}
     {vm.ended ? <div {...result} role="status"><h4 {...title}>{vm.result}</h4>{vm.sent && <p {...text}>{vm.labels.sent}</p>}<Actions {...actions}><button {...primary} type="button" onClick={vm.report} disabled={vm.sent}>{vm.labels.report}</button><button {...ghost} type="button" onClick={vm.restart}>{vm.labels.restart}</button></Actions></div> : <Card {...card}>
-      <div {...position} aria-live="polite">{vm.position}</div>
+      <h4 {...title}><span {...position} aria-live="polite">{vm.position}</span>{vm.step?.title}</h4>
       {!vm.step || vm.loading ? <EmptyState aria-label={vm.labels.loading} /> : <>
-        {vm.step.title && <h4 {...title}>{vm.step.title}</h4>}<p {...text}>{vm.step.text}</p>
-        {vm.commandNode && <><Command node={vm.commandNode} /><button {...ghost} type="button" onClick={vm.copy} aria-live="polite">{vm.copyState === 'copied' ? vm.labels.copied : vm.copyState === 'error' ? vm.labels.copyError : vm.labels.copy}</button></>}
+        <p {...text}>{vm.step.text}</p>
+        {vm.commandNode && <div {...command}><Command node={vm.commandNode} /><button {...ghost} type="button" onClick={vm.copy} aria-live="polite">{vm.copyState === 'copied' ? vm.labels.copied : vm.copyState === 'error' ? vm.labels.copyError : vm.labels.copy}</button></div>}
         {vm.step.hint && <p {...hint}>{vm.step.hint}</p>}
       </>}
       <p {...question}>{vm.labels.question}</p><Actions {...actions}><button {...primary} type="button" disabled={!vm.ready} onClick={() => vm.answer('yes')} aria-keyshortcuts="Y">{vm.labels.yes}</button><button {...ghost} type="button" disabled={!vm.ready} onClick={() => vm.answer('no')} aria-keyshortcuts="N">{vm.labels.no}</button></Actions>

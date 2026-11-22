@@ -6,7 +6,7 @@
 .prism-root .prism-troubleshoot__chip { flex-shrink: 0; padding: var(--prism-space1) var(--prism-space2); border: 1px solid var(--prism-border-soft); border-radius: var(--prism-radius-sm); color: var(--prism-muted); font-size: var(--prism-text-xs); line-height: 1.2; }
 .prism-root .prism-troubleshoot__chip[data-state="yes"] { background: var(--prism-success-soft); color: var(--prism-success); }
 .prism-root .prism-troubleshoot__step { min-height: 240px; padding: var(--prism-space5); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-md); background: var(--prism-surface-soft); box-shadow: var(--prism-shadow-sm); }
-.prism-root .prism-troubleshoot__position { margin-bottom: var(--prism-space3); color: var(--prism-muted); font-size: var(--prism-text-xs); font-variant-numeric: tabular-nums; }
+.prism-root .prism-troubleshoot__position { display: inline-block; margin-right: var(--prism-space3); color: var(--prism-muted); font-size: var(--prism-text-sm); font-weight: 400; font-variant-numeric: tabular-nums; }
 .prism-root .prism-troubleshoot__stepTitle { margin: 0 0 var(--prism-space3); color: var(--prism-text); font-size: var(--prism-text-lg); font-weight: 600; line-height: 1.4; letter-spacing: -.015em; }
 .prism-root .prism-troubleshoot__text { margin: 0 0 var(--prism-space4); white-space: pre-wrap; }
 .prism-root .prism-troubleshoot__hint { margin: var(--prism-space3) 0; color: var(--prism-muted); font-size: var(--prism-text-sm); }
@@ -16,7 +16,13 @@
 .prism-root .prism-troubleshoot__primary { background: var(--prism-accent); color: var(--prism-bg); box-shadow: var(--prism-shadow-sm); }
 .prism-root .prism-troubleshoot__primary:hover:not(:disabled) { background: color-mix(in srgb, var(--prism-accent) 90%, var(--prism-text)); }
 .prism-root .prism-troubleshoot__ghost { background: transparent; color: var(--prism-muted); }
-.prism-root .prism-troubleshoot__step > .prism-troubleshoot__ghost { display: flex; margin-left: auto; padding: var(--prism-space1) var(--prism-space2); }
+.prism-root .prism-troubleshoot__command { position: relative; }
+.prism-root .prism-troubleshoot__command pre { padding-right: calc(var(--prism-space8) * 2 + var(--prism-space4)); }
+.prism-root .prism-troubleshoot__command > .prism-troubleshoot__ghost { position: absolute; top: var(--prism-space2); right: var(--prism-space2); padding: var(--prism-space1) var(--prism-space2); background: var(--prism-surface); opacity: 0; transition: opacity var(--prism-duration-fast) var(--prism-ease), background var(--prism-duration-fast) var(--prism-ease); }
+.prism-root .prism-troubleshoot__command:is(:hover, :focus-within) > .prism-troubleshoot__ghost { opacity: 1; }
+@media (hover: none), (pointer: coarse) {
+  .prism-root .prism-troubleshoot__command > .prism-troubleshoot__ghost { opacity: 1; }
+}
 .prism-root .prism-troubleshoot__ghost:hover:not(:disabled) { color: var(--prism-text); background: var(--prism-muted-soft); border-color: var(--prism-border-soft); }
 .prism-root .prism-troubleshoot__actions > .prism-troubleshoot__ghost { border-color: var(--prism-border); }
 .prism-root :is(.prism-troubleshoot__primary, .prism-troubleshoot__ghost):disabled { opacity: .45; cursor: not-allowed; }

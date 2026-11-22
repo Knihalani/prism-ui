@@ -88,7 +88,7 @@ function Field({ field, index, vm }: { field: AskField; index: number; vm: Model
   else if (field.type === 'select') input = <select {...control} {...attrs} ref={ref} value={String(value ?? '')} onChange={event => vm.change(key, event.target.value || null)} onBlur={onBlur}><option {...optionPart} value="">{field.placeholder ?? vm.labels.select}</option>{options.map(option => <option {...optionPart} key={option.value} value={option.value}>{option.label}</option>)}</select>;
   else if (field.type === 'textarea') input = <textarea {...control} {...attrs} ref={ref} value={String(value ?? '')} placeholder={field.placeholder} rows={3} onChange={event => vm.change(key, event.target.value || null)} onBlur={onBlur} />;
   else input = <input {...control} {...attrs} ref={ref} type={field.type ?? 'text'} value={typeof value === 'boolean' ? String(value) : value ?? ''} min={field.min} max={field.max} step={field.step} placeholder={field.placeholder} onChange={event => vm.change(key, normalize(field, event.target.value))} onBlur={onBlur} />;
-  return <div {...root} data-wide={field.type === 'text' || field.type === 'textarea' || undefined}>
+  return <div {...root} data-type={field.type} data-wide={field.type === 'text' || field.type === 'textarea' || undefined}>
     <label {...label} id={`${id}-label`} htmlFor={id}>{field.label ?? <span aria-hidden="true">&nbsp;</span>}{field.required && <span {...required} aria-hidden="true"> *</span>}{vm.suggested(field) && <span {...suggested}>{vm.labels.suggested}</span>}</label>
     <div {...wrap}>{input}{field.unit && <span {...unit}>{field.unit}</span>}</div>
     {field.hint && <div {...hint} id={hintId}>{field.hint}</div>}{error && <div {...errorPart} id={errorId} role="alert">{error}</div>}

@@ -22,6 +22,14 @@ test('static runbook renders numbered steps, normal code renderer, progress and 
   expect(view.getByText('Log in now.')).toBeDefined();
 });
 
+test('header actions remain available alongside a richer code renderer copy action', () => {
+  const view = render(<Prism source={source} registry={registry} components={{ code: ({ node }) => <pre>{node.value}<button type="button">Copy code</button></pre> }} />);
+  const copy = view.getByRole('button', { name: /^Copy$/ });
+  expect(copy.closest('[data-part="stepHeader"]')).not.toBeNull();
+  expect(view.getAllByRole('button', { name: 'Stuck here?' })[0].closest('[data-part="stepHeader"]')).not.toBeNull();
+  expect(view.getByRole('button', { name: 'Copy code' }).closest('[data-part="stepBody"]')).not.toBeNull();
+});
+
 test('stuck sends the entire exact runbook action and reflects done state', () => {
   const actions: Action[] = [];
   const view = render(<Prism source={source} registry={registry} onAction={action => actions.push(action)} />);
