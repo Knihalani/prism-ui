@@ -22,3 +22,28 @@ test('pending parent replacement wins and undo before load restores the current 
   resolve({ object: { remote: 2 }, count: 9, untouched: true }); await store.ready;
   expect(store.snapshot()).toEqual({ object: { local: 1 }, count: 0, untouched: true });
 });
+
+test('rejected hydration resolves ready, saves pending edits once, and resumes persistence', async () => {
+  let reject!: (error: Error) => void;
+  const saves: object[] = [];
+  const store = createStore({ initial: { kept: true }, persist: {
+    load: () => new Promise<object>((_, fail) => { reject = fail; }), save: (_, data) => { saves.push(data); },
+  } });
+  store.batch(() => { store.set('edited', 1); store.set('second', 2); });
+  store.set('third', 3); expect(saves).toEqual([]);
+  reject(Error('offline'));
+  await expect(store.ready).resolves.toBeUndefined();
+  expect(store.snapshot()).toEqual({ kept: true, edited: 1, second: 2, third: 3 });
+  expect(saves).toEqual([store.snapshot()]);
+  store.set('edited', 4); expect(saves).toHaveLength(2); expect(saves[1]).toEqual(store.snapshot());
+});
+
+test('failed hydration without edits resolves ready and saves subsequent changes', async () => {
+  for (const load of [() => { throw Error('offline'); }, () => Promise.reject(Error('offline'))]) {
+    const saves: object[] = [];
+    const store = createStore({ initial: { kept: true }, persist: { load, save: (_, data) => { saves.push(data); } } });
+    await expect(store.ready).resolves.toBeUndefined();
+    expect(store.snapshot()).toEqual({ kept: true }); expect(saves).toEqual([]);
+    store.set('edited', 1); expect(saves).toEqual([{ kept: true, edited: 1 }]);
+  }
+});

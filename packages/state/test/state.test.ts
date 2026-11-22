@@ -55,7 +55,7 @@ test('sync persistence, namespaces, batching and async readiness', async () => {
   asyncStore.batch(() => { asyncStore.set('x', 5); asyncStore.set('y', 6); });
   expect(saves).toBe(1); asyncStore.undo(); expect(saves).toBe(2);
   const rejected = createStore({ persist: { load() { throw Error('load'); }, save() {} } });
-  await expect(rejected.ready).rejects.toThrow('load');
+  await expect(rejected.ready).resolves.toBeUndefined();
 });
 
 test('localStorage fake, malformed data, unavailable storage', () => {

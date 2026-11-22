@@ -74,22 +74,25 @@ export function createStore({ persist, namespace = '', initial = {} }: { persist
     for (const p of step.paths) changed.add(p);
     flush(false);
   }
+  function hydrated() {
+    loading = false;
+    if (pending.size) { pending.clear(); persist?.save(namespace, copy(state)); }
+  }
   function load(data: object) {
     const previous = state; state = merge(state, clean(data)); before = state;
     for (const path of pending) {
       const keys = path.split('.'), parent = read(previous, keys.slice(0, -1));
       state = write(state, keys, read(previous, keys), parent == null || !Object.hasOwn(parent, keys.at(-1)!));
     }
-    before = state; loading = false;
-    if (pending.size) { pending.clear(); persist?.save(namespace, copy(state)); }
+    before = state; hydrated();
     for (const [p, fns] of listeners) if (p === '*' ? previous !== state : !Object.is(read(previous, p.split('.')), store.get(p))) for (const fn of [...fns]) fn();
   }
   if (persist) {
     try {
       const data = persist.load(namespace);
-      if (data instanceof Promise) { loading = true; store.ready = data.then(load); }
+      if (data instanceof Promise) { loading = true; store.ready = data.then(load, hydrated); }
       else load(data);
-    } catch (error) { store.ready = Promise.reject(error); }
+    } catch { hydrated(); }
   }
   return store;
 }
