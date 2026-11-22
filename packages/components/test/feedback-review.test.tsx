@@ -61,7 +61,7 @@ for (const kind of ['pin', 'region'] as const) test(`clearing the only ${kind} c
   expect(view.getByRole('button', { name: 'Submit feedback' }).hasAttribute('disabled')).toBe(false);
   fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
   expect(actions).toHaveLength(1);
-  expect(actions[0].payload).toMatchObject({ overall: 'A meaningful overall comment', items: [] });
+  expect(actions[0].payload).toMatchObject({ mockup: 'feedback-review', overall: 'A meaningful overall comment', items: [] });
 });
 
 test('comment portals follow the target into fullscreen and return without losing text', () => {

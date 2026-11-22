@@ -85,7 +85,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   }
   function submission() {
     const working = feedback.getState(), saved = ctx.store.get(path) as FeedbackState | undefined;
-    const value = createFeedback({ ...saved, overall: working.overall, items: (saved?.items ?? []).map(item => working.items.find(current => current.id === item.id) ?? item) }).toJSON();
+    const value = createFeedback({ ...saved, mockup: title, variant: props.variant, device, overall: working.overall, items: (saved?.items ?? []).map(item => working.items.find(current => current.id === item.id) ?? item) }).toJSON();
     return createFeedback(editing ? withItem(value, editing.id, comment) : value);
   }
   function remove(id: string) { const fresh = pending.current?.id === id, saved = ctx.store.get(path)?.items.some((item: { id: string }) => item.id === id); feedback.remove(id); close(); if (!fresh && saved) commit(value => ({ ...value, items: value.items.filter(item => item.id !== id) })); announce(labels.removed); }
