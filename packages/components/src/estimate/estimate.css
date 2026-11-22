@@ -4,7 +4,7 @@
 .prism-root .prism-estimate__body { padding: var(--prism-space5); }
 .prism-root .prism-estimate__toolbar { display: flex; gap: var(--prism-space2); }
 .prism-root .prism-estimate__ask, .prism-root .prism-estimate__undo { display: inline-flex; align-items: center; gap: var(--prism-space1); border: 0; border-radius: var(--prism-radius-sm); background: var(--prism-muted-soft); color: var(--prism-muted); padding: var(--prism-space2); cursor: pointer; }
-.prism-root .prism-estimate__item { display: flex; align-items: center; gap: var(--prism-space3); min-height: 80px; padding-block: var(--prism-space3); border-bottom: 1px solid var(--prism-border-soft); animation: prism-estimate-enter 220ms var(--prism-ease); }
+.prism-root .prism-estimate__item { display: flex; align-items: center; gap: var(--prism-space3); min-height: calc(var(--prism-text-base) * 1.6 + var(--prism-text-sm) * 3.2 + var(--prism-space3) * 2 + 1px); padding-block: var(--prism-space3); border-bottom: 1px solid var(--prism-border-soft); animation: prism-estimate-enter 220ms var(--prism-ease); }
 .prism-root .prism-estimate__details { flex: 1; min-width: 0; }
 .prism-root .prism-estimate__label { font-weight: 550; }
 .prism-root .prism-estimate__description, .prism-root .prism-estimate__price { color: var(--prism-muted); font-size: var(--prism-text-sm); line-height: 1.6; }

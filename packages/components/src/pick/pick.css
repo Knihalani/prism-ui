@@ -13,7 +13,7 @@
 .prism-root .prism-pick__pip { display: block; flex: 0 0 5px; width: 5px; height: 12px; border-radius: 2px; background: var(--prism-border); }
 .prism-root .prism-pick__pip[data-state="on"] { background: var(--prism-accent); }
 .prism-root .prism-pick__list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 224px), 1fr)); grid-auto-rows: 1fr; gap: var(--prism-space4); }
-.prism-root .prism-pick__item { display: flex; flex-direction: column; min-width: 0; padding: var(--prism-space4); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-md); background: var(--prism-surface); min-height: 230px; animation: prism-pick-enter 220ms var(--prism-ease); }
+.prism-root .prism-pick__item { display: flex; flex-direction: column; min-width: 0; padding: var(--prism-space4); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-md); background: var(--prism-surface); min-height: 32rem; animation: prism-pick-enter 220ms var(--prism-ease); }
 .prism-root .prism-pick__item[data-top="true"] { border-color: var(--prism-accent); box-shadow: 0 0 0 1px var(--prism-accent-soft), var(--prism-shadow-md); }
 .prism-root .prism-pick__item[data-state="chosen"] { border-color: var(--prism-success); }
 .prism-root .prism-pick__card-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--prism-space2); margin-bottom: var(--prism-space3); }
