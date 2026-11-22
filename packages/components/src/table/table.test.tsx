@@ -24,12 +24,12 @@ test('markdown table preserves component and registry node overrides while sorti
     expect(view.container.querySelector('[data-ignored]')).toBeNull();
     const firstRow = view.container.querySelector('tbody tr');
     expect(order(view)).toEqual(['Team 10', 'Team 2', 'Team 1']);
-    act(() => store.set('test:0.sort', { column: 1, dir: 'asc' }));
+    act(() => store.set('test:table:0.sort', { column: 1, dir: 'asc' }));
     expect(order(view)).toEqual(['Team 2', 'Team 1', 'Team 10']);
     expect(view.container.querySelector('tbody tr:last-child')).toBe(firstRow);
-    act(() => store.set('test:0.sort', { column: 1, dir: 'desc' }));
+    act(() => store.set('test:table:0.sort', { column: 1, dir: 'desc' }));
     expect(order(view)).toEqual(['Team 10', 'Team 1', 'Team 2']);
-    act(() => store.set('test:0.sort', null));
+    act(() => store.set('test:table:0.sort', null));
     expect(order(view)).toEqual(['Team 10', 'Team 2', 'Team 1']);
   }
 });
@@ -56,10 +56,10 @@ test('sort cycles ascending, descending and original, with exact aria-sort and s
   const price = view.getByRole('button', { name: 'Price' }), header = view.getAllByRole('columnheader')[1];
   fireEvent.click(price);
   expect(order(view)).toEqual(['Team 2', 'Team 1', 'Team 10']); expect(header.getAttribute('aria-sort')).toBe('ascending');
-  expect(store.get('test:0.sort')).toEqual({ column: 1, dir: 'asc' });
+  expect(store.get('test:table:0.sort')).toEqual({ column: 1, dir: 'asc' });
   fireEvent.click(price); expect(order(view)).toEqual(['Team 10', 'Team 1', 'Team 2']); expect(header.getAttribute('aria-sort')).toBe('descending');
   fireEvent.click(price); expect(order(view)).toEqual(['Team 10', 'Team 2', 'Team 1']); expect(header.getAttribute('aria-sort')).toBe('none');
-  expect(store.get('test:0.sort')).toBeNull();
+  expect(store.get('test:table:0.sort')).toBeNull();
   fireEvent.click(view.getByRole('button', { name: 'Plan' }));
   expect(order(view)).toEqual(['Team 1', 'Team 2', 'Team 10']);
 });
@@ -117,7 +117,7 @@ test('empty/mixed cells do not break numeric detection, stable sorting or invali
   const store = createStore(), view = render(<Prism scope="test" source={'| Name | Value |\n| --- | --- |\n| A | 2 |\n| B | 2 |\n| C | note |\n| D | |'} store={store} />);
   expect(view.getAllByRole('columnheader')[1].style.textAlign).toBe('left');
   fireEvent.click(view.getByRole('button', { name: 'Value' })); expect(order(view)).toEqual(['D', 'A', 'B', 'C']);
-  act(() => store.set('test:0.sort', { column: 100, dir: 'asc' })); expect(order(view)).toEqual(['A', 'B', 'C', 'D']);
+  act(() => store.set('test:table:0.sort', { column: 100, dir: 'asc' })); expect(order(view)).toEqual(['A', 'B', 'C', 'D']);
 });
 
 test('unstyled mode, slots and horizontal overflow state are supported', () => {

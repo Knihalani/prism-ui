@@ -11,6 +11,64 @@ import { num } from '../../components/src/num';
 
 afterEach(cleanup);
 
+test('early completed num waits for delayed provisional state before initializing its final id', async () => {
+  const registry = createRegistry([num]), previous = createStore();
+  const source = ':num[5]{id="amount"}';
+  const first = render(<Prism scope="restore" registry={registry} store={previous} source={source} done={false}/>);
+  fireEvent.keyDown(first.getByRole('slider'), { key: 'ArrowUp' });
+  const snapshot = previous.snapshot(); first.unmount();
+  let resolve!: (value: object) => void;
+  const store = createStore({ persist: { load: () => new Promise<object>(done => { resolve = done; }), save() {} } });
+  const view = render(<Prism scope="restore" registry={registry} store={store} source={source}/>);
+  await act(async () => { resolve(snapshot); await store.ready; });
+  expect(view.getByRole('slider').textContent).toBe('6');
+  expect(store.snapshot()).toEqual({ amount: 6 });
+});
+
+test('a named num replacing a completed anonymous num does not inherit its edit', () => {
+  const registry = createRegistry([num]), store = createStore();
+  const view = render(<Prism scope="replace" registry={registry} store={store} source=":num[5]{step=1}"/>);
+  fireEvent.keyDown(view.getByRole('slider'), { key: 'ArrowUp' });
+  expect(view.getByRole('slider').textContent).toBe('6');
+  view.rerender(<Prism scope="replace" registry={registry} store={store} source={':num[9]{id="named" step=1}'}/>);
+  expect(view.getByRole('slider').textContent).toBe('9');
+  expect(store.get('named')).toBe(9);
+});
+
+test('replacement generations cannot collide with a different explicit scope', () => {
+  const registry = createRegistry([num]), store = createStore();
+  const message = (scope: string, value: number) => <Prism scope={scope} registry={registry} store={store} source={`:num[${value}]{step=1}`}/>;
+  const view = render(<>{message('shared', 5)}{message('shared~1', 9)}</>);
+  view.rerender(<>{message('shared', 7)}{message('shared~1', 9)}</>);
+  expect(view.getAllByRole('slider').map(node => node.textContent)).toEqual(['7', '9']);
+});
+
+test('different directive names at the same position own separate provisional values', () => {
+  const store = createStore();
+  function First() { const [value] = useComponentState('value', 10); return <span>{value}</span>; }
+  function Second() { const [value] = useComponentState('value', 20); return <span>{value}</span>; }
+  const registry = createRegistry([{ name: 'a', component: First }, { name: 'ab', component: Second }]);
+  const view = render(<Prism scope="names" registry={registry} store={store} source={'::a{}\n'} done={false}/>);
+  expect(view.getByText('10')).toBeDefined();
+  view.rerender(<Prism scope="names" registry={registry} store={store} source={'::ab{}\n'} done={false}/>);
+  expect(view.getByText('20')).toBeDefined();
+});
+
+for (const kind of ['unsafe', 'nested'] as const) test(`migration leaves the ${kind} final-id control visible`, () => {
+  const registry = createRegistry([num]), store = createStore();
+  const id = kind === 'unsafe' ? '__proto__' : 'visible:num:0:0.value';
+  const source = ':num[5]{id="' + id + '"}';
+  const view = render(<Prism scope="visible" registry={registry} store={store} source={source} done={false}/>);
+  fireEvent.keyDown(view.getByRole('slider'), { key: 'ArrowUp' });
+  if (kind === 'nested') expect(id.startsWith(Object.keys(store.snapshot())[0] + '.')).toBe(true);
+  view.rerender(<Prism scope="visible" registry={registry} store={store} source={source}/>);
+  expect(view.getByRole('slider').textContent).toBe('6');
+  view.rerender(<Prism scope="visible" registry={registry} store={store} source={source} animate={false}/>);
+  expect(view.getByRole('slider').textContent).toBe('6');
+  if (kind === 'unsafe') expect(store.get('__proto__')).toBeUndefined();
+  else expect(store.get(id)).toBe(6);
+});
+
 test('a container and edited nested num finalize without moving each other state', () => {
   function Box({ children }: PrismComponentProps) { useComponentState('local', 10); return <div>{children}</div>; }
   const registry = createRegistry([num, { name: 'box', component: Box }]), store = createStore();
@@ -26,7 +84,7 @@ test('a container and edited nested num finalize without moving each other state
 test('async hydration preserves saved final fields when a stream finishes before load', async () => {
   let resolve!: (value: object) => void;
   const saved: object[] = [];
-  const store = createStore({ persist: { load: () => new Promise<object>(done => { resolve = done; }), save: (_, data) => saved.push(data) } });
+  const store = createStore({ initial: { 'hydrating:counter:0': { count: 1 } }, persist: { load: () => new Promise<object>(done => { resolve = done; }), save: (_, data) => saved.push(data) } });
   const registry = createRegistry([{ name: 'counter', component: OwnedCounter }]);
   const view = render(<Prism scope="hydrating" store={store} registry={registry} source={'```ui:counter\n{"initial":1,"id":"fi'} done={false}/>);
   view.rerender(<Prism scope="hydrating" store={store} registry={registry} source={'```ui:counter\n{"initial":1,"id":"final"}\n```'}/>);
@@ -94,20 +152,20 @@ test('character-by-character estimate/pick streams persist only provisional keys
     const source = '```ui:estimate\n' + JSON.stringify({ id: 'estimate-final', items: [{ id: 'seat', label: 'Seat', price: 10, qty: 2 }] }) + '\n```\n\n```ui:pick\n' + JSON.stringify({ id: 'pick-final', criteria: [{ id: 'cost', label: 'Cost' }], weights: { cost: 2 }, options: [{ id: 'pilot', title: 'Pilot', scores: { cost: 1 } }] }) + '\n```';
     for (const char of source) {
       await act(async () => { controller.enqueue(char); await Promise.resolve(); const publish = frame; frame = undefined; publish?.(0); });
-      expect(Object.keys(store.snapshot()).every(key => ['test:0', 'test:1', 'estimate-final', 'pick-final'].includes(key))).toBe(true);
+      expect(Object.keys(store.snapshot()).every(key => ['test:estimate:0', 'test:pick:1', 'estimate-final', 'pick-final'].includes(key))).toBe(true);
     }
     await act(async () => { controller.close(); });
     expect(Object.keys(store.snapshot()).sort()).toEqual(['estimate-final', 'pick-final']);
     expect(store.get('estimate-final.total')).toBe(20);
     expect(store.get('pick-final.weights.cost')).toBe(2);
-    for (const snapshot of saved) expect(Object.keys(snapshot).every(key => ['test:0', 'test:1', 'estimate-final', 'pick-final'].includes(key))).toBe(true);
+    for (const snapshot of saved) expect(Object.keys(snapshot).every(key => ['test:estimate:0', 'test:pick:1', 'estimate-final', 'pick-final'].includes(key))).toBe(true);
     expect(memory.load('identity')).toEqual(store.snapshot());
   } finally { globalThis.requestAnimationFrame = raf; globalThis.cancelAnimationFrame = cancel; }
 });
 
 test('finalization preserves provisional edits and migrates once without history or intermediate saves', () => {
   const saved: object[] = [], store = createStore({ persist: { load: () => ({}), save: (_, data) => saved.push(data) } });
-  store.set('test:0', { count: 4 }, { history: false });
+  store.set('test:counter:0', { count: 4 }, { history: false });
   function Counter({ id, props }: PrismComponentProps) {
     const [count, set] = useComponentState('count', 0);
     expect(props.id).toBe(id);
@@ -115,7 +173,7 @@ test('finalization preserves provisional edits and migrates once without history
   }
   const registry = createRegistry([{ name: 'counter', component: Counter }]);
   const view = render(<StrictMode><Prism scope="test" registry={registry} store={store} source={'```ui:counter\n{"id":"fi'} done={false}/></StrictMode>);
-  expect(view.getByRole('button', { name: 'test:0' }).textContent).toBe('4');
+  expect(view.getByRole('button', { name: 'test:counter:0' }).textContent).toBe('4');
   const before = saved.length;
   view.rerender(<StrictMode><Prism scope="test" registry={registry} store={store} source={'```ui:counter\n{"id":"final"}\n```'}/></StrictMode>);
   expect(store.snapshot()).toEqual({ final: { count: 4 } });
@@ -142,7 +200,7 @@ test('components without an explicit id keep key state when complete', () => {
   const store = createStore(), registry = createRegistry([{ name: 'counter', component: Counter }]);
   const view = render(<Prism scope="test" store={store} registry={registry} source={'```ui:counter\n{}'} done={false}/>);
   view.rerender(<Prism scope="test" store={store} registry={registry} source={'```ui:counter\n{}\n```'}/>);
-  expect(store.snapshot()).toEqual({ 'test:0': { count: 3 } });
+  expect(store.snapshot()).toEqual({ 'test:counter:0': { count: 3 } });
 });
 
 test('inline and leaf attributes never persist a truncated id while their block is open', () => {
@@ -154,7 +212,7 @@ test('inline and leaf attributes never persist a truncated id while their block 
     for (let end = 1; end <= source.length; end++) view.rerender(<Prism scope="test" store={store} registry={registry} source={source.slice(0, end)} done={false}/>);
     view.rerender(<Prism scope="test" store={store} registry={registry} source={source}/>);
     expect(store.snapshot()).toEqual({ 'final-id': { count: 3 } });
-    for (const snapshot of saved) expect(Object.keys(snapshot).every(key => ['test:0', 'test:0:0', 'final-id'].includes(key))).toBe(true);
+    for (const snapshot of saved) expect(Object.keys(snapshot).every(key => ['test:counter:0', 'test:counter:0:0', 'final-id'].includes(key))).toBe(true);
     view.unmount();
   }
 });

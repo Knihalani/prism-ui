@@ -29,21 +29,24 @@ export function migrateComponentState(store: Store, from: string, to: string) {
 }
 
 export function useComponentId(node: Node, requested: unknown, store: Store, scope: string) {
-  const provisional = `${encodeURIComponent(scope).replaceAll('.', '%2E')}:${node.key.replaceAll('.', ':')}`;
-  const target = node.complete === false || !Object.isFrozen(node) ? provisional : String(requested ?? provisional);
-  const [, refresh] = useState(0);
-  const migrating = target !== provisional && store.get(provisional) !== undefined;
+  const provisional = `${encodeURIComponent(scope).replaceAll('.', '%2E')}:${encodeURIComponent(node.name ?? node.type).replaceAll('.', '%2E')}:${encodeURIComponent(node.key).replaceAll('.', ':')}`;
+  const requestedId = String(requested ?? provisional);
+  const valid = requestedId.split('.').every(key => !['__proto__', 'constructor', 'prototype'].includes(key));
+  const target = node.complete === false || !Object.isFrozen(node) || !valid ? provisional : requestedId;
+  const [prepared, setPrepared] = useState<{ store: Store; from: string; to: string }>();
+  const needsPreparation = !store.hydrated || target !== provisional && store.get(provisional) !== undefined;
+  const ready = !needsPreparation || prepared?.store === store && prepared.from === provisional && prepared.to === target;
   useLayoutEffect(() => {
-    if (!migrating) return;
+    if (ready) return;
     let active = true;
     const finish = () => {
       if (!active) return;
       migrateComponentState(store, provisional, target);
-      refresh(value => value + 1);
+      setPrepared({ store, from: provisional, to: target });
     };
     if (store.hydrated) finish();
     else void store.ready.then(finish);
     return () => { active = false; };
-  }, [target, provisional, store, migrating]);
-  return { id: target, ready: !migrating };
+  }, [target, provisional, store, ready]);
+  return { id: target, ready };
 }

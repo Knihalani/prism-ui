@@ -96,7 +96,7 @@ test('selection persists across pages and submits exact original rows and indice
   fireEvent.click(view.getByRole('button', { name: 'Use 3 selected' }));
   expect(actions.length).toBe(1);
   expect({ type: actions[0].type, component: actions[0].component, id: actions[0].id, payload: actions[0].payload }).toEqual({
-    type: 'select', component: 'table', id: 'test:0', payload: { rows, indices: [0, 1, 2] },
+    type: 'select', component: 'table', id: 'test:table:0', payload: { rows, indices: [0, 1, 2] },
   });
   fireEvent.click(view.getByRole('button', { name: 'Previous page' }));
   fireEvent.click(view.getByRole('checkbox', { name: 'Select all rows on page' }));

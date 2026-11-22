@@ -84,7 +84,7 @@ test('point click and keyboard selection emit exact structured payloads', () => 
   const view = render(<Prism scope="test" registry={registry} source={source(base)} onAction={action => actions.push(action)} />);
   const point = view.container.querySelector('[data-part="point"][data-index="1"][data-series="0"]')!;
   fireEvent.click(point);
-  expect(actions[0]).toEqual({ type: 'select', component: 'chart', id: 'test:0', payload: { x: 'Feb', series: 'revenue', value: 12 },
+  expect(actions[0]).toEqual({ type: 'select', component: 'chart', id: 'test:chart:0', payload: { x: 'Feb', series: 'revenue', value: 12 },
     context: { component: 'chart', props: { ...base }, state: { pivot: -1, hidden: [] } },
     message: 'User select in chart: {"x":"Feb","series":"revenue","value":12}' });
   fireEvent.keyDown(view.getByRole('img'), { key: 'ArrowDown' });

@@ -51,7 +51,7 @@ test('streaming truncated input stays stable and initializes once available', ()
   view.rerender(<Prism scope="test" source=":num[]{id=rent}" done={false} store={store} animate={false} />);
   expect(view.getByRole('slider').getAttribute('data-state')).toBe('loading'); expect(store.get('rent')).toBeUndefined();
   view.rerender(<Prism scope="test" source=":num[12]{id=rent} :calc[rent*" done={false} store={store} animate={false} />);
-  expect(view.getByRole('slider').textContent).toBe('12'); expect(store.get('test:0:0')).toBe(12); expect(store.get('rent')).toBeUndefined();
+  expect(view.getByRole('slider').textContent).toBe('12'); expect(store.get('test~1:num:0:0')).toBe(12); expect(store.get('rent')).toBeUndefined();
   view.rerender(<Prism scope="test" source=":num[12]{id=rent} :calc[rent*12] " done={false} store={store} animate={false} />);
   expect(store.get('rent')).toBeUndefined();
   view.rerender(<Prism scope="test" source=":num[12]{id=rent} :calc[rent*12] " store={store} animate={false} />);

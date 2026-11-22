@@ -168,7 +168,7 @@ test('an unfinished current step cannot resolve through an implicit yes target',
   expect((view.getByRole('button', { name: 'No' }) as HTMLButtonElement).disabled).toBe(true);
   fireEvent.click(view.getByRole('button', { name: 'Yes' }));
   fireEvent.keyDown(view.getByRole('button', { name: 'Yes' }), { key: 'y' });
-  expect(store.get('test:0.path')).toEqual([]); expect(store.get('stream')).toBeUndefined();
+  expect(store.get('test:troubleshoot:0.path')).toEqual([]); expect(store.get('stream')).toBeUndefined();
   expect(view.queryByText('Fixed after 1 step')).toBeNull();
   const full = partial + ',"yes":"router"},"router":{"text":"Restart the router.","no":"$escalate"}}}\n```\n';
   view.rerender(<Prism scope="test" source={full} registry={registry} store={store} />);

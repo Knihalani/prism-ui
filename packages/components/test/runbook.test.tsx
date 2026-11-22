@@ -71,16 +71,16 @@ test('streaming step actions stay disabled until the step closes, while frame as
   expect(check.disabled).toBe(true); expect(check.getAttribute('aria-disabled')).toBe('true');
   expect(stuck.disabled).toBe(true); expect(stuck.getAttribute('aria-disabled')).toBe('true');
   fireEvent.click(check); fireEvent.keyDown(check, { key: ' ' }); fireEvent.keyDown(check, { key: 'Enter' }); fireEvent.click(stuck);
-  expect(check.getAttribute('aria-checked')).toBe('false'); expect(store.get('test:0.done')).toEqual({}); expect(store.get('gate')).toBeUndefined(); expect(actions).toEqual([]);
+  expect(check.getAttribute('aria-checked')).toBe('false'); expect(store.get('test:runbook:0.done')).toEqual({}); expect(store.get('gate')).toBeUndefined(); expect(actions).toEqual([]);
   const ask = view.getByRole('button', { name: 'Ask about this' }) as HTMLButtonElement;
   expect(ask.disabled).toBe(false); fireEvent.click(ask); expect(actions.map(action => action.type)).toEqual(['ask']);
   view.rerender(<Prism scope="test" source={partial + ':::\n'} done={false} registry={registry} store={store} onAction={action => actions.push(action)} />);
   expect((view.getByRole('checkbox') as HTMLButtonElement).disabled).toBe(false);
   expect((view.getByRole('button', { name: 'Stuck here?' }) as HTMLButtonElement).disabled).toBe(false);
   fireEvent.keyDown(view.getByRole('checkbox'), { key: 'Enter' }); fireEvent.click(view.getByRole('button', { name: 'Stuck here?' }));
-  expect(store.get('test:0.done')).toEqual({ install: true }); expect(actions.map(action => action.type)).toEqual(['ask', 'stuck']);
+  expect(store.get('test:runbook:0.done')).toEqual({ install: true }); expect(actions.map(action => action.type)).toEqual(['ask', 'stuck']);
   view.rerender(<Prism scope="test" source={partial + ':::\n::::\n'} registry={registry} store={store} onAction={action => actions.push(action)} />);
-  expect(store.get('gate.done')).toEqual({ install: true }); expect(store.get('test:0')).toBeUndefined();
+  expect(store.get('gate.done')).toEqual({ install: true }); expect(store.get('test:runbook:0')).toBeUndefined();
 });
 
 test('unstyled parts, slots, labels and standalone or three-colon steps degrade gracefully', () => {

@@ -157,12 +157,12 @@ test('streaming partial price uses a skeleton with totals throughout; empty is s
   const prefix = '```ui:estimate\n{"id":"quote","items":[{"id":"seats","label":"Seats"';
   const view = render(<Prism scope="test" source={prefix} done={false} store={store} animate={false} />);
   expect(view.container.querySelector('[data-part="item"]')?.getAttribute('data-state')).toBe('loading');
-  expect(view.getByText('Total')).toBeDefined(); expect(store.get('test:0.total')).toBe(0); expect(store.get('quote')).toBeUndefined();
+  expect(view.getByText('Total')).toBeDefined(); expect(store.get('test:estimate:0.total')).toBe(0); expect(store.get('quote')).toBeUndefined();
   expect(view.getByRole('button', { name: 'Use this estimate' }).hasAttribute('disabled')).toBe(true);
   view.rerender(<Prism scope="test" source={prefix + ',"price":20'} done={false} store={store} animate={false} />);
-  expect(store.get('test:0.items.seats.qty')).toBeUndefined();
+  expect(store.get('test:estimate:0.items.seats.qty')).toBeUndefined();
   view.rerender(<Prism scope="test" source={prefix + ',"price":20,"qty":3}]}\n```'} done={false} store={store} animate={false} />);
-  expect(view.container.querySelector('[data-part="item"]')?.getAttribute('data-state')).toBe('ready'); expect(store.get('test:0.total')).toBe(60);
+  expect(view.container.querySelector('[data-part="item"]')?.getAttribute('data-state')).toBe('ready'); expect(store.get('test:estimate:0.total')).toBe(60);
   view.rerender(<Prism scope="test" source={source({ items: [] })} store={store} animate={false} />);
-  expect(view.getByText('Items will appear here')).toBeDefined(); expect(store.get('quote.total')).toBe(0); expect(store.get('test:0')).toBeUndefined();
+  expect(view.getByText('Items will appear here')).toBeDefined(); expect(store.get('quote.total')).toBe(0); expect(store.get('test:estimate:0')).toBeUndefined();
 });

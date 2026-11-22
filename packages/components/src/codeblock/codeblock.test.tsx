@@ -48,7 +48,7 @@ test('copy emits exact structured payload and announces success', async () => {
     fireEvent.click(view.getByRole('button', { name: 'Copy code' }));
     await waitFor(() => expect(actions.length).toBe(1));
     expect(copied).toEqual(['a\nb']);
-    expect(actions[0]).toEqual({ type: 'copy', component: 'code', id: 'test:0', payload: { lang: 'js', lines: 2 },
+    expect(actions[0]).toEqual({ type: 'copy', component: 'code', id: 'test:code:0', payload: { lang: 'js', lines: 2 },
       context: { component: 'code', props: {}, state: { wrap: false, expanded: false } },
       message: 'User copy in code: {"lang":"js","lines":2}' });
     expect(view.getByRole('status').textContent).toBe('Copied');
