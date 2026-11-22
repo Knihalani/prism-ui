@@ -3,6 +3,7 @@ import { ComponentContext, PrismPart, defineTheme, useFormat, usePart, useString
 import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { usePick } from '@prism-ui/components/pick';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
+import { SentAction, receiptMotion } from './motion';
 
 type SlotProps = FrameSlotProps<unknown>;
 type EstimateRow = EstimateModel['rows'][number];
@@ -93,12 +94,16 @@ export const print = defineTheme({
     fontBody: '"Inter Tight", "Arial Narrow", Arial, sans-serif', fontDisplay: '"Inter Tight", "Arial Narrow", Arial, sans-serif',
     fontMono: '"IBM Plex Mono", ui-monospace, monospace', fontNumeric: '"Inter Tight", Arial, sans-serif',
     radiusSm: '0px', radiusMd: '0px', radiusLg: '0px', radiusPill: '0px', elevation1: 'none', elevation2: 'none', elevation3: 'none',
-    textBase: '14px', textSm: '12px', textXs: '10px', text3xl: '67px', weightBold: '900', motionFast: '100ms', motionBase: '150ms', motionSlow: '200ms',
+    textBase: '14px', textSm: '12px', textXs: '10px', text3xl: '67px', weightBold: '900',
+    motionInstant: '45ms', motionFast: '90ms', motionBase: '120ms', motionSlow: '180ms',
+    motionEase: 'cubic-bezier(.2,0,.3,1)', motionEaseInOut: 'linear', motionEaseExit: 'linear',
+    motionSpring: 'linear', motionSpringDuration: '0ms', motionSpringBouncy: 'linear', motionSpringBouncyDuration: '120ms',
+    motionStagger: '12ms', motionDistance: '2px', motionScale: '1', motionBlur: '0px',
   },
   dark: { bg: '#151515', surface: 'transparent', surfaceRaised: '#202020', text: '#f5f3ef', textMuted: '#c2beb7', textSubtle: '#aaa69f', border: '#6d6a65', borderStrong: '#f5f3ef', accent: '#ef4438', accentText: '#ef4438', onAccent: '#151515', focus: '#ef4438' },
   components: {
     frame: { slots: { header: Header, undo: Tool, ask: Tool, overflowTrigger: Tool }, strings: { undoLabel: 'Undo', askLabel: 'Ask', moreLabel: 'Tools' } },
-    estimate: { slots: { root: EstimateRoot, body: EstimateBody, item: EstimateItem, label: EstimateLabel, checkbox: Switch, total: Total }, strings: { title: 'Week-one estimate', sectionIndex: '01 / EST', submit: 'Send estimate ↗', sentLabel: 'Estimate sent ✓', totalLabel: 'Total', footnote: '{notes} · {currency}' } },
+    estimate: { slots: { root: EstimateRoot, body: EstimateBody, item: EstimateItem, label: EstimateLabel, checkbox: Switch, total: Total, submit: SentAction }, strings: { title: 'Week-one estimate', sectionIndex: '01 / EST', submit: 'Send estimate ↗', sentLabel: 'Estimate sent ✓', totalLabel: 'Total', footnote: '{notes} · {currency}' } },
     pick: { slots: { criteria: Criteria, item: Option, list: Options }, strings: { question: 'What matters to you?', sectionIndex: '02 / PICK', optionIndex: '{n} / APPROACH', scoreSuffix: '/100', ratingSuffix: '/10', chooseTemplate: 'Choose {title} ↗' } },
     runbook: { strings: { sectionIndex: '05 / GUIDE' } },
     summary: { strings: { sectionIndex: '06 / NOTES' } },
@@ -107,6 +112,13 @@ export const print = defineTheme({
     view: { strings: { sectionIndex: '04 / SETUP' } },
   },
   css: `
+    ${receiptMotion}
+    :scope [data-print-header] { position:relative; }
+    :scope [data-print-header]::before { content:""; position:absolute; inset:-5px 0 auto; height:5px; background:var(--prism-border-strong); transform-origin:left; scale:1 1; transition:scale var(--prism-motion-slow) var(--prism-motion-ease); }
+    @starting-style { :scope [data-print-header]::before { scale:0 1; } }
+    :scope [data-print-option] :is(.prism-pick__title,.print-score) { transition:opacity var(--prism-motion-instant) linear; }
+    @media (prefers-reduced-motion:reduce) { :scope [data-print-header]::before { transition:none; scale:1 1; } }
+    :scope[data-animate="false"] [data-print-header]::before, :scope [data-animate="false"] [data-print-header]::before { transition:none; scale:1 1; }
     :scope { container-type:inline-size; --prism-prose-measure:760px; }
     :scope .prism-heading__root { font-family:var(--prism-font-display); font-weight:900; line-height:.95; letter-spacing:-.045em; }
     :scope h1.prism-heading__root { font-size:clamp(55px,8.8cqw,67px); }
@@ -124,7 +136,7 @@ export const print = defineTheme({
     :scope .prism-codeblock__root .prism-tok-comment { color:var(--prism-text-muted); }
     :scope .prism-codeblock__root :is(.prism-tok-keyword,.prism-tok-builtin) { color:var(--prism-accent-text); }
     :scope :is(.prism-estimate__root,.prism-pick__root,.prism-view__root) { border:0; border-radius:0; box-shadow:none; background:none; margin-block:28px; }
-    :scope [data-print-header] { position:relative; display:flex; align-items:center; flex-wrap:wrap; gap:8px; border-top:5px solid var(--prism-text); border-bottom:1px solid var(--prism-text); padding:9px 0; margin:0; }
+    :scope [data-print-header] { position:relative; display:flex; align-items:center; flex-wrap:wrap; gap:8px; border-top:5px solid transparent; border-bottom:1px solid var(--prism-text); padding:9px 0; margin:0; }
     :scope [data-print-header] > [data-part="title"] { font:800 20px/1.2 var(--prism-font-display); letter-spacing:-.3px; white-space:normal; overflow:visible; min-width:0; }
     :scope .print-index { flex:none; margin-left:auto; color:var(--prism-accent-text); font:500 11px var(--prism-font-mono); }
     :scope [data-print-header] > [data-part="toolbar"] { position:absolute; bottom:calc(100% + 5px); right:0; margin:0; }

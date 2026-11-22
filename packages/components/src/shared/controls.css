@@ -40,7 +40,7 @@
   box-shadow: none;
 }
 .prism-pill[data-feedback] { display: inline-grid; }
-.prism-pill[data-feedback] > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.prism-pill[data-feedback] > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .prism-pill[data-feedback] > span {
   position: relative; z-index: 1; opacity: 1; translate: 0 0; filter: blur(0);
   transition: opacity var(--prism-motion-slow) var(--prism-motion-ease), translate var(--prism-motion-slow) var(--prism-motion-ease), filter var(--prism-motion-slow) var(--prism-motion-ease);

@@ -1,8 +1,9 @@
-import { Children, createElement, forwardRef, type InputHTMLAttributes, type ReactElement } from 'react';
-import { PrismPart, defineTheme, useFormat, usePart, useStrings } from '@prism-ui/react';
+import { Children, createElement, forwardRef, useContext, type InputHTMLAttributes, type ReactElement } from 'react';
+import { ComponentContext, PrismPart, defineTheme, useFlash, useFormat, usePart, useStrings } from '@prism-ui/react';
 import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
 import type { usePick } from '@prism-ui/components/pick';
+import { SentAction, receiptMotion } from './motion';
 
 type SlotProps = FrameSlotProps<unknown>;
 type PickRow = ReturnType<typeof usePick>['rows'][number];
@@ -41,11 +42,12 @@ function Segments({ value }: { value: string }) {
 }
 export const SegmentedTotal = forwardRef<HTMLDivElement, SlotProps & { estimate: EstimateModel }>(function SegmentedTotal({ as, model, frame, overflow, estimate, children, ...props }, ref) {
   const strings = useStrings('estimate');
+  const context = useContext(ComponentContext)!, changed = useFlash(`${context.props.id ?? context.id}.total`);
   const text = String(Number(estimate.displayedTotal.toFixed(estimate.fractionDigits)));
   const label = usePart('estimate', 'total-label'), value = usePart('estimate', 'total-value'), live = usePart('estimate', 'live');
   return <div {...props} ref={ref}>
     <div className="instrument-readout-label"><PrismPart as="span" {...label}>{estimate.totalLabel}</PrismPart><span>{strings.displayLabel}</span></div>
-    <PrismPart as="span" {...value} aria-hidden="true"><small>{estimate.totalText.replace(/[\d.,\s-]/g, '')}</small><Segments value={text} /></PrismPart>
+    <PrismPart as="span" {...value} aria-hidden="true" data-instrument-change={changed ? '' : undefined}><small>{estimate.totalText.replace(/[\d.,\s-]/g, '')}</small><Segments key={text} value={text} /></PrismPart>
     <PrismPart as="span" {...live} aria-live="polite">{estimate.finalTotalText}</PrismPart>
   </div>;
 });
@@ -58,12 +60,13 @@ const Faders = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<typeof 
 });
 const Module = forwardRef<HTMLElement, SlotProps & { row: PickRow }>(function Module({ as = 'article', model, frame, overflow, row, children, ...props }, ref) {
   const strings = useStrings('pick'), format = useFormat();
+  const context = useContext(ComponentContext)!, changed = useFlash(`${context.props.id ?? context.id}.weights`);
   const part = usePart('pick', 'item', !row.ready ? 'loading' : row.chosen ? 'chosen' : row.top ? 'top' : 'ready');
   const title = usePart('pick', 'title'), subtitle = usePart('pick', 'subtitle'), bars = usePart('pick', 'bars'), choose = usePart('pick', 'choose');
-  return createElement(as, { ...part, ...props, ref, 'data-instrument-module': '', 'data-option': row.id, 'data-top': row.top || undefined, 'aria-busy': !row.ready }, <>
-    <div className="instrument-module-index">{strings.optionIndex.replace('{n}', format.number(row.index + 1, { minimumIntegerDigits: 2 }))}<i data-instrument-led="" aria-hidden="true" /></div>
+  return createElement(as, { ...part, ...props, ref, 'data-instrument-module': '', 'data-option': row.id, 'data-top': row.top || undefined, 'data-instrument-change': changed ? '' : undefined, 'aria-busy': !row.ready }, <>
+    <div className="instrument-module-index">{strings.optionIndex.replace('{n}', format.number(row.index + 1, { minimumIntegerDigits: 2 }))}<i key={row.top ? 'on' : 'off'} data-instrument-led="" aria-hidden="true" /></div>
     <PrismPart as="h4" {...title}>{row.title}</PrismPart>{row.subtitle && <PrismPart as="p" {...subtitle}>{row.subtitle}</PrismPart>}
-    <div className="instrument-score" data-instrument-score="" role="img" aria-label={row.ready ? `${row.matchText} ${row.matchLabel}` : strings.emptyLabel}><Segments value={row.ready ? String(Math.round(row.match * 100)) : '--'} /></div>
+    <div className="instrument-score" data-instrument-score="" role="img" aria-label={row.ready ? `${row.matchText} ${row.matchLabel}` : strings.emptyLabel}><Segments key={row.match} value={row.ready ? String(Math.round(row.match * 100)) : '--'} /></div>
     <PrismPart as="div" {...bars}>{row.bars.map(bar => <div className="instrument-rating" key={bar.id}><span>{bar.label}</span><span>{format.number(Math.round(bar.score * 10))}{strings.ratingSuffix}</span></div>)}</PrismPart>
     {!!row.pros.length && <ul className="instrument-notes">{row.pros.map((pro, index) => <li key={index}>{pro}</li>)}</ul>}
     {!!row.cons.length && <ul className="instrument-notes">{row.cons.map((con, index) => <li key={index}>{con}</li>)}</ul>}
@@ -88,13 +91,16 @@ export const instrument = defineTheme({
     fontMono: '"IBM Plex Mono", ui-monospace, monospace', fontNumeric: '"IBM Plex Mono", ui-monospace, monospace',
     radiusSm: '3px', radiusMd: '5px', radiusLg: '7px', textXs: '10px', textSm: '12px', textBase: '14px',
     elevation1: '0 2px 0 #b0b0a6', elevation2: '0 3px 0 #a7a89c, 0 8px 14px #292a2512',
-    motionFast: '100ms', motionBase: '160ms', motionSlow: '220ms',
+    motionInstant: '45ms', motionFast: '90ms', motionBase: '140ms', motionSlow: '180ms',
+    motionEase: 'steps(3,end)', motionEaseInOut: 'steps(4,end)', motionEaseExit: 'steps(2,end)',
+    motionSpring: 'steps(4,end)', motionSpringDuration: '0ms', motionSpringBouncy: 'steps(3,end)', motionSpringBouncyDuration: '140ms',
+    motionStagger: '14ms', motionDistance: '2px', motionScale: '1', motionBlur: '0px',
   },
   dark: { bg: '#1d1e1b', surface: '#2a2b27', surfaceRaised: '#383a34', text: '#f0eee4', textMuted: '#c3c2b7', textSubtle: '#b4b4a8', border: '#4e5047', borderStrong: '#74766b', accent: '#e55b25', accentText: '#ff945f', onAccent: '#231b12', focus: '#ff945f', elevation1: '0 2px 0 #141510', elevation2: '0 3px 0 #141510, 0 8px 14px #0003' },
   components: {
     frame: { slots: { root: Chassis, header: Header, undo: Tool, ask: Tool, overflowTrigger: Tool }, strings: { undoLabel: 'Undo', askLabel: 'Ask', moreLabel: 'Tools' }, tokens: { display: '#1b1c18', 'display-ink': '#eeede3', lcd: '#bebdb8', 'lcd-ink': '#34352e', groove: '#a1a09d', 'groove-shadow': '#73726f', 'key-shadow': '#aeadaa', 'chassis-shadow': '#b8b7b4' } },
     estimate: {
-      slots: { root: Chassis, item: Item, checkbox: Toggle, total: SegmentedTotal },
+      slots: { root: Chassis, item: Item, checkbox: Toggle, total: SegmentedTotal, submit: SentAction },
       strings: { title: 'Week-one estimate', sectionIndex: '01 / EST', submit: 'Send estimate', sentLabel: 'Sent', totalLabel: 'Total', displayLabel: 'LIVE' },
       tokens: { display: '#1b1c18', signal: '#e55b25', 'display-border': '#171812', 'key-shadow': 'var(--prism-frame-key-shadow)' },
     },
@@ -106,6 +112,14 @@ export const instrument = defineTheme({
     view: { strings: { sectionIndex: '04 / SETUP' } },
   },
   css: `
+    ${receiptMotion}
+    :scope [data-instrument-module] { --prism-motion-spring-duration:140ms; }
+    :scope .prism-view__content { --prism-motion-spring-duration:var(--prism-motion-fast); }
+    :scope [data-instrument-change] :is([data-segmented],[data-instrument-led]) { animation:instrument-contact var(--prism-motion-base) steps(1,end) 1; }
+    @keyframes instrument-contact { 0%,100% { opacity:1; } 18% { opacity:.55; } 31% { opacity:.9; } 46% { opacity:.65; } 64% { opacity:1; } }
+    :scope :is(.prism-estimate__increase,.prism-estimate__decrease,.prism-estimate__submit,[data-instrument-tool],.instrument-pick-footer button,.prism-view__button,.prism-view__segment) { transition:transform var(--prism-motion-instant) var(--prism-motion-ease); }
+    @media (prefers-reduced-motion:reduce) { :scope [data-instrument-change] :is([data-segmented],[data-instrument-led]) { animation:none; } }
+    :scope[data-animate="false"] [data-instrument-change] :is([data-segmented],[data-instrument-led]), :scope [data-animate="false"] [data-instrument-change] :is([data-segmented],[data-instrument-led]), :scope[data-animate="false"] .prism-estimate__title::before, :scope [data-animate="false"] .prism-estimate__title::before { animation:none; }
     :scope .prism-estimate__root { position:relative; overflow:hidden; border:1px solid var(--prism-border-strong); border-radius:var(--prism-radius-lg); box-shadow:inset 0 1px 0 var(--prism-surface-raised), 0 3px 0 var(--prism-border), 0 10px 24px #292a2512; padding:9px; background:var(--prism-surface); }
     :scope .instrument-screw { position:absolute; z-index:1; width:5px; height:5px; border:1px solid var(--prism-border-strong); border-radius:50%; background:var(--prism-bg); box-shadow:inset 0 1px 1px var(--prism-border); }
     :scope .instrument-screw::after { content:""; position:absolute; left:0; right:0; top:1px; border-top:1px solid var(--prism-border-strong); transform:rotate(-35deg); }
@@ -124,7 +138,7 @@ export const instrument = defineTheme({
     :scope .prism-estimate__stepper { border:0; border-radius:0; overflow:visible; gap:3px; align-items:center; }
     :scope .prism-estimate__input { border:0; width:3ch; background:transparent; font:500 18px/1 var(--prism-font-numeric); }
     :scope .prism-estimate__increase, :scope .prism-estimate__decrease { display:grid; place-items:center; width:27px; min-height:31px; border:1px solid var(--prism-border); background:var(--prism-surface-raised); border-radius:3px; box-shadow:0 2px 0 var(--prism-estimate-key-shadow); color:var(--prism-text); }
-    :scope .prism-estimate__increase:active, :scope .prism-estimate__decrease:active, :scope .prism-estimate__submit:active { transform:translateY(2px); box-shadow:none; }
+    :scope .prism-estimate__increase:active, :scope .prism-estimate__decrease:active, :scope .prism-estimate__submit:active { transform:translateY(var(--prism-motion-distance)); box-shadow:none; }
     :scope .prism-estimate__amount { min-width:0; font-size:12px; font-weight:500; }
     :scope .prism-estimate__item[data-optional] { min-height:89px; }
     :scope .prism-estimate__checkbox { appearance:none; position:relative; width:37px; height:21px; border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-border); cursor:pointer; box-shadow:inset 0 1px 2px var(--prism-border-strong); }
@@ -196,7 +210,7 @@ export const instrument = defineTheme({
     :scope .instrument-pick-footer p { min-height:2.8em; margin:0 0 18px; color:var(--prism-text-muted); font:11px/1.7 var(--prism-font-mono); }
     :scope .instrument-pick-footer button { width:100%; min-height:42px; padding:10px 14px; border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:0 3px 0 var(--prism-frame-key-shadow),inset 0 1px 0 var(--prism-surface); font:11px/1.5 var(--prism-font-mono); text-transform:uppercase; letter-spacing:.05em; cursor:pointer; }
     :scope :is([data-instrument-tool],.instrument-pick-footer button,.prism-mockup__header .prism-mockup__button,.prism-view__button,.prism-view__segment) { transition:transform var(--prism-motion-fast) var(--prism-motion-ease),box-shadow var(--prism-motion-fast) var(--prism-motion-ease); }
-    :scope :is([data-instrument-tool],.instrument-pick-footer button,.prism-mockup__header .prism-mockup__button,.prism-view__button,.prism-view__segment):active:not(:disabled) { transform:translateY(2px); box-shadow:inset 0 1px 2px var(--prism-frame-key-shadow); }
+    :scope :is([data-instrument-tool],.instrument-pick-footer button,.prism-mockup__header .prism-mockup__button,.prism-view__button,.prism-view__segment):active:not(:disabled) { transform:translateY(var(--prism-motion-distance)); box-shadow:inset 0 1px 2px var(--prism-frame-key-shadow); }
     :scope .prism-mockup__viewport { padding:0; border:0; outline:4px solid var(--prism-border); border-radius:3px; background:var(--prism-frame-display); box-shadow:inset 0 2px 4px var(--prism-frame-display); }
     :scope .prism-mockup__stage { border-radius:0; outline:0; }
     :scope .prism-mockup__header .prism-mockup__button { border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); box-shadow:0 2px 0 var(--prism-frame-key-shadow),inset 0 1px 0 var(--prism-surface); color:var(--prism-text); font:10px var(--prism-font-mono); text-transform:uppercase; }

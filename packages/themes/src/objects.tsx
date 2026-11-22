@@ -1,12 +1,14 @@
-import { Children, createElement, forwardRef, useEffect, useRef, useState, type InputHTMLAttributes, type ReactElement } from 'react';
-import { PrismPart, defineTheme, useFormat, usePart, usePrism, useSent, useStrings } from '@prism-ui/react';
+import { Children, createElement, forwardRef, type InputHTMLAttributes, type ReactElement } from 'react';
+import { PrismPart, defineTheme, spring, useFormat, usePart, useSent, useStrings } from '@prism-ui/react';
 import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
 import type { usePick } from '@prism-ui/components/pick';
+import { SentAction, receiptMotion } from './motion';
 
 type SlotProps = FrameSlotProps<unknown>;
 type PickRow = ReturnType<typeof usePick>['rows'][number];
 const supported = new Set(['estimate', 'pick', 'mockup', 'view', 'frame', 'runbook', 'troubleshoot', 'summary']);
+const paper = spring({ response: .28, damping: 1 });
 
 const Header = forwardRef<HTMLElement, SlotProps>(function Header({ as = 'header', model, frame, overflow, children, ...props }, ref) {
   const component = (props as Record<string, unknown>)['data-prism'] as string, strings = useStrings(component);
@@ -18,16 +20,14 @@ const Tool = forwardRef<HTMLElement, SlotProps>(function Tool({ as = 'button', m
   return createElement(as, { ...props, ref, 'data-objects-tool': supported.has(component) ? '' : undefined }, supported.has(component) ? props['aria-label'] : children);
 });
 const Receipt = forwardRef<HTMLElement, SlotProps>(function Receipt({ as = 'section', model, frame, overflow, children, ...props }, ref) {
-  const { sent } = useSent(), { animate } = usePrism(), strings = useStrings('estimate');
-  const previous = useRef(!!sent), [feeding, setFeeding] = useState(false);
-  useEffect(() => { setFeeding(!!sent && !previous.current && animate); previous.current = !!sent; }, [sent, animate]);
+  const { sent } = useSent(), strings = useStrings('estimate');
   return createElement(as, { ...props, ref, 'data-objects-printer': '' },
     <div className="objects-printer-slot" aria-hidden="true" />,
-    <div className="objects-receipt" data-objects-receipt="" data-state={sent ? 'sent' : 'ready'} data-printing={feeding ? '' : undefined} onAnimationEnd={event => { if (event.target === event.currentTarget) setFeeding(false); }}>
+    <div className="objects-receipt" data-objects-receipt="" data-state={sent ? 'sent' : 'ready'}>
       <div className="objects-receipt-brand"><strong>{strings.shopName}</strong><span>{strings.shopLine}</span><span>{strings.shopMotto}</span></div>
       {children}
       <div className="objects-receipt-end" aria-hidden="true"><div className="objects-barcode" />{strings.thankYou}<br />{strings.keepReceipt}</div>
-      {sent && <p className="objects-delivered" role="status">{strings.delivered}</p>}
+      <p className="objects-delivered" role="status" aria-hidden={!sent}>{strings.delivered}</p>
     </div>);
 });
 const ReceiptItem = forwardRef<HTMLDivElement, SlotProps & { row: EstimateModel['rows'][number] }>(function ReceiptItem({ as, model, frame, overflow, row, children, ...props }, ref) {
@@ -81,7 +81,10 @@ export const objects = defineTheme({
     fontBody: '"DM Sans", system-ui, sans-serif', fontDisplay: '"Caveat", cursive', fontMono: '"IBM Plex Mono", ui-monospace, monospace', fontNumeric: '"IBM Plex Mono", ui-monospace, monospace',
     radiusSm: '2px', radiusMd: '2px', radiusLg: '2px', radiusPill: '999px', textBase: '14px', textSm: '12px', textXs: '10px',
     elevation1: '0 2px 3px #675c4240, 2px 8px 14px #6a5b3c30', elevation2: '0 4px 3px #665a3b44, 0 15px 20px #665a3b3b',
-    motionFast: '120ms', motionBase: '200ms', motionSlow: '420ms',
+    motionInstant: '80ms', motionFast: '150ms', motionBase: '240ms', motionSlow: '420ms',
+    motionEase: 'cubic-bezier(.22,.7,.25,1)', motionEaseInOut: 'cubic-bezier(.45,0,.25,1)', motionEaseExit: 'cubic-bezier(.4,0,1,1)',
+    motionSpring: paper.easing, motionSpringDuration: `${paper.duration}ms`, motionSpringBouncy: paper.easing, motionSpringBouncyDuration: '300ms',
+    motionStagger: '24ms', motionDistance: '6px', motionScale: '.985', motionBlur: '1px',
   },
   dark: {
     bg: '#24221e', surface: '#30372f', surfaceRaised: '#34332d', text: '#f1ecda', textMuted: '#c2bda9', textSubtle: '#c2bda9',
@@ -94,7 +97,7 @@ export const objects = defineTheme({
       tokens: { 'note-yellow': '#ddd69c', 'note-pink': '#d4b5a5', 'note-sage': '#bbc5b5', 'card-two': '#e4e6d8', 'card-three': '#e8debb', tape: '#d6c8a3', stamp: '#9c493b', slot: '#373d34' },
     },
     estimate: {
-      slots: { root: Receipt, item: ReceiptItem, checkbox: Switch, total: Total }, tokens: { 'feed-duration': '850ms' },
+      slots: { root: Receipt, item: ReceiptItem, checkbox: Switch, total: Total, submit: SentAction }, tokens: { 'motion-slow': '620ms' },
       strings: { title: 'Week-one estimate', sectionIndex: '01 / EST', shopName: 'FIELDNOTES', shopLine: 'RESEARCH SUPPLY CO.', shopMotto: 'SMALL PILOTS, GOOD QUESTIONS.', submit: 'Print & send estimate ↗', sentLabel: 'Sent · estimate ✓', delivered: 'DELIVERED / READY FOR REVIEW', thankYou: '001 — THANK YOU FOR STARTING SMALL', keepReceipt: 'KEEP THIS FOR THE CONVERSATION.' },
     },
     pick: { slots: { criteria: StickyNotes, item: IndexCard, list: Cards }, strings: { question: 'What matters to you?', sectionIndex: '02 / PICK', optionIndex: '{n} / APPROACH', stamp: 'PICK', scoreSuffix: '/100', ratingSuffix: '/10', chooseTemplate: 'Choose {title} ↗', leads: 'leads.' } },
@@ -104,6 +107,21 @@ export const objects = defineTheme({
     mockup: { strings: { sectionIndex: '03 / DESIGN' } }, view: { strings: { sectionIndex: '04 / SETUP' } },
   },
   css: `
+    ${receiptMotion}
+    :scope [data-objects-printer] { --prism-motion-slow:var(--prism-estimate-motion-slow); }
+    :scope .objects-receipt { translate:0 0; transition:translate var(--prism-motion-slow) var(--prism-motion-ease); }
+    :scope .objects-receipt[data-state="ready"] { translate:0 calc(-2 * var(--prism-motion-distance)); }
+    :scope .objects-delivered { opacity:1; transition:opacity var(--prism-motion-slow) var(--prism-motion-ease); }
+    :scope .objects-delivered[aria-hidden="true"] { opacity:0; }
+    :scope [data-objects-card][data-option] { transition:rotate var(--prism-motion-spring-duration) var(--prism-motion-spring), translate var(--prism-motion-spring-duration) var(--prism-motion-spring), opacity var(--prism-motion-slow) var(--prism-motion-ease), filter var(--prism-motion-slow) var(--prism-motion-ease); }
+    :scope [data-objects-cards] > [data-objects-card][data-option] { opacity:1; filter:none; }
+    :scope .objects-sticky { transition:translate var(--prism-motion-fast) var(--prism-motion-ease), rotate var(--prism-motion-spring-duration) var(--prism-motion-spring); }
+    :scope .objects-sticky:is(:focus-within,:active) { translate:0 calc(-1 * var(--prism-motion-distance)); rotate:0deg; }
+    @media (hover:hover) { :scope .objects-sticky:hover { translate:0 calc(-1 * var(--prism-motion-distance)); } }
+    :scope .objects-stamp { scale:1; opacity:1; transition:scale var(--prism-motion-base) var(--prism-motion-spring), opacity var(--prism-motion-fast) var(--prism-motion-ease); }
+    @starting-style { :scope .objects-stamp { scale:1.12; opacity:0; } }
+    @media (prefers-reduced-motion:reduce) { :scope :is(.objects-receipt,.objects-sticky,.objects-stamp) { translate:none !important; scale:1 !important; transition-property:opacity !important; } }
+    :scope[data-animate="false"] :is(.objects-receipt,.objects-sticky,.objects-stamp), :scope [data-animate="false"] :is(.objects-receipt,.objects-sticky,.objects-stamp) { translate:none !important; scale:1 !important; transition:none !important; }
     :scope { container-type:inline-size; padding:24px; display:grid; grid-template-columns:minmax(0,1fr); background-color:var(--prism-bg); color:var(--prism-text); --objects-grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='130'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Cpath d='M0 0h130v130H0z' filter='url(%23n)' opacity='.075'/%3E%3C/svg%3E"); background-image:var(--objects-grain); }
     :scope > * { min-width:0; width:100%; box-sizing:border-box; }
     :scope[data-prism-theme="dark"] { --prism-frame-note-yellow:#4b4630; --prism-frame-note-pink:#503e39; --prism-frame-note-sage:#344b40; --prism-frame-card-two:#323e34; --prism-frame-card-three:#46422f; --prism-frame-tape:#786f50; --prism-frame-stamp:#efb2a2; --prism-frame-slot:#171611; }
@@ -164,8 +182,6 @@ export const objects = defineTheme({
     :scope .objects-receipt-end { border-top:1px dashed var(--prism-border); margin-top:20px; padding-top:12px; text-align:center; font:8px/1.8 var(--prism-font-mono); letter-spacing:.2px; }
     :scope .objects-barcode { width:126px; height:21px; margin:8px auto 10px; background:repeating-linear-gradient(90deg,var(--prism-text) 0 2px,transparent 2px 4px,var(--prism-text) 4px 5px,transparent 5px 9px,var(--prism-text) 9px 12px,transparent 12px 15px); }
     :scope .objects-delivered { padding:5px; margin:16px 0 0; border:2px solid var(--prism-accent-text); color:var(--prism-accent-text); font:10px/1.6 var(--prism-font-mono); text-align:center; rotate:-3deg; }
-    :scope .objects-receipt[data-printing] { animation:objects-print-feed var(--prism-estimate-feed-duration) steps(18) both; }
-    @keyframes objects-print-feed { from { clip-path:inset(0 0 90% 0); translate:0 -28px; } to { clip-path:inset(0 0 -12px 0); translate:0 0; } }
     :scope .prism-pick__body { padding:0; }
     :scope [data-objects-sticky-notes] { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,120px),1fr)); gap:16px; margin:8px 9px 34px; padding:0; }
     :scope .objects-sticky { display:block; min-width:0; padding:10px 12px 12px; color:var(--prism-text); background:var(--prism-frame-note-yellow); background-image:var(--objects-grain); box-shadow:var(--prism-elevation-1); rotate:-2deg; font:500 22px/1.2 var(--prism-font-display); }
@@ -241,11 +257,9 @@ export const objects = defineTheme({
       :scope .prism-estimate__root:not(:hover,:focus-within) .prism-estimate__header .prism-icon-btn { opacity:0; }
     }
     @media (prefers-reduced-motion:reduce) {
-      :scope .objects-receipt[data-printing] { animation:none; }
       :scope [data-objects-card]:nth-child(n), :scope .objects-sticky:nth-child(n) { rotate:0deg; translate:none; }
       :scope .prism-estimate__checkbox::after { transition:none; }
     }
-    :scope[data-animate="false"] .objects-receipt[data-printing], :scope [data-animate="false"] .objects-receipt[data-printing] { animation:none; }
     :scope[data-animate="false"] .prism-estimate__checkbox::after, :scope [data-animate="false"] .prism-estimate__checkbox::after { transition:none; }
     :scope :is(.prism-runbook__root,.prism-summary__root,.prism-troubleshoot__root,.prism-tabs__root,.prism-callout__root,.prism-card__root,.prism-grid__root) { min-width:0; max-width:100%; box-sizing:border-box; margin-block:28px; }
     :scope :is(.prism-runbook__body,.prism-summary__body,.prism-troubleshoot__body) { padding:16px 0 0; }

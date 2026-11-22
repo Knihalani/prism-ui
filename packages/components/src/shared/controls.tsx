@@ -15,6 +15,13 @@ export interface PillProps extends ButtonProps {
   receipt?: ReactNode;
 }
 
+export function ReceiptLabels({ sent = false, receipt, children }: Pick<PillProps, 'sent' | 'receipt' | 'children'>) {
+  return receipt == null ? <>{children}</> : <>
+    <span aria-hidden={sent}>{children}</span>
+    <span aria-hidden={!sent}><CheckMark />{receipt}</span>
+  </>;
+}
+
 /** Keep the ready and receipt labels in the same layout slot to avoid shifting adjacent controls. */
 export const Pill = forwardRef<HTMLButtonElement, PillProps>(function Pill(
   { variant = 'primary', sent = false, receipt, disabled, className, children, ...props }, ref,
@@ -22,10 +29,7 @@ export const Pill = forwardRef<HTMLButtonElement, PillProps>(function Pill(
   return <PrismPart as="button" ref={ref} type="button" {...props} className={cx('prism-pill', className)}
     disabled={disabled || sent} data-variant={variant} data-sent={sent ? '' : undefined}
     data-feedback={receipt != null ? '' : undefined}>
-    {receipt == null ? children : <>
-      <span aria-hidden={sent}>{children}</span>
-      <span aria-hidden={!sent}><CheckMark />{receipt}</span>
-    </>}
+    <ReceiptLabels sent={sent} receipt={receipt}>{children}</ReceiptLabels>
   </PrismPart>;
 });
 
