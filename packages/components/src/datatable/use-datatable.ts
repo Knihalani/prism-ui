@@ -7,10 +7,11 @@ import { format } from '../lib/format';
 export interface DataTableColumn {
   key: string; label?: string; type?: 'text' | 'number' | 'currency' | 'date';
   align?: 'left' | 'center' | 'right'; format?: 'text' | 'number' | 'currency' | 'percent' | 'compact' | 'date' | 'datetime'; currency?: string;
+  magnitude?: boolean; badge?: boolean; detail?: boolean;
 }
 export type DataTableRow = Record<string, unknown>;
 export interface DataTableProps {
-  id?: string; title?: string; caption?: string; columns?: DataTableColumn[]; rows?: DataTableRow[];
+  id?: string; title?: string; subtitle?: string; caption?: string; columns?: DataTableColumn[]; rows?: DataTableRow[];
   pageSize?: number; selectable?: boolean; select?: 'single' | 'multiple'; filter?: boolean;
   height?: number; density?: 'compact' | 'comfortable' | 'spacious'; complete?: boolean;
 }
@@ -18,6 +19,7 @@ export interface DataTableSelection { rows: DataTableRow[]; indices: number[] }
 export const dataTableSchema = s.object({
   id: s.string().optional().describe('Stable state id.'),
   title: s.string().optional().describe('Table heading.'),
+  subtitle: s.string().optional().describe('Supporting context below the heading.'),
   caption: s.string().optional().describe('Accessible table caption.'),
   columns: s.array(s.object({
     key: s.string().describe('Row object key.'), label: s.string().optional().describe('Column heading; defaults to key.'),
@@ -25,6 +27,9 @@ export const dataTableSchema = s.object({
     align: s.enum(['left', 'center', 'right']).optional().describe('Header/cell alignment; numbers default right.'),
     format: s.enum(['text', 'number', 'currency', 'percent', 'compact', 'date', 'datetime']).optional().describe('Intl display format.'),
     currency: s.string().optional().describe('ISO currency code; defaults to Prism currency.'),
+    magnitude: s.boolean().optional().describe('Show a magnitude rail for numeric values.'),
+    badge: s.boolean().optional().describe('Display cell text as a status badge.'),
+    detail: s.boolean().optional().describe('Tuck this column behind Show all columns on narrow screens.'),
   })).optional().describe('Ordered columns; defaults to first-row keys.'),
   rows: s.array(s.any()).optional().describe('Row objects. select emits {rows, indices}: original objects and zero-based input positions, in input order.'),
   pageSize: s.number({ min: 0, step: 1 }).optional().describe('Rows/page. Default 0: all rows, windowed above 200.'),
@@ -33,7 +38,15 @@ export const dataTableSchema = s.object({
   filter: s.boolean().optional().describe('Show fuzzy search (default true).'),
   height: s.number({ min: 80 }).optional().describe('Max scroll height (px). Default: 360 when virtualized, otherwise fit page.'),
   density: s.enum(['compact', 'comfortable', 'spacious']).optional().describe('Row spacing override.'),
-}).example({ columns: [{ key: 'name', label: 'Name', type: 'text', align: undefined, format: undefined, currency: undefined }], rows: [{ name: 'Ada' }], pageSize: 10, selectable: true, id: undefined, title: undefined, caption: undefined, select: undefined, filter: undefined, height: undefined, density: undefined });
+}).example({
+  columns: [{
+    key: 'name', label: 'Name', type: 'text', align: undefined, format: undefined,
+    currency: undefined, magnitude: undefined, badge: undefined, detail: undefined,
+  }],
+  rows: [{ name: 'Ada' }], pageSize: 10, selectable: true,
+  id: undefined, title: undefined, subtitle: undefined, caption: undefined, select: undefined,
+  filter: undefined, height: undefined, density: undefined,
+});
 
 const emptyRows: DataTableRow[] = [];
 export function inferType(values: unknown[]): DataTableColumn['type'] {
@@ -71,7 +84,8 @@ export function useDataTable(props: DataTableProps, ctx: PrismContextValue) {
       return { key: column.key, type, label: typeof column.label === 'string' ? column.label : column.key,
         align: ['left', 'center', 'right'].includes(column.align!) ? column.align : numericFormat ? 'right' : 'left',
         format,
-        currency: typeof column.currency === 'string' ? column.currency : undefined };
+        currency: typeof column.currency === 'string' ? column.currency : undefined,
+        magnitude: column.magnitude === true, badge: column.badge === true, detail: column.detail === true };
     });
   }, [rows, props.columns]);
   const [sort, setSort] = useComponentState<{ key: string; direction: 'asc' | 'desc' } | null>('sort', null);
@@ -103,7 +117,7 @@ export function useDataTable(props: DataTableProps, ctx: PrismContextValue) {
   const currentPage = complete ? Math.min(Math.max(0, page), pageCount - 1) : 0, offset = pageSize ? currentPage * pageSize : 0;
   const limit = pageSize || (!complete && props.pageSize !== 0 ? 8 : 0);
   const paged = useMemo(() => limit ? ordered.slice(offset, offset + limit) : ordered, [ordered, offset, limit]);
-  const rowHeight = props.density === 'compact' ? 32 : props.density === 'spacious' ? 48 : 40;
+  const rowHeight = props.density === 'compact' ? 32 : props.density === 'spacious' ? 60 : 52;
   const height = typeof props.height === 'number' && Number.isFinite(props.height) ? Math.max(80, props.height) : 360, virtual = !pageSize && ordered.length > 200;
   const start = virtual ? Math.min(Math.max(0, ordered.length - 1), Math.max(0, Math.floor(scrollTop / rowHeight) - 5)) : 0;
   const end = virtual ? Math.min(ordered.length, start + Math.ceil(height / rowHeight) + 10) : paged.length;

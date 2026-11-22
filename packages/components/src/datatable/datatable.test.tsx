@@ -165,10 +165,10 @@ test('large unpaginated tables window fixed-height rows and scroll to new window
   expect(order(view.container)[0]).toBe('0');
   const scroll = view.container.querySelector<HTMLElement>('[data-part="scroll"]')!;
   scroll.scrollTop = 8000; fireEvent.scroll(scroll);
-  expect(order(view.container)[0]).toBe('195');
-  expect(bodyRows(view.container)[0].getAttribute('aria-rowindex')).toBe('197');
+  expect(order(view.container)[0]).toBe('148');
+  expect(bodyRows(view.container)[0].getAttribute('aria-rowindex')).toBe('150');
   expect(bodyRows(view.container).length).toBeLessThan(25);
-  expect(scroll.querySelector('tr[aria-hidden="true"] td')?.getAttribute('style')).toContain('7800px');
+  expect(scroll.querySelector('tr[aria-hidden="true"] td')?.getAttribute('style')).toContain('7696px');
   view.rerender(<Prism registry={registry} source={source({ rows: many, pageSize: 10 })} />);
   expect(bodyRows(view.container).length).toBe(10);
   expect(view.getByRole('table').getAttribute('aria-rowcount')).toBeNull();
@@ -215,7 +215,7 @@ test('pagination metadata arriving after rows cannot expose the whole streaming 
 test('empty completed pages reuse the reserved page height without an additional spacer', () => {
   const view = render(<Prism registry={registry} source={source({ columns, rows: [], pageSize: 8 })} />);
   const empty = view.container.querySelector('[data-part="empty"]')!;
-  expect((empty.parentElement as HTMLElement).style.height).toBe('320px');
+  expect((empty.parentElement as HTMLElement).style.height).toBe('416px');
   expect(view.container.querySelectorAll('tbody tr').length).toBe(1);
 });
 

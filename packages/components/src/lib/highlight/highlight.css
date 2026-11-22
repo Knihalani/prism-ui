@@ -62,16 +62,16 @@
 }
 .prism-codeblock__root {
   --prism-tok-keyword: var(--prism-accent);
-  --prism-tok-string: var(--prism-success);
-  --prism-tok-number: var(--prism-info);
-  --prism-tok-comment: var(--prism-muted);
-  --prism-tok-function: var(--prism-accent);
+  --prism-tok-string: light-dark(#a56b50, #db9c7e);
+  --prism-tok-number: light-dark(#398f82, #72baaa);
+  --prism-tok-comment: var(--prism-ink-3);
+  --prism-tok-function: var(--prism-text);
   --prism-tok-type: var(--prism-warning);
   --prism-tok-operator: var(--prism-text);
   --prism-tok-punctuation: var(--prism-muted);
   --prism-tok-variable: var(--prism-text);
-  --prism-tok-constant: var(--prism-info);
-  --prism-tok-property: var(--prism-info);
+  --prism-tok-constant: var(--prism-text);
+  --prism-tok-property: var(--prism-text);
   --prism-tok-tag: var(--prism-success);
   --prism-tok-attr: var(--prism-info);
   --prism-tok-regex: var(--prism-success);
@@ -80,7 +80,6 @@
   --prism-tok-inserted: var(--prism-success);
   --prism-tok-meta: var(--prism-warning);
 }
-.prism-codeblock__root :where(.prism-tok-keyword, .prism-tok-tag) { font-weight: 600; }
 .prism-tok-keyword { color: var(--prism-tok-keyword, #cf222e); }
 .prism-tok-string { color: var(--prism-tok-string, #0a3069); }
 .prism-tok-number { color: var(--prism-tok-number, #0550ae); }

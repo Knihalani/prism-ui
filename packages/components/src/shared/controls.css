@@ -4,7 +4,7 @@
   outline-offset: 3px;
 }
 
-.prism-pill {
+:is(.prism-pill, :where(.prism-frame__footer) > button:not([class])) {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -32,8 +32,8 @@
   color: var(--prism-muted);
   box-shadow: none;
 }
-.prism-pill:disabled { cursor: default; }
-.prism-pill:disabled:not([data-sent]) {
+:is(.prism-pill, :where(.prism-frame__footer) > button:not([class])):disabled { cursor: default; }
+:is(.prism-pill, :where(.prism-frame__footer) > button:not([class])):disabled:not([data-sent]) {
   border-color: var(--prism-hairline);
   background: transparent;
   color: var(--prism-muted);
@@ -209,7 +209,7 @@ input.prism-inline-value:focus { background: var(--prism-accent-soft); }
   :where(:not([data-animate="false"] *)) .prism-odometer__previous {
     animation: prism-digit-out var(--prism-duration-odometer) var(--prism-ease) both;
   }
-  .prism-pill:hover:not(:disabled) { transform: translateY(-1px); }
+  :is(.prism-pill, :where(.prism-frame__footer) > button:not([class])):hover:not(:disabled) { transform: translateY(-1px); }
   [data-animate="false"] .prism-pill:hover:not(:disabled) { transform: none; }
 }
 .prism-odometer__digit[data-roll="down"] { --prism-digit-offset: -100%; }
@@ -222,10 +222,10 @@ input.prism-inline-value:focus { background: var(--prism-accent-soft); }
 
 .prism-materialise { position: relative; }
 @media (prefers-reduced-motion: no-preference) {
-  .prism-materialise:is([data-entering], [data-materialise]):not([data-animate="false"], [data-animate="false"] *) {
+  :is(.prism-materialise, .prism-frame__root):is([data-entering], [data-materialise]):not([data-animate="false"], [data-animate="false"] *) {
     animation: prism-materialise-in var(--prism-duration-entry) var(--prism-ease) var(--prism-enter-delay, 0ms) backwards;
   }
-  .prism-materialise:is([data-entering], [data-materialise]):not([data-animate="false"], [data-animate="false"] *)::after {
+  :is(.prism-materialise, .prism-frame__root):is([data-entering], [data-materialise]):not([data-animate="false"], [data-animate="false"] *)::after {
     content: "";
     position: absolute;
     inset: 0;

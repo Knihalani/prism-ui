@@ -88,6 +88,9 @@ export function Odometer({ value, format = String, animate = true, className, ..
     setRoll({ text, value, previous: roll.text, direction: value < roll.value ? 'down' : 'up', revision: roll.revision + 1 });
   }
   const previous = Array.from(roll.previous).filter(isDigit);
+  if (!animate || previous.length === 0) {
+    return <span {...props} className={cx('prism-odometer', className)}>{text}</span>;
+  }
   const next = Array.from(text);
   let remaining = next.filter(isDigit).length;
   return <span {...props} className={cx('prism-odometer', className)}>
@@ -95,7 +98,7 @@ export function Odometer({ value, format = String, animate = true, className, ..
     <span aria-hidden="true">{next.map((character, index) => {
       if (!isDigit(character)) return character;
       const before = previous[previous.length - remaining--];
-      const changed = animate && before != null && before !== character;
+      const changed = before != null && before !== character;
       return <span className="prism-odometer__digit" key={index} data-roll={changed ? roll.direction : undefined}>
         <span key={changed ? roll.revision : undefined}>{character}</span>
         {changed && <span key={`from-${roll.revision}`} className="prism-odometer__previous">{before}</span>}

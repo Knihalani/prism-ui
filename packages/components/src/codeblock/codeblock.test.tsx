@@ -94,12 +94,12 @@ test('streaming long blocks cap the body, retain all tail lines, and reserve the
   const code = Array.from({ length: 31 }, (_, index) => `const n${index} = ${index};`).join('\n');
   const view = render(<Prism registry={registry} source={'```ts\n' + code} done={false} />);
   const body = view.container.querySelector('[data-part="body"]') as HTMLElement;
-  expect(body.style.height).toBe('464px');
+  expect(body.style.height).toBe('519px');
   expect(body.getAttribute('data-tail')).toBe('true');
   expect(view.container.querySelectorAll('[data-part="line"]').length).toBe(31);
   expect((view.getByRole('button', { name: 'Streaming…' }) as HTMLButtonElement).disabled).toBe(true);
   view.rerender(<Prism registry={registry} source={fence(code)} />);
-  expect(body.style.height).toBe('464px');
+  expect(body.style.height).toBe('519px');
   expect(body.getAttribute('data-tail')).toBeNull();
   expect(view.container.querySelectorAll('[data-part="line"]').length).toBe(20);
   expect(view.getByRole('button', { name: 'Show all 31 lines' })).toBeTruthy();
