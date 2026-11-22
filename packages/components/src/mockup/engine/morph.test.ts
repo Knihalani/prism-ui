@@ -189,6 +189,41 @@ describe('createStreamMorpher', () => {
     stream.update('<div><p>edited</p><b>tail plus</b></div>');
     expect(doc.body.innerHTML).toBe('<div><p>edited</p><b>tail plus</b></div>');
   });
+  test('relocated leading styles do not invalidate anchors after a rewrite and repeated updates', () => {
+    const win = new Window();
+    const doc = win.document as unknown as Document;
+    const innerHTML = Object.getOwnPropertyDescriptor(win.Element.prototype, 'innerHTML')!;
+    const createDocument = doc.implementation.createHTMLDocument.bind(doc.implementation);
+    doc.implementation.createHTMLDocument = title => {
+      const parsed = createDocument(title);
+      Object.defineProperty(parsed.documentElement, 'innerHTML', {
+        get() { return innerHTML.get!.call(this); },
+        set(html: string) {
+          innerHTML.set!.call(this, html);
+          // Happy DOM leaves leading styles in body; browsers parse them into head.
+          while (parsed.body.firstElementChild?.tagName === 'STYLE') parsed.head.appendChild(parsed.body.firstElementChild);
+        },
+      });
+      return parsed;
+    };
+    const stream = createStreamMorpher(doc);
+    stream.update('<style>p{color:red}</style><main><p>Old</p></main>');
+    const html = '<style>p{color:blue}</style><main><p>New</p></main>';
+    stream.update(html);
+    expect(doc.body.innerHTML).toBe('<main><p>New</p></main>');
+    const main = doc.body.firstElementChild;
+    for (let repeat = 0; repeat < 3; repeat++) {
+      stream.update(html);
+      expect(doc.body.innerHTML).toBe('<main><p>New</p></main>');
+      expect(doc.body.firstElementChild).toBe(main);
+      expect(doc.head.querySelector('style')!.textContent).toBe('p{color:blue}');
+    }
+    stream.update(html + '<aside>More</aside>');
+    expect(doc.body.innerHTML).toBe('<main><p>New</p></main><aside>More</aside>');
+    stream.update('');
+    expect(doc.body.innerHTML).toBe('');
+    expect(doc.head.querySelector('style')).toBeNull();
+  });
   test('embeds stream morpher without module bindings', () => {
     const factory = new Function(`${MORPH_SOURCE}; return createStreamMorpher;`)() as typeof createStreamMorpher;
     const doc = document();
