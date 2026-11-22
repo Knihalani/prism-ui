@@ -63,7 +63,7 @@ class References {
 function textContent(nodes: Node[]): string { let result = ''; for (const n of nodes) result += n.value ?? textContent(n.children ?? []); return result; }
 
 const fence = (s: string) => /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(s);
-const directive = (s: string) => /^ {0,3}(:{2,})([\w-]+)(?:\{(.*)\})?\s*$/.exec(s);
+const directive = (s: string) => /^ {0,3}(:{2,})([\w-]+)[ \t]*(?:\{(.*)\})?\s*$/.exec(s);
 const item = (s: string) => /^( *)([-+*]|\d+[.)])\s+(.*)$/.exec(s);
 const quote = (s: string) => /^ {0,3}>/.test(s);
 const heading = (s: string) => /^ {0,3}#{1,6}(?:\s|$)/.test(s);
@@ -130,7 +130,7 @@ export function streamParser(previews = true, path = '', references = new Refere
     if (plugins?.inline && a.mode !== 'code' && a.mode !== 'container') {
       const lines = line ? [...a.lines, line] : a.lines.slice();
       const node = blocks(lines, path, a.index, undefined, plugins.inline)[0] ?? { type: 'paragraph', key: a.node.key, children: [] };
-      if (!a.lines.length && /^ {0,3}:{2,}[\w-]+(?:\{.*)?$/.test(line)) { node.complete = false; node.idComplete = false; }
+      if (!a.lines.length && /^ {0,3}:{2,}[\w-]+[ \t]*(?:\{.*)?$/.test(line)) { node.complete = false; node.idComplete = false; }
       return plugins.transform(node);
     }
     if (a.node.type === 'paragraph') {

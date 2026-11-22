@@ -18,6 +18,22 @@ test('a streamed leaf directive prefix cannot finalize before its attributes arr
   expect(parser.root.children[0].props?.id).toBe('review');
 });
 
+test.each(['::name   ', '::name {id="final" title="A name"}'])('spaced leaf headers stay provisional until newline: %s', source => {
+  const parser = createParser({ plugins: [token] });
+  for (const char of source) {
+    parser.push(char);
+    if (parser.root.children[0]?.type === 'component') {
+      expect(parser.root.children[0].complete).toBe(false);
+      expect(parser.root.children[0].idComplete).toBe(false);
+    }
+  }
+  parser.push('\n');
+  expect(parser.root.children[0].complete).toBe(true);
+  expect(parser.root.children[0].name).toBe('name');
+  if (source.includes('{')) expect(parser.root.children[0].props?.id).toBe('final');
+  expect(parser.end().root).toEqual(parse(source + '\n', { plugins: [token] }));
+});
+
 test('emphasis cannot close inside an inline plugin token', () => {
   const source = '*before @foo_bar* after*';
   const root = parse(source, { plugins: [token] }), emphasis = root.children[0].children![0];
