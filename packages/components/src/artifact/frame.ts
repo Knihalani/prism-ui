@@ -7,17 +7,18 @@ import { artifactDocument, markup, type FrameMessage, type HostMessage, type Ren
 const pools = new WeakMap<Document, HTMLIFrameElement[]>();
 const MAX_IDLE = 4;
 
-function acquire(document: Document) {
+function acquire(document: Document, existing?: HTMLIFrameElement) {
   let pool = pools.get(document);
   if (!pool) pools.set(document, pool = []);
-  const frame = pool.pop() ?? document.createElement('iframe');
+  const frame = existing ?? pool.pop() ?? document.createElement('iframe');
   frame.setAttribute('sandbox', SANDBOX);
   frame.referrerPolicy = 'no-referrer';
   return {
     frame,
     release() {
-      frame.remove();
+      if (!existing) frame.remove();
       frame.removeAttribute('srcdoc');
+      if (existing) return;
       frame.removeAttribute('title');
       frame.removeAttribute('style');
       if (pool.length < MAX_IDLE) pool.push(frame);
@@ -52,11 +53,11 @@ function jsonValue(input: unknown): boolean {
   return budget > 0;
 }
 
-export function mountArtifactFrame(container: HTMLElement, imports: Record<string, string>, store: Store, grants: readonly string[], taskPath: string, events: FrameEvents) {
+export function mountArtifactFrame(container: HTMLElement, imports: Record<string, string>, store: Store, grants: readonly string[], taskPath: string, events: FrameEvents, existing?: HTMLIFrameElement) {
   const { ownerDocument: doc } = container;
   const win = doc.defaultView!;
   const id = `artifact-${globalThis.crypto.randomUUID?.() ?? Array.from(globalThis.crypto.getRandomValues(new Uint32Array(4))).join('-')}`;
-  const { frame, release } = acquire(doc);
+  const { frame, release } = acquire(doc, existing);
   const subscriptions = new Map<string, () => void>();
   let render: Render | undefined;
   let theme: Extract<HostMessage, { type: 'theme' }> | undefined;

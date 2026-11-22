@@ -6,5 +6,7 @@ registerComponent(artifact);
 
 export { Artifact, artifact } from './artifact';
 export { artifactPlugin, artifactSchema, type ArtifactProps } from './model';
-export { ArtifactProvider, useArtifact } from './use-artifact';
+export { ArtifactProvider, useArtifact, artifactStrings } from './use-artifact';
 export { defaultArtifactImports, type ArtifactKind, type ArtifactOptions } from './policy';
+
+export type { ArtifactModel, ArtifactSlotProps } from './artifact';

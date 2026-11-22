@@ -1,6 +1,6 @@
 import '../../../react/test/setup';
 import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { Prism, createRegistry, usePrism, type Action, type PrismComponentProps } from '@prism-ui/react';
+import { Prism, createRegistry, defineTheme, usePrism, type Action, type PrismComponentProps } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { replayStart } from './harness/replay';
 import { MockupView, createFeedback, mockupDefinition, mockupPlugin, parseMockupMeta, useMockup, toMessage, type FrameController, type FrameMessage, type HitRect, type MockupProps } from './index';
@@ -23,6 +23,32 @@ function setup(props: MockupProps = {}, done = true, store = createStore()) {
   function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); }
   return { view, actions, store, renders, target, hits, canvas, pointer, change, send(message: FrameMessage) { act(() => { listeners.forEach(fn => fn(message)); }); }, rerender(props: MockupProps, done = true, nextStore = store) { view.rerender(<Prism source={source(props)} done={done} registry={registry} store={nextStore} onAction={a => actions.push(a)} />); } };
 }
+test('headless props replace enclosing labels and titles below theme overrides', () => {
+  const cases: MockupProps[] = [
+    { title: 'Headless title', labels: { title: 'Label title', submit: 'Headless submit', source: 'Headless source' } },
+    { title: undefined, labels: {} },
+    { title: undefined, labels: { title: 'Label title' } },
+  ];
+  for (const themed of [false, true]) for (const overrides of cases) {
+    const actions: Action[] = [];
+    function Custom({ props }: PrismComponentProps<MockupProps>) {
+      const model = useMockup({ ...props, ...overrides }, usePrism(), { enabled: false });
+      return <button title={model.title} aria-label={model.labels.source} onClick={() => { model.feedback.setOverall('Review note'); model.submit(); }}>{model.labels.submit}</button>;
+    }
+    const registry = createRegistry([{ ...mockupDefinition, component: Custom, strings: { ...mockupDefinition.strings, submit: 'Registry submit', source: 'Registry source' } }]);
+    const theme = defineTheme({ name: 'headless-labels', components: { mockup: { strings: themed ? { title: 'Theme title', submit: 'Theme submit', source: 'Theme source' } : {} } } });
+    const view = render(<Prism source={source({ title: 'Enclosing title', labels: { submit: 'Enclosing submit', source: 'Enclosing source' } })} registry={registry} theme={theme} onAction={action => actions.push(action)} />);
+    const title = themed ? 'Theme title' : overrides.title ?? overrides.labels?.title ?? 'Mockup';
+    const button = view.getByRole('button', { name: themed ? 'Theme source' : overrides.labels?.source ?? 'Registry source' });
+    expect(button.title).toBe(title);
+    expect(button.textContent).toBe(themed ? 'Theme submit' : overrides.labels?.submit ?? 'Registry submit');
+    fireEvent.click(button);
+    expect((actions[0].payload as { mockup: string }).mockup).toBe(title);
+    expect(actions[0].message).toContain('"' + title + '"');
+    view.unmount();
+  }
+});
+
 test('recreating the playground store does not resurrect an old feedback draft', () => {
   const props = { source: '<h1>Review</h1>' }, x = setup(props);
   x.change(x.view.getByRole('textbox', { name: 'Overall feedback' }), 'Old draft');
@@ -117,7 +143,7 @@ test('Escape and empty outside-cancel restore history, including a prior redo, a
   }
 });
 test('drawings hit test their bounding-box centre, follow layout and still submit their path', async () => {
-  const x = setup(); fireEvent.click(x.view.getByRole('button', { name: 'Draw' }));
+  const x = setup(); fireEvent.click(x.view.getByRole('button', { name: 'More tools' })); fireEvent.click(x.view.getByRole('button', { name: 'Draw' }));
   await act(async () => { x.pointer('pointerdown', 400, 50); x.pointer('pointerup', 600, 100); });
   expect(x.hits).toEqual([{ x: 50, y: 15 }]);
   const draft = x.store.get('review.feedback') as any;
@@ -131,6 +157,28 @@ test('plugin preserves identity, completion and parses safe attributes without r
   expect(mockupPlugin.transform!({ ...node, lang: 'html' })).toEqual({ ...node, lang: 'html' });
   expect(parseMockupMeta()).toEqual({}); expect(Object.keys(parseMockupMeta('__proto__=bad constructor=no title=ok'))).toEqual(['title']);
 });
+test('narrow editors escape the clipped canvas, clamp to the root and restore keyboard focus', () => {
+  for (const width of [280, 320]) for (const device of ['desktop', 'mobile'] as const) {
+    const x = setup({ source: '<h1>Hello</h1>', device });
+    const root = x.view.container.querySelector('[data-part="member"]') as HTMLElement;
+    root.getBoundingClientRect = () => ({ x: 100, y: 20, left: 100, top: 20, right: 100 + width, bottom: 420, width, height: 400, toJSON() {} });
+    if (device === 'mobile') fireEvent.click(x.view.getByRole('button', { name: 'Zoom in' }));
+    x.pointer('pointerdown', 980, 490); x.pointer('pointerup', 980, 490);
+    const popover = x.view.getByRole('dialog');
+    expect(popover.parentElement).toBe(root);
+    expect(root.querySelector('[data-part="viewport"]')!.contains(popover)).toBe(false);
+    expect(parseFloat(popover.style.left)).toBeGreaterThanOrEqual(12);
+    expect(parseFloat(popover.style.left) + parseFloat(popover.style.width)).toBeLessThanOrEqual(width - 12);
+    expect(parseFloat(popover.style.top) + 180).toBeLessThanOrEqual(400);
+    const editor = x.view.getByRole('textbox', { name: 'Add a comment…' });
+    expect(document.activeElement).toBe(editor);
+    fireEvent.keyDown(editor, { key: 'Escape' });
+    expect(x.view.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(x.canvas());
+    x.view.unmount();
+  }
+});
+
 test('popover stays within the content box near its lower right edge', () => {
   const x = setup({ source: '<h1>Hello</h1>' });
   x.pointer('pointerdown', 980, 490); x.pointer('pointerup', 980, 490);

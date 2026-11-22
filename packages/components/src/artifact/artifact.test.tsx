@@ -155,6 +155,20 @@ test('an existing artifact resyncs tokens when only the named theme changes', as
   } finally { sent.mockRestore(); styles.mockRestore(); cleanup(); restore(); }
 });
 
+test('selected version titles follow history unless explicitly overridden by the theme', () => {
+  for (const title of [undefined, 'Themed preview', 'Artifact']) {
+    const store = createStore();
+    const theme = defineTheme({ name: 'version-titles', components: { artifact: { strings: title === undefined ? {} : { title } } } });
+    const ui = (name: string, source: string) => <Prism source={fence('html', `title="${name}" id=report`, source)} plugins={plugins} registry={registry} store={store} theme={theme} />;
+    const view = render(ui('Original title', html));
+    view.rerender(ui('Latest title', '<p>Second version</p>'));
+    expect(view.getByRole('heading').textContent).toBe(title ?? 'Latest title');
+    fireEvent.change(view.getByRole('combobox', { name: 'Artifact version' }), { target: { value: '1' } });
+    expect(view.getByRole('heading').textContent).toBe(title ?? 'Original title');
+    view.unmount();
+  }
+});
+
 test('same-id revisions switch and show a line diff; controls are native keyboard controls', () => {
   const store = createStore(), options = { enabled: true };
   const ui = (source: string) => <ArtifactProvider options={options}><Prism source={source} plugins={plugins} registry={registry} store={store} /></ArtifactProvider>;

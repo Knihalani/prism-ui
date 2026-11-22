@@ -1,3 +1,4 @@
+import { artifactStrings } from './strings';
 import { buildSrcdoc } from '../mockup/engine/frame';
 import type { ArtifactKind } from './policy';
 
@@ -21,7 +22,7 @@ export type FrameMessage =
   | { type: 'task-toggle'; revision: number; task: string; checked: boolean }
   | { type: 'exitFullscreen' };
 
-function installArtifact(id: string, exported?: Standalone) {
+function installArtifact(id: string, strings: typeof artifactStrings, exported?: Standalone) {
   const standalone = parent === window;
   const values: Record<string, unknown> = Object.create(null);
   const subscriptions = new Map<string, Set<(value: unknown) => void>>();
@@ -131,7 +132,7 @@ function installArtifact(id: string, exported?: Standalone) {
     try {
       await new Promise<void>((resolve, reject) => {
         script.onload = () => resolve();
-        script.onerror = () => reject(new Error(src ? `Script could not load: ${src}` : 'Inline script could not load.'));
+        script.onerror = () => reject(new Error(src ? strings.scriptFailed.replace('{src}', src) : strings.inlineScriptFailed));
         document.head.append(script);
       });
     } finally { if (!src) URL.revokeObjectURL(url); script.remove(); }
@@ -147,7 +148,7 @@ function installArtifact(id: string, exported?: Standalone) {
           library('react'), library('react-dom/client'), library('react-dom'), loadModule(source),
         ]);
         if (revision !== version) return;
-        if (!entry.default) throw new Error('Export a React component as the default export.');
+        if (!entry.default) throw new Error(strings.missingExport);
         if (!reactRoot) {
           react = React;
           const root = document.createElement('main');
@@ -225,6 +226,6 @@ export function artifactDocument(id: string, imports: Record<string, string>, ex
   const csp = `default-src 'none'; script-src 'nonce-${nonce}' blob: ${scriptSources}; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'`;
   const head = `<style>html{background:transparent;color:var(--prism-text,#242832);font-family:var(--prism-font-body,system-ui,sans-serif);container-type:inline-size}body{margin:0;min-width:0}*,*::before,*::after{box-sizing:border-box}html[data-prism-artifact-fit]{overflow:hidden}img,svg,canvas,video{max-width:100%;height:auto}button,input,select,textarea{font:inherit}html[data-reduced-motion] *,html[data-reduced-motion] *::before,html[data-reduced-motion] *::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}</style><script nonce="${nonce}" type="importmap">${json({ imports })}</script>`;
   const srcdoc = buildSrcdoc({ id, csp, head, runtimeOptions: { interactive: true } }).replace('<script>', `<script nonce="${nonce}">`);
-  const runtime = `(${installArtifact.toString()})(${json(id)}${exported ? ',' + json(exported) : ''})`.replace(/<\/script/gi, '<\\/script');
+  const runtime = `(${installArtifact.toString()})(${json(id)},${json(artifactStrings)}${exported ? ',' + json(exported) : ''})`.replace(/<\/script/gi, '<\\/script');
   return srcdoc.replace('</head>', () => `<script nonce="${nonce}">${runtime}</script></head>`);
 }

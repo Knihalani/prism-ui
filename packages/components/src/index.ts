@@ -1,4 +1,4 @@
-export { ComponentFrame, useFrame } from './frame';
+export { ComponentFrame, useFrame, frameStrings, frameParts, FrameOverflow, useFrameOverflow } from './frame';
 export * from './shared';
 export * from './runbook';
 export * from './troubleshoot';
@@ -6,7 +6,7 @@ export * from './ask';
 export * from './num';
 export * from './estimate';
 export * from './pick';
-export type { ComponentFrameProps, FrameOptions, FrameSlotProps, FramePart } from './frame';
+export type { ComponentFrameProps, FrameOptions, FrameSlotProps, FramePart, FrameModel, FrameOverflowSlotProps } from './frame';
 export * from './callout';
 export * from './card';
 export * from './grid';

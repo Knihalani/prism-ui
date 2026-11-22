@@ -1,3 +1,4 @@
+import { artifactStrings } from './strings';
 export type ArtifactKind = 'html' | 'react' | 'svg' | 'js' | 'markdown';
 
 export const defaultArtifactImports = Object.freeze({
@@ -24,7 +25,7 @@ export function importMap(imports: ArtifactOptions['imports'], base: string): Re
   return Object.fromEntries(Object.entries(imports ?? defaultArtifactImports).map(([key, value]) => {
     const url = new URL(value, base);
     if (!/^https?:$/.test(url.protocol) || url.username || url.password || /[';,\s]/.test(url.href) ||
-        !/^[\w@.-]+(?:\/[\w.-]+)*$/.test(key)) throw new Error(`Invalid artifact import: ${key}`);
+        !/^[\w@.-]+(?:\/[\w.-]+)*$/.test(key)) throw new Error(artifactStrings.invalidImport.replace('{key}', key));
     url.hash = '';
     return [key, url.href];
   }));
