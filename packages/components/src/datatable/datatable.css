@@ -125,15 +125,16 @@
 .prism-datatable__magnitude {
   position: absolute;
   inset-inline-end: var(--prism-datatable-space-2, var(--prism-space-2));
-  inset-block-end: 9px;
-  block-size: 2px;
+  inset-block-end: 5px;
+  block-size: 3px;
+  max-inline-size: 4rem;
   border-radius: var(--prism-datatable-radius-pill, var(--prism-radius-pill));
-  background: var(--prism-datatable-accent, var(--prism-accent, #525252));
-  opacity: .35;
+  background: var(--prism-datatable-bar, var(--prism-text-muted));
+  opacity: .22;
   pointer-events: none;
   transition: width var(--prism-datatable-motion-fast, var(--prism-motion-fast)) var(--prism-datatable-motion-ease, var(--prism-motion-ease));
 }
-.prism-datatable__magnitude[data-max] { background: var(--prism-datatable-highlight, var(--prism-datatable-accent, var(--prism-accent, #525252))); opacity: .6; }
+.prism-datatable__magnitude[data-max] { opacity: .35; }
 .prism-datatable__badge.prism-chip { min-block-size: 22px; padding: 0 var(--prism-datatable-space-2, var(--prism-space-2)); font-weight: var(--prism-datatable-weight-regular, var(--prism-weight-regular)); }
 .prism-datatable__badge::before { content: ""; inline-size: 4px; block-size: 4px; border-radius: 50%; background: var(--prism-datatable-positive, var(--prism-positive)); }
 @media (hover: hover) {
