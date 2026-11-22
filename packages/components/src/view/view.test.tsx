@@ -200,3 +200,31 @@ test('streaming: a button whose handler is still streaming is disabled and sends
   fireEvent.click(view.getByRole('button', { name: /Continue with/ }));
   expect(actions.at(-1)?.payload).toEqual({ plan: 'pro', annual: true, seats: 5 });
 });
+
+test('streaming: a button is disabled while its node is open and onClick has not arrived', () => {
+  const full = gallery.pricing, cut = full.lastIndexOf('"onClick"');
+  const view = render(<Prism source={full.slice(0, cut)} done={false} />);
+  expect((view.getByRole('button', { name: /Continue with/ }) as HTMLButtonElement).disabled).toBe(true);
+});
+
+test('templates keep ||, payloads resolve every key, $ref lists subscribe', async () => {
+  const { template, run, collect } = await import('./tree');
+  const scope = { view: 'v', locals: new Set(['annual', 'items', 'pick']) };
+  const data: Record<string, unknown> = { 'v.annual': false, 'v.pick': 'b', 'v.items': [1, 2] };
+  const read = (p: string) => data[p];
+  expect(template('{{ annual || 1 }}', scope, read, v => String(v))).toBe('1');
+  expect(template('{{ pick | upper }}', scope, read, (v, k) => k === 'upper' ? String(v).toUpperCase() : String(v))).toBe('B');
+  const action = run({ action: 'pick', payload: { item: { $ref: 'pick' }, children: [{ $ref: 'annual' }], tabs: { $calc: '1 + 1' } } }, scope, { get: read, set() {}, remove() {} } as any, v => String(v));
+  expect(action?.payload).toEqual({ item: 'b', children: [false], tabs: 2 });
+  expect([...collect({ type: 'list', each: { $ref: 'items' } } as any, scope, new Set())]).toContain('v.items');
+});
+
+test('embeds: kind reaches schemas that declare it, list items get distinct ids', async () => {
+  const { s } = await import('@prism-ui/schema');
+  const { defineComponent, registerComponent } = await import('@prism-ui/react');
+  registerComponent(defineComponent({ name: 'kindprobe', schema: s.object({ id: s.string().optional(), kind: s.string().optional() }), component: ({ props, id }: any) => <i data-probe={id}>{String(props.kind)}</i> }));
+  const view = render(<Prism source={fence({ id: 'k', state: { rows: [1, 2] }, children: [{ type: 'kindprobe', kind: 'svg' }, { type: 'list', each: 'rows', item: { type: 'kindprobe' } }] })} />);
+  const probes = Array.from(view.container.querySelectorAll('[data-probe]'));
+  expect(probes[0].textContent).toBe('svg');
+  expect(new Set(probes.map(p => p.getAttribute('data-probe'))).size).toBe(3);
+});

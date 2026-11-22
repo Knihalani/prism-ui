@@ -92,23 +92,25 @@ const plainPath = /^\s*[$a-zA-Z_][\w$]*(?:\.(?:[\w$]+|\*))*\s*$/;
 export function template(text: string, scope: ViewScope, read: Read, format: Formatter): string {
   if (!text.includes('{{')) return text;
   return text.replace(/\{\{([^{}]*)\}\}/g, (_, body: string) => {
-    const bar = body.lastIndexOf('|'), expr = bar < 0 ? body : body.slice(0, bar), kind = bar < 0 ? undefined : body.slice(bar + 1).trim();
+    const bar = formatBar(body), expr = bar < 0 ? body : body.slice(0, bar), kind = bar < 0 ? undefined : body.slice(bar + 1).trim();
     let value: unknown;
     if (plainPath.test(expr) && !/^\s*(?:true|false|null)\s*$/.test(expr)) { const path = expr.trim() === '$index' ? undefined : resolvePath(expr.trim(), scope); value = expr.trim() === '$index' ? scope.index : path === undefined ? undefined : readPath(read, path); }
     else value = decode(evaluate(expr, scope, read));
     return format(value, kind);
   });
 }
+/** Index of the `| format` separator, skipping `||`. */
+export function formatBar(body: string) { for (let i = body.length - 1; i >= 0; i--) if (body[i] === '|' && body[i - 1] !== '|' && body[i + 1] !== '|') return i; return -1; }
 const raw = (key: string) => key === 'children' || key === 'item' || key === 'tabs' || /^on[A-Z]/.test(key);
 /** Resolve `$bind`/`$ref`/`$calc`, templates and `when` deep inside props; children/item templates and handlers stay raw. */
-export function resolve(value: ViewValue, scope: ViewScope, read: Read, format: Formatter, depth = 0): unknown {
+export function resolve(value: ViewValue, scope: ViewScope, read: Read, format: Formatter, depth = 0, data = false): unknown {
   if (typeof value === 'string') return template(value, scope, read, format);
   if (!value || typeof value !== 'object' || depth > 32) return value;
-  if (Array.isArray(value)) return value.map(item => resolve(item, scope, read, format, depth + 1));
+  if (Array.isArray(value)) return value.map(item => resolve(item, scope, read, format, depth + 1, data));
   if (typeof value.$bind === 'string' || typeof value.$ref === 'string') { const path = resolvePath((value.$bind ?? value.$ref) as string, scope); return path === undefined ? undefined : readPath(read, path); }
   if (typeof value.$calc === 'string') return decode(evaluate(value.$calc, scope, read));
   const out: Record<string, unknown> = {};
-  for (const key of Object.keys(value)) if (!unsafe(key)) out[key] = key === 'each' && typeof value.each === 'string' ? listAt(value.each, scope, read) : raw(key) ? value[key] : resolve(value[key], scope, read, format, depth + 1);
+  for (const key of Object.keys(value)) if (!unsafe(key)) out[key] = !data && key === 'each' && typeof value.each === 'string' ? listAt(value.each, scope, read) : !data && raw(key) ? value[key] : resolve(value[key], scope, read, format, depth + 1, data);
   return out;
 }
 function listAt(path: string, scope: ViewScope, read: Read) { const resolved = resolvePath(path, scope); const list = resolved === undefined ? undefined : readPath(read, resolved); return Array.isArray(list) ? list : []; }
@@ -117,7 +119,7 @@ export const bindPath = (value: ViewValue, scope: ViewScope) => value && typeof 
 /** Paths a node depends on, for per-node subscriptions. */
 export function collect(value: ViewValue, scope: ViewScope, into: Set<string>, depth = 0) {
   if (typeof value === 'string') {
-    if (value.includes('{{')) for (const match of value.matchAll(/\{\{([^{}]*)\}\}/g)) exprDeps(match[1].split('|')[0], scope, into);
+    if (value.includes('{{')) for (const match of value.matchAll(/\{\{([^{}]*)\}\}/g)) { const bar = formatBar(match[1]); exprDeps(bar < 0 ? match[1] : match[1].slice(0, bar), scope, into); };
     return into;
   }
   if (!value || typeof value !== 'object' || depth > 32) return into;
@@ -125,7 +127,7 @@ export function collect(value: ViewValue, scope: ViewScope, into: Set<string>, d
   const path = typeof value.$bind === 'string' ? value.$bind : typeof value.$ref === 'string' ? value.$ref : undefined;
   if (path !== undefined) { const resolved = resolvePath(path, scope); if (resolved) into.add(watchPath(resolved)); return into; }
   if (typeof value.$calc === 'string') { exprDeps(value.$calc, scope, into); return into; }
-  if (typeof value.each === 'string') { const p = resolvePath(value.each, scope); if (p) into.add(watchPath(p)); }
+  { const p = listPath(value.each, scope); if (p) into.add(watchPath(p)); }
   if (Array.isArray(value.tabs)) for (const tab of value.tabs) if (tab && typeof tab === 'object' && !Array.isArray(tab)) { collect(tab.label, scope, into, depth + 1); collect(tab.badge, scope, into, depth + 1); }
   for (const key of Object.keys(value)) if (!unsafe(key) && !raw(key) && key !== 'each') EXPR_KEYS.has(key) && typeof value[key] === 'string' ? exprDeps(value[key] as string, scope, into) : collect(value[key], scope, into, depth + 1);
   return into;
@@ -146,17 +148,17 @@ export function run(spec: unknown, scope: ViewScope, store: Write, format: Forma
   const read: Read = path => store.get(path);
   const writes: (() => void)[] = []; let action: { type: string; payload: unknown; message?: string } | undefined;
   for (const h of specs) {
-    for (const [key, value] of Object.entries(h.set ?? {})) { const path = resolvePath(key, scope); const next = resolve(value, scope, read, format); if (path) writes.push(() => store.set(path, next)); }
+    for (const [key, value] of Object.entries(h.set ?? {})) { const path = resolvePath(key, scope); const next = resolve(value, scope, read, format, 0, true); if (path) writes.push(() => store.set(path, next)); }
     for (const key of ([] as string[]).concat(h.toggle ?? [])) { const path = resolvePath(key, scope); if (path) { const next = !store.get(path); writes.push(() => store.set(path, next)); } }
     for (const [key, value] of Object.entries(h.push ?? {})) {
       const path = resolvePath(key, scope); if (!path) continue;
-      let next = resolve(value, scope, read, format);
+      let next = resolve(value, scope, read, format, 0, true);
       if (next && typeof next === 'object' && !Array.isArray(next) && !('id' in next)) next = { id: 'i' + Date.now().toString(36) + (++sequence).toString(36), ...next };
       if (typeof next === 'string' && !next.trim()) continue;
       writes.push(() => { const list = store.get(path); store.set(path, [...(Array.isArray(list) ? list : []), next]); });
     }
     for (const key of ([] as string[]).concat(h.remove ?? [])) { const path = resolvePath(key, scope); if (path) writes.push(() => store.remove(path)); }
-    if (typeof h.action === 'string' && h.action) action = { type: h.action, payload: h.payload === undefined ? extra : resolve(h.payload, scope, read, format), message: typeof h.message === 'string' ? template(h.message, scope, read, format) : undefined };
+    if (typeof h.action === 'string' && h.action) action = { type: h.action, payload: h.payload === undefined ? extra : resolve(h.payload, scope, read, format, 0, true), message: typeof h.message === 'string' ? template(h.message, scope, read, format) : undefined };
   }
   writes.forEach(write => write());
   return action;

@@ -253,7 +253,7 @@ function Spacer(p: PrimitiveProps) { return <div {...p.part('spacer')} data-size
 function Button(p: PrimitiveProps) {
   const view = useContext(ViewContext)!;
   const get: Read = path => view.prism.store.get(path);
-  const disabled = flag(p.node.disabled, p.props.disabled, p.scope, get) || isOpen(p.node.onClick);
+  const disabled = flag(p.node.disabled, p.props.disabled, p.scope, get) || isOpen(p.node.onClick) || (p.open && p.node.onClick === undefined);
   return <button type="button" {...p.part('button')} {...tokens(p.props)} data-variant={pick(p.props.variant, new Set(['primary', 'secondary', 'ghost', 'outline', 'danger', 'link'])) ?? 'secondary'} data-full={p.props.full ? '' : undefined}
     disabled={disabled} aria-label={p.props.ariaLabel ? text(p.props.ariaLabel) : undefined} onClick={() => p.act(p.node.onClick)}>
     <Icon name={p.props.icon} p={p} />{p.props.label !== undefined && <span>{text(p.props.label)}</span>}<Icon name={p.props.iconRight} p={p} />
@@ -347,7 +347,7 @@ function Avatar(p: PrimitiveProps) {
 }
 function ListItem({ p, item, index, base }: { p: PrimitiveProps; item: unknown; index: number; base: string }) {
   const scope = useMemo(() => ({ ...p.scope, item: `${base}.${index}`, index }), [p.scope, base, index]);
-  return <li {...p.part('listItem')} data-index={index}><NodeView node={p.node.item as ViewNode} scope={scope} path={p.path + '-i'} depth={p.depth} />{void item}</li>;
+  return <li {...p.part('listItem')} data-index={index}><NodeView node={p.node.item as ViewNode} scope={scope} path={`${p.path}-i${index}`} depth={p.depth} />{void item}</li>;
 }
 function List(p: PrimitiveProps) {
   const view = useContext(ViewContext)!;
@@ -412,7 +412,7 @@ function Embed({ name, props, path, open, raw, scope, depth, body, children, inl
   const view = useContext(ViewContext)!;
   const prism = view.prism, def = prism.registry.get(name);
   const { type: _t, when: _w, children: rawChildren, kind, ...own } = props;
-  const rest: Record<string, any> = kind === undefined ? own : { ...own, type: kind };
+  const rest: Record<string, any> = kind === undefined ? own : { ...own, [(def?.schema as { shape?: object } | undefined)?.shape && 'kind' in (def!.schema as { shape: object }).shape ? 'kind' : 'type']: kind };
   const result = useMemo(() => def?.schema ? def.schema.coerce(rest) as { value: Record<string, unknown>; issues: any[]; partial: boolean } : { value: rest, issues: [], partial: false }, [def, props]);
   const id = typeof rest.id === 'string' && rest.id ? rest.id : `${view.id}:${path}`;
   const complete = !open && !view.streaming;
