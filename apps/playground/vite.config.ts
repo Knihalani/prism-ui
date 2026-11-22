@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  build: { rollupOptions: { input: { chat: 'index.html', themes: 'themes.html' } } },
+  build: { rollupOptions: { input: { chat: 'index.html', themes: 'themes.html', motion: 'motion.html' } } },
   resolve: {
     dedupe: ['react', 'react-dom'],
   },
