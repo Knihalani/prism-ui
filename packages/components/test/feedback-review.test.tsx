@@ -69,6 +69,15 @@ test('overall blur into Submit merges the live text and receipt into one history
   expect(store.get('target.feedback')).toEqual(before);
 });
 
+test('moving focus to another feedback editor Submit still commits the first comment', () => {
+  const { view, store } = setup(), overall = view.getByRole('textbox', { name: 'Overall feedback' });
+  change(overall, 'Belongs to this target');
+  const otherSubmit = document.createElement('button'); otherSubmit.dataset.feedbackSubmit = '';
+  document.body.appendChild(otherSubmit);
+  try { fireEvent.blur(overall, { relatedTarget: otherSubmit }); expect(store.get('target.feedback.overall')).toBe('Belongs to this target'); }
+  finally { otherSubmit.remove(); }
+});
+
 for (const kind of ['pin', 'region'] as const) test(`clearing the only ${kind} comment cannot submit empty feedback`, () => {
   const saved = createFeedback();
   if (kind === 'pin') saved.addPin({ x: 30, y: 40, comment: 'Only comment' });

@@ -109,7 +109,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     return { left, top, width: popupWidth };
   }
   function save(restoreFocus = false) { const edit = editing; close(restoreFocus); if (edit) { feedback.edit(edit.id, { comment }); commit(value => withItem(value, edit.id, comment)); } }
-  function saveOverall(event?: { relatedTarget: EventTarget | null }) { if (event?.relatedTarget instanceof Element && event.relatedTarget.closest('[data-feedback-submit]')) return; const overall = feedback.getState().overall; if (overall !== (ctx.store.get(path)?.overall ?? '')) commit(value => ({ ...value, overall })); }
+  function saveOverall(event?: { relatedTarget: EventTarget | null }) { if (event?.relatedTarget instanceof Element && root.current?.contains(event.relatedTarget) && event.relatedTarget.closest('[data-feedback-submit]')) return; const overall = feedback.getState().overall; if (overall !== (ctx.store.get(path)?.overall ?? '')) commit(value => ({ ...value, overall })); }
   const subscribeHistory = (fn: () => void) => ctx.store.subscribe('*', fn);
   const canUndo = useSyncExternalStore(subscribeHistory, () => ctx.store.canUndo(path), () => false), canRedo = useSyncExternalStore(subscribeHistory, () => ctx.store.canRedo(path), () => false);
   function undo() { cancel(false); ctx.store.undo(path); }
