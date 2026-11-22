@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent } from 'react';
+import { useContext, useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent } from 'react';
 import { ComponentContext, useComponentState, useEmit, type PrismContextValue } from '@prism-ui/react';
 import { createFeedback, createFrameController, previousAsResolved, sanitizeSvg, toMessage, wireframeDocument, type FeedbackPayload, type FeedbackState, type FeedbackPoint, type FrameController, type HitRect } from './engine';
 
@@ -18,8 +18,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const labels = { ...mockupLabels, ...props.labels }, title = props.title ?? labels.title, source = props.source ?? '';
   const [localDevice, writeDevice] = useComponentState<MockupDevice>('device', props.device ?? 'desktop'), [localZoom, writeZoom] = useComponentState('zoom', 1), [draft] = useComponentState<FeedbackState | undefined>('feedback', undefined), [submitted, setSubmitted] = useComponentState('submitted', false);
   const device = options.controls?.device ?? localDevice, setDevice = options.controls?.setDevice ?? writeDevice, zoom = options.controls?.zoom ?? localZoom, setZoom = options.controls?.setZoom ?? writeZoom;
-  const feedback = useMemo(() => createFeedback({ ...draft, mockup: title, variant: props.variant, device }), [ctx.store, component?.id]);
-  const feedbackRef = useRef(feedback); feedbackRef.current = feedback;
+  const [feedback] = useState(() => createFeedback({ ...draft, mockup: title, variant: props.variant, device }));
   const state = useSyncExternalStore(feedback.subscribe, feedback.getState, feedback.getState);
   const root = useRef<HTMLDivElement>(null), viewport = useRef<HTMLDivElement>(null), canvas = useRef<HTMLDivElement>(null), iframe = useRef<HTMLIFrameElement>(null), graphic = useRef<HTMLDivElement>(null), controller = useRef<FrameController | null>(null);
   const [visible, setVisible] = useState(typeof IntersectionObserver === 'undefined'), [containerWidth, setContainerWidth] = useState(1280), [contentHeight, setContentHeight] = useState(400), [naturalWidth, setNaturalWidth] = useState(800);
@@ -38,9 +37,9 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     if (!enabled || !visible || !framed || !iframe.current) return;
     const frame = (options.createController ?? createFrameController)(); controller.current = frame; frame.attach(iframe.current);
     const offSize = frame.on('size', message => grow(message.height));
-    const offLayout = frame.on('layout', message => feedbackRef.current.reanchor(Object.fromEntries(message.anchors.map(a => [a.key, a.box]))));
+    const offLayout = frame.on('layout', message => feedback.reanchor(Object.fromEntries(message.anchors.map(a => [a.key, a.box]))));
     return () => { offSize(); offLayout(); frame.destroy(); controller.current = null; };
-  }, [visible, enabled, framed, options.createController]);
+  }, [visible, enabled, framed, options.createController, feedback]);
   useEffect(() => { controller.current?.render(kind === 'wire' ? wireframeDocument(source) : source, complete); }, [source, complete, kind, visible, enabled, options.createController]);
   useEffect(() => { controller.current?.setAnchors(feedback.anchorRequests()); }, [state, visible, enabled, feedback]);
   useEffect(() => { const escape = (event: globalThis.KeyboardEvent) => { if (event.key === 'Escape') { setExpanded(false); setPenValue(false); } }; document.addEventListener('keydown', escape); return () => document.removeEventListener('keydown', escape); }, []);

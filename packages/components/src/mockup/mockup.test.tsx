@@ -58,11 +58,30 @@ test('a named replay with no saved draft keeps provisional feedback edits when i
   const store = createStore(), props = { source: '<h1>Review</h1>' };
   const x = setup(props, false, store);
   x.change(x.view.getByRole('textbox', { name: 'Overall feedback' }), 'Keep the in-flight edit');
-  const provisional = Object.keys(store.snapshot())[0];
+  expect(Object.keys(store.snapshot())).toEqual(['review']);
   x.rerender(props);
   expect((x.view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('Keep the in-flight edit');
   expect(store.get('review.feedback.overall')).toBe('Keep the in-flight edit');
-  expect(store.get(provisional)).toBeUndefined();
+  expect(Object.keys(store.snapshot())).toEqual(['review']);
+});
+test('stream feedback undo and redo history survives completion', () => {
+  const props = { source: '<h1>Review</h1>' }, x = setup(props, false);
+  x.change(x.view.getByRole('textbox', { name: 'Overall feedback' }), 'Stream edit');
+  fireEvent.click(x.view.getByRole('button', { name: 'Undo' }));
+  x.rerender(props);
+  expect((x.view.getByRole('button', { name: 'Redo' }) as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(x.view.getByRole('button', { name: 'Redo' }));
+  expect((x.view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('Stream edit');
+  fireEvent.click(x.view.getByRole('button', { name: 'Undo' }));
+  expect((x.view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('');
+});
+test('completion preserves the pending annotation rollback used by Escape', () => {
+  const props = { source: '<h1>Review</h1>' }, x = setup(props, false);
+  fireEvent.keyDown(x.view.getByRole('application'), { key: 'Enter' });
+  x.rerender(props);
+  fireEvent.keyDown(x.view.getByRole('textbox', { name: 'Add a comment…' }), { key: 'Escape' });
+  expect(x.view.queryByRole('button', { name: /^Comment 1:/ })).toBeNull();
+  expect(x.store.get('review.feedback.items')).toEqual([]);
 });
 test('Escape and Enter in a comment return focus to the keyboard canvas', () => {
   const x = setup(); const canvas = x.canvas(); act(() => canvas.focus()); fireEvent.keyDown(canvas, { key: 'Enter' });
@@ -100,7 +119,7 @@ test('drawings hit test their bounding-box centre, follow layout and still submi
 });
 test('plugin preserves identity, completion and parses safe attributes without registering code', () => {
   const node = { type: 'code', key: 'x', lang: 'mockup:html', meta: '{title="Pricing plans" device=mobile variant="A" group=g1 id=p flag}', value: '<h1>Pricing</h1>', complete: false };
-  expect(mockupPlugin.transform!(node)).toEqual({ type: 'component', key: 'x', name: 'mockup', props: { title: 'Pricing plans', device: 'mobile', variant: 'A', group: 'g1', id: 'p', flag: true, kind: 'html', source: node.value }, children: [], complete: false });
+  expect(mockupPlugin.transform!(node)).toEqual({ type: 'component', key: 'x', name: 'mockup', props: { title: 'Pricing plans', device: 'mobile', variant: 'A', group: 'g1', id: 'p', flag: true, kind: 'html', source: node.value }, children: [], complete: false, idComplete: true });
   expect(mockupPlugin.transform!({ ...node, lang: 'html' })).toEqual({ ...node, lang: 'html' });
   expect(parseMockupMeta()).toEqual({}); expect(Object.keys(parseMockupMeta('__proto__=bad constructor=no title=ok'))).toEqual(['title']);
 });

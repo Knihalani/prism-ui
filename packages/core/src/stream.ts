@@ -139,6 +139,7 @@ export function streamParser(previews = true, path = '', references = new Refere
     if (a.json) {
       const value = a.json.value;
       a.node.props = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+      a.node.idComplete = a.json.idComplete;
     }
     const node = a.node;
     if (a.nested) node.children = a.nested.root.children;
@@ -172,7 +173,7 @@ export function streamParser(previews = true, path = '', references = new Refere
       a.node.children = a.nested!.root.children; finishNode(a.node, a.index);
     } else if (a.mode === 'code') {
       if (a.json) {
-        const value = a.json.end(); a.node.props = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+        const value = a.json.end(); a.node.props = value && typeof value === 'object' && !Array.isArray(value) ? value : {}; a.node.idComplete = a.json.idComplete;
       }
       finishNode(a.node, a.index);
     } else {
@@ -258,12 +259,12 @@ export function streamParser(previews = true, path = '', references = new Refere
       if (f) {
         const info = f[2].trim(); const space = info.search(/\s/); const lang = space < 0 ? info : info.slice(0, space); const meta = space < 0 ? '' : info.slice(space).trim();
         a.mode = 'code'; a.mark = f[1][0]; a.size = f[1].length;
-        if (lang.startsWith('ui:')) { a.json = new JsonScanner(); a.node = { type: 'component', key: a.node.key, name: lang.slice(3), props: {}, children: [], complete: false }; }
+        if (lang.startsWith('ui:')) { a.json = new JsonScanner(); a.node = { type: 'component', key: a.node.key, name: lang.slice(3), props: {}, children: [], complete: false, idComplete: false }; }
         else a.node = { type: 'code', key: a.node.key, lang, meta, value: '', complete: false };
         return;
       }
       if (d) {
-        a.node = { type: 'component', key: a.node.key, name: d[2], props: attributes(d[3] ?? ''), children: [], complete: d[1].length === 2 };
+        a.node = { type: 'component', key: a.node.key, name: d[2], props: attributes(d[3] ?? ''), children: [], complete: d[1].length === 2, idComplete: true };
         if (d[1].length === 2) { active = undefined; finishNode(a.node, a.index); }
         else { a.mode = 'container'; a.mark = ':'; a.size = d[1].length; a.nested = streamParser(previews, a.node.key, references, plugins); a.node.children = a.nested.root.children; }
         return;

@@ -28,6 +28,16 @@ function comment(canvas: HTMLElement, text: string, view: ReturnType<typeof rend
   fireEvent.keyDown(canvas, { key: 'Enter' });
   const area = view.getByRole('textbox', { name: 'Add a comment…' }); act(() => area.focus()); fireEvent.change(area, { target: { value: text } }); fireEvent.keyUp(area, { key: 'Unidentified' }); fireEvent.click(view.getByText('Save'));
 }
+test('group Redo stays subscribed to the streaming feedback model after completion', () => {
+  const x = setup();
+  fireEvent.click(x.view.getByRole('tab', { name: 'B' }));
+  comment(x.view.getByRole('application'), 'Streaming B edit', x.view);
+  x.rerender(a + b + '</h1>\n```', true);
+  fireEvent.click(x.view.getByRole('button', { name: 'Undo' }));
+  expect((x.view.getByRole('button', { name: 'Redo' }) as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(x.view.getByRole('button', { name: 'Redo' }));
+  expect(x.view.getByRole('button', { name: 'Comment 1: Streaming B edit' })).toBeDefined();
+});
 test('two streamed blocks form one switcher; tabs switch and compare shows both with one overall and submit', () => {
   const x = setup(); expect(x.view.getAllByRole('tablist')).toHaveLength(1); expect(x.view.getAllByRole('tab').map(el => el.textContent)).toEqual(['A', 'B', 'Compare']); expect(x.view.getByLabelText('Streaming')).toBeDefined(); expect(x.view.getAllByRole('application')).toHaveLength(1); expect(x.view.container.querySelectorAll('iframe')).toHaveLength(1);
   fireEvent.click(x.view.getByRole('tab', { name: 'B' })); expect(x.view.getByRole('tab', { name: 'B' }).getAttribute('aria-selected')).toBe('true'); expect(x.view.container.querySelectorAll('iframe')).toHaveLength(1);

@@ -39,6 +39,8 @@ Growing `source` pushes only its appended suffix while `done={false}`. Completed
 
 ## Registry and renderers
 
+Private editor models can set `requiresFinalId: true` on their definition. The renderer waits for a final identity, hydration, and any migration before mounting that component. Closed top-level JSON ids and directive/fence headers can establish identity before the body finishes; anonymous JSON models wait until the object closes. Their mounted model therefore keeps its undo history, pending operations, and subscriptions throughout the remaining stream. Mockup opts into this policy. Other components continue rendering under provisional ids as before. Parser plugins can set `node.idComplete = true` when their identity-bearing header is sealed.
+
 `createRegistry(defs?)` gives `register(def)`, `get(name)`, `list()` and `docs()`. `registerComponent(def)` adds to the module-level `defaultRegistry`; use isolated registries for separate catalogs. `defineComponent(def)` preserves schema inference. Definitions include `name`, optional `schema`, `component`, `fallback`, `docs`, `examples`, `inline`, `syntax` and `message`.
 
 Resolution is `components[name or type]` → registry definition → built-in markdown → unknown directive (a div with `data-prism="unknown" data-name="…"` and its children). Registry schemas still coerce props for directive overrides. Fallbacks render only when both incomplete and partial. Components receive `{ node, props, children, id, complete, partial, issues }`; `id` is `props.id ?? node.key`.
