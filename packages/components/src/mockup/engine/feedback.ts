@@ -304,20 +304,32 @@ export function previousAsResolved(payload: FeedbackPayload): FeedbackItem[] {
   return payload.items.map(item => ({ ...copy(item), id: `previous-${item.n}`, createdAt: 0, resolved: true }));
 }
 
-export function toMessage(payload: FeedbackPayload, opts: { maxItems?: number } = {}): string {
+export const feedbackMessageStrings = {
+  feedbackHeading: 'Feedback on mockup{title}{details}:', feedbackTitle: ' "{title}"', feedbackDetails: ' ({details})',
+  feedbackVariant: 'variant {variant}', feedbackOverall: 'Overall: {text}', feedbackPin: 'Pin at {x}%,{y}%',
+  feedbackRegion: 'Region {area}', feedbackDrawing: 'Drawing (area {area})', feedbackOnText: ' on "{text}" ({selector})',
+  feedbackOn: ' on {selector}', feedbackLocation: ' ({location})', feedbackTop: 'top', feedbackBottom: 'bottom',
+  feedbackLeft: 'left', feedbackRight: 'right', feedbackCentre: 'centre', feedbackMore: '… {n} more item(s)',
+};
+export function toMessage(payload: FeedbackPayload, opts: { maxItems?: number; strings?: Partial<typeof feedbackMessageStrings> } = {}): string {
+  const strings = { ...feedbackMessageStrings, ...opts.strings };
+  const format = (key: keyof typeof strings, values: Record<string, string | number>) => strings[key].replace(/\{(\w+)\}/g, (match, key: string) => key in values ? String(values[key]) : match);
   const short = (text: string, max = 180) => text.replace(/\s+/g, ' ').trim().slice(0, max);
-  const details = [payload.variant ? `variant ${short(payload.variant, 60)}` : '', payload.device ? short(payload.device, 60) : ''].filter(Boolean);
-  const lines = [`Feedback on mockup${payload.mockup ? ` "${short(payload.mockup, 80)}"` : ''}${details.length ? ` (${details.join(', ')})` : ''}:`];
-  if (payload.overall.trim()) lines.push(`Overall: ${short(payload.overall, 500)}`);
+  const details = [payload.variant ? format('feedbackVariant', { variant: short(payload.variant, 60) }) : '', payload.device ? short(payload.device, 60) : ''].filter(Boolean);
+  const lines = [format('feedbackHeading', {
+    title: payload.mockup ? format('feedbackTitle', { title: short(payload.mockup, 80) }) : '',
+    details: details.length ? format('feedbackDetails', { details: details.join(', ') }) : '',
+  })];
+  if (payload.overall.trim()) lines.push(format('feedbackOverall', { text: short(payload.overall, 500) }));
   const limit = Math.max(0, Math.floor(opts.maxItems ?? payload.items.length));
   for (const item of payload.items.slice(0, limit)) {
     const x = round(item.x), y = round(item.y), ex = round(item.x + (item.w ?? 0)), ey = round(item.y + (item.h ?? 0));
     const area = `${x}–${ex}% x, ${y}–${ey}% y`;
-    const location = `${y < 33 ? 'top' : y > 66 ? 'bottom' : ''}${x < 33 ? '-left' : x > 66 ? '-right' : ''}`.replace(/^-/, '') || 'centre';
-    const target = item.target ? item.target.text ? ` on "${short(item.target.text, 80)}" (${short(item.target.selector, 100)})` : ` on ${short(item.target.selector, 100)}` : ` (${location})`;
-    const geometry = item.kind === 'pin' ? `Pin at ${x}%,${y}%` : item.kind === 'region' ? `Region ${area}` : `Drawing (area ${area})`;
+    const location = [y < 33 ? strings.feedbackTop : y > 66 ? strings.feedbackBottom : '', x < 33 ? strings.feedbackLeft : x > 66 ? strings.feedbackRight : ''].filter(Boolean).join('-') || strings.feedbackCentre;
+    const target = item.target ? item.target.text ? format('feedbackOnText', { text: short(item.target.text, 80), selector: short(item.target.selector, 100) }) : format('feedbackOn', { selector: short(item.target.selector, 100) }) : format('feedbackLocation', { location });
+    const geometry = format(item.kind === 'pin' ? 'feedbackPin' : item.kind === 'region' ? 'feedbackRegion' : 'feedbackDrawing', { x, y, area });
     lines.push(`${item.n}. ${geometry}${target}${item.comment.trim() ? `: ${short(item.comment)}` : ''}`);
   }
-  if (payload.items.length > limit) lines.push(`… ${payload.items.length - limit} more item(s)`);
+  if (payload.items.length > limit) lines.push(format('feedbackMore', { n: payload.items.length - limit }));
   return lines.join('\n');
 }

@@ -7,6 +7,19 @@ import { estimate } from '../src/estimate';
 
 const items = [{ id: 'seats', label: 'Seats', description: 'Team access', price: 36, qty: 6 }, { id: 'notes', label: 'Notes', price: 36, optional: true }];
 const source = (rows = items) => '```ui:estimate\n' + JSON.stringify({ id: 'quote', items: rows, discount: .1, taxRate: .1 }) + '\n```';
+test('frame theme translations beat Estimate definition defaults unless its theme overrides them', () => {
+  for (const specific of [false, true]) {
+    const theme = defineTheme({ name: 'translated-frame', components: {
+      frame: { strings: { askLabel: 'Discuter', undoLabel: 'Annuler' } },
+      ...(specific ? { estimate: { strings: { askLabel: 'Discuss estimate', undoLabel: 'Revert estimate' } } } : {}),
+    } });
+    const view = render(<Prism source={source()} theme={theme} />);
+    expect(view.getByRole('button', { name: specific ? 'Discuss estimate' : 'Discuter' })).toBeDefined();
+    expect(view.getByRole('button', { name: specific ? 'Revert estimate' : 'Annuler' })).toBeDefined();
+    view.unmount();
+  }
+});
+
 test('every declared Estimate part, including empty, can be replaced without replacing the component', () => {
   const covered = new Set<string>();
   for (const content of [source(), source([])]) {

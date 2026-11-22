@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { ComponentContext, useEmit, type PrismContextValue } from '@prism-ui/react';
+import { ComponentContext, useEmit, useStrings, useTheme, type PrismContextValue } from '@prism-ui/react';
+import { artifactStrings, artifactError } from './strings';
 import { sanitizeSvg } from '../mockup/engine/sanitize-svg';
 import { compileArtifact } from './compiler';
 import { mountArtifactFrame } from './frame';
@@ -38,7 +39,7 @@ function readTheme(element: HTMLElement): ThemeSnapshot {
 }
 
 export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, complete = true) {
-  const options = useContext(Options), emit = useEmit();
+  const options = useContext(Options), emit = useEmit(), strings = useStrings('artifact', artifactStrings);
   const component = useContext(ComponentContext)!;
   const taskPath = markdownTaskPath(component.id);
   const headerId = component.node.lang?.startsWith('artifact:') ? component.node.props?.id : undefined;
@@ -50,6 +51,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   const [chosen, selectVersion] = useState(0);
   const version = versions.find(version => version.number === chosen) ?? versions.at(-1);
   const selected = version ?? props;
+  const title = useTheme().theme.components.artifact?.strings?.title ?? selected.title ?? strings[selected.kind] ?? strings.title;
   const { kind, source } = selected;
   const autoMax = selected.height === 'auto' ? maxAutoHeight : undefined;
   const readySource = !!version || complete;
@@ -57,13 +59,14 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   const [mode, setMode] = useState<'preview' | 'source' | 'diff'>('preview');
   const previous = version && versions.find(item => item.number === version.number - 1);
   const diff = useMemo(() => mode === 'diff' && previous ? sourceDiff(previous.source, source) : undefined, [mode, previous, source]);
+  const [iframe, iframeRef] = useState<HTMLIFrameElement | null>(null);
   const [container, ref] = useState<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(false);
   const [reloadKey, setReload] = useState(0);
   const sessionRef = useRef<ReturnType<typeof mountArtifactFrame> | null>(null);
   const revision = useRef(0);
-  const current = useRef({ emit, title: selected.title ?? 'Artifact', autoMax });
-  current.current = { emit, title: selected.title ?? 'Artifact', autoMax };
+  const current = useRef({ emit, title, autoMax });
+  current.current = { emit, title, autoMax };
   const [failure, setFailure] = useState<{ source: string; kind: string; error: string }>();
   const [notice, setNotice] = useState('');
   const [fullscreen, setFullscreen] = useState(false);
@@ -72,7 +75,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   const [measured, setMeasured] = useState<{ taskPath: string; height: number }>();
   const height = measured?.taskPath === taskPath ? measured.height : 0;
   const last = useRef<{ kind: ArtifactProps['kind']; source: string; complete: boolean } | undefined>(undefined);
-  const error = failure?.source === source && failure.kind === kind ? failure.error : undefined;
+  const error = artifactError(failure?.source === source && failure.kind === kind ? failure.error : undefined, strings);
   const updating = enabled && !error && !!version &&
     (!complete || (rendered && (displayed.kind !== kind || displayed.source !== source)));
   const imports = options.imports;
@@ -106,12 +109,12 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   }, [container]);
 
   useEffect(() => {
-    if (!container || !enabled || !visible || !runnable) return;
+    if (!container || !iframe || !enabled || !visible || !runnable) return;
     return () => { sessionRef.current?.destroy(); sessionRef.current = null; last.current = undefined; };
-  }, [container, enabled, visible, runnable, imports, store, grants, reloadKey, taskPath]);
+  }, [container, iframe, enabled, visible, runnable, imports, store, grants, reloadKey, taskPath]);
 
   useEffect(() => {
-    if (!container || !visible || !runnable) return;
+    if (!container || !iframe || !visible || !runnable) return;
     let cancelled = false;
     const number = ++revision.current;
     const report = (text: string, received = number) => {
@@ -129,10 +132,8 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
         },
         send: (type, payload) => current.current.emit(type, payload),
         exitFullscreen: () => { if (container.ownerDocument.fullscreenElement === fullscreenTarget()) void container.ownerDocument.exitFullscreen(); },
-      });
+      }, iframe);
       session.frame.title = current.current.title;
-      session.frame.setAttribute('data-prism', 'artifact');
-      session.frame.setAttribute('data-part', 'iframe');
       sessionRef.current = session;
       session.sizeMode(current.current.autoMax);
       updateTheme();
@@ -149,12 +150,12 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
       const render = (code: Pick<Render, 'source' | 'tasks'>) => {
         if (!cancelled) session.render({ kind, ...code, complete: readySource, revision: number });
       };
-      if (source.length > 1_000_000) report('Artifact source exceeds 1 MB.');
+      if (source.length > 1_000_000) report(strings.sourceTooLarge);
       else if (kind === 'react') void compileArtifact(source, options.compilerUrl).then(source => render({ source }), error => report(errorMessage(error)));
       else render(present(kind, source));
     } catch (error) { report(errorMessage(error)); }
     return () => { cancelled = true; };
-  }, [container, visible, runnable, imports, store, grants, reloadKey, kind, source, readySource, taskPath, options.compilerUrl, updateTheme, fullscreenTarget]);
+  }, [container, iframe, visible, runnable, imports, store, grants, reloadKey, kind, source, readySource, taskPath, options.compilerUrl, updateTheme, fullscreenTarget]);
 
   useEffect(() => {
     if (!container || !visible) return;
@@ -168,12 +169,12 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
     return () => { observer.disconnect(); media?.removeEventListener('change', updateTheme); };
   }, [container, visible, updateTheme]);
 
-  useEffect(() => { if (sessionRef.current) sessionRef.current.frame.title = current.current.title; }, [selected.title]);
+  useEffect(() => { if (sessionRef.current) sessionRef.current.frame.title = current.current.title; }, [title]);
   useEffect(() => { sessionRef.current?.sizeMode(autoMax); }, [autoMax]);
 
   async function copy() {
-    try { await navigator.clipboard.writeText(source); setNotice('Copied'); }
-    catch { setNotice('Clipboard unavailable'); }
+    try { await navigator.clipboard.writeText(source); setNotice(strings.copied); }
+    catch { setNotice(strings.clipboardUnavailable); }
   }
   async function download(standalone = false) {
     try {
@@ -188,7 +189,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
       const link = doc.createElement('a');
       link.href = url; link.download = filename + '.' + (standalone ? 'html' : suffix[kind]); link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch { setNotice('Download unavailable'); }
+    } catch { setNotice(strings.downloadUnavailable); }
   }
   async function toggleFullscreen() {
     const target = fullscreenTarget();
@@ -196,12 +197,14 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
     try {
       if (target.ownerDocument.fullscreenElement === target) await target.ownerDocument.exitFullscreen();
       else await target.requestFullscreen();
-    } catch { setNotice('Fullscreen unavailable'); }
+    } catch { setNotice(strings.fullscreenUnavailable); }
   }
   return {
-    selected, versions, version, selectVersion, mode, setMode, diff, previous, enabled, rendered, updating, error, notice, ref, fullscreen,
+    iframeRef, needsFrame: enabled && visible && runnable, strings, streaming: !complete || updating, title: current.current.title, selected, versions, version, selectVersion, mode, setMode, diff, previous, enabled, rendered, updating, error, notice, ref, fullscreen,
     height: typeof selected.height === 'number' ? selected.height : Math.max(heights[selected.size], height),
     copy, download, reload, toggleFullscreen,
     fix() { if (error) emit('fix', { error, source, kind, version: version?.number ?? 1 }); },
   };
 }
+
+export { artifactStrings } from './strings';

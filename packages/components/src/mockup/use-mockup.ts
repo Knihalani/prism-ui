@@ -1,9 +1,9 @@
 import { useContext, useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent } from 'react';
-import { ComponentContext, useComponentState, useEmit, useStrings, type PrismContextValue } from '@prism-ui/react';
-import { createFeedback, createFrameController, previousAsResolved, sanitizeSvg, toMessage, wireframeDocument, type FeedbackPayload, type FeedbackState, type FeedbackPoint, type FrameController, type HitRect } from './engine';
+import { ComponentContext, useComponentState, useSent, useFlash, usePrism, useTheme, type PrismContextValue } from '@prism-ui/react';
+import { createFeedback, createFrameController, previousAsResolved, sanitizeSvg, toMessage, wireframeDocument, feedbackMessageStrings, type FeedbackPayload, type FeedbackState, type FeedbackPoint, type FrameController, type HitRect } from './engine';
 
 export type MockupDevice = 'desktop' | 'tablet' | 'mobile';
-export const mockupLabels = { variants: 'Variants', compare: 'Compare', prefer: 'Prefer this', streaming: 'Streaming', title: 'Mockup', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobile', zoomOut: 'Zoom out', zoomIn: 'Zoom in', fit: 'Fit', fullscreen: 'Fullscreen', source: 'View source', copy: 'Copy', draw: 'Draw', color: 'Pen colour', canvas: 'Design canvas. Press Enter to add a comment', hint: 'Click to comment · drag to select', empty: 'Click anywhere on the design to leave a comment.', overall: 'Overall feedback', save: 'Save', delete: 'Delete', edit: 'Edit', placeholder: 'Add a comment…', undo: 'Undo', redo: 'Redo', submit: 'Submit feedback', sent: 'Feedback sent · {n} comments', editFeedback: 'Edit feedback', countOne: '{n} comment', countOther: '{n} comments', sentOne: 'Feedback sent · {n} comment', sentOther: 'Feedback sent · {n} comments', count: '{n} comments', comment: 'Comment {n}: {text}', added: 'Comment {n} added', removed: 'Comment removed', loading: 'Loading design', imageError: 'Image unavailable', resolved: 'Resolved' };
+export const mockupLabels = { ...feedbackMessageStrings, devices: 'Device', colorOption: 'Pen colour {n}', resolvedComment: 'Resolved {n}: {text}', editComment: 'Edit {n}', deleteComment: 'Delete {n}', preferred: 'Preferred: {variant}', variants: 'Variants', compare: 'Compare', prefer: 'Prefer this', streaming: 'Streaming', title: 'Mockup', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobile', zoomOut: 'Zoom out', zoomIn: 'Zoom in', fit: 'Fit', fullscreen: 'Fullscreen', source: 'View source', copy: 'Copy', draw: 'Draw', color: 'Pen colour', canvas: 'Design canvas. Press Enter to add a comment', hint: 'Click to comment · drag to select', empty: 'Click anywhere on the design to leave a comment.', overall: 'Overall feedback', save: 'Save', delete: 'Delete', edit: 'Edit', placeholder: 'Add a comment…', undo: 'Undo', redo: 'Redo', submit: 'Submit feedback', sent: 'Feedback sent · {n} comments', editFeedback: 'Edit feedback', countOne: '{n} comment', countOther: '{n} comments', sentOne: 'Feedback sent · {n} comment', sentOther: 'Feedback sent · {n} comments', count: '{n} comments', comment: 'Comment {n}: {text}', added: 'Comment {n} added', removed: 'Comment removed', loading: 'Loading design', imageError: 'Image unavailable', resolved: 'Resolved' };
 export type MockupLabels = Partial<typeof mockupLabels>;
 export interface MockupProps { id?: string; kind?: 'html' | 'svg' | 'wire' | 'image'; source?: string; src?: string; title?: string; device?: MockupDevice; variant?: string; group?: string; height?: number; previous?: FeedbackPayload; labels?: MockupLabels }
 export interface MockupControls { device: MockupDevice; setDevice(device: MockupDevice): void; zoom: number; setZoom(zoom: number): void; pen: boolean; setPen(pen: boolean): void; color: string; setColor(color: string): void }
@@ -11,18 +11,22 @@ export interface MockupOptions { createController?: () => FrameController; enabl
 const widths = { desktop: 1280, tablet: 834, mobile: 390 };
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
 
+export function useMockupStrings(props: MockupProps): typeof mockupLabels {
+  const defaults = { ...mockupLabels, ...usePrism().registry.get('mockup')?.strings }, theme = useTheme().theme.components.mockup?.strings;
+  return { ...defaults, ...props.labels, title: props.title ?? props.labels?.title ?? defaults.title, ...theme } as typeof mockupLabels;
+}
 export function useMockup(props: MockupProps, ctx: PrismContextValue, options: MockupOptions = {}) {
-  const component = useContext(ComponentContext), emit = useEmit();
+  const component = useContext(ComponentContext), receipt = useSent(), flash = useFlash('feedback');
   const enabled = options.enabled !== false;
   const complete = component?.node.complete !== false, kind = props.kind ?? 'html', framed = kind === 'html' || kind === 'wire';
-  const labels = { ...mockupLabels, ...props.labels, ...useStrings('mockup') }, title = props.title ?? labels.title, source = props.source ?? '';
+  const labels = useMockupStrings(props), title = labels.title, source = props.source ?? '';
   const [localDevice, writeDevice] = useComponentState<MockupDevice>('device', props.device ?? 'desktop'), [localZoom, writeZoom] = useComponentState('zoom', 1), [draft] = useComponentState<FeedbackState | undefined>('feedback', undefined), [submitted, setSubmitted] = useComponentState('submitted', false);
   const device = options.controls?.device ?? localDevice, setDevice = options.controls?.setDevice ?? writeDevice, zoom = options.controls?.zoom ?? localZoom, setZoom = options.controls?.setZoom ?? writeZoom;
   const [feedback] = useState(() => createFeedback({ ...draft, mockup: title, variant: props.variant, device }));
   const state = useSyncExternalStore(feedback.subscribe, feedback.getState, feedback.getState);
   const root = useRef<HTMLDivElement>(null), viewport = useRef<HTMLDivElement>(null), canvas = useRef<HTMLDivElement>(null), iframe = useRef<HTMLIFrameElement>(null), graphic = useRef<HTMLDivElement>(null), controller = useRef<FrameController | null>(null);
   const [visible, setVisible] = useState(typeof IntersectionObserver === 'undefined'), [containerWidth, setContainerWidth] = useState(1280), [contentHeight, setContentHeight] = useState(400), [naturalWidth, setNaturalWidth] = useState(800);
-  const [expanded, setExpanded] = useState(false), [showSource, setShowSource] = useState(false), [pen, setPen] = useState(false), [color, setColor] = useState('var(--prism-accent, #525252)'), [active, setActive] = useState<string | null>(null), [editing, setEditing] = useState<{ id: string; fresh: boolean; text: string } | null>(null), [comment, setComment] = useState(''), [announcement, announce] = useState(''), [reticle, setReticle] = useState<FeedbackPoint>([50, 50]), [focused, setFocused] = useState(false), [hover, setHover] = useState<FeedbackPoint | null>(null), [rubber, setRubber] = useState<FeedbackPoint[]>([]), [imageError, setImageError] = useState(false);
+  const [expanded, setExpanded] = useState(false), [showSource, setShowSource] = useState(false), [pen, setPen] = useState(false), [color, setColor] = useState('var(--prism-mockup-accent, var(--prism-accent-text))'), [active, setActive] = useState<string | null>(null), [editing, setEditing] = useState<{ id: string; fresh: boolean; text: string } | null>(null), [comment, setComment] = useState(''), [announcement, announce] = useState(''), [reticle, setReticle] = useState<FeedbackPoint>([50, 50]), [focused, setFocused] = useState(false), [hover, setHover] = useState<FeedbackPoint | null>(null), [rubber, setRubber] = useState<FeedbackPoint[]>([]), [imageError, setImageError] = useState(false);
   const penValue = options.controls?.pen ?? pen, colorValue = options.controls?.color ?? color;
   const setPenValue = options.controls?.setPen ?? setPen, setColorValue = options.controls?.setColor ?? setColor;
   const gesture = useRef<{ points: FeedbackPoint[]; clientX: number; clientY: number } | null>(null);
@@ -52,17 +56,20 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   function remove(id: string) { feedback.remove(id); setEditing(null); announce(labels.removed); }
   function close(restoreFocus = false) { pending.current = null; setEditing(null); if (restoreFocus) canvas.current?.focus({ preventScroll: true }); }
   function popoverPosition(x: number, y: number) {
-    const popupWidth = Math.min(320, containerWidth - 24), popupHeight = 180;
-    const left = Math.max(12 / scale, Math.min(width - (popupWidth + 12) / scale, x / 100 * width));
-    const anchor = y / 100 * contentHeight, bottom = Math.min(contentHeight, ((viewport.current?.scrollTop ?? 0) + (viewport.current?.clientHeight || contentHeight * scale)) / scale);
-    const top = Math.max(12 / scale, Math.min(bottom - (popupHeight + 12) / scale, anchor + 20 / scale));
+    const bounds = root.current?.getBoundingClientRect(), artboard = canvas.current?.getBoundingClientRect();
+    const availableWidth = bounds?.width || containerWidth, availableHeight = bounds?.height || contentHeight * scale;
+    const popupWidth = Math.min(320, Math.max(0, availableWidth - 24)), popupHeight = 180;
+    const anchorX = (artboard?.left ?? 0) - (bounds?.left ?? 0) + x / 100 * (artboard?.width || width * scale);
+    const anchorY = (artboard?.top ?? 0) - (bounds?.top ?? 0) + y / 100 * (artboard?.height || contentHeight * scale);
+    const left = Math.max(12, Math.min(availableWidth - popupWidth - 12, anchorX));
+    const top = Math.max(12, Math.min(availableHeight - popupHeight - 12, anchorY + 20));
     return { left, top, width: popupWidth };
   }
   function save(restoreFocus = false) { if (editing) feedback.edit(editing.id, { comment }); close(restoreFocus); }
   useEffect(() => {
     if (!editing) return;
     const outside = (event: globalThis.PointerEvent) => {
-      if (event.target instanceof Element && event.target.closest('.prism-mockup__popover')) return;
+      if (event.target instanceof Element && event.target.closest('[data-prism="mockup"][data-part="popover"]')) return;
       if (editing.fresh && !comment.trim() && feedback.getState().items.find(item => item.id === editing.id)?.kind !== 'drawing') cancel(false);
       else save();
     };
@@ -100,12 +107,12 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   };
   function onKeyDown(event: KeyboardEvent<HTMLElement>) { if (event.key === 'Escape') { cancel(); setPenValue(false); setExpanded(false); } if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.stopPropagation(); setEditing(null); event.shiftKey ? feedback.redo() : feedback.undo(); } }
   function canvasKey(event: KeyboardEvent<HTMLDivElement>) { if (event.target !== event.currentTarget || submitted) return; const step = event.shiftKey ? 10 : 2; if (event.key.startsWith('Arrow')) { event.preventDefault(); setReticle(([x, y]) => [clamp(x + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0)), clamp(y + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0))]); } if (event.key === 'Enter') { event.preventDefault(); add({ x: reticle[0], y: reticle[1] }); } }
-  return { props, kind, framed, complete, labels, title, source, svg, root, viewport, canvas, iframe, graphic, visible: visible && enabled, width, scale, contentHeight, device, setDevice, zoom, setZoom, expanded, showSource, setShowSource, pen: penValue, setPen: setPenValue, color: colorValue, setColor: setColorValue, active, setActive, editing, comment, setComment, announcement, reticle, focused, setFocused, hover, rubber, pointer, onKeyDown, canvasKey, feedback, state, resolved, submitted, setSubmitted, open, remove, save, cancel, close, popoverPosition, locale: ctx.format.locale, canSubmit: feedback.canSubmit || !!(editing && comment.trim()), imageError, setImageError,
+  return { flash, props, kind, framed, complete, labels, title, source, svg, root, viewport, canvas, iframe, graphic, visible: visible && enabled, width, scale, contentHeight, device, setDevice, zoom, setZoom, expanded, showSource, setShowSource, pen: penValue, setPen: setPenValue, color: colorValue, setColor: setColorValue, active, setActive, editing, comment, setComment, announcement, reticle, focused, setFocused, hover, rubber, pointer, onKeyDown, canvasKey, feedback, state, resolved, submitted, setSubmitted, open, remove, save, cancel, close, popoverPosition, locale: ctx.format.locale, canSubmit: feedback.canSubmit || !!(editing && comment.trim()), imageError, setImageError,
     imageSrc: /^(https:|data:image\/)/i.test((props.src ?? source).trim()) ? (props.src ?? source).trim() : undefined,
     imageLoaded(width: number, height: number) { setNaturalWidth(width || 800); grow(height || 400); },
     async fullscreen() { try { if (document.fullscreenElement) await document.exitFullscreen(); else if (root.current?.requestFullscreen) await root.current.requestFullscreen(); else setExpanded(old => !old); } catch { setExpanded(old => !old); } },
     async copy() { try { await navigator.clipboard?.writeText(source); } catch {} },
-    submit() { save(); if (!feedback.canSubmit) return; const payload = feedback.toPayload(); emit('feedback', payload, toMessage(payload)); setSubmitted(true); setEditing(null); },
+    submit() { save(); if (!feedback.canSubmit) return; const payload = feedback.toPayload(); receipt.send('feedback', payload, toMessage(payload, { strings: labels })); setSubmitted(true); setEditing(null); },
   };
 }
 export type MockupModel = ReturnType<typeof useMockup>;

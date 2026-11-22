@@ -3,9 +3,9 @@ import { afterEach, expect, test } from 'bun:test';
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import type { ComponentProps } from 'react';
-import { createTheme, Prism, usePart, type Action } from '@prism-ui/react';
+import { createTheme, defineTheme, Prism, usePart, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
-import { ComponentFrame, useFrame, type ComponentFrameProps } from '../src';
+import { ComponentFrame, FrameOverflow, useFrame, type ComponentFrameProps } from '../src';
 
 afterEach(cleanup);
 
@@ -26,6 +26,35 @@ test('frame renders accessible parts, toolbar, footer and entry marker', () => {
   }
   expect(view.getByText('Draft')).toBeDefined(); expect(view.getByText('Frame content')).toBeDefined(); expect(view.getByRole('button', { name: 'Confirm' })).toBeDefined();
   expect(view.getByRole('button', { name: 'Ask about this' }).querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+});
+
+test('default overflow trigger restores DOM focus after Escape', () => {
+  const view = setup({ ask: false, toolbar: <FrameOverflow component="example"><button>Inside overflow</button></FrameOverflow> });
+  const trigger = view.getByRole('button', { name: 'More tools' });
+  fireEvent.click(trigger);
+  const inside = view.getByRole('button', { name: 'Inside overflow' });
+  act(() => inside.focus());
+  fireEvent.keyDown(inside, { key: 'Escape' });
+  expect(trigger.getAttribute('aria-expanded')).toBe('false');
+  expect(document.activeElement).toBe(trigger);
+});
+
+test('component labels override frame strings while missing labels use frame fallbacks', () => {
+  for (const level of ['frame', 'props', 'theme'] as const) {
+    const own = level === 'frame' ? {} : { askLabel: 'Prop ask', undoLabel: 'Prop undo' };
+    const source = '~~~ui:example\n' + JSON.stringify({ id: 'demo', ...own }) + '\n~~~';
+    const theme = defineTheme({ name: 'frame-labels', components: {
+      frame: { strings: level === 'props' ? {} : { askLabel: 'Frame ask', undoLabel: 'Frame undo' } },
+      example: { strings: level === 'theme' ? { askLabel: 'Theme ask', undoLabel: 'Theme undo' } : {} },
+    } });
+    const view = setup({ undo: true }, { source, theme });
+    const prefix = level === 'frame' ? 'Frame' : level === 'props' ? 'Prop' : 'Theme';
+    for (const action of ['ask', 'undo']) {
+      const button = view.getByRole('button', { name: prefix + ' ' + action });
+      expect(button.getAttribute('title')).toBe(prefix + ' ' + action);
+    }
+    view.unmount();
+  }
 });
 
 test('ask emits the enclosing directive context and the default human message', () => {

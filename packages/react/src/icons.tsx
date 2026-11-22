@@ -71,6 +71,7 @@ export const iconPaths = {
   briefcase: 'M3 7h18v13H3zM8 7V4h8v3M3 13h18',
   layers: 'm12 3 9 5-9 5-9-5zM3 13l9 5 9-5',
   target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  more: 'M4 12h.01M12 12h.01M20 12h.01',
   circle: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z',
   dot: 'M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
 };
