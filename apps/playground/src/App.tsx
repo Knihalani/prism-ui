@@ -6,6 +6,7 @@ import { createReplay } from './replay';
 import { playgroundPlugins } from './plugins';
 
 type Message = { id: string; role: 'user' | 'assistant'; text: string; stream?: AsyncIterable<string>; pending?: boolean; action?: Action };
+type Reply = { id: string; text: string };
 class MessageBoundary extends Component<{ children: ReactNode }, { error: boolean }> {
   state = { error: false };
   static getDerivedStateFromError() { return { error: true }; }
@@ -21,11 +22,12 @@ export function App({ pace = { chars: 8, delay: 20 } }: { pace?: { chars: number
   const [active, setActive] = useState<string>();
   const sequence = useRef(0), session = useRef(Date.now().toString(36));
   const running = useRef<ReturnType<typeof createReplay> | undefined>(undefined);
+  const queued = useRef<Reply[]>([]);
   const thread = useRef<HTMLDivElement>(null), composer = useRef<HTMLTextAreaElement>(null), menuButton = useRef<HTMLButtonElement>(null);
   const follow = useRef(true);
   const nextId = () => 'm' + session.current + 'x' + ++sequence.current;
-  const stop = useCallback(() => { running.current?.stop(); running.current = undefined; setActive(undefined); }, []);
-  useEffect(() => () => running.current?.stop(), []);
+  const stop = useCallback(() => { queued.current = []; running.current?.stop(); running.current = undefined; setActive(undefined); }, []);
+  useEffect(() => () => { queued.current = []; running.current?.stop(); running.current = undefined; }, []);
   useEffect(() => {
     const element = thread.current;
     if (!element) return;
@@ -39,18 +41,28 @@ export function App({ pace = { chars: 8, delay: 20 } }: { pace?: { chars: number
     window.addEventListener('keydown', close);
     return () => window.removeEventListener('keydown', close);
   }, [menu]);
-  function respond(prompt: string, item?: Demo, action?: Action, reply?: string) {
-    stop();
-    const id = nextId(), text = reply ?? (item ? demoSource(item, id) : fallback);
+  function startReply({ id, text }: Reply) {
     const replay = createReplay(text, () => pace, () => {
       setMessages(current => current.map(message => message.id === id ? { ...message, pending: false } : message));
-      if (running.current === replay) { running.current = undefined; setActive(undefined); }
+      if (running.current === replay) {
+        running.current = undefined;
+        const next = queued.current.shift();
+        if (next) startReply(next); else setActive(undefined);
+      }
     });
     running.current = replay; follow.current = true;
-    setMessages(current => [...current, { id: nextId(), role: 'user', text: prompt, action }, { id, role: 'assistant', text, stream: replay.stream, pending: true }]);
+    setMessages(current => [...current, { id, role: 'assistant', text, stream: replay.stream, pending: true }]);
     setActive(id); setMenu(false);
   }
+  function respond(prompt: string, item?: Demo, action?: Action, reply?: string) {
+    if (!action) stop();
+    const id = nextId(), text = reply ?? (item ? demoSource(item, id) : fallback);
+    const user: Message = { id: nextId(), role: 'user', text: prompt, action };
+    setMessages(current => [...current, user]);
+    if (running.current) queued.current.push({ id, text }); else startReply({ id, text });
+  }
   function onAction(action: Action) {
+    if (action.type === 'copy') return;
     let reply = 'Got it — I’ve noted your choice. Your changes stay in this conversation. You can keep exploring above, or ask me for the next part of the plan.';
     if (action.component === 'estimate' && action.type === 'use') {
       const path = action.id + '.items.seats.qty', current = store.get(path);

@@ -99,6 +99,61 @@ test('stop and new chat cancel an unfinished response without resurrecting messa
   expect(x.container.querySelectorAll('[data-message]')).toHaveLength(0);
 });
 
+test('actions queue their replies in order without truncating the active stream', async () => {
+  const pace = { ...fast }, x = render(<App pace={pace} />);
+  fireEvent.click(x.getByRole('button', { name: 'Cards & badges' }));
+  await waitFor(() => expect(x.queryByRole('button', { name: 'Stop response' }) === null).toBe(true));
+  pace.chars = 1; pace.delay = 5;
+  fireEvent.click(x.getByRole('button', { name: 'Markdown' }));
+  fireEvent.click(x.getByRole('button', { name: 'Choose concierge' }));
+  fireEvent.click(x.getByRole('button', { name: 'Choose self-serve' }));
+  expect(x.container.querySelectorAll('[data-message=user]')).toHaveLength(4);
+  expect(x.container.querySelectorAll('[data-message=assistant]')).toHaveLength(2);
+  expect(x.queryByText(/Got it — I’ve noted/)).toBeNull();
+  pace.chars = fast.chars; pace.delay = 0;
+  await waitFor(() => expect(x.container.querySelectorAll('[data-message=assistant]')).toHaveLength(4));
+  await waitFor(() => expect(x.queryByRole('button', { name: 'Stop response' }) === null).toBe(true));
+  const replies = x.container.querySelectorAll('[data-message=assistant]');
+  expect(replies[1].textContent).toContain('The goal isn’t perfection');
+  expect(replies[2].textContent).toContain('Got it — I’ve noted');
+  expect(replies[3].textContent).toContain('Got it — I’ve noted');
+});
+
+test.each(['Stop response', 'New chat'])('%s discards queued action replies', async control => {
+  const pace = { ...fast }, x = render(<App pace={pace} />);
+  fireEvent.click(x.getByRole('button', { name: 'Cards & badges' }));
+  await waitFor(() => expect(x.queryByRole('button', { name: 'Stop response' }) === null).toBe(true));
+  pace.chars = 1; pace.delay = 5;
+  fireEvent.click(x.getByRole('button', { name: 'Markdown' }));
+  fireEvent.click(x.getByRole('button', { name: 'Choose concierge' }));
+  fireEvent.click(x.getByRole('button', { name: control }));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(x.queryByRole('button', { name: 'Stop response' }) === null).toBe(true);
+  expect(x.queryByText(/Got it — I’ve noted/)).toBeNull();
+  expect(x.container.querySelectorAll('[data-message=assistant]')).toHaveLength(control === 'New chat' ? 0 : 2);
+});
+
+test('copy stays local and leaves a streaming response running', async () => {
+  const clipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => {} } });
+  try {
+    const pace = { ...fast }, x = render(<App pace={pace} />);
+    fireEvent.click(x.getByRole('button', { name: 'Code' }));
+    await waitFor(() => expect(x.queryByRole('button', { name: 'Stop response' }) === null).toBe(true));
+    pace.chars = 1; pace.delay = 5;
+    fireEvent.click(x.getByRole('button', { name: 'Markdown' }));
+    await act(async () => { fireEvent.click(x.getByRole('button', { name: 'Copy code' })); });
+    expect(x.container.querySelectorAll('[data-message=user]')).toHaveLength(2);
+    expect(x.container.querySelectorAll('[data-message=assistant]')).toHaveLength(2);
+    pace.chars = fast.chars; pace.delay = 0;
+    await waitFor(() => expect(x.getByText(/The goal isn’t perfection/)).toBeDefined());
+    await waitFor(() => expect(x.queryByRole('button', { name: 'Stop response' }) === null).toBe(true));
+  } finally {
+    if (clipboard) Object.defineProperty(navigator, 'clipboard', clipboard);
+    else Reflect.deleteProperty(navigator, 'clipboard');
+  }
+});
+
 test('router handles specific artifact and mockup requests, fallback and distinct message namespaces', () => {
   expect(replyFor('build a react artifact')?.id).toBe('artifact-react');
   expect(replyFor('a/b variants')?.id).toBe('mockup-ab');

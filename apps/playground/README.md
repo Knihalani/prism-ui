@@ -6,7 +6,7 @@ A minimal chat interface, with a registry-backed sidebar of working examples. Me
 
 All assistant messages share one localStorage-backed store. Each reply gets its own explicit component IDs, so repeated demos do not collide. New chat clears the thread and resets the playground persistence namespace. Thread text itself is not persisted. The store/persistence module and reusable parser fixtures are retained.
 
-Component actions become user messages with expandable JSON payloads, followed by scripted replies. Submitting an estimate demonstrates an agent state patch by increasing its seat count by one (up to 25).
+Component actions become user messages with expandable JSON payloads; their scripted replies queue behind any active response. Copy stays local without adding chat messages. Stop, New chat, or another prompt/example cancels queued replies. Only sending a typed prompt or starting New chat clears the composer draft. Submitting an estimate demonstrates an agent state patch by increasing its seat count by one (up to 25).
 
 `src/catalogue.ts` defines grouped, realistic examples and routing keywords; newly registered components are also discovered from the registry. Both artifact and mockup plugins are enabled. Mockup images use a local SVG; React artifacts use the artifact package’s pinned CDN compiler/import map.
 
