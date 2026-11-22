@@ -26,6 +26,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const penValue = options.controls?.pen ?? pen, colorValue = options.controls?.color ?? color;
   const setPenValue = options.controls?.setPen ?? setPen, setColorValue = options.controls?.setColor ?? setColor;
   const gesture = useRef<{ points: FeedbackPoint[]; clientX: number; clientY: number } | null>(null);
+  const pending = useRef<{ id: string; rollback(): void } | null>(null);
   const completeRef = useRef(complete); completeRef.current = complete;
   const grow = (height: number) => setContentHeight(old => completeRef.current ? Math.max(1, height) : Math.max(old, height, 400));
   useEffect(() => { const persist = () => ctx.store.set(`${component!.id}.feedback`, feedback.toJSON(), { history: false }); persist(); return feedback.subscribe(persist); }, [feedback, ctx.store, component?.id]);
@@ -49,7 +50,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const resolved = props.previous ? previousAsResolved(props.previous) : [];
   function open(id: string, fresh = false) { const item = feedback.getState().items.find(item => item.id === id); if (!item) return; setEditing({ id, fresh, text: item.comment }); setComment(item.comment); setActive(id); }
   function remove(id: string) { feedback.remove(id); setEditing(null); announce(labels.removed); }
-  function close(restoreFocus = false) { setEditing(null); if (restoreFocus) canvas.current?.focus({ preventScroll: true }); }
+  function close(restoreFocus = false) { pending.current = null; setEditing(null); if (restoreFocus) canvas.current?.focus({ preventScroll: true }); }
   function popoverPosition(x: number, y: number) {
     const popupWidth = Math.min(320, containerWidth - 24), popupHeight = 180;
     const left = Math.max(12 / scale, Math.min(width - (popupWidth + 12) / scale, x / 100 * width));
@@ -60,11 +61,15 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   function save(restoreFocus = false) { if (editing) feedback.edit(editing.id, { comment }); close(restoreFocus); }
   useEffect(() => {
     if (!editing) return;
-    const outside = (event: globalThis.PointerEvent) => { if (!(event.target instanceof Element) || !event.target.closest('.prism-mockup__popover')) save(); };
+    const outside = (event: globalThis.PointerEvent) => {
+      if (event.target instanceof Element && event.target.closest('.prism-mockup__popover')) return;
+      if (editing.fresh && !comment.trim() && feedback.getState().items.find(item => item.id === editing.id)?.kind !== 'drawing') cancel(false);
+      else save();
+    };
     document.addEventListener('pointerdown', outside, true);
     return () => document.removeEventListener('pointerdown', outside, true);
   }, [editing, comment]);
-  function cancel() { if (editing?.fresh && !editing.text) feedback.remove(editing.id); close(!!editing); }
+  function cancel(restoreFocus = true) { if (editing?.fresh && !editing.text && pending.current?.id === editing.id) pending.current.rollback(); close(restoreFocus && !!editing); }
   async function target(id: string, rect: HitRect, client?: FeedbackPoint) {
     if (framed) { const hit = await controller.current?.hit(rect); if (hit?.target && feedback.getState().items.some(item => item.id === id)) feedback.edit(id, { target: hit.target, targetBox: hit.target.box }); }
     else if (kind === 'svg' && client) {
@@ -77,7 +82,9 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     }
   }
   function add(rect: HitRect, points?: FeedbackPoint[], client?: FeedbackPoint) {
+    const rollback = feedback.checkpoint();
     const item = points ? feedback.addDrawing({ points, color: colorValue }) : rect.w !== undefined ? feedback.addRegion({ ...rect, w: rect.w, h: rect.h ?? 0 }) : feedback.addPin(rect);
+    pending.current = { id: item.id, rollback };
     open(item.id, true); announce(labels.added.replace('{n}', String(item.n)));
     if (points) {
       const center = { x: item.x + (item.w ?? 0) / 2, y: item.y + (item.h ?? 0) / 2 }, bounds = canvas.current?.getBoundingClientRect();

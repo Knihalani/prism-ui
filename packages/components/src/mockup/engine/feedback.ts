@@ -222,6 +222,17 @@ export function createFeedback(init: FeedbackInit = {}) {
   return {
     getState: () => state,
     subscribe(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; },
+    checkpoint() {
+      const draft = copy(state) as FeedbackState, history = copy(past), redo = copy(future), operationName = lastOperation, operationTime = lastTime;
+      let restored = false;
+      return () => {
+        if (restored) return;
+        restored = true;
+        past.splice(0, past.length, ...history); future.splice(0, future.length, ...redo);
+        lastOperation = operationName; lastTime = operationTime;
+        publish(applyBoxes(draft));
+      };
+    },
     addPin(input: PinInput) { return add('pin', { x: clamp(input.x), y: clamp(input.y), comment: input.comment ?? '', ...(input.target ? { target: input.target } : {}) }, input.targetBox); },
     addRegion(input: RegionInput) { return add('region', { ...box(input), comment: input.comment ?? '', ...(input.target ? { target: input.target } : {}) }, input.targetBox); },
     addDrawing(input: DrawingInput) { return add('drawing', { ...drawing(input), comment: input.comment ?? '', ...(input.color === undefined ? {} : { color: input.color }) }); },

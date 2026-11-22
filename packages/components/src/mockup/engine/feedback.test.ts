@@ -9,6 +9,24 @@ function fixture() {
 }
 
 describe('feedback state and history', () => {
+  test('rolling back creation and async target metadata restores an empty undo/redo history', () => {
+    for (const kind of ['pin', 'region'] as const) {
+      const { model } = fixture(), initial = model.toJSON(), rollback = model.checkpoint();
+      const item = kind === 'pin' ? model.addPin({ x: 10, y: 20 }) : model.addRegion({ x: 10, y: 20, w: 30, h: 40 });
+      model.edit(item.id, { target: { selector: '#cta' }, targetBox: { x: 0, y: 0, w: 50, h: 50 } });
+      rollback(); expect(model.toJSON()).toEqual(initial); expect(model.canUndo).toBe(false); expect(model.canRedo).toBe(false);
+      model.undo(); model.redo(); expect(model.toJSON()).toEqual(initial);
+      model.setOverall('Later'); rollback(); expect(model.getState().overall).toBe('Later');
+    }
+  });
+  test('rollback preserves the entire preexisting undo/redo chain and typing coalescing', () => {
+    const { model, tick } = fixture(); model.setOverall('Kept'); tick(1000); model.setOverall('Redo me'); model.undo();
+    const rollback = model.checkpoint(), initial = model.toJSON();
+    const item = model.addPin({ x: 5, y: 5 }); model.edit(item.id, { target: { selector: 'button' } }); rollback();
+    expect(model.toJSON()).toEqual(initial); expect(model.canUndo).toBe(true); expect(model.canRedo).toBe(true);
+    model.undo(); expect(model.getState().overall).toBe(''); model.redo(); expect(model.getState().overall).toBe('Kept'); model.redo(); expect(model.getState().overall).toBe('Redo me'); expect(model.getState().items).toEqual([]);
+    const next = fixture(); next.model.setOverall('a'); const cancel = next.model.checkpoint(); next.model.addRegion({ x: 1, y: 1, w: 1, h: 1 }); cancel(); next.tick(200); next.model.setOverall('ab'); next.model.undo(); expect(next.model.getState().overall).toBe('');
+  });
   test('empty state, immutable snapshots, subscriptions and no-op identity', () => {
     const { model } = fixture();
     const initial = model.getState();

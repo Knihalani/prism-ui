@@ -49,6 +49,23 @@ test('Escape and Enter in a comment return focus to the keyboard canvas', () => 
   expect(document.activeElement).toBe(canvas); expect(x.view.queryByRole('dialog')).toBeNull();
   expect(x.view.getByRole('button', { name: 'Comment 1: Saved from keyboard' })).toBeDefined();
 });
+test('Escape and empty outside-cancel restore history, including a prior redo, after real target resolution', async () => {
+  for (const kind of ['pin', 'region'] as const) for (const outside of [false, true]) {
+    const x = setup();
+    x.change(x.view.getByRole('textbox', { name: 'Overall feedback' }), 'Keep me');
+    fireEvent.click(x.view.getByRole('button', { name: 'Undo' }));
+    const undo = x.view.getByRole('button', { name: 'Undo' }) as HTMLButtonElement, redo = x.view.getByRole('button', { name: 'Redo' }) as HTMLButtonElement;
+    expect(undo.disabled).toBe(true); expect(redo.disabled).toBe(false);
+    await act(async () => { x.pointer('pointerdown', 200, 100); x.pointer('pointerup', kind === 'pin' ? 200 : 500, kind === 'pin' ? 100 : 300); });
+    expect((x.store.get('review.feedback') as any).items[0].target).toBeDefined();
+    if (outside) fireEvent.pointerDown(x.view.getByRole('textbox', { name: 'Overall feedback' }));
+    else fireEvent.keyDown(x.view.getByRole('textbox', { name: 'Add a comment…' }), { key: 'Escape' });
+    expect(x.view.queryByRole('dialog')).toBeNull(); expect((x.store.get('review.feedback') as any).items).toEqual([]);
+    expect(undo.disabled).toBe(true); expect(redo.disabled).toBe(false);
+    fireEvent.click(redo); expect((x.view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('Keep me'); expect((x.store.get('review.feedback') as any).items).toEqual([]);
+    x.view.unmount();
+  }
+});
 test('drawings hit test their bounding-box centre, follow layout and still submit their path', async () => {
   const x = setup(); fireEvent.click(x.view.getByRole('button', { name: 'Draw' }));
   await act(async () => { x.pointer('pointerdown', 400, 50); x.pointer('pointerup', 600, 100); });
