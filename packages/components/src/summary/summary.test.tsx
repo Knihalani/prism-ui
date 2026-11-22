@@ -30,11 +30,13 @@ test('summary renders frame, numbered citations, checklist owners and formatted 
   expect(view.getByRole('group').getAttribute('data-state')).toBe('done');
   expect(view.getByRole('group').hasAttribute('data-prism-enter')).toBe(true);
   expect(view.getByRole('heading', { name: 'Action items' })).toBeDefined();
-  expect(pointButtons(view).length).toBe(2); expect(pointButtons(view)[0].textContent).toBe('Ready to launch[1]');
+  expect(pointButtons(view).length).toBe(2); expect(pointButtons(view)[0].textContent).toBe('Ready to launch1');
   expect(view.getByText('Keep current pricing').tagName).toBe('P');
   expect(view.getAllByRole('checkbox').length).toBe(2); expect(view.getByText('MC').getAttribute('aria-hidden')).toBe('true');
   expect(view.getByText('Jan 15, 2020').getAttribute('data-tone')).toBe('warning'); expect(view.getByText('Next week')).toBeDefined();
-  expect(view.getByRole('button', { name: 'Undo' })).toBeDefined();
+  expect(view.getByRole('button', { name: 'Undo' }).title).toBe('Undo');
+  expect(view.getByRole('button', { name: 'Ask about this' }).title).toBe('Ask about this');
+  expect(view.container.querySelector('[data-part="citation"]')?.textContent).toBe('1');
   expect((view.getByRole('button', { name: 'Send action items' }) as HTMLButtonElement).disabled).toBe(false);
   view.container.querySelectorAll('[data-prism="summary"]').forEach(part => expect(part.classList.contains('prism-summary__' + part.getAttribute('data-part'))).toBe(true));
   expect(defaultRegistry.docs()).toContain('### summary'); expect(defaultRegistry.docs()).toContain('Summary bullets with optional inline citations');

@@ -35,7 +35,7 @@
 @media (hover: none) { .prism-root .prism-runbook__toolbar > button { opacity: 1; } }
 @keyframes prism-runbook-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 @keyframes prism-runbook-draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
-.prism-root .prism-runbook__root path { stroke-dasharray: 24; }
+.prism-root .prism-runbook__root .prism-check path { stroke-dasharray: 24; }
 .prism-root .prism-runbook__root .prism-check path { animation: prism-runbook-draw var(--prism-duration, 400ms) var(--prism-ease-spring, cubic-bezier(.2,.8,.2,1.15)) both; }
 .prism-root .prism-runbook__skeleton[data-prism-skeleton-line] { width: var(--prism-skeleton-width, 80%); height: var(--prism-skeleton-height, 22px); background: var(--prism-fill, #8881); border-radius: 4px; }
 .prism-root[data-animate="false"] .prism-runbook__root *, .prism-root [data-animate="false"] .prism-runbook__root * { animation: none; transition: none; }
@@ -54,3 +54,7 @@
 .prism-root .prism-runbook__root [data-prism="codeblock"][data-part="label"] { display: none; }
 .prism-root .prism-runbook__root [data-prism="codeblock"] pre { padding-right: 112px; }
 @media (hover: none) { .prism-root .prism-runbook__root [data-prism="codeblock"][data-part="header"] { opacity: 1; } }
+
+.prism-root .prism-runbook__toolbar { flex-wrap: nowrap; }
+.prism-root .prism-runbook__progress { order: 1; margin-left: 10px; gap: 8px; white-space: nowrap; }
+.prism-root .prism-runbook__track { width: 28px; }

@@ -6,6 +6,13 @@ export interface SummarySource { quote?: string; title?: string; url?: string }
 export interface SummaryPoint { text: string; source?: SummarySource }
 export interface SummaryAction { text: string; owner?: string; due?: string }
 export interface SummaryProps { id?: string; title?: string; points?: SummaryPoint[]; actions?: SummaryAction[] }
+function labelToolbar(root: HTMLElement | null) {
+  root?.querySelectorAll<HTMLButtonElement>('[data-prism="summary"][data-part="toolbar"] > button').forEach(button => {
+    const label = button.textContent?.trim();
+    if (label) { button.setAttribute('aria-label', label); button.title = label; }
+  });
+}
+function SummarySurface(props: HTMLAttributes<HTMLElement>) { return <section {...props} ref={labelToolbar} />; }
 function Point(props: HTMLAttributes<HTMLLIElement>) { return <li {...props} />; }
 function Source(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
 function Action(props: HTMLAttributes<HTMLLIElement>) { return <li {...props} />; }
@@ -62,12 +69,12 @@ export function Summary({ props, complete }: PrismComponentProps<SummaryProps>) 
   const presentation = usePresentation(), { unstyled } = usePrism();
   const model = useSummary(props, { complete }), { parts } = model;
   const PointSlot = useSlot('summary', 'point', Point), SourceSlot = useSlot('summary', 'source', Source), ActionSlot = useSlot('summary', 'action', Action), EmptySlot = useSlot('summary', 'empty', Empty);
-  return <ComponentFrame component="summary" title={props.title ?? (complete ? 'Summary' : '')} label={props.title || 'Summary'} state={model.state} ask undo actions={<><span {...parts.progress}>{model.actions.length > 0 ? model.completed + ' of ' + model.actions.length + ' complete' : ''}</span><button {...parts.send} className={[parts.send.className, !unstyled && 'prism-pill'].filter(Boolean).join(' ')} type="button" disabled={!model.canSend} onClick={model.send}>{model.sent ? `Sent · ${model.actions.length} action items` : 'Send action items'}<svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d={model.sent ? 'm3 8 3 3 7-7' : 'M2 8h11M9 3l5 5-5 5'} /></svg></button></>}>
+  return <ComponentFrame as={SummarySurface} component="summary" title={props.title ?? (complete ? 'Summary' : '')} label={props.title || 'Summary'} state={model.state} ask undo actions={<><span {...parts.progress}>{model.actions.length > 0 ? model.completed + ' of ' + model.actions.length + ' complete' : ''}</span><button {...parts.send} className={[parts.send.className, !unstyled && 'prism-pill'].filter(Boolean).join(' ')} type="button" disabled={!model.canSend} onClick={model.send}>{model.sent ? `Sent · ${model.actions.length} action items` : 'Send action items'}<svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d={model.sent ? 'm3 8 3 3 7-7' : 'M2 8h11M9 3l5 5-5 5'} /></svg></button></>}>
     <ul {...parts.points} data-presentation={presentation['data-state']} data-entering={presentation['data-entering']} ref={model.pointListRef}>
       {model.loadingPoints && [0, 1, 2].map(index => <li {...parts.skeleton} data-prism-skeleton-line="" key={index} aria-hidden="true" />)}
       {model.points.map(point => <PointSlot {...parts.point} style={{ ...parts.point.style, '--prism-enter-delay': `${point.index * 45}ms` } as CSSProperties} key={point.index}>
         <div {...parts.pointRow}>
-          {point.source ? <button {...parts.pointButton} type="button" id={point.buttonId} aria-expanded={point.expanded} aria-controls={point.panelId} onClick={() => model.togglePoint(point.index)} onKeyDown={model.onPointKeyDown}><span {...parts.pointText}>{point.text || (!complete ? <span {...parts.skeleton} aria-hidden="true" /> : '')}</span><span {...parts.citation} className={[parts.citation.className, !unstyled && 'prism-chip'].filter(Boolean).join(' ')}>[{point.number}]</span></button> : <p {...parts.pointText} tabIndex={0} onKeyDown={model.onPointKeyDown}>{point.text || (!complete ? <span {...parts.skeleton} aria-hidden="true" /> : '')}</p>}
+          {point.source ? <button {...parts.pointButton} type="button" id={point.buttonId} aria-expanded={point.expanded} aria-controls={point.panelId} onClick={() => model.togglePoint(point.index)} onKeyDown={model.onPointKeyDown}><span {...parts.pointText}>{point.text || (!complete ? <span {...parts.skeleton} aria-hidden="true" /> : '')}</span><span {...parts.citation} className={[parts.citation.className, !unstyled && 'prism-chip'].filter(Boolean).join(' ')}>{point.number}</span></button> : <p {...parts.pointText} tabIndex={0} onKeyDown={model.onPointKeyDown}>{point.text || (!complete ? <span {...parts.skeleton} aria-hidden="true" /> : '')}</p>}
           <button {...parts.pointAsk} className={[parts.pointAsk.className, !unstyled && 'prism-icon-btn'].filter(Boolean).join(' ')} type="button" aria-label={'Ask about point ' + (point.index + 1)} onClick={() => model.askPoint(point.index)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M3 3h10v7H7l-4 3Z" /></svg></button>
         </div>
         {point.source && <SourceSlot {...parts.source} id={point.panelId} role="region" aria-label={'Source ' + point.number} aria-labelledby={point.buttonId} aria-hidden={!point.expanded} inert={!point.expanded} data-expanded={point.expanded ? '' : undefined}>

@@ -2,8 +2,9 @@
 .prism-root .prism-summary__title:empty { width: 44%; min-width: 120px; height: 24px; background: var(--prism-muted-soft); border-radius: var(--prism-radius-sm, 4px); }
 .prism-root .prism-summary__body { padding: var(--prism-space3) var(--prism-space6) var(--prism-space5); }
 .prism-root .prism-summary__points, .prism-root .prism-summary__actionList { margin: 0; padding: 0; list-style: none; }
-.prism-root .prism-summary__point { position: relative; padding-left: var(--prism-space4); }
-.prism-root .prism-summary__point::before { content: ""; position: absolute; left: 1px; top: 24px; width: 4px; height: 4px; border-radius: 50%; background: var(--prism-muted); }
+.prism-root .prism-summary__points { list-style: disc; padding-left: var(--prism-space6); }
+.prism-root .prism-summary__point { position: relative; padding-left: var(--prism-space1); margin-block: var(--prism-space1); }
+.prism-root .prism-summary__point::marker { color: var(--prism-text); }
 .prism-root .prism-summary__pointRow { position: relative; display: flex; flex-direction: column; gap: var(--prism-space2); align-items: stretch; min-height: 48px; padding-block: var(--prism-space3); }
 .prism-root .prism-summary__pointButton { display: flex; flex: 1; align-items: baseline; gap: var(--prism-space2); padding: 0; border: 0; background: transparent; color: var(--prism-text); text-align: left; font: inherit; line-height: 1.65; cursor: pointer; border-radius: var(--prism-radius-sm, 4px); }
 .prism-root .prism-summary__pointButton:hover .prism-summary__citation, .prism-root .prism-summary__pointButton[aria-expanded="true"] .prism-summary__citation { background: var(--prism-accent-soft, color-mix(in oklab, currentColor 5%, transparent)); color: var(--prism-accent, #5559e8); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--prism-accent, #5559e8) 24%, transparent); }
@@ -47,22 +48,21 @@
 
 .prism-root .prism-summary__root:not([data-variant="card"]) { border: 0; background: transparent; box-shadow: none; border-radius: 0; overflow: visible; font-variant-numeric: tabular-nums; }
 .prism-root .prism-summary__root:not([data-variant="card"]) > :is(.prism-summary__header, .prism-summary__body, .prism-summary__footer) { padding: 0; border: 0; background: transparent; box-shadow: none; }
-.prism-root .prism-summary__root:not([data-variant="card"]) > .prism-summary__header { margin-bottom: 20px; gap: 12px; }
+.prism-root .prism-summary__root:not([data-variant="card"]) > .prism-summary__header { margin-bottom: 8px; gap: 12px; }
 .prism-root .prism-summary__title { font-family: var(--prism-font-display, inherit); font-size: 1.125rem; font-weight: 600; letter-spacing: -.025em; line-height: 1.4; }
 .prism-root .prism-summary__toolbar { gap: 4px; }
-.prism-root .prism-summary__toolbar > button { width: 28px; height: 28px; padding: 0; border: 0; background: transparent; box-shadow: none; font-size: 0; opacity: 0; transition: opacity var(--prism-duration-fast, 150ms); color: var(--prism-muted, #777); }
+.prism-root .prism-summary__toolbar > button { width: 28px; height: 28px; padding: 0; gap: 0; overflow: visible; border: 0; background: transparent; box-shadow: none; font-size: 0; opacity: 0; transition: opacity var(--prism-duration-fast, 150ms); color: var(--prism-muted, #777); }
 .prism-root .prism-summary__root:is(:hover,:focus-within) .prism-summary__toolbar > button { opacity: 1; }
 .prism-root .prism-summary__root .prism-pill { border-radius: var(--prism-radius-pill, 999px); box-shadow: none; min-height: 40px; padding: 9px 18px; gap: 10px; font-weight: 500; }
 .prism-root .prism-summary__root .prism-pill:focus-visible { outline: 2px solid var(--prism-accent, #5559e8); outline-offset: 3px; box-shadow: 0 0 20px var(--prism-accent-glow, #7772); }
 @media (hover: none) { .prism-root .prism-summary__toolbar > button { opacity: 1; } }
 @keyframes prism-summary-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 @keyframes prism-summary-draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
-.prism-root .prism-summary__root path { stroke-dasharray: 24; }
+.prism-root .prism-summary__root .prism-check path { stroke-dasharray: 24; }
 .prism-root .prism-summary__root .prism-check path { animation: prism-summary-draw var(--prism-duration, 400ms) var(--prism-ease-spring, cubic-bezier(.2,.8,.2,1.15)) both; }
 .prism-root .prism-summary__root:not([data-variant="card"]) > .prism-summary__footer { margin-top: 22px; justify-content: space-between; gap: 16px; }
-.prism-root .prism-summary__pointRow { flex-direction: row; align-items: baseline; gap: 8px; padding-block: 10px; min-height: 44px; }
-.prism-root .prism-summary__point::before { top: 22px; width: 3px; height: 3px; }
-.prism-root .prism-summary__citation { position: relative; top: -.3em; font-size: 10px; padding: 0 4px; border-radius: 4px; background: var(--prism-fill, #8881); }
+.prism-root .prism-summary__pointRow { flex-direction: row; align-items: baseline; gap: 8px; padding-block: 2px; min-height: 0; }
+.prism-root .prism-summary__citation { position: relative; font-size: .6875rem; line-height: 1.4; min-width: 1.4em; justify-content: center; padding: 0 3px; border-radius: var(--prism-radius-pill, 999px); background: var(--prism-fill, #8881); }
 .prism-root .prism-summary__pointAsk, .prism-root .prism-summary__point:is(:hover,:focus-within) .prism-summary__pointAsk { position: static; width: 26px; height: 26px; flex: 0 0 26px; padding: 5px; margin: 0; align-self: baseline; background: transparent; }
 .prism-root .prism-summary__sourceMeta { border-left: 2px solid var(--prism-accent, #5559e8); background: var(--prism-accent-soft, #7771); padding-bottom: 12px; margin-bottom: 10px; }
 .prism-root .prism-summary__quote { border-left-color: var(--prism-accent, #5559e8); background: var(--prism-accent-soft, #7771); padding-bottom: 4px; }
@@ -86,7 +86,7 @@
 
 .prism-root .prism-summary__pointButton { display: block; }
 .prism-root .prism-summary__pointButton .prism-summary__pointText { display: inline; }
-.prism-root .prism-summary__citation { margin-left: 5px; vertical-align: super; top: 0; }
+.prism-root .prism-summary__citation { margin-left: 2px; vertical-align: super; top: 0; }
 .prism-root .prism-summary__actionLabel { position: relative; }
 .prism-root .prism-summary__tick { position: absolute; left: 0; top: calc(50% - 9px); color: var(--prism-accent-contrast, var(--prism-bg, white)); pointer-events: none; opacity: 0; }
 .prism-root .prism-summary__checkbox:checked + .prism-summary__tick { opacity: 1; }
@@ -96,3 +96,5 @@
 
 .prism-root[data-animate="false"] .prism-summary__loading *, .prism-root [data-animate="false"] .prism-summary__loading * { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-root .prism-summary__loading * { animation: none; transition: none; } }
+
+.prism-root .prism-summary__toolbar svg { display: block; width: 16px; height: 16px; overflow: visible; stroke-width: 1.5; }

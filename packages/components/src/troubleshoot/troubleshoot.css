@@ -10,10 +10,10 @@
 .prism-root .prism-troubleshoot__stepTitle { margin: 0 0 var(--prism-space3); color: var(--prism-text); font-size: var(--prism-text-lg); font-weight: 600; line-height: 1.4; letter-spacing: -.015em; }
 .prism-root .prism-troubleshoot__text { margin: 0 0 var(--prism-space4); white-space: pre-wrap; }
 .prism-root .prism-troubleshoot__hint { margin: var(--prism-space3) 0; color: var(--prism-muted); font-size: var(--prism-text-sm); }
-.prism-root .prism-troubleshoot__question { margin: var(--prism-space5) 0 var(--prism-space3); font-size: var(--prism-text-sm); font-weight: 500; }
+.prism-root .prism-troubleshoot__question { margin: var(--prism-space5) 0 var(--prism-space3); font-size: var(--prism-text-base); font-weight: 400; }
 .prism-root .prism-troubleshoot__actions { display: flex; flex-wrap: wrap; gap: var(--prism-space2); }
 .prism-root :is(.prism-troubleshoot__primary, .prism-troubleshoot__ghost) { display: inline-flex; align-items: center; justify-content: center; min-height: var(--prism-space7); padding: var(--prism-space2) var(--prism-space4); border: 1px solid transparent; border-radius: var(--prism-radius-sm, 4px); font: 500 var(--prism-text-sm)/1.4 var(--prism-font-sans); cursor: pointer; transition: background var(--prism-duration-fast, 150ms) var(--prism-ease), border-color var(--prism-duration-fast, 150ms) var(--prism-ease); }
-.prism-root .prism-troubleshoot__primary { background: var(--prism-accent, #5559e8); color: var(--prism-bg); box-shadow: var(--prism-shadow-sm); }
+.prism-root .prism-troubleshoot__primary { background: var(--prism-accent, #5559e8); color: var(--prism-accent-contrast, var(--prism-bg, #fff)); box-shadow: var(--prism-shadow-sm); }
 .prism-root .prism-troubleshoot__primary:hover:not(:disabled) { background: color-mix(in srgb, var(--prism-accent, #5559e8) 90%, var(--prism-text)); }
 .prism-root .prism-troubleshoot__ghost { background: transparent; color: var(--prism-muted); }
 .prism-root .prism-troubleshoot__command { position: relative; }
@@ -50,7 +50,7 @@
 @media (hover: none) { .prism-root .prism-troubleshoot__toolbar > button { opacity: 1; } }
 @keyframes prism-troubleshoot-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 @keyframes prism-troubleshoot-draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
-.prism-root .prism-troubleshoot__root path { stroke-dasharray: 24; }
+.prism-root .prism-troubleshoot__root .prism-check path { stroke-dasharray: 24; }
 .prism-root .prism-troubleshoot__root .prism-check path { animation: prism-troubleshoot-draw var(--prism-duration, 400ms) var(--prism-ease-spring, cubic-bezier(.2,.8,.2,1.15)) both; }
 .prism-root .prism-troubleshoot__step, .prism-root .prism-troubleshoot__result { min-height: 0; padding: 0; border: 0; background: transparent; box-shadow: none; border-radius: 0; }
 .prism-root .prism-troubleshoot__result:is([data-state="resolved"],[data-state="sent"]) { border: 0; background: transparent; }
@@ -86,3 +86,5 @@
 .prism-root .prism-troubleshoot__root [data-prism="codeblock"][data-part="label"] { display: none; }
 .prism-root .prism-troubleshoot__root [data-prism="codeblock"] pre { padding-right: 112px; }
 @media (hover: none) { .prism-root .prism-troubleshoot__root [data-prism="codeblock"][data-part="header"] { opacity: 1; } }
+
+.prism-root .prism-troubleshoot__question { font-size: var(--prism-text-base); line-height: 1.65; }
