@@ -68,7 +68,7 @@
   outline: 2px solid var(--prism-accent, #525252);
   outline-offset: 1px;
 }
-.prism-artifact__preview { position: relative; background: var(--prism-artifact-panel); }
+.prism-artifact__preview { position: relative; isolation: isolate; background: var(--prism-artifact-panel); }
 .prism-artifact__viewport > iframe { display: block; inline-size: 100%; block-size: 100%; border: 0; }
 .prism-artifact__empty, .prism-artifact__error {
   position: absolute;
