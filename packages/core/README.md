@@ -44,6 +44,27 @@ For the measured paragraph, fence, container and JSON cases, total streaming par
 
 `mount(element, {components: {card: (node, document) => DOMNode}})` returns `{update(root)}`. The mount owns the element's child list; identical top-level block references are never mutated or moved. Changed blocks replace their subtree; custom components can return functional DOM nodes with event listeners. No browser globals are needed until mounting.
 
+## Plugins
+
+Pass `{ plugins }` to `parse(text, options)` or `createParser(options)`. Plugins are ordered objects with a `name` and optional `inline`, `block`, and `transform` hooks. No plugins (or an empty array) uses the original parser paths.
+
+```ts
+const mentions = {
+  name: 'mentions',
+  inline: [{ trigger: '@', parse(src: string, pos: number) {
+    const m = /^@(\w+)/.exec(src.slice(pos));
+    return m ? { node: { type: 'component', name: 'mention', props: { user: m[1] } }, end: pos + m[0].length } : null;
+  } }],
+};
+parse('Hello @Ada', { plugins: [mentions] });
+```
+
+Inline triggers must be one character; return `null` to leave built-in parsing in control, or a node and an exclusive `end` offset. Core assigns node keys, including descendant keys. Inline hooks work in headings, lists, quotes, tables, and nested inline markup; code spans and escapes remain literal. Streaming with inline extensions re-tokenizes the provisional block.
+
+A block hook has `test(line)`, `continue(line, state)`, and `finish(lines)`. A matching top-level line opens the block; `state` is a per-block mutable `{ lines, data: {} }`, with `lines` containing accepted lines, including the opener. Returning false from `continue` finalizes the block and reprocesses that line normally. To consume a closing delimiter, accept it and record closure in `state.data`, then reject the next line. `finish` receives a copy of the accepted lines, plus the current partial line during previews. Core assigns `key` and `complete` (false during previews, true at finalization, including end of input). Block hooks also work inside directive containers, but not inside list items or blockquotes.
+
+`transform(node)` may return a replacement node. It runs on each newly finalized subtree before deep freezing, and on provisional previews; already frozen descendants are skipped. Completed nodes are transformed once and retained by reference. Exported types include `Plugin`, `InlineExt`, `BlockExt`, and `BlockState`.
+
 ## Development
 
 From the monorepo root: `bun install`, `bun test`, `bun run typecheck`, `bun run bench`.
