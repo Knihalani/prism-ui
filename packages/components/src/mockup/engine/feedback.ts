@@ -181,6 +181,7 @@ export function createFeedback(init: FeedbackInit = {}) {
     return true;
   };
   const applyBoxes = (draft: FeedbackState) => {
+    for (const key of ['mockup', 'variant', 'device'] as const) { if (state[key] === undefined) delete draft[key]; else draft[key] = state[key]; }
     for (const item of draft.items) {
       const a = item.anchor, b = a && boxes[a.key];
       if (!a || !b || b.w <= 0 || b.h <= 0) continue;
@@ -260,7 +261,7 @@ export function createFeedback(init: FeedbackInit = {}) {
     },
     remove(id: string) { operation(draft => { draft.items = draft.items.filter(item => item.id !== id); }); },
     setOverall(text: string) { operation(draft => { draft.overall = text; }, 'overall'); },
-    setContext(value: FeedbackContext) { operation(draft => { for (const key of ['mockup', 'variant', 'device'] as const) if (key in value) { if (value[key] === undefined) delete draft[key]; else draft[key] = value[key]; } }); },
+    setContext(value: FeedbackContext) { const draft = copy(state) as FeedbackState; for (const key of ['mockup', 'variant', 'device'] as const) if (key in value) { if (value[key] === undefined) delete draft[key]; else draft[key] = value[key]; } publish(draft); },
     clear() { operation(draft => { draft.items = []; draft.overall = ''; }); },
     undo() {
       if (!past.length) return;
