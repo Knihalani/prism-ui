@@ -28,9 +28,8 @@ test('dotted item ids share nested quantity and enabled paths with controls and 
 test('streaming partial and invalid currencies fall back until a complete code arrives', () => {
   const store = createStore();
   const view = render(<Prism source={'```ui:estimate\n{"id":"quote","items":[{"id":"seats","label":"Seats","price":20}],"currency":"'} done={false} store={store} animate={false} locale="en-US" currency="GBP" />);
-  for (const currency of ['', 'U', 'US', 'U1D', 'USDD', 'USD', 'EUR']) {
+  for (const [currency, code] of [['', 'GBP'], ['U', 'GBP'], ['US', 'GBP'], ['U1D', 'GBP'], ['USDD', 'GBP'], ['USD', 'USD'], ['EUR', 'EUR'], ['eur', 'EUR'], [' eUr ', 'EUR'], ['  ', 'GBP'], [' u ', 'GBP']]) {
     view.rerender(<Prism source={'```ui:estimate\n{"id":"quote","items":[{"id":"seats","label":"Seats","price":20}],"currency":"' + currency} done={false} store={store} animate={false} locale="en-US" currency="GBP" />);
-    const code = /^[A-Z]{3}$/.test(currency) ? currency : 'GBP';
     expect(view.container.querySelector('[data-part="total-value"]')?.textContent).toBe(new Intl.NumberFormat('en-US', { style: 'currency', currency: code }).format(20));
   }
   view.rerender(<Prism source={source({ currency: 'EUR', items: [{ id: 'seats', label: 'Seats', price: 20 }] })} store={store} animate={false} locale="en-US" currency="GBP" />);

@@ -9,10 +9,9 @@ afterEach(cleanup);
 
 test('num and calc tolerate streaming and invalid currency overrides', () => {
   const store = createStore(), view = render(<Prism source="" done={false} store={store} animate={false} locale="en-US" currency="GBP" />);
-  for (const currency of ['', 'U', 'US', 'U1D', 'USDD', 'USD', 'EUR']) {
+  for (const [currency, code] of [['', 'GBP'], ['U', 'GBP'], ['US', 'GBP'], ['U1D', 'GBP'], ['USDD', 'GBP'], ['USD', 'USD'], ['EUR', 'EUR'], ['eur', 'EUR'], [' eUr ', 'EUR'], ['  ', 'GBP'], [' u ', 'GBP']]) {
     const source = `:num[12]{id=n format=currency currency="${currency}"} :calc[n*2]{format=currency currency="${currency}"}`;
     view.rerender(<Prism source={source} done={false} store={store} animate={false} locale="en-US" currency="GBP" />);
-    const code = /^[A-Z]{3}$/.test(currency) ? currency : 'GBP';
     const format = new Intl.NumberFormat('en-US', { style: 'currency', currency: code });
     expect(view.getByRole('slider').textContent).toBe(format.format(12));
     expect(view.container.querySelector('[data-prism="calc"]')?.textContent).toBe(format.format(24));
