@@ -1,4 +1,7 @@
 export { ComponentFrame, useFrame } from './frame';
+export * from './runbook';
+export * from './troubleshoot';
+export * from './ask';
 export * from './num';
 export * from './estimate';
 export * from './pick';
