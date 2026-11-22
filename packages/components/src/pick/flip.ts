@@ -1,0 +1,18 @@
+import { useLayoutEffect, useRef } from 'react';
+
+export function useFlip(enabled: boolean) {
+  const ref = useRef<HTMLDivElement>(null), previous = useRef(new Map<string, DOMRect>());
+  useLayoutEffect(() => {
+    const next = new Map<string, DOMRect>(), animations: Animation[] = [];
+    ref.current?.querySelectorAll<HTMLElement>('[data-option]').forEach(element => {
+      const id = element.dataset.option!, rect = element.getBoundingClientRect(), before = previous.current.get(id);
+      next.set(id, rect);
+      if (enabled && before && element.animate && (before.x !== rect.x || before.y !== rect.y)) {
+        animations.push(element.animate([{ transform: `translate(${before.x - rect.x}px, ${before.y - rect.y}px)` }, { transform: 'translate(0, 0)' }], { duration: 280, easing: 'cubic-bezier(.2,.65,.3,1)' }));
+      }
+    });
+    previous.current = next;
+    return () => animations.forEach(animation => animation.cancel());
+  });
+  return ref;
+}
