@@ -205,7 +205,7 @@ export function useDataTable(props: DataTableProps, ctx: PrismContextValue, rawR
     if (options.duration && vm.pageSize && before && before.pageSize !== vm.pageSize && before.height > height) resizeAnimation.current = element.animate?.([{ minHeight: before.height + 'px' }, { minHeight: height + 'px' }], options);
   }, [vm.complete, ctx.animate, ctx.unstyled, props.height, vm.pageSize, vm.rowHeight, vm.visible.length, skeletonCount]);
   const resetScroll = () => { if (scroll.current) scroll.current.scrollTop = 0; };
-  const sortBy = (key: string) => { if (!vm.complete) return; resetScroll(); if (!vm.virtual) { flip.current?.cancel(); flip.current = createFlip(motion()); flip.current.measure(elements()); sortPending.current = true; } vm.toggleSort(key); };
+  const sortBy = (key: string) => { if (!vm.complete) return; resetScroll(); if (!vm.virtual) { const next = createFlip(motion()); next.measure(elements()); flip.current?.cancel(); flip.current = next; sortPending.current = true; } vm.toggleSort(key); };
   const payload = vm.sent?.payload as Partial<DataTableSelection> | undefined, sent = vm.sent !== undefined;
   return { ...vm, props: { ...props, actionHint: vm.strings.actionHint }, frame, scroll, pageCheckbox, tableId, hintId, appearance, hostBackground, animate: ctx.animate, unstyled: ctx.unstyled,
     presentation: Object.fromEntries(Object.entries(frame.rootProps).filter(([key]) => key.startsWith('data-'))),

@@ -1,0 +1,10 @@
+:root { font: 16px/1.6 system-ui, sans-serif; color: #0d0d0d; background: #fff; color-scheme: light; }
+:root[data-mode="dark"] { color: #ececec; background: #212121; color-scheme: dark; }
+:root[data-width="320"] { font-size: 13px; }
+body { margin: 0; }
+.motion-page { max-width: calc(100% - 32px); margin: 0 auto; padding: 24px 0 64px; }
+.motion-page section[data-demo] { margin: 0 0 48px; }
+.motion-toolbar { display: flex; justify-content: flex-end; margin-bottom: 24px; }
+.motion-label { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; opacity: .65; }
+.motion-label h2 { font-size: 12px; font-weight: 500; margin: 0; }
+.motion-label button, .motion-toolbar button { font: inherit; color: inherit; background: transparent; border: 1px solid color-mix(in srgb, currentColor 25%, transparent); border-radius: 4px; padding: 3px 8px; font-size: 12px; cursor: pointer; }

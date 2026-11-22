@@ -1,6 +1,7 @@
 import { expect, test, mock } from 'bun:test';
 import { Window } from 'happy-dom';
 import { createFlip } from './flip';
+import { spring } from '@prism-ui/react';
 
 function setup() {
   const window = new Window();
@@ -23,7 +24,7 @@ test('optional configurable entry animation respects reduced motion', () => {
     const flip = createFlip({ enter: { scale: 0.9, translateY: 4 }, reducedMotion });
     flip.measure([]); flip.play([element]);
     if (reducedMotion) expect(element.animate).not.toHaveBeenCalled();
-    else expect(element.animate).toHaveBeenCalledWith([{ transform: 'translate(0px, 4px) scale(0.9)', opacity: 0 }, { transform: 'none', opacity: '1' }], { duration: 250, easing: 'ease' });
+    else expect(element.animate).toHaveBeenCalledWith([{ transform: 'translate(0px, 4px) scale(0.9)', opacity: 0 }, { transform: 'none', opacity: '1' }], { duration: 500, easing: spring({ response: .35, damping: .85 }).easing });
     flip.cancel();
   }
 });
@@ -72,7 +73,7 @@ test('CSS fallback restores original styles on completion and cancellation', asy
   element.style.transform = 'scale(2)'; element.style.transition = 'opacity 1s';
   const flip = createFlip({ duration: 5, reducedMotion: false });
   flip.measure([element]); move(10); flip.play();
-  expect(element.style.transition).toBe('transform 5ms ease');
+  expect(element.style.transition).toBe(`transform 5ms ${spring({ response: .35, damping: .85 }).easing}`);
   expect(element.style.transform).toBe('scale(2)');
   await new Promise(resolve => setTimeout(resolve, 15));
   expect(element.style.transition).toBe('opacity 1s');

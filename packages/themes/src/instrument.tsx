@@ -1,17 +1,33 @@
-import { Children, type HTMLAttributes, type InputHTMLAttributes } from 'react';
-import { PrismPart, defineTheme, usePart, useStrings } from '@prism-ui/react';
+import { Children, createElement, forwardRef, type InputHTMLAttributes, type ReactElement } from 'react';
+import { PrismPart, defineTheme, useFormat, usePart, useStrings } from '@prism-ui/react';
 import type { EstimateModel } from '@prism-ui/components/estimate';
+import type { FrameSlotProps } from '@prism-ui/components/frame';
+import type { usePick } from '@prism-ui/components/pick';
 
-function Chassis({ as, children, ...props }: HTMLAttributes<HTMLElement> & { as?: unknown }) {
-  return <section {...props}>{[0, 1, 2, 3].map(index => <i key={index} className="instrument-screw" data-corner={index} aria-hidden="true" />)}{children}</section>;
-}
-function Item({ as, row, children, ...props }: HTMLAttributes<HTMLDivElement> & { as?: unknown; row: EstimateModel['rows'][number] }) {
+type SlotProps = FrameSlotProps<unknown>;
+type PickRow = ReturnType<typeof usePick>['rows'][number];
+const supported = new Set(['estimate', 'pick', 'mockup', 'view', 'frame', 'runbook', 'troubleshoot', 'summary']);
+const Chassis = forwardRef<HTMLElement, SlotProps>(function Chassis({ as = 'section', model, frame, overflow, children, ...props }, ref) {
+  const component = (props as Record<string, unknown>)['data-prism'] as string;
+  return createElement(as, { ...props, ref, 'data-instrument-chassis': supported.has(component) ? '' : undefined },
+    supported.has(component) && [0, 1, 2, 3].map(index => <i key={index} className="instrument-screw" data-corner={index} aria-hidden="true" />), children);
+});
+const Header = forwardRef<HTMLElement, SlotProps>(function Header({ as = 'header', model, frame, overflow, children, ...props }, ref) {
+  const component = (props as Record<string, unknown>)['data-prism'] as string, strings = useStrings(component);
+  return createElement(as, { ...props, ref, 'data-instrument-header': supported.has(component) ? '' : undefined }, children,
+    supported.has(component) && <span className="instrument-index">{strings.sectionIndex}</span>);
+});
+const Tool = forwardRef<HTMLElement, SlotProps>(function Tool({ as = 'button', model, frame, overflow, children, ...props }, ref) {
+  const component = (props as Record<string, unknown>)['data-prism'] as string;
+  return createElement(as, { ...props, ref, 'data-instrument-tool': supported.has(component) ? '' : undefined }, supported.has(component) ? props['aria-label'] : children);
+});
+const Item = forwardRef<HTMLDivElement, SlotProps & { row: EstimateModel['rows'][number] }>(function Item({ as, model, frame, overflow, row, children, ...props }, ref) {
   const pieces = Children.toArray(children);
-  return <div {...props} data-optional={row.optional ? '' : undefined}>{row.optional ? <>{pieces[1]}{pieces[0]}{pieces[3]}</> : children}</div>;
-}
-function Toggle({ as, ...props }: InputHTMLAttributes<HTMLInputElement> & { as?: unknown }) {
-  return <input {...props} role="switch" />;
-}
+  return <div {...props} ref={ref} data-optional={row.optional ? '' : undefined}>{row.optional ? <>{pieces[1]}{pieces[0]}{pieces[3]}</> : children}</div>;
+});
+const Toggle = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { as?: unknown }>(function Toggle({ as, ...props }, ref) {
+  return <input {...props} ref={ref} role="switch" />;
+});
 const segments = {
   a: '8,2 36,2 41,7 35,12 9,12 3,7', b: '37,14 42,9 42,35 37,40 32,35 32,19',
   c: '37,42 42,47 42,73 37,78 32,73 32,47', d: '9,70 35,70 41,75 36,80 8,80 3,75',
@@ -19,32 +35,75 @@ const segments = {
   g: '9,36 35,36 40,41 35,46 9,46 4,41',
 };
 const digits: Record<string, string> = { '0': 'abcdef', '1': 'bc', '2': 'abdeg', '3': 'abcdg', '4': 'bcfg', '5': 'acdfg', '6': 'acdefg', '7': 'abc', '8': 'abcdefg', '9': 'abcdfg', '-': 'g' };
-export function SegmentedTotal({ as, estimate, children, ...props }: HTMLAttributes<HTMLDivElement> & { as?: unknown; estimate: EstimateModel }) {
+function Segments({ value }: { value: string }) {
+  const chars = [...value];
+  return <svg viewBox={`0 0 ${Math.max(1, chars.length) * 48} 84`} aria-hidden="true" data-segmented="">{chars.map((char, index) => <g key={index} transform={`translate(${index * 48} 0)`}>{char === '.' ? <circle cx="8" cy="75" r="5" fill="currentColor" /> : Object.entries(segments).map(([key, points]) => <polygon key={key} points={points} fill="currentColor" opacity={(digits[char] ?? '').includes(key) ? .96 : .055} />)}</g>)}</svg>;
+}
+export const SegmentedTotal = forwardRef<HTMLDivElement, SlotProps & { estimate: EstimateModel }>(function SegmentedTotal({ as, model, frame, overflow, estimate, children, ...props }, ref) {
   const strings = useStrings('estimate');
-  const text = String(Number(estimate.displayedTotal.toFixed(2))), chars = [...text];
+  const text = String(Number(estimate.displayedTotal.toFixed(estimate.fractionDigits)));
   const label = usePart('estimate', 'total-label'), value = usePart('estimate', 'total-value'), live = usePart('estimate', 'live');
-  return <div {...props}>
+  return <div {...props} ref={ref}>
     <div className="instrument-readout-label"><PrismPart as="span" {...label}>{estimate.totalLabel}</PrismPart><span>{strings.displayLabel}</span></div>
-    <PrismPart as="span" {...value} aria-hidden="true"><small>{estimate.totalText.replace(/[\d.,\s-]/g, '')}</small><svg viewBox={`0 0 ${chars.length * 48} 84`} aria-hidden="true" data-segmented="">{chars.map((char, index) => <g key={index} transform={`translate(${index * 48} 0)`}>{char === '.' ? <circle cx="8" cy="75" r="5" fill="currentColor" /> : Object.entries(segments).map(([key, points]) => <polygon key={key} points={points} fill="currentColor" opacity={(digits[char] ?? '').includes(key) ? .96 : .055} />)}</g>)}</svg></PrismPart>
+    <PrismPart as="span" {...value} aria-hidden="true"><small>{estimate.totalText.replace(/[\d.,\s-]/g, '')}</small><Segments value={text} /></PrismPart>
     <PrismPart as="span" {...live} aria-live="polite">{estimate.finalTotalText}</PrismPart>
   </div>;
-}
+});
+const Faders = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<typeof usePick> }>(function Faders({ as, model, frame, overflow, pick, children, ...props }, ref) {
+  const strings = useStrings('pick');
+  return <div {...props} ref={ref} data-instrument-faders="">{pick.chips.map(criterion => {
+    const weight = criterion.weight;
+    return <label className="instrument-fader" key={criterion.id}><span>{criterion.label}<output>{weight}</output></span><input type="range" min={0} max={3} step={1} value={weight} aria-label={`${criterion.label} ${strings.weightLabel}`} onInput={event => pick.setWeight(criterion.id, Number(event.currentTarget.value))} /><i aria-hidden="true" /></label>;
+  })}</div>;
+});
+const Module = forwardRef<HTMLElement, SlotProps & { row: PickRow }>(function Module({ as = 'article', model, frame, overflow, row, children, ...props }, ref) {
+  const strings = useStrings('pick'), format = useFormat();
+  const part = usePart('pick', 'item', !row.ready ? 'loading' : row.chosen ? 'chosen' : row.top ? 'top' : 'ready');
+  const title = usePart('pick', 'title'), subtitle = usePart('pick', 'subtitle'), bars = usePart('pick', 'bars'), choose = usePart('pick', 'choose');
+  return createElement(as, { ...part, ...props, ref, 'data-instrument-module': '', 'data-option': row.id, 'data-top': row.top || undefined, 'aria-busy': !row.ready }, <>
+    <div className="instrument-module-index">{strings.optionIndex.replace('{n}', format.number(row.index + 1, { minimumIntegerDigits: 2 }))}<i data-instrument-led="" aria-hidden="true" /></div>
+    <PrismPart as="h4" {...title}>{row.title}</PrismPart>{row.subtitle && <PrismPart as="p" {...subtitle}>{row.subtitle}</PrismPart>}
+    <div className="instrument-score" data-instrument-score="" role="img" aria-label={row.ready ? `${row.matchText} ${row.matchLabel}` : strings.emptyLabel}><Segments value={row.ready ? String(Math.round(row.match * 100)) : '--'} /></div>
+    <PrismPart as="div" {...bars}>{row.bars.map(bar => <div className="instrument-rating" key={bar.id}><span>{bar.label}</span><span>{format.number(Math.round(bar.score * 10))}{strings.ratingSuffix}</span></div>)}</PrismPart>
+    {!!row.pros.length && <ul className="instrument-notes">{row.pros.map((pro, index) => <li key={index}>{pro}</li>)}</ul>}
+    {!!row.cons.length && <ul className="instrument-notes">{row.cons.map((con, index) => <li key={index}>{con}</li>)}</ul>}
+    {row.tag && <span className="instrument-tag">{row.tag}</span>}
+    {row.chosen && <span className="instrument-tag" role="status">{row.chosenLabel}</span>}
+    <div className="instrument-module-actions">{!row.top && <PrismPart as="button" {...choose} type="button" disabled={!row.ready} onClick={row.onChoose}>{strings.chooseTemplate.replace('{title}', row.title)}</PrismPart>}</div>
+  </>);
+});
+const Modules = forwardRef<HTMLDivElement, SlotProps>(function Modules({ as, model, frame, overflow, children, ...props }, ref) {
+  const strings = useStrings('pick');
+  const items = Children.toArray(children) as ReactElement<{ row?: PickRow }>[];
+  const leader = items.find(item => item.props.row?.top)?.props.row;
+  const ordered = [...items].sort((a, b) => (a.props.row?.index ?? 0) - (b.props.row?.index ?? 0));
+  return <div {...props} ref={ref} data-instrument-modules=""><div className="instrument-module-grid">{ordered}</div>{leader && <div className="instrument-pick-footer"><p>{leader.title} {strings.leads} {leader.reason}</p><button type="button" disabled={!leader.ready} onClick={leader.onChoose}>{leader.chosen ? leader.chosenLabel : strings.chooseTemplate.replace('{title}', leader.title)}</button></div>}</div>;
+});
 export const instrument = defineTheme({
   name: 'instrument',
   tokens: {
-    bg: '#d4d3ce', surface: '#e2e1db', surfaceRaised: '#f1f0ea', text: '#292a25', textMuted: '#64655c', textSubtle: '#797a71',
-    border: '#b6b6ad', borderStrong: '#919289', accent: '#e55b25', accentText: '#a83e16', onAccent: '#fff', focus: '#e55b25',
+    bg: '#d4d3cc', surface: '#e1e0dd', surfaceRaised: '#ecebe8', text: '#262522', textMuted: '#575653', textSubtle: '#62615b',
+    border: '#b9b8b5', borderStrong: '#a5a4a1', accent: '#e55b25', accentText: '#a83e16', onAccent: '#231b12', focus: '#a83e16',
     fontBody: '"IBM Plex Sans", system-ui, sans-serif', fontDisplay: '"IBM Plex Sans", system-ui, sans-serif',
     fontMono: '"IBM Plex Mono", ui-monospace, monospace', fontNumeric: '"IBM Plex Mono", ui-monospace, monospace',
     radiusSm: '3px', radiusMd: '5px', radiusLg: '7px', textXs: '10px', textSm: '12px', textBase: '14px',
     elevation1: '0 2px 0 #b0b0a6', elevation2: '0 3px 0 #a7a89c, 0 8px 14px #292a2512',
+    motionFast: '100ms', motionBase: '160ms', motionSlow: '220ms',
   },
+  dark: { bg: '#1d1e1b', surface: '#2a2b27', surfaceRaised: '#383a34', text: '#f0eee4', textMuted: '#c3c2b7', textSubtle: '#b4b4a8', border: '#4e5047', borderStrong: '#74766b', accent: '#e55b25', accentText: '#ff945f', onAccent: '#231b12', focus: '#ff945f', elevation1: '0 2px 0 #141510', elevation2: '0 3px 0 #141510, 0 8px 14px #0003' },
   components: {
+    frame: { slots: { root: Chassis, header: Header, undo: Tool, ask: Tool, overflowTrigger: Tool }, strings: { undoLabel: 'Undo', askLabel: 'Ask', moreLabel: 'Tools' }, tokens: { display: '#1b1c18', 'display-ink': '#eeede3', lcd: '#bebdb8', 'lcd-ink': '#34352e', groove: '#a1a09d', 'groove-shadow': '#73726f', 'key-shadow': '#aeadaa', 'chassis-shadow': '#b8b7b4' } },
     estimate: {
       slots: { root: Chassis, item: Item, checkbox: Toggle, total: SegmentedTotal },
-      strings: { title: 'Estimate / 01', submit: 'Send estimate', sentLabel: 'Sent', totalLabel: 'Total', displayLabel: 'LIVE' },
-      tokens: { display: '#252620', signal: '#e55b25', 'display-border': '#171812', 'key-shadow': '#a7a89c' },
+      strings: { title: 'Week-one estimate', sectionIndex: '01 / EST', submit: 'Send estimate', sentLabel: 'Sent', totalLabel: 'Total', displayLabel: 'LIVE' },
+      tokens: { display: '#1b1c18', signal: '#e55b25', 'display-border': '#171812', 'key-shadow': 'var(--prism-frame-key-shadow)' },
     },
+    pick: { slots: { criteria: Faders, item: Module, list: Modules }, strings: { question: 'What matters to you?', sectionIndex: '02 / PICK', optionIndex: '{n} / APPROACH', chooseTemplate: 'Choose {title} ↗', ratingSuffix: '/10', leads: 'leads.' } },
+    runbook: { strings: { sectionIndex: '05 / GUIDE' } },
+    summary: { strings: { sectionIndex: '06 / NOTES' } },
+    troubleshoot: { strings: { sectionIndex: '07 / CHECK' } },
+    mockup: { strings: { sectionIndex: '03 / DESIGN' } },
+    view: { strings: { sectionIndex: '04 / SETUP' } },
   },
   css: `
     :scope .prism-estimate__root { position:relative; overflow:hidden; border:1px solid var(--prism-border-strong); border-radius:var(--prism-radius-lg); box-shadow:inset 0 1px 0 var(--prism-surface-raised), 0 3px 0 var(--prism-border), 0 10px 24px #292a2512; padding:9px; background:var(--prism-surface); }
@@ -84,6 +143,183 @@ export const instrument = defineTheme({
     :scope .prism-estimate__actions { width:100%; }
     :scope .prism-estimate__submit { width:100%; min-height:40px; border:1px solid color-mix(in srgb,var(--prism-accent) 70%,var(--prism-text)); border-radius:3px; background:var(--prism-accent); box-shadow:0 3px 0 color-mix(in srgb,var(--prism-accent) 60%,var(--prism-text)); font:500 11px/1.4 var(--prism-font-mono); text-transform:uppercase; letter-spacing:.08em; }
     :scope .prism-estimate__submit[data-sent] { background:var(--prism-bg); color:var(--prism-text); border-color:var(--prism-border-strong); box-shadow:0 2px 0 var(--prism-border); opacity:1; }
-    @media (max-width:480px) { :scope .prism-estimate__item { grid-template-columns:minmax(0,1fr) auto 7ch; } :scope .prism-estimate__details { flex-basis:auto; } :scope .prism-estimate__amount { margin:0; } }
+    :scope { container-type:inline-size; box-sizing:border-box; padding:28px; background:var(--prism-bg); --prism-prose-measure:760px; }
+    :scope > * { min-width:0; width:100%; box-sizing:border-box; }
+    :scope[data-prism-theme="dark"], :scope [data-prism-theme="dark"] { --prism-frame-lcd:#1b1c18; --prism-frame-lcd-ink:#c3c2b7; --prism-frame-groove:#161713; --prism-frame-groove-shadow:#0e0f0c; --prism-frame-key-shadow:#141510; --prism-frame-chassis-shadow:#11120f; }
+    :scope [data-instrument-chassis] { box-sizing:border-box; min-width:0; position:relative; padding:24px; border:1px solid var(--prism-border-strong); border-radius:var(--prism-radius-lg); background:var(--prism-surface); box-shadow:0 3px 0 var(--prism-frame-chassis-shadow), inset 0 1px 0 var(--prism-surface-raised); }
+    :scope [data-instrument-header] { position:relative; display:flex; align-items:center; flex-wrap:wrap; gap:10px 16px; margin:0 0 22px; padding:0 0 16px; border-bottom:1px solid var(--prism-border); }
+    :scope [data-instrument-header] > :is(h2,h3) { margin:0; flex:1; min-width:0; white-space:normal; overflow:visible; text-overflow:clip; font:500 11px/1.5 var(--prism-font-mono); letter-spacing:.06em; text-transform:uppercase; }
+    :scope .instrument-index { margin-left:auto; font:9px/1.5 var(--prism-font-mono); color:var(--prism-text-muted); letter-spacing:.04em; white-space:nowrap; }
+    :scope [data-instrument-tool] { opacity:1; border:1px solid var(--prism-border-strong); padding:5px 8px; min-width:0; min-height:27px; border-radius:var(--prism-radius-sm); background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:0 2px 0 var(--prism-frame-key-shadow),inset 0 1px 0 var(--prism-surface); font:9px/1.3 var(--prism-font-mono); text-transform:uppercase; }
+    :scope [data-instrument-tool] { width:auto; height:auto; }
+    :scope :is(.prism-estimate__toolbar,.prism-pick__toolbar,.prism-view__toolbar,.prism-mockup__toolbar) { position:absolute; right:0; bottom:calc(100% + 6px); opacity:0; pointer-events:none; transition:opacity var(--prism-motion-fast) var(--prism-motion-ease); }
+    :scope [data-instrument-chassis]:is(:hover,:focus-within) :is(.prism-estimate__toolbar,.prism-pick__toolbar,.prism-view__toolbar,.prism-mockup__toolbar) { opacity:1; pointer-events:auto; }
+    :scope .prism-mockup__root > [data-instrument-header] > .prism-mockup__toolbar { position:static; opacity:1; pointer-events:auto; }
+    :scope .prism-mockup__root[data-instrument-chassis] .prism-mockup__headerActions { opacity:1; pointer-events:auto; }
+    :scope .prism-estimate__root { overflow:visible; }
+    :scope .prism-estimate__body, :scope .prism-estimate__footer { padding:0; }
+    :scope .prism-estimate__footer { margin-top:16px; }
+    :scope .prism-estimate__item { min-height:96px; }
+    :scope .instrument-readout-label { color:var(--prism-frame-display-ink); }
+    :scope .instrument-readout-label > :last-child { opacity:1; }
+    :scope .prism-estimate__submit { color:var(--prism-on-accent); }
+    :scope .prism-pick__body { display:block; padding:0; }
+    :scope .prism-pick__criteria { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; padding:0; border:0; margin:26px 0 30px; }
+    :scope .instrument-fader { min-width:0; display:block; }
+    :scope .instrument-fader > span { display:flex; justify-content:space-between; gap:8px; font:10px/1.5 var(--prism-font-mono); text-transform:uppercase; }
+    :scope .instrument-fader output { color:var(--prism-text-muted); }
+    :scope .instrument-fader input { appearance:none; display:block; box-sizing:border-box; width:100%; height:7px; margin:21px 0 12px; border:1px solid var(--prism-border-strong); border-radius:1px; background:var(--prism-frame-groove); box-shadow:inset 0 2px 0 var(--prism-frame-groove-shadow),0 1px 0 var(--prism-surface-raised); cursor:pointer; }
+    :scope .instrument-fader input::-webkit-slider-thumb { appearance:none; box-sizing:border-box; width:18px; height:27px; border:1px solid var(--prism-border-strong); border-radius:2px; background:linear-gradient(to bottom,var(--prism-surface-raised) 45%,var(--prism-text-muted) 45%,var(--prism-text-muted) 50%,var(--prism-surface-raised) 50%); box-shadow:0 2px 1px var(--prism-frame-key-shadow),inset 0 1px 0 var(--prism-surface); }
+    :scope .instrument-fader input::-moz-range-thumb { box-sizing:border-box; width:18px; height:27px; border:1px solid var(--prism-border-strong); border-radius:2px; background:linear-gradient(to bottom,var(--prism-surface-raised) 45%,var(--prism-text-muted) 45%,var(--prism-text-muted) 50%,var(--prism-surface-raised) 50%); box-shadow:0 2px 1px var(--prism-frame-key-shadow); }
+    :scope .instrument-fader > i { display:block; height:5px; margin-inline:2px; background:repeating-linear-gradient(90deg,var(--prism-border-strong) 0 1px,transparent 1px calc((100% - 1px)/10)); }
+    :scope .prism-pick__list { display:block; padding:0; }
+    :scope .instrument-module-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:11px; align-items:stretch; }
+    :scope [data-instrument-module] { min-width:0; min-height:0; display:flex; flex-direction:column; padding:15px 14px; background:var(--prism-bg); border:1px solid var(--prism-border); border-top:3px solid var(--prism-border); border-radius:var(--prism-radius-sm); box-shadow:inset 0 1px 0 var(--prism-surface-raised); }
+    :scope [data-instrument-module][data-top] { border-color:var(--prism-accent); }
+    :scope .instrument-module-index { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:25px; color:var(--prism-text-muted); font:9px/1.5 var(--prism-font-mono); }
+    :scope [data-instrument-led] { flex:none; width:5px; height:5px; border-radius:50%; background:var(--prism-text-muted); box-shadow:inset 0 1px 1px var(--prism-frame-key-shadow); }
+    :scope [data-top] [data-instrument-led] { background:var(--prism-accent); box-shadow:0 0 0 2px var(--prism-surface),0 0 6px var(--prism-accent); }
+    :scope [data-instrument-module] .prism-pick__title { margin:0; font:600 16px/1.25 var(--prism-font-body); }
+    :scope [data-instrument-module] .prism-pick__subtitle { flex:1; margin:10px 0 18px; min-height:36px; font:11px/1.6 var(--prism-font-body); color:var(--prism-text-muted); }
+    :scope .instrument-score { display:flex; align-items:center; min-width:0; padding:10px 8px; margin-block:16px 12px; min-height:60px; background:var(--prism-frame-lcd); border:1px solid var(--prism-border-strong); border-radius:2px; color:var(--prism-frame-lcd-ink); box-shadow:inset 0 2px 3px color-mix(in srgb,var(--prism-text) 15%,transparent); }
+    :scope .instrument-score svg { display:block; max-width:100%; width:auto; height:36px; }
+    :scope [data-top] .instrument-score { background:var(--prism-frame-display); color:var(--prism-accent); border-color:var(--prism-estimate-display-border); }
+    :scope [data-instrument-module] .prism-pick__bars { display:grid; gap:0; margin:0; }
+    :scope .instrument-rating { display:flex; justify-content:space-between; gap:6px; padding-block:5px; border-bottom:1px solid var(--prism-border); color:var(--prism-text-muted); font:9px/1.5 var(--prism-font-mono); }
+    :scope .instrument-rating > :first-child { min-width:0; overflow-wrap:anywhere; }
+    :scope .instrument-rating > :last-child { white-space:nowrap; }
+    :scope .instrument-notes { padding-left:14px; font:11px/1.6 var(--prism-font-body); }
+    :scope .instrument-tag { display:block; margin-top:8px; font:10px var(--prism-font-mono); }
+    :scope .instrument-module-actions { min-height:26px; margin-top:10px; }
+    :scope [data-instrument-module] .prism-pick__choose { margin:0; border:0; padding:4px 0; color:var(--prism-text); background:transparent; box-shadow:none; text-align:left; font:9px/1.5 var(--prism-font-mono); text-transform:uppercase; text-decoration:underline; }
+    :scope .instrument-pick-footer { padding-top:21px; }
+    :scope .instrument-pick-footer p { min-height:2.8em; margin:0 0 18px; color:var(--prism-text-muted); font:11px/1.7 var(--prism-font-mono); }
+    :scope .instrument-pick-footer button { width:100%; min-height:42px; padding:10px 14px; border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:0 3px 0 var(--prism-frame-key-shadow),inset 0 1px 0 var(--prism-surface); font:11px/1.5 var(--prism-font-mono); text-transform:uppercase; letter-spacing:.05em; cursor:pointer; }
+    :scope :is([data-instrument-tool],.instrument-pick-footer button,.prism-mockup__header .prism-mockup__button,.prism-view__button,.prism-view__segment) { transition:transform var(--prism-motion-fast) var(--prism-motion-ease),box-shadow var(--prism-motion-fast) var(--prism-motion-ease); }
+    :scope :is([data-instrument-tool],.instrument-pick-footer button,.prism-mockup__header .prism-mockup__button,.prism-view__button,.prism-view__segment):active:not(:disabled) { transform:translateY(2px); box-shadow:inset 0 1px 2px var(--prism-frame-key-shadow); }
+    :scope .prism-mockup__viewport { padding:0; border:0; outline:4px solid var(--prism-border); border-radius:3px; background:var(--prism-frame-display); box-shadow:inset 0 2px 4px var(--prism-frame-display); }
+    :scope .prism-mockup__stage { border-radius:0; outline:0; }
+    :scope .prism-mockup__header .prism-mockup__button { border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); box-shadow:0 2px 0 var(--prism-frame-key-shadow),inset 0 1px 0 var(--prism-surface); color:var(--prism-text); font:10px var(--prism-font-mono); text-transform:uppercase; }
+    :scope .prism-mockup__header .prism-mockup__button[aria-pressed="true"] { color:var(--prism-text); background:var(--prism-bg); box-shadow:inset 0 2px 3px var(--prism-frame-key-shadow); }
+    :scope :is(.prism-view__controlWrap,.prism-view__control) { border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:inset 0 2px 3px color-mix(in srgb,var(--prism-text) 12%,transparent); font:12px/1.7 var(--prism-font-mono); }
+    :scope .prism-view__button[data-variant="primary"] { min-height:40px; padding:10px 14px; border:1px solid color-mix(in srgb,var(--prism-accent) 70%,var(--prism-text)); border-radius:3px; background:var(--prism-accent); color:var(--prism-on-accent); box-shadow:0 3px 0 color-mix(in srgb,var(--prism-accent) 60%,var(--prism-text)),inset 0 1px 0 color-mix(in srgb,var(--prism-accent) 70%,var(--prism-surface-raised)); font:500 11px/1.5 var(--prism-font-mono); text-transform:uppercase; }
+    :scope .prism-view__body { padding:0; }
+    :scope .prism-view__label { font:10px/1.6 var(--prism-font-mono); letter-spacing:.03em; text-transform:uppercase; }
+    :scope .prism-view__controlWrap .prism-view__control { border:0; background:transparent; box-shadow:none; }
+    :scope .prism-view__control { padding:10px 12px; }
+    :scope .prism-view__segmented { gap:5px; padding:0 0 3px; border:0; background:transparent; box-shadow:none; }
+    :scope .prism-view__segment { padding:9px 12px; border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); box-shadow:0 3px 0 var(--prism-frame-key-shadow),inset 0 1px 0 var(--prism-surface); color:var(--prism-text); font:10px/1.4 var(--prism-font-mono); }
+    :scope .prism-view__segment[aria-checked="true"] { background:var(--prism-bg); color:var(--prism-text); box-shadow:inset 0 2px 3px var(--prism-frame-key-shadow); transform:translateY(2px); border-color:var(--prism-border-strong); }
+    :scope .prism-view__switch { width:37px; height:21px; padding:3px; border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-border); box-shadow:inset 0 1px 2px var(--prism-border-strong); }
+    :scope .prism-view__switch[data-state="on"] { background:var(--prism-accent); }
+    :scope .prism-view__thumb { width:13px; height:13px; border-radius:2px; background:var(--prism-surface-raised); border:1px solid var(--prism-border-strong); }
+    :scope .prism-view__switch[data-state="on"] .prism-view__thumb { transform:translateX(16px); }
+    :scope .prism-view__footer { display:block; margin-top:22px; padding:0; border:0; }
+    :scope .prism-view__actions { display:flex; min-width:0; }
+    :scope .prism-view__actions > .prism-view__button[data-variant="primary"] { flex:1; min-width:0; }
+    :scope .prism-heading__root { font-family:var(--prism-font-display); font-weight:600; line-height:1.12; letter-spacing:-.04em; }
+    :scope h1.prism-heading__root { font-size:clamp(34px,5cqw,44px); }
+    :scope :is(h2,h3).prism-heading__root { display:flex; align-items:center; gap:9px; font:500 12px/1.5 var(--prism-font-mono); text-transform:uppercase; letter-spacing:.06em; }
+    :scope :is(h2,h3).prism-heading__root::before { content:""; flex:none; width:8px; height:10px; background:var(--prism-accent); box-shadow:inset 0 1px 0 var(--prism-surface-raised); }
+    :scope .prism-paragraph__root { font:14px/1.6 var(--prism-font-body); }
+    :scope .prism-table__root { border:1px solid var(--prism-border-strong); border-collapse:collapse; background:var(--prism-surface); border-radius:3px; font-variant-numeric:tabular-nums; }
+    :scope .prism-table__root :is(th,td) { padding:10px 14px; border-bottom:1px solid var(--prism-border); background:transparent; }
+    :scope .prism-table__root th { font:10px/1.5 var(--prism-font-mono); text-transform:uppercase; letter-spacing:.04em; background:var(--prism-surface-raised); }
+    :scope .prism-codeblock__root { --prism-codeblock-text:var(--prism-frame-display-ink); --prism-codeblock-text-muted:var(--prism-frame-display-ink); border:2px solid var(--prism-border-strong); border-radius:4px; background:var(--prism-frame-display); color:var(--prism-frame-display-ink); box-shadow:inset 0 2px 5px #0005,0 1px 0 var(--prism-surface-raised); }
+    :scope .prism-codeblock__header { padding:9px 14px; background:transparent; color:var(--prism-frame-display-ink); border-bottom:1px solid var(--prism-border); font:10px var(--prism-font-mono); text-transform:uppercase; }
+    :scope .prism-codeblock__label { color:var(--prism-frame-display-ink); }
+    :scope .prism-codeblock__body { padding:8px 0; background:transparent; }
+    :scope .prism-codeblock__line { padding-inline:14px; }
+    :scope .prism-codeblock__root [class*="prism-tok-"] { color:var(--prism-frame-display-ink); }
+    :scope .prism-codeblock__root :is(.prism-tok-keyword,.prism-tok-number,.prism-tok-boolean) { color:var(--prism-accent); }
+    :scope [data-instrument-chassis] :focus-visible { outline:2px solid var(--prism-focus); outline-offset:3px; }
+    @container (max-width:480px) { :scope .prism-estimate__item { grid-template-columns:minmax(0,1fr) auto; gap:6px 12px; } :scope .prism-estimate__details { flex-basis:auto; grid-row:span 2; } :scope .prism-estimate__amount { grid-column:2; margin:0; } }
+    @container (max-width:540px) {
+      :scope .prism-pick__criteria, :scope .instrument-module-grid { grid-template-columns:1fr; }
+      :scope .prism-pick__criteria { gap:24px; }
+      :scope .instrument-module-index { margin-bottom:15px; }
+      :scope .instrument-pick-footer p { min-height:0; }
+    }
+    @container (max-width:360px) {
+      :scope [data-instrument-chassis] { padding:22px 16px; }
+      :scope .prism-mockup__header { flex-direction:row; }
+      :scope .prism-mockup__toolbar { position:static; order:2; flex-wrap:wrap; justify-content:flex-end; }
+      :scope .prism-mockup__tools { flex:1 1 auto; min-width:0; flex-wrap:wrap; justify-content:flex-end; }
+      :scope .prism-mockup__header .prism-mockup__tools .prism-mockup__button { padding-inline:4px; font-size:9px; min-width:24px; }
+      :scope .prism-view__segment { padding-inline:8px; font-size:9px; }
+    }
+    @media (hover:none) { :scope :is(.prism-estimate__toolbar,.prism-pick__toolbar,.prism-view__toolbar,.prism-mockup__toolbar) { opacity:1; pointer-events:auto; } }
+    @media (prefers-reduced-motion:reduce) { :scope [data-instrument-chassis] *, :scope [data-instrument-chassis] *::after, :scope [data-instrument-chassis] *::before { transition:none; } }
+    :scope[data-animate="false"] [data-instrument-chassis] *, :scope[data-animate="false"] [data-instrument-chassis] *::after, :scope[data-animate="false"] [data-instrument-chassis] *::before, :scope [data-animate="false"] [data-instrument-chassis] *, :scope [data-animate="false"] [data-instrument-chassis] *::after, :scope [data-animate="false"] [data-instrument-chassis] *::before { transition:none; }
+    :scope :is(.prism-runbook__root,.prism-summary__root,.prism-troubleshoot__root,.prism-tabs__root,.prism-callout__root,.prism-card__root,.prism-grid__root) { min-width:0; max-width:100%; box-sizing:border-box; margin-block:28px; }
+    :scope :is(.prism-runbook__body,.prism-summary__body,.prism-troubleshoot__body) { padding:16px 0 0; }
+    :scope .prism-runbook__step[data-numbered="true"] { position:relative; margin:0; padding:16px 0 16px 44px; border:0; border-bottom:1px solid var(--prism-border); border-radius:0; background:none; box-shadow:none; }
+    :scope .prism-runbook__step[data-numbered="true"] .prism-runbook__check { left:-44px; top:0; width:28px; height:28px; font:11px var(--prism-font-mono); }
+    :scope .prism-runbook__step[data-numbered="true"]::before { display:none; }
+    :scope .prism-runbook__stepHeader { flex-wrap:wrap; }
+    :scope .prism-runbook__stepTitle { font-size:14px; }
+    :scope .prism-runbook__stepBody .prism-paragraph__root { font-size:13px; }
+    :scope :is(.prism-runbook__progress,.prism-summary__actionsTitle,.prism-summary__progress,.prism-troubleshoot__position,.prism-grid__meta) { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text-muted); }
+    :scope .prism-runbook__actions { min-width:0; }
+    :scope .prism-runbook__stuck { font:10px var(--prism-font-mono); }
+    :scope .prism-tabs__list { gap:0; min-height:40px; overflow:visible; flex-wrap:wrap; }
+    :scope .prism-tabs__tab { min-width:0; white-space:normal; flex:1; padding:12px 14px; color:var(--prism-text-muted); font:11px/1.5 var(--prism-font-mono); }
+    :scope .prism-tabs__indicator { display:none; }
+    :scope .prism-tab__body { padding:18px 0; }
+    :scope .prism-badge__root { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text); }
+    :scope .prism-badge__root[data-variant="solid"] { background:var(--prism-accent); color:var(--prism-on-accent); }
+    :scope .prism-grid__body { gap:20px; }
+    :scope .prism-grid__body > .prism-card__root { margin:0; }
+    :scope .prism-grid__body > .prism-card__root::before { display:none; }
+    :scope :is(.prism-card__title,.prism-callout__title) { margin:0; }
+    :scope :is(.prism-card__body,.prism-callout__body) > .prism-paragraph__root { font-size:13px; line-height:1.65; }
+    :scope .prism-troubleshoot__step { padding:0; border:0; background:none; box-shadow:none; }
+    :scope .prism-troubleshoot__position { white-space:nowrap; flex:none; }
+    :scope .prism-troubleshoot__stepTitle { display:flex; align-items:center; gap:12px; }
+    :scope .prism-troubleshoot__text { font-size:13px; line-height:1.65; }
+    :scope :is(.prism-summary__send,.prism-troubleshoot__primary) { background:var(--prism-accent); color:var(--prism-on-accent); border:0; font:11px/1.5 var(--prism-font-mono); text-transform:uppercase; padding:10px 16px; }
+    :scope .prism-summary__points { padding:0; }
+    :scope .prism-summary__point { padding-block:12px; border-bottom:1px solid var(--prism-border); }
+    :scope .prism-summary__avatar { color:var(--prism-text); background:var(--prism-surface-raised); }
+    @container (max-width:420px) { :scope .prism-grid__body { grid-template-columns:1fr; } :scope .prism-runbook__actions { flex-basis:100%; justify-content:flex-start; margin:0; } }
+
+    :scope :is(.prism-card__root,.prism-callout__root,.prism-tabs__root) { padding:20px; border:1px solid var(--prism-border-strong); border-radius:4px; background:var(--prism-surface); box-shadow:0 3px 0 var(--prism-frame-key-shadow),inset 0 1px 0 var(--prism-surface-raised); }
+    :scope :is(.prism-card__title,.prism-callout__title,.prism-tabs__title,.prism-grid__title) { font:500 11px/1.5 var(--prism-font-mono); text-transform:uppercase; letter-spacing:.06em; }
+    :scope .prism-callout__root { border-left:3px solid var(--prism-accent); }
+    :scope .prism-callout__icon { color:var(--prism-accent-text); }
+    :scope .prism-tabs__list { gap:6px; padding:14px 0 4px; border:0; }
+    :scope .prism-tabs__tab { border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:0 3px 0 var(--prism-frame-key-shadow); }
+    :scope .prism-tabs__tab[aria-selected="true"] { background:var(--prism-bg); color:var(--prism-text); box-shadow:inset 0 2px 3px var(--prism-frame-key-shadow); transform:translateY(2px); border-top:2px solid var(--prism-accent); }
+    :scope .prism-runbook__check { border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:0 2px 0 var(--prism-frame-key-shadow); }
+    :scope .prism-runbook__check::after { content:""; position:absolute; right:-4px; top:-4px; width:6px; height:6px; border-radius:50%; background:var(--prism-border-strong); border:2px solid var(--prism-surface); }
+    :scope .prism-runbook__check[data-state="current"]::after { background:var(--prism-accent); }
+    :scope .prism-runbook__check[data-state="done"] { color:var(--prism-text); background:var(--prism-bg); border-color:var(--prism-border-strong); box-shadow:inset 0 1px 2px var(--prism-frame-key-shadow); }
+    :scope .prism-runbook__check[data-state="done"]::after { background:var(--prism-accent); box-shadow:0 0 5px var(--prism-accent); }
+    :scope .prism-badge__root { border:1px solid var(--prism-border-strong); border-radius:2px; padding:3px 8px; background:var(--prism-bg); box-shadow:inset 0 1px 2px var(--prism-frame-key-shadow); }
+    :scope .prism-badge__dot { background:var(--prism-accent); }
+    :scope .prism-troubleshoot__position { color:var(--prism-accent); background:var(--prism-frame-display); border:1px solid var(--prism-border-strong); border-radius:2px; padding:5px 8px; }
+    :scope :is(.prism-summary__send,.prism-troubleshoot__primary) { border-radius:3px; box-shadow:0 3px 0 var(--prism-frame-key-shadow); }
+    :scope .prism-summary__quote { background:var(--prism-bg); border-color:var(--prism-accent); }
+
+    :scope .prism-codeblock__root :is(.prism-codeblock__copy,.prism-codeblock__wrap,.prism-codeblock__collapse,.prism-codeblock__ask) { min-height:26px; padding:3px 5px; font:10px/1.4 var(--prism-font-mono); text-transform:uppercase; }
+    :scope .prism-codeblock__actions { gap:6px; }
+    :scope [data-prism="runbook"][data-part="header"] { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; }
+    :scope [data-prism="runbook"][data-part="header"] > [data-part="title"] { grid-area:1/1; }
+    :scope [data-prism="runbook"][data-part="header"] > [class$="-index"] { grid-area:1/2; }
+    :scope [data-prism="runbook"][data-part="header"] > [data-part="toolbar"] { grid-area:2/1/3/-1; position:static; opacity:1; pointer-events:auto; justify-content:flex-start; width:100%; margin-top:8px; }
+    :scope .prism-runbook__progress { flex:1; min-width:0; }
+    :scope .prism-runbook__track { max-width:220px; }
+    :scope .prism-runbook__stepTitle { padding-inline-end:0; }
+    :scope .prism-runbook__actions { position:absolute; inset-block-start:auto; inset-block-end:calc(100% + 4px); right:0; flex-basis:auto; justify-content:flex-end; margin:0; }
+    :scope :is(.prism-summary__header,.prism-troubleshoot__header) > [data-part="toolbar"] { position:absolute; bottom:calc(100% + 6px); right:0; }
+    :scope .prism-summary__root { overflow:visible; }
+    :scope .prism-summary__point { padding-block:0; }
+    :scope .prism-summary__pointRow { min-height:0; padding-block:12px; }
+    :scope .prism-summary__footer { padding:16px 0 0; margin-top:16px; border-top:1px solid var(--prism-border); background:none; gap:12px; flex-wrap:wrap; }
+    :scope .prism-tabs__body { padding:0; }
+    @container (max-width:420px) { :scope .prism-summary__footer { align-items:stretch; flex-direction:column; } :scope .prism-summary__send { width:100%; justify-content:center; } }
+
+    :scope .prism-runbook__check[data-state="current"] { box-shadow:0 2px 0 var(--prism-frame-key-shadow); color:var(--prism-text); background:var(--prism-surface-raised); }
+
   `,
 });

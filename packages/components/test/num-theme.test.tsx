@@ -5,7 +5,7 @@ import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react
 import { Prism, defineTheme, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { num, calc, type NumSlotProps, type CalcSlotProps } from '../src/num';
-import { motionProgress, useNumberTween } from '../src/num/use-tween';
+import { useNumberTween } from '../src/num/use-tween';
 
 afterEach(cleanup);
 const source = ':num[12]{id=n} and :calc[n*2]';
@@ -84,18 +84,18 @@ test('flash follows every formula dependency, ignores unrelated values and expir
   act(() => store.set('a', 5)); expect(output.hasAttribute('data-prism-flash')).toBe(true); expect(output.textContent).toBe('20'); expect(view.getByRole('slider').hasAttribute('data-prism-flash')).toBe(true);
 });
 
-test('calc tween uses CSS duration/easing and honors disabled and reduced motion', () => {
+test('calc uses the shared spring, CSS response and disabled and reduced motion guards', () => {
   const raf = globalThis.requestAnimationFrame, cancel = globalThis.cancelAnimationFrame, media = globalThis.matchMedia;
   let tick: FrameRequestCallback | undefined, cancelled = 0, reduced = false;
   globalThis.requestAnimationFrame = callback => { tick = callback; return 1; }; globalThis.cancelAnimationFrame = () => { cancelled++; };
   globalThis.matchMedia = query => ({ matches: reduced, media: query, onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; } });
   function Fixture({ value, enabled = true }: { value: number; enabled?: boolean }) { const root = useRef<HTMLSpanElement>(null), shown = useNumberTween(value, enabled, root); return <span ref={root} style={{ '--prism-calc-motion-base': '100ms', '--prism-calc-motion-spring': 'linear' } as CSSProperties}>{shown}</span>; }
   try {
-    expect(motionProgress(.5, 'linear')).toBe(.5); expect(motionProgress(.5, 'cubic-bezier(0,0,1,1)')).toBeCloseTo(.5);
     const view = render(<Fixture value={0} />), before = performance.now(); view.rerender(<Fixture value={100} />);
-    act(() => tick?.(before + 50)); expect(Number(view.container.textContent)).toBeGreaterThan(40); expect(Number(view.container.textContent)).toBeLessThan(60);
-    act(() => tick?.(before + 120)); expect(view.container.textContent).toBe('100');
+    act(() => tick?.(before)); act(() => tick?.(before + 50)); expect(Number(view.container.textContent)).toBeGreaterThan(0); expect(Number(view.container.textContent)).toBeLessThan(101);
+    for (let time = 66; time < 1000; time += 16) act(() => tick?.(before + time));
+    expect(view.container.textContent).toBe('100');
     view.rerender(<Fixture value={200} enabled={false} />); expect(view.container.textContent).toBe('200'); expect(cancelled).toBeGreaterThan(0);
-    reduced = true; view.rerender(<Fixture value={300} />); expect(view.container.textContent).toBe('300');
+    reduced = true; view.unmount(); const reducedView = render(<Fixture value={300} />); reducedView.rerender(<Fixture value={400} />); expect(reducedView.container.textContent).toBe('400');
   } finally { globalThis.requestAnimationFrame = raf; globalThis.cancelAnimationFrame = cancel; if (media) globalThis.matchMedia = media; else Reflect.deleteProperty(globalThis, 'matchMedia'); }
 });

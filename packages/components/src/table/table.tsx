@@ -72,11 +72,10 @@ export function useTable(props: TableProps, ctx: Pick<PrismComponentProps, 'node
   const elements = () => Array.from(scrollRef.current?.querySelectorAll('tbody tr') ?? []);
   const onSort = (column: number) => {
     if (streaming || !Number.isInteger(column) || column < 0 || column >= headers.length) return;
-    flip.current?.cancel();
     const style = scrollRef.current && getComputedStyle(scrollRef.current), token = style?.getPropertyValue('--prism-table-motion-base').trim() || style?.getPropertyValue('--prism-motion-base').trim() || '0ms';
     const duration = animate ? (parseFloat(token) || 0) * (/ms$/.test(token) ? 1 : 1000) : 0;
-    flip.current = createFlip({ duration, easing: style?.getPropertyValue('--prism-table-motion-spring').trim() || style?.getPropertyValue('--prism-motion-spring').trim() || 'ease' });
-    flip.current.measure(elements()); pending.current = true;
+    const next = createFlip({ duration, easing: style?.getPropertyValue('--prism-table-motion-spring').trim() || style?.getPropertyValue('--prism-motion-spring').trim() || 'ease' });
+    next.measure(elements()); flip.current?.cancel(); flip.current = next; pending.current = true;
     setPage(0); setSort(sort?.column !== column ? { column, dir: 'asc' } : sort.dir === 'asc' ? { column, dir: 'desc' } : null);
   };
   useLayoutEffect(() => { if (pending.current && !streaming) { pending.current = false; flip.current?.play(elements()); } }, [stored, streaming]);
@@ -126,7 +125,7 @@ const Part = forwardRef<any, { part: TablePart; as?: ElementType; row?: TableRow
   return <View as={as} {...attrs} {...props} ref={ref} {...(View === Element ? {} : { table, row, column })} />;
 });
 function TableRowView({ node, children }: MarkdownProps) {
-  return <Part part="row" as="tr" row={node}>{children}</Part>;
+  return <Part part="row" as="tr" row={node} data-prism-enter="">{children}</Part>;
 }
 function TableCellView({ node, children }: MarkdownProps) {
   const table = useContext(TableContext)!, context = table.cells.get(node.key), index = context?.index ?? 0, column = context?.column, row = context?.row, header = node.type === 'tableHeader', alignment = table.align[index];

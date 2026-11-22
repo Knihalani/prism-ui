@@ -1,3 +1,5 @@
+@import './motion.css';
+
 :where([data-prism-theme-name]) {
   color-scheme: light;
   --prism-bg: transparent;
@@ -45,11 +47,21 @@
   --prism-elevation-1: 0 1px 2px color-mix(in srgb, currentColor 5%, transparent);
   --prism-elevation-2: 0 4px 12px color-mix(in srgb, currentColor 8%, transparent);
   --prism-elevation-3: 0 12px 32px color-mix(in srgb, currentColor 12%, transparent);
-  --prism-motion-fast: 150ms;
-  --prism-motion-base: 250ms;
+  --prism-motion-instant: 90ms;
+  --prism-motion-fast: 160ms;
+  --prism-motion-base: 240ms;
   --prism-motion-slow: 420ms;
-  --prism-motion-ease: cubic-bezier(.2,.8,.2,1);
-  --prism-motion-spring: cubic-bezier(.34,1.56,.64,1);
+  --prism-motion-ease: cubic-bezier(.23,1,.32,1);
+  --prism-motion-ease-in-out: cubic-bezier(.65,0,.35,1);
+  --prism-motion-ease-exit: cubic-bezier(.4,0,1,1);
+  --prism-motion-spring: linear(0, 0.026, 0.087, 0.17, 0.263, 0.358, 0.451, 0.538, 0.617, 0.687, 0.748, 0.8, 0.844, 0.881, 0.911, 0.935, 0.953, 0.968, 0.98, 0.988, 0.994, 0.999, 1.002, 1.004, 1.005, 1.005, 1.005, 1.005, 1.005, 1.004, 1.004, 1.003, 1.003, 1.002, 1.002, 1.002, 1.001, 1.001, 1.001, 1);
+  --prism-motion-spring-duration: 500ms;
+  --prism-motion-spring-bouncy: linear(0, 0.033, 0.12, 0.229, 0.35, 0.479, 0.593, 0.695, 0.789, 0.861, 0.919, 0.966, 0.998, 1.02, 1.035, 1.042, 1.044, 1.043, 1.04, 1.035, 1.03, 1.024, 1.019, 1.014, 1.01, 1.007, 1.004, 1.002, 1, 0.999, 0.999, 0.998, 0.998, 0.998, 0.998, 0.998, 0.999, 0.999, 0.999, 1);
+  --prism-motion-spring-bouncy-duration: 600ms;
+  --prism-motion-stagger: 28ms;
+  --prism-motion-distance: 6px;
+  --prism-motion-scale: .97;
+  --prism-motion-blur: 2px;
 }
 :where([data-prism-theme="dark"]) { color-scheme: dark; }
 @media (prefers-color-scheme: dark) { :where([data-prism-theme="auto"]) { color-scheme: dark; } }
@@ -61,5 +73,22 @@
   --prism-space-1: 5px; --prism-space-2: 10px; --prism-space-3: 15px; --prism-space-4: 20px;
   --prism-space-5: 25px; --prism-space-6: 30px; --prism-space-7: 40px; --prism-space-8: 50px;
 }
-:where([data-animate="false"]) { --prism-motion-fast: 0ms; --prism-motion-base: 0ms; --prism-motion-slow: 0ms; }
-@media (prefers-reduced-motion: reduce) { :where([data-prism-theme-name]) { --prism-motion-fast: 0ms; --prism-motion-base: 0ms; --prism-motion-slow: 0ms; } }
+@media (prefers-reduced-motion: reduce) {
+  [data-prism-theme-name] {
+    --prism-motion-base: var(--prism-motion-fast) !important;
+    --prism-motion-slow: var(--prism-motion-fast) !important;
+    --prism-motion-spring-duration: var(--prism-motion-fast) !important;
+    --prism-motion-spring-bouncy-duration: var(--prism-motion-fast) !important;
+    --prism-motion-distance: 0px !important;
+    --prism-motion-scale: 1 !important;
+    --prism-motion-blur: 0px !important;
+    --prism-motion-stagger: 0ms !important;
+  }
+}
+[data-prism-theme-name][data-animate="false"] {
+  --prism-motion-instant: 0ms !important; --prism-motion-fast: 0ms !important;
+  --prism-motion-base: 0ms !important; --prism-motion-slow: 0ms !important;
+  --prism-motion-spring-duration: 0ms !important; --prism-motion-spring-bouncy-duration: 0ms !important;
+  --prism-motion-stagger: 0ms !important; --prism-motion-distance: 0px !important;
+  --prism-motion-scale: 1 !important; --prism-motion-blur: 0px !important;
+}

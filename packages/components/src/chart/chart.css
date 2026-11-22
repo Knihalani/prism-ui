@@ -16,7 +16,6 @@
 .prism-chart__tick { fill: var(--prism-chart-text-muted, var(--prism-text-muted)); font-family: var(--prism-chart-font-body, var(--prism-font-body)); font-size: var(--prism-chart-text-xs, var(--prism-text-xs)); font-weight: var(--prism-chart-weight-regular, var(--prism-weight-regular)); font-variant-numeric: tabular-nums; transition: x var(--prism-chart-motion-base, var(--prism-motion-base)) var(--prism-chart-motion-ease, var(--prism-motion-ease)); }
 .prism-chart__line { stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; animation: prism-chart-draw var(--prism-chart-motion-slow, var(--prism-motion-slow)) var(--prism-chart-motion-ease, var(--prism-motion-ease)) both; }
 .prism-chart__line, .prism-chart__area, .prism-chart__bar, .prism-chart__slice { transition: opacity var(--prism-chart-motion-base, var(--prism-motion-base)) var(--prism-chart-motion-ease, var(--prism-motion-ease)); }
-.prism-chart__plot { animation: prism-chart-fade var(--prism-chart-motion-base, var(--prism-motion-base)) var(--prism-chart-motion-ease, var(--prism-motion-ease)) both; }
 .prism-chart__point { cursor: pointer; stroke: var(--prism-chart-surface, var(--prism-surface)); stroke-width: 1.5; transition: cx var(--prism-chart-motion-base, var(--prism-motion-base)) var(--prism-chart-motion-ease, var(--prism-motion-ease)); }
 .prism-chart__bar { transform-box: fill-box; transform-origin: center bottom; animation: prism-chart-grow var(--prism-chart-motion-slow, var(--prism-motion-slow)) var(--prism-chart-motion-ease, var(--prism-motion-ease)) both; cursor: pointer; }
 .prism-chart__slice { stroke: var(--prism-chart-surface, var(--prism-surface)); stroke-width: 2; cursor: pointer; }
@@ -43,7 +42,6 @@
 .prism-chart__empty { position: absolute; inset: 45% 0 auto; text-align: center; color: var(--prism-chart-text-muted, var(--prism-text-muted)); font-size: var(--prism-chart-text-sm, var(--prism-text-sm)); pointer-events: none; }
 @keyframes prism-chart-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes prism-chart-grow { from { transform: scaleY(.02); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
-@keyframes prism-chart-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes prism-chart-shimmer { from { opacity: .3; } to { opacity: .8; } }
 [data-animate="false"] .prism-chart__root *, .prism-chart__root[data-animate="false"] * { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-chart__root * { animation: none; transition: none; } }

@@ -1,5 +1,6 @@
 import type { Action } from '@prism-ui/react';
 import type { Reply, Turn } from '../types';
+import { scopedAgentSource } from '../../adaptive-source';
 
 export interface ScenarioContext { scope: string; ownerScope: string; history: Turn[] }
 export interface Scenario {
@@ -149,6 +150,21 @@ export const scenarios: Scenario[] = [
       }
       if (action.type === 'select' || action.type === 'pivot') return { text: `${p.label || p.x ? 'For “' + safe(p.label || p.x) + '”, ' : 'For that selection, '}the interview quotes matter more than the bar height. A mention is a clue to investigate, not a vote or evidence of willingness to pay.` };
       return fallback('the research', action);
+    },
+  },
+  {
+    id: 'adaptive', title: 'Build a team dashboard', prompt: 'Build an adaptive team dashboard', keywords: ['adaptive', 'team dashboard', 'team activity', 'team doing'], components: ['artifact'],
+    opening: scopedAgentSource,
+    onAction(action) {
+      const p = record(action.payload);
+      if (action.type === 'select') return { text: `“${safe(p.label) || 'That idea'}” is our next priority. I’d give it one owner, define a small first milestone, and review it with the team on Friday. Your selection is saved in the dashboard above; nothing has been scheduled.` };
+      if (action.type === 'feedback') {
+        const comments = Array.isArray(p.items) ? p.items.map((item: any) => safe(item.comment)).filter(Boolean) : [];
+        const note = safe(p.overall || comments.join('; '));
+        return { text: note ? `I’ve kept your dashboard feedback: “${note}”. I’d use that to refine the next version while keeping the team’s current selection. This is a design note, not a published change.` : 'I’ve kept your dashboard feedback with this conversation. I’d review the marked areas before changing the layout; your current priority stays selected.' };
+      }
+      if (action.type === 'fix') return { text: 'The dashboard reported a rendering problem. I’d inspect the artifact’s source and error before changing it. Try Reload in its controls; your saved planning selection stays in this conversation.' };
+      return fallback('the team dashboard', action);
     },
   },
 ];
