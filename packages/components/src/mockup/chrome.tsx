@@ -31,6 +31,7 @@ export interface MockupFooterModel {
   model?: MockupModel | MockupGroupModel;
   labels: MockupModel['labels']; locale?: string; count: number; submitted: boolean; edit(): void;
   canUndo: boolean; canRedo: boolean; undo(): void; redo(): void; canSubmit: boolean; submit(): void;
+  commitOverall?(): void;
 }
 export function MockupFooter(vm: MockupFooterModel) {
   const model = vm.model ?? vm;
@@ -38,5 +39,5 @@ export function MockupFooter(vm: MockupFooterModel) {
   const countPart = usePart('mockup', 'count');
   const footer = usePart('mockup', 'feedbackFooter'), button = usePart('mockup', 'button'), primary = usePart('mockup', 'primary');
   return submitted ? <PrismPart slotProps={{ model }} as="span" {...footer} role="status">{commentCount(labels, locale, count, true)}<PrismPart slotProps={{ model }} as="button" {...button} onClick={edit}>{labels.editFeedback}</PrismPart></PrismPart> :
-    <PrismPart slotProps={{ model }} as="span" {...footer}><PrismPart slotProps={{ model }} as="button" {...button} data-secondary="" disabled={!canUndo} onClick={undo}><Icon name="undo" />{labels.undo}</PrismPart><PrismPart slotProps={{ model }} as="button" {...button} data-secondary="" disabled={!canRedo} onClick={redo}><Icon name="redo" />{labels.redo}</PrismPart><PrismPart slotProps={{ model }} as="span" {...countPart}>{commentCount(labels, locale, count)}</PrismPart><PrismPart slotProps={{ model }} as="button" {...primary} disabled={!canSubmit} onClick={submit}>{labels.submit}</PrismPart></PrismPart>;
+    <PrismPart slotProps={{ model }} as="span" {...footer}><PrismPart slotProps={{ model }} as="button" {...button} data-secondary="" disabled={!canUndo} onClick={undo}><Icon name="undo" />{labels.undo}</PrismPart><PrismPart slotProps={{ model }} as="button" {...button} data-secondary="" disabled={!canRedo} onClick={redo}><Icon name="redo" />{labels.redo}</PrismPart><PrismPart slotProps={{ model }} as="span" {...countPart}>{commentCount(labels, locale, count)}</PrismPart><PrismPart slotProps={{ model }} as="button" {...primary} data-feedback-submit="" disabled={!canSubmit} onBlur={() => vm.commitOverall?.()} onClick={submit}>{labels.submit}</PrismPart></PrismPart>;
 }

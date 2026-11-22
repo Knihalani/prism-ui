@@ -56,6 +56,19 @@ test('tabbing through Submit commits an overall comment without submitting it', 
   expect(store.get('target.feedback.overall')).toBe('Newer saved');
 });
 
+test('overall blur into Submit merges the live text and receipt into one history entry', () => {
+  const { view, store, actions } = setup(), before = store.get('target.feedback');
+  const overall = view.getByRole('textbox', { name: 'Overall feedback' }), submit = view.getByRole('button', { name: 'Submit feedback' });
+  change(overall, 'Atomic submission');
+  fireEvent.blur(overall, { relatedTarget: submit });
+  expect(store.get('target.feedback')).toEqual(before);
+  fireEvent.click(submit);
+  expect(store.get('target.feedback')).toMatchObject({ overall: 'Atomic submission', submitted: true });
+  expect(actions).toHaveLength(1);
+  act(() => store.undo('target'));
+  expect(store.get('target.feedback')).toEqual(before);
+});
+
 for (const kind of ['pin', 'region'] as const) test(`clearing the only ${kind} comment cannot submit empty feedback`, () => {
   const saved = createFeedback();
   if (kind === 'pin') saved.addPin({ x: 30, y: 40, comment: 'Only comment' });

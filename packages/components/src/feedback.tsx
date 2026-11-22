@@ -37,7 +37,7 @@ function FeedbackEditor({ open, close, surface }: { open: boolean; close(): void
       {open && !vm.submitted && surface.viewport.current && createPortal(<MockupAnnotations vm={vm} popover={false} />, surface.viewport.current)}
       {open && vm.editing && !vm.submitted && <FeedbackPopover vm={vm} surface={surface} />}
       {!vm.submitted && <><MockupPenTools vm={vm} model={vm} /><PrismPart slotProps={{ model: vm }} as="label" {...overall}>{vm.labels.overall}<PrismPart slotProps={{ model: vm }} as="textarea" {...input} value={vm.state.overall} onChange={event => vm.feedback.setOverall(event.target.value)} onBlur={vm.saveOverall} /></PrismPart></>}
-      <MockupFooter model={vm} labels={vm.labels} locale={vm.locale} count={vm.state.items.length} submitted={vm.submitted} edit={() => vm.setSubmitted(false)} canUndo={vm.feedback.canUndo} canRedo={vm.feedback.canRedo} undo={() => { vm.close(); vm.feedback.undo(); }} redo={() => { vm.close(); vm.feedback.redo(); }} canSubmit={vm.canSubmit} submit={vm.submit} />
+      <MockupFooter model={vm} labels={vm.labels} locale={vm.locale} count={vm.state.items.length} submitted={vm.submitted} edit={() => vm.setSubmitted(false)} canUndo={vm.feedback.canUndo} canRedo={vm.feedback.canRedo} undo={() => { vm.close(); vm.feedback.undo(); }} redo={() => { vm.close(); vm.feedback.redo(); }} canSubmit={vm.canSubmit} submit={vm.submit} commitOverall={vm.saveOverall} />
       <span className="prism-inline-feedback__live" aria-live="polite">{vm.announcement}</span>
     </PrismPart>;
 }
