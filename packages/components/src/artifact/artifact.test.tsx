@@ -2,7 +2,7 @@ import '../../../react/test/setup';
 import { afterEach, expect, spyOn, test } from 'bun:test';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { createRegistry, Prism, type Action } from '@prism-ui/react';
+import { createRegistry, defineTheme, Prism, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { ArtifactProvider, artifact, artifactPlugin } from './index';
 import { fence } from './fixtures';
@@ -57,6 +57,35 @@ function observeFrames() {
   } as unknown as typeof IntersectionObserver;
   return () => { globalThis.IntersectionObserver = original; };
 }
+
+test('an existing artifact resyncs tokens when only the named theme changes', async () => {
+  const restore = observeFrames(), store = createStore();
+  const first = defineTheme({ name: 'artifact-first', tokens: { accent: '#123456' } });
+  const second = defineTheme({ name: 'artifact-second', tokens: { accent: '#654321' } });
+  const ui = (theme: typeof first) => <Prism theme={theme} mode="light" source={snippet} plugins={plugins} registry={registry} store={store} />;
+  const view = render(ui(first));
+  const frame = await waitFor(() => { const frame = view.container.querySelector('iframe'); if (!frame) throw Error('No frame'); return frame; });
+  const viewport = view.container.querySelector<HTMLElement>('[data-part=viewport]')!;
+  const computed = window.getComputedStyle.bind(window);
+  const styles = spyOn(window, 'getComputedStyle').mockImplementation((element, pseudo) => {
+    const original = computed(element, pseudo);
+    if (element !== viewport) return original;
+    return new Proxy(original, { get(target, key) {
+      if (key === Symbol.iterator) return function* () { yield '--prism-accent'; };
+      if (key === 'getPropertyValue') return (property: string) => property === '--prism-accent' ? (viewport.closest('[data-prism-theme-name]')?.getAttribute('data-prism-theme-name') === first.name ? '#123456' : '#654321') : original.getPropertyValue(property);
+      return Reflect.get(target, key, target);
+    } });
+  });
+  const sent = spyOn(frame.contentWindow!, 'postMessage');
+  try {
+    const id = frame.srcdoc.match(/artifact-[\da-f-]{36}/)![0];
+    act(() => window.dispatchEvent(new MessageEvent('message', { data: { ns: 'prism-mockup', id, type: 'ready' }, origin: 'null', source: frame.contentWindow })));
+    view.rerender(ui(second));
+    await waitFor(() => expect(sent.mock.calls.some(([message]) => message.type === 'theme' && message.tokens['--prism-accent'] === '#654321' && message.dark === false)).toBe(true));
+    expect(view.container.querySelector('iframe')).toBe(frame);
+    expect(view.container.querySelector('.prism-root')?.getAttribute('data-prism-theme')).toBe('light');
+  } finally { sent.mockRestore(); styles.mockRestore(); cleanup(); restore(); }
+});
 
 test('same-id revisions switch and show a line diff; controls are native keyboard controls', () => {
   const store = createStore(), options = { enabled: true };

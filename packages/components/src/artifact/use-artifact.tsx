@@ -161,7 +161,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
     const win = container.ownerDocument.defaultView;
     const observer = new MutationObserver(updateTheme);
     for (let root: HTMLElement | null = container; root; root = root.parentElement) {
-      observer.observe(root, { attributes: true, attributeFilter: ['class', 'style', 'data-prism-theme', 'data-density', 'data-animate'] });
+      observer.observe(root, { attributes: true, attributeFilter: ['class', 'style', 'data-prism-theme', 'data-prism-theme-name', 'data-density', 'data-animate'] });
     }
     const media = win?.matchMedia?.('(prefers-color-scheme: dark)');
     media?.addEventListener('change', updateTheme);

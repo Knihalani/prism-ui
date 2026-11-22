@@ -1,5 +1,5 @@
 import { useCallback, useContext, useMemo, useSyncExternalStore, type HTMLAttributes } from 'react';
-import { ComponentContext, usePrism, type Action } from './context';
+import { ComponentContext, PrismPart, usePrism, type Action } from './context';
 import { useActionDispatch } from './hooks';
 
 export type PresentationState = 'streaming' | 'ready' | 'sent';
@@ -70,5 +70,5 @@ export function StreamCaret() {
 
 type StreamSkeletonProps = HTMLAttributes<HTMLElement> & { as?: 'div' | 'span' };
 export function StreamSkeleton({ as: Element = 'div', ...props }: StreamSkeletonProps) {
-  return <Element {...props} aria-hidden="true" data-state="streaming" data-prism-skeleton="" />;
+  return <PrismPart as={Element} {...props} aria-hidden="true" data-state="streaming" data-prism-skeleton="" />;
 }

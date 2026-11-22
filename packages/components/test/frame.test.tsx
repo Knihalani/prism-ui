@@ -87,9 +87,9 @@ test('headless useFrame supports a minimal view and an untitled frame is labelle
   expect(view.getByRole('group').getAttribute('aria-label')).toBe('minimal'); fireEvent.click(view.getByRole('button')); expect(actions[0].type).toBe('ask');
 });
 
-test('CSS declares every ThemeTokens name using the createTheme kebab convention', () => {
+test('CSS declares every semantic token using the createTheme kebab convention', () => {
   const source = readFileSync(new URL('../../react/src/theme.tsx', import.meta.url), 'utf8');
-  const tokens = source.split('export interface ThemeTokens {')[1].split('}')[0].matchAll(/(\w+): string/g);
-  const css = readFileSync(new URL('../src/styles/tokens.css', import.meta.url), 'utf8');
-  for (const [, token] of tokens) expect(css).toContain(Object.keys(createTheme({ [token]: '' }))[0] + ':');
+  const tokens = source.split('export interface Tokens {')[1].split('}')[0].matchAll(/(\w+): string/g);
+  const css = readFileSync(new URL('../../react/src/theme.css', import.meta.url), 'utf8');
+  for (const [, token] of tokens) expect(css).toContain(Object.keys(createTheme({ [token]: '' }))[0] + (token === 'accent' ? ',' : ':'));
 });

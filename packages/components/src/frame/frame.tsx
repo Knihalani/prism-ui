@@ -1,5 +1,5 @@
 import { createElement, useCallback, useContext, useSyncExternalStore, type CSSProperties, type ElementType, type HTMLAttributes, type KeyboardEvent, type ReactNode } from 'react';
-import { ComponentContext, cx, useEmit, usePart, usePresentation, usePrism, useSlot } from '@prism-ui/react';
+import { ComponentContext, Icon, cx, useEmit, usePart, usePresentation, usePrism, useSlot, useStrings } from '@prism-ui/react';
 
 export interface FrameOptions {
   component: string; title?: string; label?: string; state?: string; ask?: boolean; undo?: boolean;
@@ -8,7 +8,7 @@ export interface ComponentFrameProps extends FrameOptions {
   variant?: 'inline' | 'card';
   toolbar?: ReactNode; actions?: ReactNode; as?: ElementType; className?: string; style?: CSSProperties; children?: ReactNode;
 }
-export interface FrameSlotProps extends HTMLAttributes<HTMLElement> { as?: ElementType }
+export interface FrameSlotProps extends HTMLAttributes<HTMLElement> { as?: ElementType; type?: 'button'; disabled?: boolean }
 export type FramePart = 'root' | 'header' | 'title' | 'toolbar' | 'body' | 'footer' | 'ask' | 'undo';
 
 function useFramePart(component: string, part: FramePart, state?: string) {
@@ -46,26 +46,22 @@ export function useFrame({ component, title, label, state, ask = true, undo = fa
 }
 function Element({ as = 'div', ...props }: FrameSlotProps) { return createElement(as, props); }
 function useFrameSlot(component: string, part: FramePart) { return useSlot(component, part, useSlot('frame', part, Element)); }
-const icons = {
-  ask: 'M13 7.5A5.5 5.5 0 0 1 7.5 13H3l1-2.5a5.5 5.5 0 1 1 9-3Z',
-  undo: 'M5 3 2 6l3 3M2 6h7a3.5 3.5 0 0 1 0 7H6',
-  check: 'm3.5 8 3 3 6-6',
-};
-export function FrameIcon({ name }: { name: keyof typeof icons }) {
-  return <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={icons[name]} /></svg>;
-}
+export function FrameIcon({ name }: { name: 'ask' | 'undo' | 'check' }) { return <Icon name={name} />; }
+const frameStrings = { undoLabel: 'Undo', askLabel: 'Ask about this' };
 export function ComponentFrame({ toolbar, actions, as = 'section', variant = 'inline', className, style, children, ...options }: ComponentFrameProps) {
   const frame = useFrame(options), { parts } = frame;
   const Root = useFrameSlot(options.component, 'root'), Header = useFrameSlot(options.component, 'header'), Title = useFrameSlot(options.component, 'title');
   const Toolbar = useFrameSlot(options.component, 'toolbar'), Body = useFrameSlot(options.component, 'body'), Footer = useFrameSlot(options.component, 'footer');
+  const Undo = useFrameSlot(options.component, 'undo'), Ask = useFrameSlot(options.component, 'ask');
+  const strings = { ...useStrings('frame', frameStrings), ...useStrings(options.component) };
   const iconClass = !frame.unstyled && 'prism-icon-btn';
   return <Root {...frame.rootProps} as={as} data-variant={variant} className={cx(parts.root.className, className) || undefined} style={{ ...parts.root.style, ...style }}>
     {(options.title !== undefined || toolbar != null || frame.ask || frame.undo) && <Header {...parts.header} as="header" data-utility-only={options.title === undefined && toolbar == null ? '' : undefined}>
       {options.title !== undefined && <Title {...parts.title} as="h3">{options.title}</Title>}
       {(toolbar != null || frame.ask || frame.undo) && <Toolbar {...parts.toolbar}>
         {toolbar}
-        {frame.undo && <button {...parts.undo} className={cx(parts.undo.className, iconClass) || undefined} type="button" disabled={!frame.canUndo} onClick={frame.onUndo} aria-label="Undo" title="Undo" aria-keyshortcuts="Control+Z Meta+Z"><FrameIcon name="undo" /></button>}
-        {frame.ask && <button {...parts.ask} className={cx(parts.ask.className, iconClass) || undefined} type="button" onClick={frame.onAsk} aria-label="Ask about this" title="Ask about this"><FrameIcon name="ask" /></button>}
+        {frame.undo && <Undo {...parts.undo} as="button" className={cx(parts.undo.className, iconClass) || undefined} type="button" disabled={!frame.canUndo} onClick={frame.onUndo} aria-label={strings.undoLabel} title={strings.undoLabel} aria-keyshortcuts="Control+Z Meta+Z"><FrameIcon name="undo" /></Undo>}
+        {frame.ask && <Ask {...parts.ask} as="button" className={cx(parts.ask.className, iconClass) || undefined} type="button" onClick={frame.onAsk} aria-label={strings.askLabel} title={strings.askLabel}><FrameIcon name="ask" /></Ask>}
       </Toolbar>}
     </Header>}
     <Body {...parts.body}>{children}</Body>

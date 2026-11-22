@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useState, useId, useLayoutEffect, useMemo, useReducer, useRef, useSyncExternalStore, type KeyboardEvent, type RefObject } from 'react';
-import { ComponentContext, useComponentState, useEmit, usePart, usePrism } from '@prism-ui/react';
+import { PrismPart, ComponentContext, useComponentState, useEmit, usePart, usePrism } from '@prism-ui/react';
 import type { Store } from '@prism-ui/state';
 import { ComponentFrame } from '../frame';
 import { toMessage, type FeedbackPayload } from './engine';
@@ -73,25 +73,25 @@ function GroupMember({ member, label, visible, submitted, register, refresh, con
 function MockupGroupView({ members, options }: { members: Member[]; options?: MockupOptions }) {
   const vm = useMockupGroup(members), id = useId(), rootRef = useRef<HTMLDivElement>(null);
   const [device, setDevice] = useComponentState<MockupDevice>('groupDevice', members[0].props.device ?? 'desktop'), [zoom, setZoom] = useComponentState('groupZoom', 1);
-  const [pen, setPen] = useState(false), [color, setColor] = useState('var(--prism-accent)'), [showSource, setShowSource] = useState(false), [expanded, setExpanded] = useState(false);
+  const [pen, setPen] = useState(false), [color, setColor] = useState('var(--prism-accent, #525252)'), [showSource, setShowSource] = useState(false), [expanded, setExpanded] = useState(false);
   const controls = { device, setDevice, zoom, setZoom, pen, setPen, color, setColor };
   useEffect(() => { const escape = (event: globalThis.KeyboardEvent) => { if (event.key === 'Escape') { setExpanded(false); setPen(false); } }; document.addEventListener('keydown', escape); return () => document.removeEventListener('keydown', escape); }, []);
   async function fullscreen() { try { if (document.fullscreenElement) await document.exitFullscreen(); else if (rootRef.current?.requestFullscreen) await rootRef.current.requestFullscreen(); else setExpanded(value => !value); } catch { setExpanded(value => !value); } }
   const source = vm.active.props.source ?? '', chrome = { ...controls, labels: vm.labels, framed: members.some(member => ['html', 'wire'].includes(member.props.kind ?? 'html')), fullscreen, showSource, setShowSource };
   const root = usePart('mockup', 'group'), tabs = usePart('mockup', 'tabs'), tab = usePart('mockup', 'tab'), columns = usePart('mockup', 'columns'), column = usePart('mockup', 'column'), dot = usePart('mockup', 'streamDot'), input = usePart('mockup', 'input'), button = usePart('mockup', 'button'), sharedTools = usePart('mockup', 'sharedTools');
   const selected = vm.compare ? 'compare' : vm.active.key;
-  return <div {...root} ref={rootRef} data-state={expanded ? 'expanded' : vm.submitted ? 'submitted' : 'editing'}>
-    <ComponentFrame component="mockup" title={members[0].props.title ?? vm.labels.title} ask undo={false} toolbar={<div {...tabs} role="tablist" aria-label={vm.labels.variants}>{[...members.map((m, i) => ({ key: m.key, label: variant(m, i), complete: m.complete })), { key: 'compare', label: vm.labels.compare, complete: true }].map((entry, index) => <button key={entry.key} {...tab} id={`${id}-tab-${entry.key}`} role="tab" aria-label={entry.label} aria-description={!entry.complete ? vm.labels.streaming : undefined} aria-selected={selected === entry.key} aria-controls={`${id}-panel-${entry.key}`} tabIndex={selected === entry.key ? 0 : -1} onClick={() => vm.setTab(entry.key)} onKeyDown={event => vm.navigate(event, index)}>{entry.label}{!entry.complete && <span {...dot} aria-label={vm.labels.streaming} />}</button>)}</div>}>
-      <div {...sharedTools}>{!vm.submitted && <MockupPenTools vm={chrome} />}<MockupToolbar vm={chrome} /></div>
+  return <PrismPart as="div" {...root} ref={rootRef} data-state={expanded ? 'expanded' : vm.submitted ? 'submitted' : 'editing'}>
+    <ComponentFrame component="mockup" title={members[0].props.title ?? vm.labels.title} ask undo={false} toolbar={<PrismPart as="div" {...tabs} role="tablist" aria-label={vm.labels.variants}>{[...members.map((m, i) => ({ key: m.key, label: variant(m, i), complete: m.complete })), { key: 'compare', label: vm.labels.compare, complete: true }].map((entry, index) => <PrismPart as="button" key={entry.key} {...tab} id={`${id}-tab-${entry.key}`} role="tab" aria-label={entry.label} aria-description={!entry.complete ? vm.labels.streaming : undefined} aria-selected={selected === entry.key} aria-controls={`${id}-panel-${entry.key}`} tabIndex={selected === entry.key ? 0 : -1} onClick={() => vm.setTab(entry.key)} onKeyDown={event => vm.navigate(event, index)}>{entry.label}{!entry.complete && <PrismPart as="span" {...dot} aria-label={vm.labels.streaming} />}</PrismPart>)}</PrismPart>}>
+      <PrismPart as="div" {...sharedTools}>{!vm.submitted && <MockupPenTools vm={chrome} />}<MockupToolbar vm={chrome} /></PrismPart>
       {showSource && <MockupSource vm={{ labels: vm.labels, source, copy: async () => { try { await navigator.clipboard?.writeText(source); } catch {} } }} />}
-      <div {...columns} data-compare={vm.compare || undefined} role={vm.compare ? 'tabpanel' : undefined} id={vm.compare ? `${id}-panel-compare` : undefined} aria-labelledby={vm.compare ? `${id}-tab-compare` : undefined}>
-        {members.map((member, index) => { const label = variant(member, index), visible = vm.compare || vm.active.key === member.key; return <div key={member.key} {...column} hidden={!visible} role={!vm.compare ? 'tabpanel' : undefined} id={`${id}-panel-${member.key}`} aria-labelledby={!vm.compare ? `${id}-tab-${member.key}` : undefined}>
-          {vm.compare && <div><strong>{label}</strong>{!vm.submitted && <button {...button} aria-pressed={vm.preferred === label} onClick={() => vm.setPreferred(vm.preferred === label ? undefined : label)}>{vm.preferred === label && <Icon name="check" />}{vm.labels.prefer} {label}</button>}</div>}
+      <PrismPart as="div" {...columns} data-compare={vm.compare || undefined} role={vm.compare ? 'tabpanel' : undefined} id={vm.compare ? `${id}-panel-compare` : undefined} aria-labelledby={vm.compare ? `${id}-tab-compare` : undefined}>
+        {members.map((member, index) => { const label = variant(member, index), visible = vm.compare || vm.active.key === member.key; return <PrismPart as="div" key={member.key} {...column} hidden={!visible} role={!vm.compare ? 'tabpanel' : undefined} id={`${id}-panel-${member.key}`} aria-labelledby={!vm.compare ? `${id}-tab-${member.key}` : undefined}>
+          {vm.compare && <div><strong>{label}</strong>{!vm.submitted && <PrismPart as="button" {...button} aria-pressed={vm.preferred === label} onClick={() => vm.setPreferred(vm.preferred === label ? undefined : label)}>{vm.preferred === label && <Icon name="check" />}{vm.labels.prefer} {label}</PrismPart>}</div>}
           <ComponentContext.Provider value={member.context}><GroupMember key={member.id} member={member} label={label} visible={visible} submitted={vm.submitted} register={vm.register} refresh={vm.refresh} controls={controls} options={options} /></ComponentContext.Provider>
-        </div>; })}
-      </div>
-      {!vm.submitted && <label>{vm.labels.overall}<textarea {...input} value={vm.overall} onChange={event => vm.setOverall(event.target.value)} /></label>}
+        </PrismPart>; })}
+      </PrismPart>
+      {!vm.submitted && <label>{vm.labels.overall}<PrismPart as="textarea" {...input} value={vm.overall} onChange={event => vm.setOverall(event.target.value)} /></label>}
       <MockupFooter labels={vm.labels} locale={vm.locale} count={vm.count} submitted={vm.submitted} edit={() => vm.setSubmitted(false)} canUndo={!!vm.model?.feedback.canUndo} canRedo={!!vm.model?.feedback.canRedo} undo={() => { vm.model?.close(); vm.model?.feedback.undo(); }} redo={() => { vm.model?.close(); vm.model?.feedback.redo(); }} canSubmit={vm.canSubmit} submit={vm.submit} />
     </ComponentFrame>
-  </div>;
+  </PrismPart>;
 }

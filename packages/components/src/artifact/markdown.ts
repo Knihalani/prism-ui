@@ -1,19 +1,19 @@
 import { parse, renderToString, type Node } from '@prism-ui/core';
 
 const styles = `<style>
-main[data-artifact-markdown]{padding:var(--prism-space6,24px);font-size:var(--prism-text-base,15px);line-height:1.55}
+main[data-artifact-markdown]{padding:var(--prism-space-6,24px);font-size:var(--prism-text-base,15px);line-height:1.55}
 [data-artifact-markdown] :where(h1,h2,h3,h4,h5,h6,p,ul,ol,blockquote,pre){margin:0}
 [data-artifact-markdown] :where(h1,h2,h3,h4,h5,h6){line-height:1.2;letter-spacing:-.025em}
 [data-artifact-markdown] h1{font-size:var(--prism-text-xl,22px)}
 [data-artifact-markdown] h2{font-size:var(--prism-text-lg,18px)}
-[data-artifact-markdown] > * + *{margin-block-start:var(--prism-space3,12px)}
-[data-artifact-markdown] :where(ul,ol){padding-inline-start:var(--prism-space5,20px)}
-[data-artifact-markdown] li + li,[data-artifact-markdown] li > * + *{margin-block-start:var(--prism-space1,4px)}
+[data-artifact-markdown] > * + *{margin-block-start:var(--prism-space-3,12px)}
+[data-artifact-markdown] :where(ul,ol){padding-inline-start:var(--prism-space-5,20px)}
+[data-artifact-markdown] li + li,[data-artifact-markdown] li > * + *{margin-block-start:var(--prism-space-1,4px)}
 [data-artifact-markdown] [data-task]{list-style:none}
-[data-artifact-markdown] [data-task] > label{display:flex;align-items:baseline;gap:var(--prism-space2,8px)}
-[data-artifact-markdown] [data-task] input{position:relative;top:.12em;flex:none;margin:0;accent-color:var(--prism-accent)}
-[data-artifact-markdown] [data-task] input:focus-visible{outline:2px solid var(--prism-accent);outline-offset:2px}
-[data-artifact-markdown] blockquote{padding-inline-start:var(--prism-space3,12px);border-inline-start:2px solid var(--prism-border);color:var(--prism-muted)}
+[data-artifact-markdown] [data-task] > label{display:flex;align-items:baseline;gap:var(--prism-space-2,8px)}
+[data-artifact-markdown] [data-task] input{position:relative;top:.12em;flex:none;margin:0;accent-color:var(--prism-accent, #525252)}
+[data-artifact-markdown] [data-task] input:focus-visible{outline:2px solid var(--prism-accent, #525252);outline-offset:2px}
+[data-artifact-markdown] blockquote{padding-inline-start:var(--prism-space-3,12px);border-inline-start:2px solid var(--prism-border);color:var(--prism-text-muted)}
 </style>`;
 
 const text = (node: Node): string => node.value ?? node.children?.map(text).join('') ?? '';

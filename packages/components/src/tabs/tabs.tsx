@@ -1,13 +1,14 @@
+import { componentStrings } from '../strings';
 import { Children, createContext, useContext, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type HTMLAttributes, type KeyboardEvent } from 'react';
-import { cx, StreamSkeleton, useComponentState, useFlash, usePart, usePresentation, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
+import { useStrings, PrismPart, cx, StreamSkeleton, useComponentState, useFlash, usePart, usePresentation, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
 
 export interface TabsProps { id?: string; title?: string; label?: string; variant?: 'underline' | 'pill'; size?: 'sm' | 'md'; fitted?: boolean }
 export interface TabProps { id?: string; label?: string; badge?: string }
 interface TabGroup { keys: string[]; active: number; tabId(key: string): string; panelId(key: string): string }
 const TabsContext = createContext<TabGroup | null>(null);
-function Body(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
-function Title(props: HTMLAttributes<HTMLElement>) { return <h3 {...props} />; }
-function Label(props: HTMLAttributes<HTMLSpanElement>) { return <span {...props} />; }
+function Body(props: HTMLAttributes<HTMLDivElement>) { return <PrismPart as="div" {...props} />; }
+function Title(props: HTMLAttributes<HTMLElement>) { return <PrismPart as="h3" {...props} />; }
+function Label(props: HTMLAttributes<HTMLSpanElement>) { return <PrismPart as="span" {...props} />; }
 function reference(value: unknown) {
   return value && typeof value === 'object' && Object.hasOwn(value, '$ref') && '$ref' in value && typeof value.$ref === 'string' ? value.$ref : undefined;
 }
@@ -83,25 +84,26 @@ export function useTabs(props: TabsProps, ctx: Pick<PrismComponentProps, 'node' 
     indicatorStyle: { ...parts.indicator.style, '--prism-tabs-indicator-left': indicator.left + 'px', '--prism-tabs-indicator-width': indicator.width + 'px' } as CSSProperties };
 }
 export function Tabs({ props, ...ctx }: PrismComponentProps<TabsProps>) {
+  const themeStrings = useStrings('tabs', componentStrings.tabs);
   const model = useTabs(props, ctx), { parts, group } = model;
   const { unstyled } = usePrism();
   const BodySlot = useSlot('tabs', 'body', Body), LabelSlot = useSlot('tabs', 'label', Label);
   const title = usePart('tabs', 'title'), TitleSlot = useSlot('tabs', 'title', Title);
-  return <TabsContext.Provider value={group}><div {...model.rootProps}>
+  return <TabsContext.Provider value={group}><PrismPart as="div" {...model.rootProps}>
     {props.title && <TitleSlot {...title}>{props.title}</TitleSlot>}
-    <div {...parts.list} ref={model.listRef} role="tablist" aria-label={props.label ?? props.title ?? 'Tabs'} data-measured={model.indicator.width > 0 ? '' : undefined}>
-      {model.tabs.map((tab, index) => <button {...parts.tab} type="button" role="tab" key={tab.key} id={group.tabId(tab.key)} aria-label={tab.props.label ? undefined : 'Loading tab'} aria-controls={group.panelId(tab.key)} aria-selected={index === model.active} tabIndex={index === model.active ? 0 : -1} onClick={() => model.select(index)} onKeyDown={event => model.onKeyDown(event, index)}>
+    <PrismPart as="div" {...parts.list} ref={model.listRef} role="tablist" aria-label={props.label ?? props.title ?? 'Tabs'} data-measured={model.indicator.width > 0 ? '' : undefined}>
+      {model.tabs.map((tab, index) => <PrismPart as="button" {...parts.tab} type="button" role="tab" key={tab.key} id={group.tabId(tab.key)} aria-label={tab.props.label ? undefined : themeStrings.loadingTab} aria-controls={group.panelId(tab.key)} aria-selected={index === model.active} tabIndex={index === model.active ? 0 : -1} onClick={() => model.select(index)} onKeyDown={event => model.onKeyDown(event, index)}>
         <LabelSlot {...parts.label}>{tab.props.label
           ? !unstyled && tab.labelPath !== undefined ? <LinkedTabText key={tab.labelPath} path={tab.labelPath} text={tab.props.label} /> : tab.props.label
-          : unstyled || ctx.complete ? <span {...parts.skeleton} aria-hidden="true" /> : <StreamSkeleton {...parts.skeleton} as="span" data-prism-skeleton-line="" />}</LabelSlot>
-        {tab.props.badge != null && <span {...parts.badge} className={cx(parts.badge.className, !unstyled && 'prism-chip') || undefined}>
+          : unstyled || ctx.complete ? <PrismPart as="span" {...parts.skeleton} aria-hidden="true" /> : <StreamSkeleton {...parts.skeleton} as="span" data-prism-skeleton-line="" />}</LabelSlot>
+        {tab.props.badge != null && <PrismPart as="span" {...parts.badge} className={cx(parts.badge.className, !unstyled && 'prism-chip') || undefined}>
           {!unstyled && tab.badgePath !== undefined ? <LinkedTabText key={tab.badgePath} path={tab.badgePath} text={tab.props.badge} /> : tab.props.badge}
-        </span>}
-      </button>)}
-      <span {...parts.indicator} style={model.indicatorStyle} aria-hidden="true" />
-    </div>
+        </PrismPart>}
+      </PrismPart>)}
+      <PrismPart as="span" {...parts.indicator} style={model.indicatorStyle} aria-hidden="true" />
+    </PrismPart>
     <BodySlot {...parts.body}>{model.rendered}</BodySlot>
-  </div></TabsContext.Provider>;
+  </PrismPart></TabsContext.Provider>;
 }
 export function useTab(props: TabProps, ctx: Pick<PrismComponentProps, 'node' | 'complete'>) {
   const group = useContext(TabsContext), presentation = usePresentation(), state = ctx.complete ? 'done' : 'streaming';
@@ -111,5 +113,5 @@ export function useTab(props: TabProps, ctx: Pick<PrismComponentProps, 'node' | 
 }
 export function Tab({ props, children, ...ctx }: PrismComponentProps<TabProps>) {
   const model = useTab(props, ctx), BodySlot = useSlot('tab', 'body', Body), TitleSlot = useSlot('tab', 'title', Title);
-  return <section {...model.rootProps}>{!model.grouped && props.label && <TitleSlot {...model.title}>{props.label}</TitleSlot>}<BodySlot {...model.body}>{children}</BodySlot></section>;
+  return <PrismPart as="section" {...model.rootProps}>{!model.grouped && props.label && <TitleSlot {...model.title}>{props.label}</TitleSlot>}<BodySlot {...model.body}>{children}</BodySlot></PrismPart>;
 }

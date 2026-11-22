@@ -1,12 +1,12 @@
 const reactStyle = `<style>{\`
-  main{padding:var(--prism-space6,24px)}h2,p{margin:0}
-  h2{font-size:26px;letter-spacing:-.045em}small, label,p{color:var(--prism-muted)}
+  main{padding:var(--prism-space-6,24px)}h2,p{margin:0}
+  h2{font-size:26px;letter-spacing:-.045em}small, label,p{color:var(--prism-text-muted)}
   .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
   .tag{border:1px solid var(--prism-border);border-radius:30px;padding:5px 10px;font-size:11px}
   .stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
   .stat{display:grid;gap:8px;border:1px solid var(--prism-border);padding:12px;border-radius:var(--prism-radius-md);background:var(--prism-bg)}
   output,b{font-size:23px;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
-  input{width:100%;accent-color:var(--prism-accent);margin:8px 0}button{border:0;border-radius:var(--prism-radius-sm);padding:8px 12px;color:var(--prism-surface);background:var(--prism-accent);cursor:pointer}
+  input{width:100%;accent-color:var(--prism-accent, #525252);margin:8px 0}button{border:0;border-radius:var(--prism-radius-sm);padding:8px 12px;color:var(--prism-surface);background:var(--prism-accent, #525252);cursor:pointer}
 \`}</style>`;
 
 export const calculator = `import { useState } from 'react';
@@ -63,16 +63,16 @@ export const infographic = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0
   <g font-family="system-ui,sans-serif" fill="var(--prism-text)">
     <text x="26" y="43" font-size="31" font-weight="710" letter-spacing="-1">Where clean power comes from</text>
     <g font-size="15">
-      <text x="28" y="90">Wind</text><rect x="112" y="75" width="383" height="19" rx="5" fill="var(--prism-accent)"/><text x="509" y="90">42%</text>
-      <text x="28" y="131">Solar</text><rect x="112" y="116" width="283" height="19" rx="5" fill="var(--prism-success)"/><text x="409" y="131">31%</text>
+      <text x="28" y="90">Wind</text><rect x="112" y="75" width="383" height="19" rx="5" fill="var(--prism-accent, #525252)"/><text x="509" y="90">42%</text>
+      <text x="28" y="131">Solar</text><rect x="112" y="116" width="283" height="19" rx="5" fill="var(--prism-positive)"/><text x="409" y="131">31%</text>
       <text x="28" y="172">Hydro</text><rect x="112" y="157" width="173" height="19" rx="5" fill="var(--prism-info)"/><text x="299" y="172">19%</text>
-      <text x="28" y="213">Other</text><rect x="112" y="198" width="73" height="19" rx="5" fill="var(--prism-muted)"/><text x="199" y="213">8%</text>
+      <text x="28" y="213">Other</text><rect x="112" y="198" width="73" height="19" rx="5" fill="var(--prism-text-muted)"/><text x="199" y="213">8%</text>
     </g>
   </g>
 </svg>`;
 
 export const canvasGame = `const root = document.querySelector('#app');
-root.innerHTML = '<style>.moonhop{padding:var(--prism-space6,24px)}.moonhop header{display:flex;justify-content:space-between;align-items:center;gap:var(--prism-space3,12px)}.moonhop button{flex:none;border:0;border-radius:var(--prism-radius-sm);padding:8px 12px;color:var(--prism-surface);background:var(--prism-accent);cursor:pointer}.moonhop canvas{display:block;width:100%;height:auto;border-radius:var(--prism-radius-md)}</style><section class="moonhop"><header><div><b>Moonhop</b><p style="margin:4px 0 8px;color:var(--prism-muted)">Collect the stars before you run out of hops.</p></div><button type="button">New game</button></header><canvas width="580" height="150" tabindex="0" aria-label="Moonhop game; arrow keys to move"></canvas><p role="status" style="margin:8px 0 0">0 of 5 stars collected</p></section>';
+root.innerHTML = '<style>.moonhop{padding:var(--prism-space-6,24px)}.moonhop header{display:flex;justify-content:space-between;align-items:center;gap:var(--prism-space-3,12px)}.moonhop button{flex:none;border:0;border-radius:var(--prism-radius-sm);padding:8px 12px;color:var(--prism-surface);background:var(--prism-accent, #525252);cursor:pointer}.moonhop canvas{display:block;width:100%;height:auto;border-radius:var(--prism-radius-md)}</style><section class="moonhop"><header><div><b>Moonhop</b><p style="margin:4px 0 8px;color:var(--prism-text-muted)">Collect the stars before you run out of hops.</p></div><button type="button">New game</button></header><canvas width="580" height="150" tabindex="0" aria-label="Moonhop game; arrow keys to move"></canvas><p role="status" style="margin:8px 0 0">0 of 5 stars collected</p></section>';
 const canvas = root.querySelector('canvas'), ctx = canvas.getContext('2d'), status = root.querySelector('[role=status]');
 const stars = [1, 4, 6, 9, 11];
 let cursor, collected, hops;

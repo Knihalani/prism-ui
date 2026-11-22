@@ -1,5 +1,6 @@
+import { componentStrings } from '../strings';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type HTMLAttributes } from 'react';
-import { cx, defineComponent, registerComponent, StreamSkeleton, useComponentState, useEmit, usePart, usePrism, useSlot, type PrismContextValue, type PrismComponentProps } from '@prism-ui/react';
+import { useStrings, PrismPart, cx, defineComponent, registerComponent, StreamSkeleton, useComponentState, useEmit, usePart, usePrism, useSlot, type PrismContextValue, type PrismComponentProps } from '@prism-ui/react';
 import { s } from '@prism-ui/schema';
 import { FrameIcon, useFrame } from '../frame';
 import { createIncremental, escapeHTML, highlight } from '../lib/highlight';
@@ -72,11 +73,12 @@ export function useCodeBlock(props: CodeBlockProps, ctx: PrismContextValue) {
     },
   };
 }
-function Container(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
-function Button(props: React.ButtonHTMLAttributes<HTMLButtonElement>) { return <button type="button" {...props} />; }
-function Label(props: HTMLAttributes<HTMLSpanElement>) { return <span {...props} />; }
-function Line({ html, ...props }: HTMLAttributes<HTMLSpanElement> & { html: string }) { return <span {...props} dangerouslySetInnerHTML={{ __html: html || '\n' }} />; }
+function Container(props: HTMLAttributes<HTMLDivElement>) { return <PrismPart as="div" {...props} />; }
+function Button(props: React.ButtonHTMLAttributes<HTMLButtonElement>) { return <PrismPart as="button" type="button" {...props} />; }
+function Label(props: HTMLAttributes<HTMLSpanElement>) { return <PrismPart as="span" {...props} />; }
+function Line({ html, ...props }: HTMLAttributes<HTMLSpanElement> & { html: string }) { return <PrismPart as="span" {...props} dangerouslySetInnerHTML={{ __html: html || '\n' }} />; }
 export function CodeBlock({ node, props, complete }: PrismComponentProps<CodeBlockProps>) {
+  const themeStrings = useStrings('codeblock', componentStrings.codeblock);
   const prism = usePrism();
   const vm = useCodeBlock({ ...props, code: props.code ?? node.value, lang: props.lang ?? node.lang, meta: props.meta ?? node.meta, complete }, prism);
   const frame = useFrame({ component: 'codeblock', label: vm.label });
@@ -99,28 +101,28 @@ export function CodeBlock({ node, props, complete }: PrismComponentProps<CodeBlo
   return <Root {...root} className={cx(root.className, !prism.unstyled && 'prism-materialise') || undefined} role="region" aria-label={vm.label} onKeyDown={frame.rootProps.onKeyDown} data-state={frame.rootProps['data-state']} data-entering={frame.rootProps['data-entering']} data-animate={vm.animate ? undefined : 'false'} data-lines={vm.lines || vm.lang === 'diff' ? '' : undefined}>
     <Header {...header}>
       <Title {...label}>{heading}</Title>
-      <Copy {...copy} aria-label="Copy code" title={vm.feedback || 'Copy code'} onClick={vm.copy}>{vm.feedback === 'Copied' ? 'Copied' : 'Copy'}</Copy>
+      <Copy {...copy} aria-label={themeStrings.copyCode} title={vm.feedback || 'Copy code'} onClick={vm.copy}>{vm.feedback === 'Copied' ? themeStrings.copied : themeStrings.copy}</Copy>
     </Header>
     <Body {...body} data-tail={!vm.complete && vm.collapsed ? 'true' : undefined} data-streaming={!vm.complete ? '' : undefined} style={{ height: vm.collapsed ? vm.threshold * 24.7 + 25 : undefined, ...body.style }} data-wrap={vm.wrap ? 'true' : 'false'}><pre ref={pre}><code>{htmlLines.slice(0, vm.collapsed && vm.complete ? vm.threshold : undefined).map((html, index) => {
       const raw = vm.rawLines[index] ?? '', metadata = vm.lang === 'diff' && /^(?:---|\+\+\+|@@)/.test(raw);
       const state = metadata ? undefined : raw.startsWith('+') ? 'inserted' : raw.startsWith('-') ? 'deleted' : undefined;
       const highlightLine = vm.highlights.some(([start, end]) => index + 1 >= start && index + 1 <= end);
-      return <span key={index} {...line} data-state={state} data-highlight={highlightLine ? '' : undefined}>
+      return <PrismPart as="span" key={index} {...line} data-state={state} data-highlight={highlightLine ? '' : undefined}>
         <Gutter {...gutter} aria-hidden="true">{state ? (state === 'inserted' ? '+' : '−') : vm.lines ? index + 1 : ''}</Gutter>
         {!prism.unstyled && !vm.code && !vm.complete
           ? <StreamSkeleton as="span" className="prism-codeblock__skeleton" data-prism-skeleton-line="" />
           : <Row {...content} html={state ? html.replace(/^((?:<[^>]+>)*)[+-]/, '$1') : html} />}
-      </span>;
+      </PrismPart>;
     })}</code></pre></Body>
     <Actions {...actions}>
-      <Wrap {...wrap} aria-label="Toggle line wrap" title="Toggle line wrap" aria-pressed={vm.wrap} onClick={vm.toggleWrap}>Wrap lines</Wrap>
-      <Ask {...ask} aria-label="Ask about this code" title="Ask about this code" onClick={frame.onAsk}><FrameIcon name="ask" /> Ask about this code</Ask>
-      {vm.collapsible && <Collapse {...collapse} disabled={!vm.complete} aria-expanded={vm.expanded} onClick={vm.toggleCollapse}>{!vm.complete ? 'Streaming…' : vm.collapsed ? `Show all ${vm.count} lines` : 'Show less'}</Collapse>}
+      <Wrap {...wrap} aria-label={themeStrings.toggleLineWrap} title={themeStrings.toggleLineWrap} aria-pressed={vm.wrap} onClick={vm.toggleWrap}>{themeStrings.wrapLines}</Wrap>
+      <Ask {...ask} aria-label={themeStrings.askAboutThisCode} title={themeStrings.askAboutThisCode} onClick={frame.onAsk}><FrameIcon name="ask" /> {themeStrings.askAboutThisCode}</Ask>
+      {vm.collapsible && <Collapse {...collapse} disabled={!vm.complete} aria-expanded={vm.expanded} onClick={vm.toggleCollapse}>{!vm.complete ? themeStrings.streaming : vm.collapsed ? `Show all ${vm.count} lines` : themeStrings.showLess}</Collapse>}
     </Actions>
     <Status {...status} role="status" aria-live="polite">{vm.feedback}</Status>
   </Root>;
 }
-export const codeBlockDefinition = defineComponent({ name: 'code', schema: codeBlockSchema, component: CodeBlock,
+export const codeBlockDefinition = defineComponent({ name: 'code', parts: ["actions","ask","body","collapse","content","copy","gutter","header","label","line","root","status","wrap"], strings: componentStrings.codeblock, schema: codeBlockSchema, component: CodeBlock,
   docs: 'Highlighted fenced code with copy, line numbers, wrapping and collapse.',
   examples: ['```ts {lines title="example.ts"}\nconst answer = 42;\n```'], syntax: 'leaf' });
 registerComponent(codeBlockDefinition);

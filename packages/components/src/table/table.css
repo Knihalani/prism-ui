@@ -1,16 +1,16 @@
 .prism-root .prism-table__root { position: relative; min-width: 0; }
-.prism-root :where(*) + div.prism-table__root { margin-block-start: var(--prism-flow-gap); }
-.prism-root .prism-table__scroll { overflow: auto; max-height: var(--prism-table-max-height, 480px); scrollbar-width: thin; scrollbar-color: var(--prism-hairline) transparent; }
-.prism-root .prism-table__table { width: 100%; border-collapse: separate; border-spacing: 0; font: 400 var(--prism-text-base)/1.4 var(--prism-font-sans); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.prism-root :where(*) + div.prism-table__root { margin-block-start: var(--prism-space-5); }
+.prism-root .prism-table__scroll { overflow: auto; max-height: var(--prism-table-max-height, 480px); scrollbar-width: thin; scrollbar-color: var(--prism-border) transparent; }
+.prism-root .prism-table__table { width: 100%; border-collapse: separate; border-spacing: 0; font-family: var(--prism-font-body); font-size: var(--prism-text-base); line-height: 1.4; font-weight: var(--prism-weight-regular); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .prism-root .prism-table__head { position: sticky; inset-block-start: 0; z-index: 1; background: var(--prism-table-header-bg, var(--prism-bg)); }
-.prism-root .prism-table__header { padding: 0; border-block-end: 1px solid var(--prism-hairline); color: var(--prism-ink-3); font-size: 12px; font-weight: 600; }
+.prism-root .prism-table__header { padding: 0; border-block-end: 1px solid var(--prism-border); color: var(--prism-text-subtle); font-size: var(--prism-text-xs); font-weight: var(--prism-weight-semibold); }
 .prism-root .prism-table__sort {
   display: inline-flex;
   align-items: center;
-  gap: var(--prism-space1);
+  gap: var(--prism-space-1);
   width: 100%;
   min-height: 38px;
-  padding-inline: var(--prism-space3);
+  padding-inline: var(--prism-space-3);
   border: 0;
   background: transparent;
   color: inherit;
@@ -24,27 +24,27 @@
 .prism-root .prism-table__sort:disabled { cursor: default; }
 .prism-root .prism-table__sort:disabled .prism-table__sortIcon { visibility: hidden; }
 .prism-root .prism-table__sort:focus-visible { outline-offset: -2px; }
-.prism-root .prism-table__header[aria-sort]:not([aria-sort="none"]) { color: var(--prism-accent); }
+.prism-root .prism-table__header[aria-sort]:not([aria-sort="none"]) { color: var(--prism-accent-text, var(--prism-accent, #525252)); }
 .prism-root .prism-table__sortIcon { flex-shrink: 0; opacity: .7; }
-.prism-root .prism-table__cell { block-size: 44px; padding: var(--prism-space2) var(--prism-space3); border-block-end: 1px solid var(--prism-hairline); vertical-align: middle; }
+.prism-root .prism-table__cell { block-size: 44px; padding: var(--prism-space-2) var(--prism-space-3); border-block-end: 1px solid var(--prism-border); vertical-align: middle; }
 .prism-root :is(.prism-table__header:first-child .prism-table__sort, .prism-table__cell:first-child) { padding-inline-start: 0; }
-.prism-root :is(.prism-table__header:last-child .prism-table__sort, .prism-table__cell:last-child) { padding-inline-end: var(--prism-space1); }
-.prism-root .prism-table__row { transition: background var(--prism-duration-fast); }
-.prism-root .prism-table__body .prism-table__row:hover { background: var(--prism-fill); }
+.prism-root :is(.prism-table__header:last-child .prism-table__sort, .prism-table__cell:last-child) { padding-inline-end: var(--prism-space-1); }
+.prism-root .prism-table__row { transition: background var(--prism-motion-fast); }
+.prism-root .prism-table__body .prism-table__row:hover { background: color-mix(in srgb, var(--prism-text) 3.5%, transparent); }
 .prism-root .prism-table__root::before, .prism-root .prism-table__root::after {
   content: "";
   position: absolute;
   inset-block: 0;
-  width: var(--prism-space4);
+  width: var(--prism-space-4);
   z-index: 2;
   pointer-events: none;
   opacity: 0;
-  transition: opacity var(--prism-duration);
+  transition: opacity var(--prism-motion-base);
 }
 .prism-root .prism-table__root::before { left: 0; background: linear-gradient(to right, var(--prism-table-header-bg, var(--prism-bg)), transparent); }
 .prism-root .prism-table__root::after { right: 0; background: linear-gradient(to left, var(--prism-table-header-bg, var(--prism-bg)), transparent); }
 .prism-root .prism-table__root[data-overflow-start]::before, .prism-root .prism-table__root[data-overflow-end]::after { opacity: 1; }
-.prism-root .prism-table__pagination { display: flex; justify-content: flex-end; align-items: center; gap: var(--prism-space3); padding-block-start: var(--prism-space2); color: var(--prism-muted); font-size: var(--prism-text-sm); }
-.prism-root .prism-table__pageButton { border: 0; border-radius: var(--prism-radius-pill); padding: var(--prism-space2) var(--prism-space3); background: transparent; color: var(--prism-muted); font: inherit; cursor: pointer; }
-.prism-root .prism-table__pageButton:hover:not(:disabled) { background: var(--prism-fill); }
+.prism-root .prism-table__pagination { display: flex; justify-content: flex-end; align-items: center; gap: var(--prism-space-3); padding-block-start: var(--prism-space-2); color: var(--prism-text-muted); font-size: var(--prism-text-sm); }
+.prism-root .prism-table__pageButton { border: 0; border-radius: var(--prism-radius-pill); padding: var(--prism-space-2) var(--prism-space-3); background: transparent; color: var(--prism-text-muted); font: inherit; cursor: pointer; }
+.prism-root .prism-table__pageButton:hover:not(:disabled) { background: color-mix(in srgb, var(--prism-text) 3.5%, transparent); }
 .prism-root .prism-table__pageButton:disabled { opacity: .45; cursor: default; }

@@ -1,7 +1,7 @@
 import { useContext, useEffect, useMemo, useRef, useState, type HTMLAttributes, type KeyboardEvent } from 'react';
 import type { Node } from '@prism-ui/core';
 import { s } from '@prism-ui/schema';
-import { ComponentContext, defaultRenderers, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, useSlot, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
+import { useStrings, useTheme, PrismPart, ComponentContext, defaultRenderers, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, useSlot, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
 
 export interface TroubleshootStep { title?: string; text: string; command?: string; yes?: string; no?: string; hint?: string }
@@ -27,7 +27,7 @@ export function useTroubleshoot(props: TroubleshootProps, ctx: PrismContextValue
   const component = useContext(ComponentContext), format = useFormat(), emit = useEmit();
   const [storedPath, setPath] = useComponentState<TroubleshootAnswer[]>('path', []), [sent, setSent] = useComponentState('sent', false);
   const steps = useMemo(() => validateSteps(props.steps), [props.steps]);
-  const labels = useMemo(() => ({ ...defaults, ...props.labels }), [props.labels]);
+  const labels = { ...defaults, ...props.labels, ...useStrings('troubleshoot') }, themed = useTheme().theme.components.troubleshoot?.strings;
   const derived = useMemo(() => {
     let current = props.start;
     const path: TroubleshootAnswer[] = [];
@@ -39,7 +39,8 @@ export function useTroubleshoot(props: TroubleshootProps, ctx: PrismContextValue
   }, [props.start, storedPath, steps, component?.node.complete]);
   const { path } = derived;
   const pluralRules = useMemo(() => new Intl.PluralRules(format.locale), [format.locale]);
-  const resultLabel = pluralRules.select(path.length) === 'one' ? props.labels?.fixedOne ?? props.labels?.fixed ?? labels.fixedOne : props.labels?.fixedOther ?? props.labels?.fixed ?? labels.fixedOther;
+  const plural = pluralRules.select(path.length) === 'one' ? 'fixedOne' : 'fixedOther';
+  const resultLabel = themed?.[plural] ?? themed?.fixed ?? props.labels?.[plural] ?? props.labels?.fixed ?? labels[plural];
   const streamedKeys = props.steps && typeof props.steps === 'object' && !Array.isArray(props.steps) ? Object.keys(props.steps) : [];
   const currentReady = component?.node.complete !== false || !!(derived.current && streamedKeys.indexOf(derived.current) >= 0 && streamedKeys.indexOf(derived.current) < streamedKeys.length - 1);
   const readyTarget = (value: string | undefined) => value === '$fixed' || value === '$escalate' || !!(value && steps[value]?.text.trim() && streamedKeys.indexOf(value) < streamedKeys.length - 1);
@@ -51,7 +52,7 @@ export function useTroubleshoot(props: TroubleshootProps, ctx: PrismContextValue
   function edit(next: TroubleshootAnswer[]) { ctx.store.batch(() => { setPath(next); setSent(false); }); }
   function answer(value: 'yes' | 'no') { if (ready && !derived.ended && derived.current) edit([...path, { step: derived.current, answer: value }]); }
   function back(index = Math.max(0, path.length - 1)) { edit(path.slice(0, index)); }
-  return { ...derived, path, sent, ready, labels, steps, commandNode, copyState, title: props.title ?? labels.title,
+  return { ...derived, path, sent, ready, labels, steps, commandNode, copyState, title: labels.title,
     loading: !derived.step?.text.trim() || (component?.node.complete === false && !ready),
     state: sent ? 'sent' : derived.ended ? derived.resolved ? 'resolved' : 'dead-end' : 'active',
     position: `${labels.step} ${format.number(path.length + 1)}`,
@@ -68,8 +69,8 @@ export function useTroubleshoot(props: TroubleshootProps, ctx: PrismContextValue
     async copy() { clearTimeout(timer.current); try { await navigator.clipboard.writeText((commandNode?.value ?? '').replace(/^\$ /gm, '')); setCopyState('copied'); } catch { setCopyState('error'); } timer.current = setTimeout(() => setCopyState('idle'), 1500); },
   };
 }
-function Box(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
-function Empty(props: HTMLAttributes<HTMLDivElement>) { return <div {...usePart('troubleshoot', 'skeleton')} {...props} role="status" />; }
+function Box(props: HTMLAttributes<HTMLDivElement>) { return <PrismPart as="div" {...props} />; }
+function Empty(props: HTMLAttributes<HTMLDivElement>) { return <PrismPart as="div" {...usePart('troubleshoot', 'skeleton')} {...props} role="status" />; }
 function Command({ node }: { node: Node }) {
   const ctx = usePrism(), definition = ctx.registry.get('code');
   const View = ctx.components.code ?? definition?.component ?? defaultRenderers.code;
@@ -82,21 +83,21 @@ export function Troubleshooter({ props }: PrismComponentProps<TroubleshootProps>
   const body = usePart('troubleshoot', 'conversation'), history = usePart('troubleshoot', 'history'), item = usePart('troubleshoot', 'historyItem'), chip = usePart('troubleshoot', 'chip'), card = usePart('troubleshoot', 'step', vm.state), position = usePart('troubleshoot', 'position'), title = usePart('troubleshoot', 'stepTitle'), text = usePart('troubleshoot', 'text'), hint = usePart('troubleshoot', 'hint'), question = usePart('troubleshoot', 'question'), actions = usePart('troubleshoot', 'actions'), primary = usePart('troubleshoot', 'primary'), ghost = usePart('troubleshoot', 'ghost'), result = usePart('troubleshoot', 'result', vm.state);
   const command = usePart('troubleshoot', 'command');
   const Item = useSlot('troubleshoot', 'historyItem', Box), Card = useSlot('troubleshoot', 'step', Box), EmptyState = useSlot('troubleshoot', 'empty', Empty), Actions = useSlot('troubleshoot', 'actions', Box);
-  return <div {...body} onKeyDown={vm.onKeyDown}><ComponentFrame component="troubleshoot" title={vm.title} state={vm.state} ask undo>
-    {vm.path.length > 0 && <div {...history} aria-label={vm.labels.history}>{vm.path.map((entry, index) => <Item {...item} key={`${index}.${entry.step}`}><button {...ghost} type="button" onClick={() => vm.back(index)}><span {...text}>{vm.steps[entry.step]?.text ?? entry.step}</span><span {...chip} data-state={entry.answer}>{vm.labels[entry.answer]}</span></button></Item>)}</div>}
-    {vm.ended ? <div {...result} role="status"><h4 {...title}>{vm.result}</h4>{vm.sent && <p {...text}>{vm.labels.sent}</p>}<Actions {...actions}><button {...primary} type="button" onClick={vm.report} disabled={vm.sent}>{vm.labels.report}</button><button {...ghost} type="button" onClick={vm.restart}>{vm.labels.restart}</button></Actions></div> : <Card {...card}>
-      <h4 {...title}><span {...position} aria-live="polite">{vm.position}</span>{vm.step?.title}</h4>
+  return <PrismPart as="div" {...body} onKeyDown={vm.onKeyDown}><ComponentFrame component="troubleshoot" title={vm.title} state={vm.state} ask undo>
+    {vm.path.length > 0 && <PrismPart as="div" {...history} aria-label={vm.labels.history}>{vm.path.map((entry, index) => <Item {...item} key={`${index}.${entry.step}`}><PrismPart as="button" {...ghost} type="button" onClick={() => vm.back(index)}><PrismPart as="span" {...text}>{vm.steps[entry.step]?.text ?? entry.step}</PrismPart><PrismPart as="span" {...chip} data-state={entry.answer}>{vm.labels[entry.answer]}</PrismPart></PrismPart></Item>)}</PrismPart>}
+    {vm.ended ? <PrismPart as="div" {...result} role="status"><PrismPart as="h4" {...title}>{vm.result}</PrismPart>{vm.sent && <PrismPart as="p" {...text}>{vm.labels.sent}</PrismPart>}<Actions {...actions}><PrismPart as="button" {...primary} type="button" onClick={vm.report} disabled={vm.sent}>{vm.labels.report}</PrismPart><PrismPart as="button" {...ghost} type="button" onClick={vm.restart}>{vm.labels.restart}</PrismPart></Actions></PrismPart> : <Card {...card}>
+      <PrismPart as="h4" {...title}><PrismPart as="span" {...position} aria-live="polite">{vm.position}</PrismPart>{vm.step?.title}</PrismPart>
       {!vm.step || vm.loading ? <EmptyState aria-label={vm.labels.loading} /> : <>
-        <p {...text}>{vm.step.text}</p>
-        {vm.commandNode && <div {...command}><Command node={vm.commandNode} /><button {...ghost} type="button" onClick={vm.copy} aria-live="polite">{vm.copyState === 'copied' ? vm.labels.copied : vm.copyState === 'error' ? vm.labels.copyError : vm.labels.copy}</button></div>}
-        {vm.step.hint && <p {...hint}>{vm.step.hint}</p>}
+        <PrismPart as="p" {...text}>{vm.step.text}</PrismPart>
+        {vm.commandNode && <PrismPart as="div" {...command}><Command node={vm.commandNode} /><PrismPart as="button" {...ghost} type="button" onClick={vm.copy} aria-live="polite">{vm.copyState === 'copied' ? vm.labels.copied : vm.copyState === 'error' ? vm.labels.copyError : vm.labels.copy}</PrismPart></PrismPart>}
+        {vm.step.hint && <PrismPart as="p" {...hint}>{vm.step.hint}</PrismPart>}
       </>}
-      <p {...question}>{vm.labels.question}</p><Actions {...actions}><button {...primary} type="button" disabled={!vm.ready} onClick={() => vm.answer('yes')} aria-keyshortcuts="Y">{vm.labels.yes}</button><button {...ghost} type="button" disabled={!vm.ready} onClick={() => vm.answer('no')} aria-keyshortcuts="N">{vm.labels.no}</button></Actions>
+      <PrismPart as="p" {...question}>{vm.labels.question}</PrismPart><Actions {...actions}><PrismPart as="button" {...primary} type="button" disabled={!vm.ready} onClick={() => vm.answer('yes')} aria-keyshortcuts="Y">{vm.labels.yes}</PrismPart><PrismPart as="button" {...ghost} type="button" disabled={!vm.ready} onClick={() => vm.answer('no')} aria-keyshortcuts="N">{vm.labels.no}</PrismPart></Actions>
     </Card>}
-  </ComponentFrame></div>;
+  </ComponentFrame></PrismPart>;
 }
 const labelsSchema = s.object(Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, s.string().optional().describe(`Override the ${key} label${key.startsWith('fixed') ? '; {count} is the formatted step count' : ''}`).example(value)]))).optional().describe('Translated interface labels').example(defaults);
-export const troubleshootDefinition = defineComponent({ name: 'troubleshoot', schema: s.object({
+export const troubleshootDefinition = defineComponent({ name: 'troubleshoot', parts: ["actions","ask","body","chip","command","conversation","empty","footer","ghost","header","hint","history","historyItem","position","primary","question","result","root","skeleton","step","stepTitle","text","title","toolbar","undo"], strings: defaults, schema: s.object({
   id: s.string().optional().describe('Persistent component state identifier').example('wifi'),
   title: s.string().optional().describe('Troubleshooting title').example('Wi-Fi drops'),
   start: s.string().describe('First step id').example('restart'),

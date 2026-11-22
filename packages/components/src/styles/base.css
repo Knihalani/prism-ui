@@ -1,32 +1,33 @@
 .prism-root[data-prism-presentation], .prism-root[data-prism-presentation] * { box-sizing: border-box; }
+.prism-root :where(button, input, textarea, select) { font: inherit; }
 .prism-root[data-prism-presentation] {
-  max-inline-size: var(--prism-measure-wide);
+  max-inline-size: var(--prism-prose-measure-wide, 760px);
   margin-inline: auto;
   color: var(--prism-text);
   background: var(--prism-bg);
-  font-family: var(--prism-font-sans);
+  font-family: var(--prism-font-body);
   font-size: var(--prism-text-base);
   line-height: 1.65;
-  letter-spacing: var(--prism-letter-spacing);
-  font-feature-settings: var(--prism-font-features);
+  letter-spacing: var(--prism-prose-letter-spacing, normal);
+  font-feature-settings: var(--prism-prose-font-features, normal);
   font-variant-numeric: tabular-nums;
   overflow-wrap: break-word;
   -webkit-font-smoothing: antialiased;
 }
 .prism-root[data-prism-presentation] > :not(:where(.prism-datatable__root, div.prism-table__root, .prism-chart__root, .prism-mockup__root, .prism-artifact__root)) {
-  max-inline-size: var(--prism-measure);
+  max-inline-size: var(--prism-prose-measure, 680px);
   margin-inline: auto;
 }
 .prism-root[data-prism-presentation] :where(.prism-paragraph__root, .prism-list__root, .prism-blockquote__root) {
-  font-family: var(--prism-font-sans);
+  font-family: var(--prism-font-body);
   font-size: var(--prism-text-base);
   line-height: 1.65;
 }
 .prism-root[data-prism-presentation] :where(.prism-paragraph__root, .prism-heading__root, .prism-code__root > code)::after,
 .prism-root[data-prism-presentation][data-state="streaming"]:empty::after,
 .prism-root[data-prism-presentation] .prism-stream-caret {
-  background: var(--prism-spectrum);
-  box-shadow: var(--prism-spectrum-glow);
+  background: var(--prism-prose-highlight, var(--prism-accent, #525252));
+  box-shadow: var(--prism-prose-highlight-shadow, none);
 }
 .prism-root :is(.prism-card__body, .prism-callout__body):has(> [data-prism-skeleton]) {
   display: grid;
@@ -36,38 +37,38 @@
 .prism-root :is(.prism-card__body, .prism-callout__body) > [data-prism-skeleton] { margin-block: 0; }
 .prism-root :where(.prism-heading__root, .prism-paragraph__root, .prism-list__root, .prism-blockquote__root, .prism-thematicBreak__root, .prism-image__root, .prism-code__root, .prism-table__root) { margin-block: 0; }
 .prism-root :where(.prism-heading__root, .prism-paragraph__root, .prism-list__root, .prism-blockquote__root, .prism-thematicBreak__root, .prism-image__root, .prism-code__root, .prism-table__root) + :where(.prism-heading__root, .prism-paragraph__root, .prism-list__root, .prism-blockquote__root, .prism-thematicBreak__root, .prism-image__root, .prism-code__root, .prism-table__root),
-.prism-root :where(div, section, aside, article) + :where(.prism-heading__root, .prism-paragraph__root, .prism-list__root, .prism-blockquote__root, .prism-thematicBreak__root, .prism-image__root, .prism-code__root, .prism-table__root) { margin-block-start: var(--prism-flow-gap); }
+.prism-root :where(div, section, aside, article) + :where(.prism-heading__root, .prism-paragraph__root, .prism-list__root, .prism-blockquote__root, .prism-thematicBreak__root, .prism-image__root, .prism-code__root, .prism-table__root) { margin-block-start: var(--prism-space-5); }
 
 .prism-root .prism-heading__root {
   font-family: var(--prism-font-display);
-  font-weight: 400;
+  font-weight: var(--prism-weight-regular);
   line-height: 1.13;
   letter-spacing: -.01em;
   text-wrap: balance;
 }
-.prism-root .prism-heading__root + :where(.prism-paragraph__root, .prism-list__root) { margin-block-start: var(--prism-space2); }
-.prism-root h1.prism-heading__root { font-size: var(--prism-text-total); }
-.prism-root h2.prism-heading__root { font-size: var(--prism-text-display); }
-.prism-root h3.prism-heading__root { font-size: 28px; }
+.prism-root .prism-heading__root + :where(.prism-paragraph__root, .prism-list__root) { margin-block-start: var(--prism-space-2); }
+.prism-root h1.prism-heading__root { font-size: var(--prism-text-3xl); }
+.prism-root h2.prism-heading__root { font-size: var(--prism-text-2xl); }
+.prism-root h3.prism-heading__root { font-size: var(--prism-text-2xl); }
 .prism-root :is(h4, h5, h6).prism-heading__root {
-  font: 600 var(--prism-text-base)/1.4 var(--prism-font-sans);
+  font-family: var(--prism-font-body); font-size: var(--prism-text-base); line-height: 1.4; font-weight: var(--prism-weight-semibold);
 }
-.prism-root .prism-strong__root { font-weight: 650; }
-.prism-root .prism-delete__root { color: var(--prism-muted); }
+.prism-root .prism-strong__root { font-weight: var(--prism-weight-semibold); }
+.prism-root .prism-delete__root { color: var(--prism-text-muted); }
 .prism-root .prism-list__root { padding-inline-start: 1.45em; }
-.prism-root .prism-list__root .prism-list__root { margin-block: var(--prism-space1) 0; }
+.prism-root .prism-list__root .prism-list__root { margin-block: var(--prism-space-1) 0; }
 .prism-root .prism-listItem__root { padding-inline-start: .2em; }
-.prism-root .prism-listItem__root + .prism-listItem__root { margin-block-start: var(--prism-space1); }
-.prism-root .prism-listItem__root::marker { color: var(--prism-muted); font-variant-numeric: tabular-nums; }
+.prism-root .prism-listItem__root + .prism-listItem__root { margin-block-start: var(--prism-space-1); }
+.prism-root .prism-listItem__root::marker { color: var(--prism-text-muted); font-variant-numeric: tabular-nums; }
 .prism-root .prism-listItem__root:has(> input[type="checkbox"]) { list-style: none; position: relative; }
 .prism-root .prism-listItem__root > input[type="checkbox"] { position: absolute; inset-block-start: .28em; inset-inline-start: -1.27em; }
 .prism-root .prism-blockquote__root {
-  padding-inline-start: var(--prism-space4);
-  border-inline-start: 2px solid var(--prism-hairline);
-  color: var(--prism-muted);
+  padding-inline-start: var(--prism-space-4);
+  border-inline-start: 2px solid var(--prism-border);
+  color: var(--prism-text-muted);
 }
 .prism-root .prism-link__root {
-  color: var(--prism-accent);
+  color: var(--prism-accent-text, var(--prism-accent, #525252));
   text-decoration-color: color-mix(in oklab, currentColor 42%, transparent);
   text-decoration-thickness: 1px;
   text-underline-offset: .2em;
@@ -76,16 +77,16 @@
 .prism-root .prism-inlineCode__root {
   padding: .13em .34em;
   border-radius: var(--prism-radius-sm);
-  background: var(--prism-fill);
+  background: color-mix(in srgb, var(--prism-text) 3.5%, transparent);
   font-family: var(--prism-font-mono);
   font-size: .87em;
   overflow-wrap: anywhere;
 }
 .prism-root .prism-code__root {
-  padding: var(--prism-space4);
+  padding: var(--prism-space-4);
   overflow: auto;
-  border-radius: var(--prism-radius-code);
-  background: var(--prism-fill-strong);
+  border-radius: var(--prism-radius-lg);
+  background: color-mix(in srgb, var(--prism-text) 6%, transparent);
   font: var(--prism-text-sm)/1.65 var(--prism-font-mono);
   overflow-wrap: normal;
   tab-size: 2;
@@ -93,30 +94,30 @@
 .prism-root .prism-code__root > code { font: inherit; }
 .prism-root .prism-table__root { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--prism-text-sm); }
 .prism-root :is(.prism-tableHeader__root, .prism-tableCell__root) {
-  padding: var(--prism-space2) var(--prism-space3);
-  border-block-end: 1px solid var(--prism-hairline);
+  padding: var(--prism-space-2) var(--prism-space-3);
+  border-block-end: 1px solid var(--prism-border);
   text-align: start;
   vertical-align: top;
   font-variant-numeric: tabular-nums;
 }
-.prism-root .prism-tableHeader__root { color: var(--prism-muted); font-weight: 600; }
-.prism-root .prism-thematicBreak__root { border: 0; border-block-start: 1px solid var(--prism-hairline); }
+.prism-root .prism-tableHeader__root { color: var(--prism-text-muted); font-weight: var(--prism-weight-semibold); }
+.prism-root .prism-thematicBreak__root { border: 0; border-block-start: 1px solid var(--prism-border); }
 .prism-root .prism-image__root { display: block; max-width: 100%; height: auto; border-radius: var(--prism-radius-md); }
 
 .prism-root :is([data-prism-enter], .prism-enter):not(.prism-materialise, .prism-frame__root) {
-  animation: prism-materialise-in var(--prism-duration-entry) var(--prism-ease) backwards;
-  animation-delay: calc(var(--prism-duration-entry) * var(--prism-stagger, 0) / 8);
+  animation: prism-materialise-in var(--prism-motion-slow) var(--prism-motion-ease) backwards;
+  animation-delay: calc(var(--prism-motion-slow) * var(--prism-frame-stagger, 0) / 8);
 }
 @keyframes prism-shimmer { to { background-position: -200% 0; } }
 .prism-root .prism-skeleton {
-  background: linear-gradient(100deg, var(--prism-fill), var(--prism-fill-strong), var(--prism-fill));
+  background: linear-gradient(100deg, color-mix(in srgb, var(--prism-text) 3.5%, transparent), color-mix(in srgb, var(--prism-text) 6%, transparent), color-mix(in srgb, var(--prism-text) 3.5%, transparent));
   background-size: 200% 100%;
-  animation: prism-shimmer var(--prism-shimmer-duration) ease-in-out infinite;
+  animation: prism-shimmer var(--prism-motion-slow) var(--prism-motion-ease) infinite;
   border-radius: var(--prism-radius-sm);
 }
 .prism-root[data-animate="false"] :is([data-prism-enter], .prism-enter, .prism-skeleton),
 .prism-root [data-animate="false"] :is([data-prism-enter], .prism-enter, .prism-skeleton) { animation: none; }
-.prism-root .prism-skeleton[data-state="done"] { animation: none; background: var(--prism-fill); }
+.prism-root .prism-skeleton[data-state="done"] { animation: none; background: color-mix(in srgb, var(--prism-text) 3.5%, transparent); }
 @media (prefers-reduced-motion: reduce) {
   .prism-root :is([data-prism-enter], .prism-enter, .prism-skeleton) { animation: none; }
 }

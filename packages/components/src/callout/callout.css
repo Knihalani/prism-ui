@@ -1,7 +1,7 @@
 .prism-root .prism-callout__root {
-  --prism-callout-color: var(--prism-accent);
+  --prism-callout-color: var(--prism-accent, #525252);
   position: relative;
-  padding-inline-start: var(--prism-space6);
+  padding-inline-start: var(--prism-space-6);
 }
 .prism-root .prism-callout__root::before {
   content: "";
@@ -11,25 +11,25 @@
   inline-size: 2px;
   background: var(--prism-callout-color);
 }
-.prism-root :where(*) + .prism-callout__root { margin-block-start: var(--prism-flow-gap); }
+.prism-root :where(*) + .prism-callout__root { margin-block-start: var(--prism-space-5); }
 .prism-root .prism-callout__root[data-tone="tip"]::before {
-  background: linear-gradient(180deg, #7dd3fc, #818cf8, #c084fc, #f472b6, #fdba74);
-  box-shadow: var(--prism-spectrum-glow);
+  background: var(--prism-callout-highlight, var(--prism-accent, #525252));
+  box-shadow: var(--prism-callout-highlight-shadow, none);
 }
-.prism-root .prism-callout__root[data-tone="success"] { --prism-callout-color: var(--prism-success); }
+.prism-root .prism-callout__root[data-tone="success"] { --prism-callout-color: var(--prism-positive); }
 .prism-root .prism-callout__root[data-tone="warning"] { --prism-callout-color: var(--prism-warning); }
 .prism-root .prism-callout__root[data-tone="danger"] { --prism-callout-color: var(--prism-danger); }
 .prism-root .prism-callout__root[data-variant="outline"]::before { inline-size: 1px; }
 .prism-root .prism-callout__header {
   display: flex;
   align-items: baseline;
-  gap: var(--prism-space2);
+  gap: var(--prism-space-2);
   min-height: 1.35em;
 }
 .prism-root .prism-callout__header:has(.prism-callout__ask) { padding-inline-end: 32px; }
 .prism-root .prism-callout__icon { align-self: center; color: var(--prism-callout-color); flex: none; }
-.prism-root .prism-callout__title { margin: 0; font: 600 16px/1.65 var(--prism-font-sans); }
-.prism-root .prism-callout__body:not(:empty) { margin-top: 10px; font-size: 16px; line-height: 1.8; }
+.prism-root .prism-callout__title { margin: 0; font-family: var(--prism-font-body); font-size: var(--prism-text-base); line-height: 1.65; font-weight: var(--prism-weight-semibold); }
+.prism-root .prism-callout__body:not(:empty) { margin-top: 10px; font-size: var(--prism-text-base); line-height: 1.8; }
 .prism-root .prism-callout__ask { position: absolute; inset-block-start: -4px; inset-inline-end: 0; }
 .prism-root .prism-callout__skeleton {
   --prism-skeleton-width: 69%;
@@ -42,5 +42,5 @@
   .prism-root .prism-callout__root:not(:hover, :focus-within) > .prism-callout__header .prism-callout__ask { opacity: 0; }
 }
 @media (max-width: 520px) {
-  .prism-root .prism-callout__root { padding-inline-start: var(--prism-space5); }
+  .prism-root .prism-callout__root { padding-inline-start: var(--prism-space-5); }
 }

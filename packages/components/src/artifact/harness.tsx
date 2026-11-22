@@ -1,6 +1,7 @@
+import { componentStrings } from '../strings';
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Prism, createRegistry, type Action } from '@prism-ui/react';
+import { useStrings, Prism, createRegistry, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { num } from '../num';
 import '../num/num.css';
@@ -32,6 +33,7 @@ const harnessWindow = window as Window & { harness?: Harness };
 const actions: Action[] = [];
 
 function HarnessView() {
+  const themeStrings = useStrings('artifact', componentStrings.artifact);
   const [theme, setTheme] = useState<'light' | 'dark'>(query.get('theme') === 'dark' ? 'dark' : 'light');
   const [show, setShow] = useState(true);
   const [src, setSrc] = useState({ source: bench ? partial(calculatorFence) : full, done: !bench });
@@ -45,11 +47,11 @@ function HarnessView() {
   useEffect(() => { harnessWindow.harness = { actions, stream, close, version, demo, error, clear: () => setShow(false) }; });
   return <div className="harness-page" data-prism-theme={theme}>
     <header className="harness-header">
-      <h1>Inline artifacts</h1>
-      <nav aria-label="Harness">
-        <button onClick={demo}>Gallery</button><button onClick={stream}>Stream</button><button onClick={close}>Finish</button>
-        <button onClick={() => begin(revision)}>Stream update</button><button onClick={version}>Version 2</button><button onClick={error}>Error</button>
-        <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{theme === 'light' ? 'Dark' : 'Light'}</button>
+      <h1>{themeStrings.inlineArtifacts}</h1>
+      <nav aria-label={themeStrings.harness}>
+        <button onClick={demo}>{themeStrings.gallery}</button><button onClick={stream}>{themeStrings.stream}</button><button onClick={close}>{themeStrings.finish}</button>
+        <button onClick={() => begin(revision)}>{themeStrings.streamUpdate}</button><button onClick={version}>{themeStrings.version2}</button><button onClick={error}>{themeStrings.error}</button>
+        <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{theme === 'light' ? themeStrings.dark : themeStrings.light}</button>
       </nav>
     </header>
     {show && <ArtifactProvider options={options}>

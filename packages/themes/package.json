@@ -1,0 +1,10 @@
+{
+  "name": "@prism-ui/themes",
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": false,
+  "exports": { ".": "./src/index.ts", "./refraction": "./src/refraction.ts", "./instrument": "./src/instrument.tsx" },
+  "peerDependencies": { "react": ">=18" },
+  "dependencies": { "@prism-ui/react": "workspace:*", "@prism-ui/components": "workspace:*" },
+  "devDependencies": { "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "@testing-library/react": "^16.0.0", "react-dom": "^19.0.0" }
+}

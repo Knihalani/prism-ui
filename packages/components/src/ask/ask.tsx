@@ -1,6 +1,7 @@
+import { componentStrings } from '../strings';
 import { useContext, useId, useMemo, useRef, type HTMLAttributes, type KeyboardEvent, type ReactNode } from 'react';
 import { s } from '@prism-ui/schema';
-import { ComponentContext, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, useSlot, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
+import { useStrings, PrismPart, ComponentContext, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, useSlot, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
 
 export type AskValue = string | number | boolean | null;
@@ -27,7 +28,7 @@ export function useAsk(props: AskProps, ctx: PrismContextValue) {
   const component = useContext(ComponentContext), format = useFormat(), emit = useEmit();
   const fields = useMemo(() => { const seen = new Set<string>(); return (props.fields ?? []).filter(field => !field.id || (!seen.has(field.id) && !!seen.add(field.id))); }, [props.fields]);
   const [values, setValues] = useComponentState<Record<string, AskValue>>('values', {}), [touched, setTouched] = useComponentState<Record<string, boolean>>('touched', {}), [submitted, setSubmitted] = useComponentState('submitted', false);
-  const labels = useMemo(() => ({ ...defaults, ...props.labels }), [props.labels]);
+  const strings = useStrings('ask'), labels = { ...defaults, ...props.labels, ...strings };
   const current = useMemo<Record<string, AskValue>>(() => Object.fromEntries(fields.filter(field => field.id).map(field => [field.id!, normalize(field, Object.hasOwn(values, field.id!) ? values[field.id!] : field.value)])), [fields, values]);
   const controls = useRef(new Map<string, HTMLElement>());
   const complete = component?.node.complete !== false;
@@ -54,7 +55,7 @@ export function useAsk(props: AskProps, ctx: PrismContextValue) {
     ctx.store.batch(() => { setValues(current); setSubmitted(true); });
     emit('submit', { values: current }, sentence(props.title ?? labels.title, fields, current, (field, value) => formatted(field, value, format, labels)));
   }
-  return { fields, values: current, touched, submitted, labels, errors, controls, complete, title: props.title ?? labels.title, submitLabel: props.submit ?? labels.send,
+  return { fields, values: current, touched, submitted, labels, errors, controls, complete, title: labels.title, submitLabel: strings.submit ?? labels.send,
     canSubmit: complete && fields.length > 0 && fields.every(field => field.id && field.label && field.type),
     suggested(field: AskField) { return field.value !== undefined && field.value !== null && !Object.hasOwn(values, field.id ?? ''); },
     loading(index: number) { return !complete && (index === fields.length - 1 || !fields[index]?.type || !fields[index]?.id); },
@@ -68,9 +69,10 @@ export function useAsk(props: AskProps, ctx: PrismContextValue) {
   };
 }
 type Model = ReturnType<typeof useAsk>;
-function Box(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
-function Empty({ label }: { label: string }) { const root = usePart('ask', 'empty'), part = usePart('ask', 'skeleton'); return <div {...root} role="status" aria-label={label}><div {...part} /></div>; }
+function Box(props: HTMLAttributes<HTMLDivElement>) { return <PrismPart as="div" {...props} />; }
+function Empty({ label }: { label: string }) { const root = usePart('ask', 'empty'), part = usePart('ask', 'skeleton'); return <PrismPart as="div" {...root} role="status" aria-label={label}><PrismPart as="div" {...part} /></PrismPart>; }
 function Field({ field, index, vm }: { field: AskField; index: number; vm: Model }) {
+  const themeStrings = useStrings('ask', componentStrings.ask);
   const unique = useId(), id = `ask-${unique}`, errorId = `${id}-error`, hintId = `${id}-hint`;
   const root = usePart('ask', 'field', vm.loading(index) ? 'loading' : undefined), label = usePart('ask', 'label', field.label ? undefined : 'loading'), required = usePart('ask', 'required'), suggested = usePart('ask', 'suggested'), control = usePart('ask', 'control'), hint = usePart('ask', 'hint'), errorPart = usePart('ask', 'error'), skeleton = usePart('ask', 'skeleton'), unit = usePart('ask', 'unit'), wrap = usePart('ask', 'inputWrap'), segments = usePart('ask', 'segments'), segment = usePart('ask', 'segment'), switchPart = usePart('ask', 'switch'), thumb = usePart('ask', 'thumb'), optionPart = usePart('ask', 'option');
   const key = field.id ?? '', value = vm.values[key] ?? null, error = vm.touched[key] ? vm.errors[key] : '';
@@ -80,33 +82,33 @@ function Field({ field, index, vm }: { field: AskField; index: number; vm: Model
   const ref = (element: HTMLElement | null) => { if (element) vm.controls.current.set(key, element); else vm.controls.current.delete(key); };
   const onBlur = () => vm.blur(key);
   let input: ReactNode;
-  if (vm.loading(index)) input = <div {...skeleton} aria-hidden="true" />;
-  else if (field.type === 'toggle') input = <button {...switchPart} {...attrs} ref={ref} type="button" role="switch" aria-checked={value === true} data-state={value === true ? 'on' : 'off'} onClick={() => vm.change(key, value !== true)} onBlur={onBlur}><span {...thumb} /></button>;
-  else if (smallSelect) input = <div {...segments} {...attrs} ref={ref} role="radiogroup" tabIndex={-1} onBlur={onBlur}>{options.map((option, optionIndex) => <button {...segment} key={option.value} type="button" role="radio" aria-checked={value === option.value} tabIndex={value === option.value || (value === null && optionIndex === 0) ? 0 : -1} onClick={() => vm.change(key, option.value)} onKeyDown={event => {
+  if (vm.loading(index)) input = <PrismPart as="div" {...skeleton} aria-hidden="true" />;
+  else if (field.type === 'toggle') input = <PrismPart as="button" {...switchPart} {...attrs} ref={ref} type="button" role="switch" aria-checked={value === true} data-state={value === true ? 'on' : 'off'} onClick={() => vm.change(key, value !== true)} onBlur={onBlur}><PrismPart as="span" {...thumb} /></PrismPart>;
+  else if (smallSelect) input = <PrismPart as="div" {...segments} {...attrs} ref={ref} role="radiogroup" tabIndex={-1} onBlur={onBlur}>{options.map((option, optionIndex) => <PrismPart as="button" {...segment} key={option.value} type="button" role="radio" aria-checked={value === option.value} tabIndex={value === option.value || (value === null && optionIndex === 0) ? 0 : -1} onClick={() => vm.change(key, option.value)} onKeyDown={event => {
     let next: number | undefined;
     if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (optionIndex + 1) % options.length;
     if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (optionIndex + options.length - 1) % options.length;
     if (event.key === 'Home') next = 0; if (event.key === 'End') next = options.length - 1;
     if (next !== undefined) { event.preventDefault(); vm.change(key, options[next].value); (event.currentTarget.parentElement?.children[next] as HTMLElement)?.focus(); }
-  }}>{option.label}</button>)}</div>;
-  else if (field.type === 'select') input = <select {...control} {...attrs} ref={ref} value={String(value ?? '')} onChange={event => vm.change(key, event.target.value || null)} onBlur={onBlur}><option {...optionPart} value="">{field.placeholder ?? vm.labels.select}</option>{options.map(option => <option {...optionPart} key={option.value} value={option.value}>{option.label}</option>)}</select>;
-  else if (field.type === 'textarea') input = <textarea {...control} {...attrs} ref={ref} value={String(value ?? '')} placeholder={field.placeholder} rows={3} onChange={event => vm.change(key, event.target.value || null)} onBlur={onBlur} />;
-  else input = <input {...control} {...attrs} ref={ref} type={field.type ?? 'text'} value={typeof value === 'boolean' ? String(value) : value ?? ''} min={field.min} max={field.max} step={field.step} placeholder={field.placeholder} onChange={event => vm.change(key, normalize(field, event.target.value))} onBlur={onBlur} />;
-  return <div {...root} data-type={field.type} data-wide={field.type === 'text' || field.type === 'textarea' || undefined}>
-    <label {...label} id={`${id}-label`} htmlFor={id}>{field.label ?? <span aria-hidden="true">&nbsp;</span>}{field.required && <span {...required} aria-hidden="true"> *</span>}{vm.suggested(field) && <span {...suggested}>{vm.labels.suggested}</span>}</label>
-    {field.type && <div {...wrap}>{input}{field.unit && <span {...unit}>{field.unit}</span>}</div>}
-    {field.hint && <div {...hint} id={hintId}>{field.hint}</div>}{error && <div {...errorPart} id={errorId} role="alert">{error}</div>}
-  </div>;
+  }}>{option.label}</PrismPart>)}</PrismPart>;
+  else if (field.type === 'select') input = <PrismPart as="select" {...control} {...attrs} ref={ref} value={String(value ?? '')} onChange={event => vm.change(key, event.target.value || null)} onBlur={onBlur}><PrismPart as="option" {...optionPart} value="">{field.placeholder ?? vm.labels.select}</PrismPart>{options.map(option => <PrismPart as="option" {...optionPart} key={option.value} value={option.value}>{option.label}</PrismPart>)}</PrismPart>;
+  else if (field.type === 'textarea') input = <PrismPart as="textarea" {...control} {...attrs} ref={ref} value={String(value ?? '')} placeholder={field.placeholder} rows={3} onChange={event => vm.change(key, event.target.value || null)} onBlur={onBlur} />;
+  else input = <PrismPart as="input" {...control} {...attrs} ref={ref} type={field.type ?? 'text'} value={typeof value === 'boolean' ? String(value) : value ?? ''} min={field.min} max={field.max} step={field.step} placeholder={field.placeholder} onChange={event => vm.change(key, normalize(field, event.target.value))} onBlur={onBlur} />;
+  return <PrismPart as="div" {...root} data-type={field.type} data-wide={field.type === 'text' || field.type === 'textarea' || undefined}>
+    <PrismPart as="label" {...label} id={`${id}-label`} htmlFor={id}>{field.label ?? <span aria-hidden="true">{themeStrings.nbsp}</span>}{field.required && <PrismPart as="span" {...required} aria-hidden="true"> *</PrismPart>}{vm.suggested(field) && <PrismPart as="span" {...suggested}>{vm.labels.suggested}</PrismPart>}</PrismPart>
+    {field.type && <PrismPart as="div" {...wrap}>{input}{field.unit && <PrismPart as="span" {...unit}>{field.unit}</PrismPart>}</PrismPart>}
+    {field.hint && <PrismPart as="div" {...hint} id={hintId}>{field.hint}</PrismPart>}{error && <PrismPart as="div" {...errorPart} id={errorId} role="alert">{error}</PrismPart>}
+  </PrismPart>;
 }
 export function Ask({ props }: PrismComponentProps<AskProps>) {
   const vm = useAsk(props, usePrism());
   const form = usePart('ask', 'form'), grid = usePart('ask', 'fields'), actions = usePart('ask', 'actions'), primary = usePart('ask', 'submit'), edit = usePart('ask', 'edit'), summary = usePart('ask', 'summary'), row = usePart('ask', 'summaryRow'), label = usePart('ask', 'summaryLabel'), value = usePart('ask', 'summaryValue');
   const Item = useSlot('ask', 'field', Field), EmptyState = useSlot('ask', 'empty', Empty), Actions = useSlot('ask', 'actions', Box), Summary = useSlot('ask', 'summary', Box);
   return <ComponentFrame component="ask" title={vm.title} state={vm.submitted ? 'submitted' : 'editing'} ask undo>
-    {vm.submitted ? <Summary {...summary} aria-live="polite">{vm.fields.map((field, index) => <div {...row} key={field.id ?? index}><span {...label}>{field.label}</span><span {...value}>{vm.display(field)}</span></div>)}<Actions {...actions}><button {...edit} type="button" onClick={vm.edit}>{vm.labels.edit}</button></Actions></Summary> : <form {...form} noValidate onKeyDown={vm.onKeyDown} onSubmit={event => { event.preventDefault(); vm.submit(); }}>
-      <div {...grid}>{vm.fields.length ? vm.fields.map((field, index) => <Item key={field.id ?? index} field={field} index={index} vm={vm} />) : <EmptyState label={vm.labels.loading} />}</div>
-      <Actions {...actions}><button {...primary} type="submit" disabled={!vm.canSubmit}>{vm.submitLabel}</button></Actions>
-    </form>}
+    {vm.submitted ? <Summary {...summary} aria-live="polite">{vm.fields.map((field, index) => <PrismPart as="div" {...row} key={field.id ?? index}><PrismPart as="span" {...label}>{field.label}</PrismPart><PrismPart as="span" {...value}>{vm.display(field)}</PrismPart></PrismPart>)}<Actions {...actions}><PrismPart as="button" {...edit} type="button" onClick={vm.edit}>{vm.labels.edit}</PrismPart></Actions></Summary> : <PrismPart as="form" {...form} noValidate onKeyDown={vm.onKeyDown} onSubmit={event => { event.preventDefault(); vm.submit(); }}>
+      <PrismPart as="div" {...grid}>{vm.fields.length ? vm.fields.map((field, index) => <Item key={field.id ?? index} field={field} index={index} vm={vm} />) : <EmptyState label={vm.labels.loading} />}</PrismPart>
+      <Actions {...actions}><PrismPart as="button" {...primary} type="submit" disabled={!vm.canSubmit}>{vm.submitLabel}</PrismPart></Actions>
+    </PrismPart>}
   </ComponentFrame>;
 }
 const optionSchema = s.union(s.string().describe('Option value and label').example('Indoor'), s.object({ value: s.string().describe('Submitted value').example('outdoor'), label: s.string().describe('Visible option label').example('Outdoor') }).describe('Option with distinct label').example({ value: 'outdoor', label: 'Outdoor' }));
@@ -125,7 +127,7 @@ const fieldSchema = s.object({
   unit: s.string().optional().describe('Visible suffix for the input and summary').example('guests'),
 });
 const labelsSchema = s.object(Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, s.string().optional().describe(`Override ${key} text; keep any {min} or {max} placeholder`).example(value)]))).optional().describe('Translated interface labels and validation messages').example(defaults);
-export const askDefinition = defineComponent({ name: 'ask', schema: s.object({
+export const askDefinition = defineComponent({ name: 'ask', parts: ["actions","ask","body","control","edit","empty","error","field","fields","footer","form","header","hint","inputWrap","label","option","required","root","segment","segments","skeleton","submit","suggested","summary","summaryLabel","summaryRow","summaryValue","switch","thumb","title","toolbar","undo","unit"], strings: { ...defaults, ...componentStrings.ask }, schema: s.object({
   id: s.string().optional().describe('Persistent component state identifier').example('reservation'),
   title: s.string().optional().describe('Form title').example('Book a table'),
   submit: s.string().optional().describe('Primary submit label').example('Book table'),

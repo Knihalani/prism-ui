@@ -1,15 +1,16 @@
+import { componentStrings } from '../strings';
 import { useId, useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent } from 'react';
-import { useComponentState, useEmit, useFormat, usePart, useSlot, type PrismComponentProps } from '@prism-ui/react';
+import { useStrings, Icon, PrismPart, useComponentState, useEmit, useFormat, usePart, useSlot, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
 
 export interface SummarySource { quote?: string; title?: string; url?: string }
 export interface SummaryPoint { text: string; source?: SummarySource }
 export interface SummaryAction { text: string; owner?: string; due?: string }
 export interface SummaryProps { id?: string; title?: string; points?: SummaryPoint[]; actions?: SummaryAction[] }
-function Point(props: HTMLAttributes<HTMLLIElement>) { return <li {...props} />; }
-function Source(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
-function Action(props: HTMLAttributes<HTMLLIElement>) { return <li {...props} />; }
-function Empty(props: HTMLAttributes<HTMLParagraphElement>) { return <p {...props} />; }
+function Point(props: HTMLAttributes<HTMLLIElement>) { return <PrismPart as="li" {...props} />; }
+function Source(props: HTMLAttributes<HTMLDivElement>) { return <PrismPart as="div" {...props} />; }
+function Action(props: HTMLAttributes<HTMLLIElement>) { return <PrismPart as="li" {...props} />; }
+function Empty(props: HTMLAttributes<HTMLParagraphElement>) { return <PrismPart as="p" {...props} />; }
 function sourceLink(value?: string) {
   try { const url = new URL(value ?? ''); return url.protocol === 'https:' || url.protocol === 'http:' ? { href: url.href, hostname: url.hostname } : undefined; } catch { return undefined; }
 }
@@ -54,28 +55,29 @@ export function useSummary(props: SummaryProps, ctx: Pick<PrismComponentProps, '
   };
 }
 export function Summary({ props, complete }: PrismComponentProps<SummaryProps>) {
+  const themeStrings = useStrings('summary', componentStrings.summary);
   const model = useSummary(props, { complete }), { parts } = model;
   const PointSlot = useSlot('summary', 'point', Point), SourceSlot = useSlot('summary', 'source', Source), ActionSlot = useSlot('summary', 'action', Action), EmptySlot = useSlot('summary', 'empty', Empty);
-  return <ComponentFrame component="summary" title={props.title ?? (complete ? 'Summary' : '')} label={props.title || 'Summary'} state={model.state} ask undo actions={<><span {...parts.progress}>{model.actions.length > 0 ? model.completed + ' of ' + model.actions.length + ' complete' : ''}</span><button {...parts.send} type="button" disabled={!model.canSend} onClick={model.send}>Send action items<svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 8h11M9 3l5 5-5 5" /></svg></button></>}>
-    <ul {...parts.points} ref={model.pointListRef}>
-      {model.loadingPoints && [0, 1, 2].map(index => <li {...parts.skeleton} key={index} aria-hidden="true" />)}
+  return <ComponentFrame component="summary" title={props.title ?? (complete ? 'Summary' : '')} label={props.title || 'Summary'} state={model.state} ask undo actions={<><PrismPart as="span" {...parts.progress}>{model.actions.length > 0 ? model.completed + themeStrings.of + model.actions.length + themeStrings.complete : ''}</PrismPart><PrismPart as="button" {...parts.send} type="button" disabled={!model.canSend} onClick={model.send}>{themeStrings.sendActionItems}<Icon name="send" /></PrismPart></>}>
+    <PrismPart as="ul" {...parts.points} ref={model.pointListRef}>
+      {model.loadingPoints && [0, 1, 2].map(index => <PrismPart as="li" {...parts.skeleton} key={index} aria-hidden="true" />)}
       {model.points.map(point => <PointSlot {...parts.point} key={point.index}>
-        <div {...parts.pointRow}>
-          {point.source ? <button {...parts.pointButton} type="button" id={point.buttonId} aria-expanded={point.expanded} aria-controls={point.panelId} onClick={() => model.togglePoint(point.index)} onKeyDown={model.onPointKeyDown}><span {...parts.pointText}>{point.text || (!complete ? <span {...parts.skeleton} aria-hidden="true" /> : '')}</span><span {...parts.citation}>[{point.number}]</span></button> : <p {...parts.pointText} tabIndex={0} onKeyDown={model.onPointKeyDown}>{point.text || (!complete ? <span {...parts.skeleton} aria-hidden="true" /> : '')}</p>}
-          <button {...parts.pointAsk} type="button" aria-label={'Ask about point ' + (point.index + 1)} onClick={() => model.askPoint(point.index)}>Ask about this</button>
-        </div>
-        {point.source && <SourceSlot {...parts.source} id={point.panelId} role="region" aria-label={'Source ' + point.number} aria-labelledby={point.buttonId} aria-hidden={!point.expanded} inert={!point.expanded} data-expanded={point.expanded ? '' : undefined}>
-          <div {...parts.sourceInner}><blockquote {...parts.quote}>{point.source.quote}</blockquote><div {...parts.sourceMeta}>{point.source.title && <span {...parts.sourceTitle}>{point.source.title}</span>}{point.link && <a {...parts.sourceLink} href={point.link.href} target="_blank" rel="noopener noreferrer">{point.link.hostname}<span aria-hidden="true"> ↗</span></a>}</div></div>
+        <PrismPart as="div" {...parts.pointRow}>
+          {point.source ? <PrismPart as="button" {...parts.pointButton} type="button" id={point.buttonId} aria-expanded={point.expanded} aria-controls={point.panelId} onClick={() => model.togglePoint(point.index)} onKeyDown={model.onPointKeyDown}><PrismPart as="span" {...parts.pointText}>{point.text || (!complete ? <PrismPart as="span" {...parts.skeleton} aria-hidden="true" /> : '')}</PrismPart><PrismPart as="span" {...parts.citation}>[{point.number}]</PrismPart></PrismPart> : <PrismPart as="p" {...parts.pointText} tabIndex={0} onKeyDown={model.onPointKeyDown}>{point.text || (!complete ? <PrismPart as="span" {...parts.skeleton} aria-hidden="true" /> : '')}</PrismPart>}
+          <PrismPart as="button" {...parts.pointAsk} type="button" aria-label={themeStrings.askAboutPoint + (point.index + 1)} onClick={() => model.askPoint(point.index)}>{themeStrings.askAboutThis}</PrismPart>
+        </PrismPart>
+        {point.source && <SourceSlot {...parts.source} id={point.panelId} role="region" aria-label={themeStrings.source + point.number} aria-labelledby={point.buttonId} aria-hidden={!point.expanded} inert={!point.expanded} data-expanded={point.expanded ? '' : undefined}>
+          <PrismPart as="div" {...parts.sourceInner}><PrismPart as="blockquote" {...parts.quote}>{point.source.quote}</PrismPart><PrismPart as="div" {...parts.sourceMeta}>{point.source.title && <PrismPart as="span" {...parts.sourceTitle}>{point.source.title}</PrismPart>}{point.link && <PrismPart as="a" {...parts.sourceLink} href={point.link.href} target="_blank" rel="noopener noreferrer">{point.link.hostname}<Icon name="external" /></PrismPart>}</PrismPart></PrismPart>
         </SourceSlot>}
       </PointSlot>)}
-    </ul>
-    {!model.loadingPoints && !model.points.length && <EmptySlot {...parts.empty}>No summary points yet.</EmptySlot>}
-    <section {...parts.actions} aria-label="Action items"><h4 {...parts.actionsTitle}>Action items</h4><ul {...parts.actionList}>
-      {model.loadingActions && [0, 1].map(index => <li {...parts.skeleton} key={index} aria-hidden="true" />)}
+    </PrismPart>
+    {!model.loadingPoints && !model.points.length && <EmptySlot {...parts.empty}>{themeStrings.noSummaryPointsYet}</EmptySlot>}
+    <PrismPart as="section" {...parts.actions} aria-label={themeStrings.actionItems}><PrismPart as="h4" {...parts.actionsTitle}>{themeStrings.actionItems}</PrismPart><PrismPart as="ul" {...parts.actionList}>
+      {model.loadingActions && [0, 1].map(index => <PrismPart as="li" {...parts.skeleton} key={index} aria-hidden="true" />)}
       {model.actions.map(action => <ActionSlot {...parts.action} key={action.index} data-checked={action.done ? '' : undefined}>
-        <label {...parts.actionLabel}><input {...parts.checkbox} type="checkbox" checked={action.done} onChange={() => model.toggleAction(action.index)} aria-label={action.text || 'Action item ' + (action.index + 1)} /><span {...parts.actionText}>{action.text || (!complete ? <span {...parts.skeleton} aria-hidden="true" /> : '')}</span></label>
-        <div {...parts.actionMeta}>{action.owner && <span {...parts.owner}><span {...parts.avatar} aria-hidden="true" style={{ ...parts.avatar.style, '--prism-summary-owner-hue': action.ownerDetails?.hue } as CSSProperties}>{action.ownerDetails?.initials}</span>{action.owner}</span>}{action.due && <time {...parts.due} dateTime={action.dateTime} data-tone={action.overdue ? 'warning' : undefined}>{action.dueLabel}</time>}</div>
+        <PrismPart as="label" {...parts.actionLabel}><PrismPart as="input" {...parts.checkbox} type="checkbox" checked={action.done} onChange={() => model.toggleAction(action.index)} aria-label={action.text || 'Action item ' + (action.index + 1)} /><PrismPart as="span" {...parts.actionText}>{action.text || (!complete ? <PrismPart as="span" {...parts.skeleton} aria-hidden="true" /> : '')}</PrismPart></PrismPart>
+        <PrismPart as="div" {...parts.actionMeta}>{action.owner && <PrismPart as="span" {...parts.owner}><PrismPart as="span" {...parts.avatar} aria-hidden="true" style={{ ...parts.avatar.style, '--prism-summary-owner-hue': action.ownerDetails?.hue } as CSSProperties}>{action.ownerDetails?.initials}</PrismPart>{action.owner}</PrismPart>}{action.due && <PrismPart as="time" {...parts.due} dateTime={action.dateTime} data-tone={action.overdue ? 'warning' : undefined}>{action.dueLabel}</PrismPart>}</PrismPart>
       </ActionSlot>)}
-    </ul>{!model.loadingActions && !model.actions.length && <EmptySlot {...parts.empty}>No action items.</EmptySlot>}</section>
+    </PrismPart>{!model.loadingActions && !model.actions.length && <EmptySlot {...parts.empty}>{themeStrings.noActionItems}</EmptySlot>}</PrismPart>
   </ComponentFrame>;
 }

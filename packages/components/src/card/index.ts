@@ -1,3 +1,4 @@
+import { componentStrings } from '../strings';
 import { defineComponent, registerComponent } from '@prism-ui/react';
 import { s } from '@prism-ui/schema';
 import { Card } from './card';
@@ -5,7 +6,7 @@ import { Card } from './card';
 export { Card, useCard } from './card';
 export type { CardProps } from './card';
 export const cardDef = defineComponent({
-  name: 'card', component: Card, syntax: 'container',
+  name: 'card', parts: ["root","action","actions","ask","body","header","image","link","skeleton","subtitle","title","toolbar"], strings: componentStrings.card, component: Card, syntax: 'container',
   schema: s.object({
     id: s.string().optional().describe('Stable instance identifier'),
     title: s.string().optional().describe('Card title'),
