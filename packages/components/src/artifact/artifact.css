@@ -138,4 +138,8 @@
 .prism-artifact__shell[data-variant="inline"] .prism-artifact__title { display: none; }
 .prism-artifact__shell[data-variant="inline"]:is(:hover,:focus-within) .prism-artifact__header { opacity: 1; transform: none; pointer-events: auto; }
 @media (hover: none) { .prism-root .prism-artifact__shell[data-variant="inline"] .prism-artifact__header { opacity: 1; transform: none; pointer-events: auto; } }
-@container (max-width: 400px) { .prism-artifact__controls { gap: 0; } .prism-artifact__updating:empty { display: none; } }
+@container (max-width: 400px) {
+  .prism-root .prism-artifact__shell[data-variant="inline"] .prism-artifact__header { position: relative; inset: auto; justify-self: end; margin-inline-end: 36px; margin-block-end: var(--prism-space-2); }
+  .prism-artifact__controls { gap: 0; }
+  .prism-artifact__shell[data-variant="inline"] .prism-artifact__updating { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+}

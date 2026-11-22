@@ -23,6 +23,15 @@ test('artifacts default to inline, with adaptive runtime and model instructions'
   expect(docs).toContain('host-granted'); expect(docs).toContain('--prism-on-accent');
 });
 
+test('narrow inline toolbars reserve document flow space rather than covering the preview', async () => {
+  const css = await Bun.file(new URL('./artifact.css', import.meta.url)).text();
+  const narrow = css.slice(css.lastIndexOf('@container (max-width: 400px)'));
+  const header = narrow.match(/\.prism-artifact__header\s*\{([^}]+)\}/)?.[1] ?? '';
+  expect(header).toMatch(/position:\s*(relative|static)\s*;/);
+  expect(header).toMatch(/inset:\s*auto\s*;/);
+  expect(header).toMatch(/margin-block-end:\s*var\(--prism-space-2\)/);
+});
+
 test('automatic content height can shrink after completion but never collapses while streaming', async () => {
   const restore = observeFrames();
   const store = createStore(), text = '```artifact:html {id=autofit}\n<p>Hello</p>';
