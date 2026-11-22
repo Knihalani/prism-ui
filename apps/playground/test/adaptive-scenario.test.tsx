@@ -7,6 +7,7 @@ import { createScriptedAgent } from '../src/agent/scripted';
 import { agentSource, scopedAgentSource } from '../src/adaptive-source';
 import { shells } from '../src/url-state';
 import type { AgentEvent } from '../src/agent/types';
+import { artifactFontBootstrap, artifactFontStyle } from '../src/artifact-fonts';
 
 let previousUrl: string;
 beforeEach(() => { previousUrl = window.location.href; window.location.href = 'http://localhost/'; });
@@ -45,6 +46,30 @@ test('the shared preview source retains its IDs while each conversation scopes i
   expect(agentSource).toContain('{id=adaptive-input');
   expect(scopedAgentSource('chat')).toContain('{id=chat-adaptive-input');
   expect(scopedAgentSource('chat')).not.toContain('{id=adaptive-input');
+});
+
+test('artifact source keeps font bytes out of streamed messages and history', () => {
+  for (const source of [agentSource, scopedAgentSource('conversation')]) {
+    expect(new TextEncoder().encode(source).length).toBeLessThan(12_000);
+    expect(source).not.toContain('@font-face');
+    expect(source).not.toContain('base64,');
+    expect(source).not.toContain('woff2');
+  }
+});
+
+test('frame font bootstrap tolerates a missing host and reuses its stylesheet on replay', () => {
+  const install = new Function('prism', artifactFontBootstrap.replace(/<\/?script>/g, ''));
+  const sheet = () => document.getElementById('playground-artifact-fonts');
+  try {
+    install({ theme: {} });
+    expect(sheet()).toBeNull();
+    install({ theme: artifactFontStyle });
+    install({ theme: artifactFontStyle });
+    expect(document.querySelectorAll('#playground-artifact-fonts')).toHaveLength(1);
+    for (const family of ['Shell Inter', 'Shell Manrope', 'Caveat', 'DM Sans', 'Inter Tight', 'IBM Plex Mono']) {
+      expect(sheet()?.textContent).toContain('font-family:"' + family + '"');
+    }
+  } finally { sheet()?.remove(); }
 });
 
 test('scripted artifact selection and feedback route back to the owning scenario', async () => {
