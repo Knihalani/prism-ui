@@ -1,11 +1,13 @@
 import './setup';
-import { expect, test } from 'bun:test';
-import { act, fireEvent, render, waitFor } from '@testing-library/react';
+import { afterEach, expect, test } from 'bun:test';
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { StrictMode } from 'react';
 import { createStore, memoryAdapter } from '@prism-ui/state';
 import { s } from '@prism-ui/schema';
 import type { Node, Plugin } from '@prism-ui/core';
 import { Prism, createRegistry, defineComponent, registerComponent, defaultRegistry, toPromptDocs, usePart, useSlot, useEmit, useStore, useStoreValue, useComponentState, useFormula, useFormat, usePrism, usePrismStream, createTheme, ThemeScope, defaultRenderers, message, cx, type Action, type MarkdownProps, type PrismComponentProps, type PrismStream, type PrismProps, type Middleware } from '../src';
+
+afterEach(cleanup);
 
 test('source deltas preserve frozen node references and render counts, including inline nodes', () => {
   const nodes: Node[] = []; let frozen = 0, inline = 0;

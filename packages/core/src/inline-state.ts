@@ -49,7 +49,9 @@ export class InlineState {
   private finishToken() {
     const target = this.tokenTarget!;
     target.pop();
-    const parsed = inline(this.token, this.path); for (let i = 0; i < parsed.length; i++) target.push(parsed[i]);
+    const rekey = (node: Node, path: string) => { node.key = path; node.children?.forEach((child, index) => rekey(child, `${path}.${index}`)); };
+    const parsed = inline(this.token, this.path);
+    for (const node of parsed) { rekey(node, `${this.path}.${target.length}`); target.push(node); }
     this.token = ''; this.tokenKind = ''; this.tokenNode = undefined; this.tokenTarget = undefined; this.quote = ''; this.depth = 0;
   }
   push(source: string) {

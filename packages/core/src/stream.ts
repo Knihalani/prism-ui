@@ -72,6 +72,15 @@ const setext = (s: string) => /^ {0,3}(?:=+|-+)\s*$/.test(s);
 const tableDelimiter = (s: string) => s.includes('|') && /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(s);
 const definition = (s: string) => /^ {0,3}\[([^\]]+)\]:\s*(?:<([^>]*)>|(\S+?))(?:\s+["'(](.*)["')])?\s*$/.exec(s);
 
+function append(parent: Node, child: Node) {
+  function key(node: Node, path: string) {
+    node.key = path;
+    node.children?.forEach((child, index) => key(child, `${path}.${index}`));
+  }
+  key(child, `${parent.key}.${parent.children!.length}`);
+  parent.children!.push(child);
+}
+
 type Mode = 'paragraph' | 'list' | 'blockquote' | 'table' | 'code' | 'container' | 'plugin';
 interface Active {
   mode: Mode;
@@ -269,15 +278,15 @@ export function streamParser(previews = true, path = '', references = new Refere
       const parsed = blocks([value], a.node.key, 0, undefined, plugins?.inline);
       if (a.mode === 'list' && parsed[0]?.type === 'list') {
         if (a.node.type !== 'list') a.node = { ...parsed[0], key: keyAt(a.index), children: [] };
-        a.node.children!.push(...(parsed[0].children ?? []));
+        for (const child of parsed[0].children ?? []) append(a.node, child);
       } else if (a.mode === 'blockquote') {
         if (a.node.type !== 'blockquote') a.node = { type: 'blockquote', key: keyAt(a.index), children: [] };
-        a.node.children!.push(...(parsed[0]?.children ?? []));
+        for (const child of parsed[0]?.children ?? []) append(a.node, child);
       }
       a.inline = undefined; a.inlinePending = '';
     } else if (previews && a.mode === 'table' && !tableDelimiter(value)) {
       const row = blocks([a.lines[0], a.lines[1], value], a.node.key, 0, undefined, plugins?.inline)[0]?.children?.[1];
-      if (row) a.node.children!.push(row);
+      if (row) append(a.node, row);
     }
   }
   function acceptPlugin(value: string) {
