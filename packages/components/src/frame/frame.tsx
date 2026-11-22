@@ -1,4 +1,4 @@
-import { createElement, useCallback, useContext, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ElementType, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from 'react';
+import { createElement, forwardRef, useCallback, useContext, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ElementType, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from 'react';
 import { ComponentContext, Icon, cx, useEmit, usePart, usePresentation, usePrism, useSlot, useStrings } from '@prism-ui/react';
 
 export interface FrameOptions {
@@ -46,7 +46,7 @@ export function useFrame({ component, title, label, state, ask = true, undo = fa
       'data-prism-enter': presentation['data-entering'], onKeyDown } };
 }
 export type FrameModel = ReturnType<typeof useFrame>;
-function Element({ as = 'div', model, frame, overflow, ...props }: FrameSlotProps<unknown>) { return createElement(as, props); }
+const Element = forwardRef<HTMLElement, FrameSlotProps<unknown>>(function Element({ as = 'div', model, frame, overflow, ...props }, ref) { return createElement(as, { ...props, ref }); });
 function useFrameSlot(component: string, part: FramePart) { return useSlot(component, part, useSlot('frame', part, Element)); }
 export function FrameIcon({ name }: { name: 'ask' | 'undo' | 'check' }) { return <Icon name={name} />; }
 export const frameStrings = { undoLabel: 'Undo', askLabel: 'Ask about this', moreLabel: 'More tools' };

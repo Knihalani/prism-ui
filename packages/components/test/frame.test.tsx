@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import type { ComponentProps } from 'react';
 import { createTheme, defineTheme, Prism, usePart, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
-import { ComponentFrame, useFrame, type ComponentFrameProps } from '../src';
+import { ComponentFrame, FrameOverflow, useFrame, type ComponentFrameProps } from '../src';
 
 afterEach(cleanup);
 
@@ -26,6 +26,17 @@ test('frame renders accessible parts, toolbar, footer and entry marker', () => {
   }
   expect(view.getByText('Draft')).toBeDefined(); expect(view.getByText('Frame content')).toBeDefined(); expect(view.getByRole('button', { name: 'Confirm' })).toBeDefined();
   expect(view.getByRole('button', { name: 'Ask about this' }).querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+});
+
+test('default overflow trigger restores DOM focus after Escape', () => {
+  const view = setup({ ask: false, toolbar: <FrameOverflow component="example"><button>Inside overflow</button></FrameOverflow> });
+  const trigger = view.getByRole('button', { name: 'More tools' });
+  fireEvent.click(trigger);
+  const inside = view.getByRole('button', { name: 'Inside overflow' });
+  act(() => inside.focus());
+  fireEvent.keyDown(inside, { key: 'Escape' });
+  expect(trigger.getAttribute('aria-expanded')).toBe('false');
+  expect(document.activeElement).toBe(trigger);
 });
 
 test('component labels override frame strings while missing labels use frame fallbacks', () => {
