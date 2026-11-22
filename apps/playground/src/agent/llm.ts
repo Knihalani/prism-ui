@@ -1,6 +1,7 @@
 import '@prism-ui/components';
 import { defaultRegistry, toPromptDocs } from '@prism-ui/react';
 import type { Agent, AgentEvent } from './types';
+import { describeInteraction } from './interaction';
 
 export interface LlmOptions { provider: 'openai' | 'anthropic'; apiKey: string; model?: string; fetch?: typeof globalThis.fetch }
 export function systemPrompt() {
@@ -34,7 +35,7 @@ export function createLlmAgent(options: LlmOptions): Agent {
     async *respond(input, signal): AsyncIterable<AgentEvent> {
       if (signal.aborted || (input.kind === 'action' && input.action.type === 'copy')) return;
       yield { type: 'thinking' };
-      const content = input.kind === 'message' ? input.text : '[UI interaction]\nThe user interacted with a component:\n' + JSON.stringify(input.action);
+      const content = input.kind === 'message' ? input.text : describeInteraction(input.action);
       const messages = [...input.history.map(turn => ({ role: turn.role, content: turn.text })), { role: 'user', content }];
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (anthropic) Object.assign(headers, { 'x-api-key': options.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' });

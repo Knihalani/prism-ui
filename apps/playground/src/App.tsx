@@ -6,6 +6,7 @@ import { createScriptedAgent, routeMessage } from './agent/scripted';
 import { realistic, type Pace } from './agent/pace';
 import { scenarios } from './agent/scenarios';
 import type { Agent, AgentInput, Turn } from './agent/types';
+import { describeInteraction } from './agent/interaction';
 import { Icon, type IconName } from './ui/Icon';
 import { AssistantTurn } from './ui/Turn';
 import { Palette } from './ui/Palette';
@@ -88,7 +89,10 @@ export function App({ pace = realistic, agentFactory }: AppProps) {
   }
   async function run(conversation: Conversation, request: Request, replacement?: Message) {
     if (conversation.controller) { conversation.queue.push(request); return; }
-    const history: Turn[] = conversation.messages.filter(message => message !== replacement && !message.error).map(({ role, text }) => ({ role, text }));
+    const history: Turn[] = conversation.messages.filter(message => message !== replacement).flatMap(message => [
+      ...(message.input?.kind === 'action' ? [{ role: 'user' as const, text: describeInteraction(message.input.action) }] : []),
+      ...(!message.error ? [{ role: message.role, text: message.text }] : []),
+    ]);
     const input: AgentInput = replacement?.input ?? ('action' in request ? { kind: 'action', action: request.action, history } : { kind: 'message', text: request.demoId ? 'gallery:' + request.demoId : request.text, history });
     const gallery = replacement?.gallery ?? ('demoId' in request && !!request.demoId);
     if (!replacement && 'text' in request) {

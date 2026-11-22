@@ -3,7 +3,7 @@ import { afterEach, expect, test } from 'bun:test';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { App } from '../src/App';
 import { fast, type Pace } from '../src/agent/pace';
-import type { Agent } from '../src/agent/types';
+import type { Agent, AgentInput } from '../src/agent/types';
 import { makeStore } from '../src/store';
 import { plainProse } from '../src/ui/Turn';
 
@@ -45,6 +45,27 @@ test('landing has six natural suggestions and clicking one renders a streamed co
   expect(view.container.querySelector('[data-prism="pick"]')).not.toBeNull();
   expect(view.getAllByRole('button', { name: 'Your next laptop' })).toHaveLength(1);
   expect(view.getByRole('log').getAttribute('aria-busy')).toBe('false');
+});
+
+test('live history keeps component submissions in order without adding visible user turns', async () => {
+  const inputs: AgentInput[] = [];
+  const agent: Agent = { id: 'history', label: 'History probe', async *respond(input) {
+    inputs.push(input);
+    yield { type: 'text', delta: inputs.length === 1 ? '```ui:pick\n{"id":"history-pick","question":"Choose a model","options":[{"id":"chosen-model","title":"A laptop","scores":{}}]}\n```' : 'Noted.' };
+  } };
+  const view = render(<App pace={fast} agentFactory={() => agent} />);
+  send(view, 'Recommend a laptop'); await done(view);
+  fireEvent.click(view.getByRole('button', { name: 'Choose' })); await done(view);
+  expect(users(view.container)).toHaveLength(1);
+  send(view, 'Why that configuration?'); await done(view);
+  expect(inputs.map(input => input.kind)).toEqual(['message', 'action', 'message']);
+  const history = inputs[2].history;
+  expect(history.map(turn => turn.role)).toEqual(['user', 'assistant', 'user', 'assistant']);
+  expect(history[2].text).toContain('[UI interaction]');
+  expect(history[2].text).toContain('chosen-model');
+  expect(history[3].text).toBe('Noted.');
+  expect(users(view.container)).toHaveLength(2);
+  expect(view.container.textContent).not.toContain('[UI interaction]');
 });
 
 test('pick action adds only an assistant continuation and no payload or syntax', async () => {
