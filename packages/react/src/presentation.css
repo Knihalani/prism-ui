@@ -66,10 +66,10 @@
     animation: prism-skeleton-sweep 1.65s ease-in-out infinite;
   }
   .prism-root[data-prism-presentation]:not([data-animate="false"]) [data-entering]:not([data-prism-enter]) {
-    animation: prism-presentation-enter var(--prism-duration, 240ms) var(--prism-ease-spring, cubic-bezier(.2, .8, .25, 1)) var(--prism-enter-delay, 0ms) backwards;
+    animation: prism-presentation-enter var(--prism-motion-base, 240ms) var(--prism-motion-spring, cubic-bezier(.2, .8, .25, 1)) var(--prism-frame-enter-delay, 0ms) backwards;
   }
   .prism-root[data-prism-presentation]:not([data-animate="false"]) [data-exiting] {
-    animation: prism-presentation-exit var(--prism-duration-fast, 150ms) ease-out both;
+    animation: prism-presentation-exit var(--prism-motion-fast, 150ms) ease-out both;
   }
 }
 @keyframes prism-caret-breathe {

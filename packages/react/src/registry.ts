@@ -11,6 +11,8 @@ export interface ComponentDef<S extends Schema<any> = Schema<any>> {
   fallback?: ComponentType<PrismComponentProps<Infer<S>>>;
   skeleton?: ComponentType<PrismComponentProps<Infer<S>>>;
   requiresFinalId?: boolean;
+  parts?: string[];
+  strings?: Record<string, string>;
   docs?: string; examples?: string[]; inline?: boolean; syntax?: Definition['syntax'];
   message?(action: Action): string;
 }
