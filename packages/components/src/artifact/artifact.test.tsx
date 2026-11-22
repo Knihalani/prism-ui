@@ -79,7 +79,7 @@ test('an existing artifact resyncs tokens when only the named theme changes', as
   const sent = spyOn(frame.contentWindow!, 'postMessage');
   try {
     const id = frame.srcdoc.match(/artifact-[\da-f-]{36}/)![0];
-    act(() => window.dispatchEvent(new MessageEvent('message', { data: { ns: 'prism-artifact', id, type: 'ready' }, origin: 'null', source: frame.contentWindow })));
+    act(() => window.dispatchEvent(new MessageEvent('message', { data: { ns: 'prism-mockup', id, type: 'ready' }, origin: 'null', source: frame.contentWindow })));
     view.rerender(ui(second));
     await waitFor(() => expect(sent.mock.calls.some(([message]) => message.type === 'theme' && message.tokens['--prism-accent'] === '#654321' && message.dark === false)).toBe(true));
     expect(view.container.querySelector('iframe')).toBe(frame);
