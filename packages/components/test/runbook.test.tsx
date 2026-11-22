@@ -11,18 +11,19 @@ const registry = createRegistry([runbookDefinition, stepDefinition]);
 const source = '::::runbook{title="Deploy to Fly" id=deploy}\n:::step{title="Install the CLI" id=install}\nRun:\n```bash\n$ fly install\n```\n:::\n:::step{title="Log in"}\nLog in now.\n:::\n::::\n';
 
 test.each(['undo', 'redo'])('stream finalization rewrites checklist %s history to its final id', travel => {
-  const store = createStore(), partial = source.slice(0, -5);
+  const store = createStore({ initial: { 'history:runbook:0': { done: {} } } }), partial = source.slice(0, -5);
   const view = render(<Prism scope="history" source={partial} done={false} registry={registry} store={store} />);
-  fireEvent.click(view.getAllByRole('checkbox')[0]); fireEvent.click(view.getAllByRole('checkbox')[1]);
-  if (travel === 'redo') fireEvent.click(view.getByRole('button', { name: 'Undo' }));
+  expect(view.queryByRole('checkbox')).toBeNull();
+  act(() => store.set('history:runbook:0.done', { install: true }));
+  if (travel === 'redo') act(() => store.undo('history:runbook:0'));
   view.rerender(<Prism scope="history" source={source} registry={registry} store={store} />);
   expect(store.get('history:runbook:0')).toBeUndefined();
   if (travel === 'undo') {
     fireEvent.click(view.getByRole('button', { name: 'Undo' }));
-    expect(view.getAllByRole('checkbox').map(check => check.getAttribute('aria-checked'))).toEqual(['true', 'false']);
+    expect(view.getAllByRole('checkbox').map(check => check.getAttribute('aria-checked'))).toEqual(['false', 'false']);
   }
   act(() => store.redo('deploy'));
-  expect(view.getAllByRole('checkbox').map(check => check.getAttribute('aria-checked'))).toEqual(['true', 'true']);
+  expect(view.getAllByRole('checkbox').map(check => check.getAttribute('aria-checked'))).toEqual(['true', 'false']);
 });
 
 test('static runbook renders numbered steps, normal code renderer, progress and complete state', () => {
@@ -37,11 +38,11 @@ test('static runbook renders numbered steps, normal code renderer, progress and 
   expect(view.getByText('Log in now.')).toBeDefined();
 });
 
-test('header actions remain available alongside a richer code renderer copy action', () => {
+test('command and help actions remain available alongside a richer code renderer copy action', () => {
   const view = render(<Prism source={source} registry={registry} components={{ code: ({ node }) => <pre>{node.value}<button type="button">Copy code</button></pre> }} />);
   const copy = view.getByRole('button', { name: /^Copy$/ });
-  expect(copy.closest('[data-part="stepHeader"]')).not.toBeNull();
-  expect(view.getAllByRole('button', { name: 'Stuck here?' })[0].closest('[data-part="stepHeader"]')).not.toBeNull();
+  expect(copy.closest('[data-part="command"]')).not.toBeNull();
+  expect(view.getAllByRole('button', { name: 'Stuck here?' })[0].closest('[data-part="actions"]')).not.toBeNull();
   expect(view.getByRole('button', { name: 'Copy code' }).closest('[data-part="stepBody"]')).not.toBeNull();
 });
 
@@ -68,34 +69,30 @@ test('keyboard toggles, arrow focus and frame undo work; unrelated state does no
 test('streaming grows from empty skeleton through missing title and partial body', () => {
   const initial = '::::runbook{title="Deploy"}\n';
   const view = render(<Prism source={initial} done={false} registry={registry} />);
-  expect(view.container.querySelectorAll('[data-part="skeleton"]').length).toBe(1);
+  expect(view.container.querySelectorAll('[data-part="skeleton"]').length).toBeGreaterThan(0);
   view.rerender(<Prism source={initial + ':::step{title="Installing'} done={false} registry={registry} />);
   expect(view.queryByText(':::step{title="Installing')).toBeNull();
   view.rerender(<Prism source={initial + ':::step\nHel'} done={false} registry={registry} />);
-  expect(view.container.querySelector('[data-part="stepTitle"]')?.getAttribute('data-state')).toBe('loading');
+  expect(view.container.querySelector('[data-prism-skeleton]')).not.toBeNull();
   view.rerender(<Prism source={initial + ':::step\nHello world\n:::\n::::\n'} registry={registry} />);
   expect(view.getByText('Hello world')).toBeDefined();
   expect(view.getByRole('progressbar').getAttribute('aria-valuemax')).toBe('1');
 });
 
-test('streaming step actions stay disabled until the step closes, while frame ask remains enabled', () => {
+test('streaming steps are presentational until the runbook closes', () => {
   const actions: Action[] = [], store = createStore();
   const partial = '::::runbook{id=gate title="Deploy"}\n:::step{id=install title="Install"}\nInstalling\n';
   const view = render(<Prism scope="test" source={partial} done={false} registry={registry} store={store} onAction={action => actions.push(action)} />);
-  const check = view.getByRole('checkbox') as HTMLButtonElement, stuck = view.getByRole('button', { name: 'Stuck here?' }) as HTMLButtonElement;
-  expect(check.disabled).toBe(true); expect(check.getAttribute('aria-disabled')).toBe('true');
-  expect(stuck.disabled).toBe(true); expect(stuck.getAttribute('aria-disabled')).toBe('true');
-  fireEvent.click(check); fireEvent.keyDown(check, { key: ' ' }); fireEvent.keyDown(check, { key: 'Enter' }); fireEvent.click(stuck);
-  expect(check.getAttribute('aria-checked')).toBe('false'); expect(store.get('test:runbook:0.done')).toEqual({}); expect(store.get('gate')).toBeUndefined(); expect(actions).toEqual([]);
-  const ask = view.getByRole('button', { name: 'Ask about this' }) as HTMLButtonElement;
-  expect(ask.disabled).toBe(false); fireEvent.click(ask); expect(actions.map(action => action.type)).toEqual(['ask']);
-  view.rerender(<Prism scope="test" source={partial + ':::\n'} done={false} registry={registry} store={store} onAction={action => actions.push(action)} />);
-  expect((view.getByRole('checkbox') as HTMLButtonElement).disabled).toBe(false);
-  expect((view.getByRole('button', { name: 'Stuck here?' }) as HTMLButtonElement).disabled).toBe(false);
-  fireEvent.keyDown(view.getByRole('checkbox'), { key: 'Enter' }); fireEvent.click(view.getByRole('button', { name: 'Stuck here?' }));
-  expect(store.get('test:runbook:0.done')).toEqual({ install: true }); expect(actions.map(action => action.type)).toEqual(['ask', 'stuck']);
+  expect(view.queryByRole('checkbox')).toBeNull(); expect(view.queryByRole('button')).toBeNull();
+  expect(store.snapshot()).toEqual({}); expect(actions).toEqual([]);
+  view.rerender(<Prism scope="test" source={partial + ':::\n'} done={false} registry={registry} store={store} />);
+  expect(view.queryByRole('checkbox')).toBeNull(); expect(store.snapshot()).toEqual({});
   view.rerender(<Prism scope="test" source={partial + ':::\n::::\n'} registry={registry} store={store} onAction={action => actions.push(action)} />);
-  expect(store.get('gate.done')).toEqual({ install: true }); expect(store.get('test:runbook:0')).toBeUndefined();
+  fireEvent.keyDown(view.getByRole('checkbox'), { key: 'Enter' });
+  fireEvent.click(view.getByRole('button', { name: 'Stuck here?' }));
+  expect(store.get('gate.done')).toEqual({ install: true });
+  expect(store.get('test:runbook:0')).toBeUndefined();
+  expect(actions.map(action => action.type)).toEqual(['stuck']);
 });
 
 test('unstyled parts, slots, labels and standalone or three-colon steps degrade gracefully', () => {
