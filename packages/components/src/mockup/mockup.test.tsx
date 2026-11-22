@@ -157,6 +157,28 @@ test('plugin preserves identity, completion and parses safe attributes without r
   expect(mockupPlugin.transform!({ ...node, lang: 'html' })).toEqual({ ...node, lang: 'html' });
   expect(parseMockupMeta()).toEqual({}); expect(Object.keys(parseMockupMeta('__proto__=bad constructor=no title=ok'))).toEqual(['title']);
 });
+test('narrow editors escape the clipped canvas, clamp to the root and restore keyboard focus', () => {
+  for (const width of [280, 320]) for (const device of ['desktop', 'mobile'] as const) {
+    const x = setup({ source: '<h1>Hello</h1>', device });
+    const root = x.view.container.querySelector('[data-part="member"]') as HTMLElement;
+    root.getBoundingClientRect = () => ({ x: 100, y: 20, left: 100, top: 20, right: 100 + width, bottom: 420, width, height: 400, toJSON() {} });
+    if (device === 'mobile') fireEvent.click(x.view.getByRole('button', { name: 'Zoom in' }));
+    x.pointer('pointerdown', 980, 490); x.pointer('pointerup', 980, 490);
+    const popover = x.view.getByRole('dialog');
+    expect(popover.parentElement).toBe(root);
+    expect(root.querySelector('[data-part="viewport"]')!.contains(popover)).toBe(false);
+    expect(parseFloat(popover.style.left)).toBeGreaterThanOrEqual(12);
+    expect(parseFloat(popover.style.left) + parseFloat(popover.style.width)).toBeLessThanOrEqual(width - 12);
+    expect(parseFloat(popover.style.top) + 180).toBeLessThanOrEqual(400);
+    const editor = x.view.getByRole('textbox', { name: 'Add a comment…' });
+    expect(document.activeElement).toBe(editor);
+    fireEvent.keyDown(editor, { key: 'Escape' });
+    expect(x.view.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(x.canvas());
+    x.view.unmount();
+  }
+});
+
 test('popover stays within the content box near its lower right edge', () => {
   const x = setup({ source: '<h1>Hello</h1>' });
   x.pointer('pointerdown', 980, 490); x.pointer('pointerup', 980, 490);

@@ -56,10 +56,13 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   function remove(id: string) { feedback.remove(id); setEditing(null); announce(labels.removed); }
   function close(restoreFocus = false) { pending.current = null; setEditing(null); if (restoreFocus) canvas.current?.focus({ preventScroll: true }); }
   function popoverPosition(x: number, y: number) {
-    const popupWidth = Math.min(320, containerWidth - 24), popupHeight = 180;
-    const left = Math.max(12 / scale, Math.min(width - (popupWidth + 12) / scale, x / 100 * width));
-    const anchor = y / 100 * contentHeight, bottom = Math.min(contentHeight, ((viewport.current?.scrollTop ?? 0) + (viewport.current?.clientHeight || contentHeight * scale)) / scale);
-    const top = Math.max(12 / scale, Math.min(bottom - (popupHeight + 12) / scale, anchor + 20 / scale));
+    const bounds = root.current?.getBoundingClientRect(), artboard = canvas.current?.getBoundingClientRect();
+    const availableWidth = bounds?.width || containerWidth, availableHeight = bounds?.height || contentHeight * scale;
+    const popupWidth = Math.min(320, Math.max(0, availableWidth - 24)), popupHeight = 180;
+    const anchorX = (artboard?.left ?? 0) - (bounds?.left ?? 0) + x / 100 * (artboard?.width || width * scale);
+    const anchorY = (artboard?.top ?? 0) - (bounds?.top ?? 0) + y / 100 * (artboard?.height || contentHeight * scale);
+    const left = Math.max(12, Math.min(availableWidth - popupWidth - 12, anchorX));
+    const top = Math.max(12, Math.min(availableHeight - popupHeight - 12, anchorY + 20));
     return { left, top, width: popupWidth };
   }
   function save(restoreFocus = false) { if (editing) feedback.edit(editing.id, { comment }); close(restoreFocus); }

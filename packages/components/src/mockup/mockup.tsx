@@ -50,7 +50,7 @@ export function MockupView({ vm, feedback = true, embedded = false }: { vm: Mock
               {vm.hover && !vm.state.items.length && !vm.submitted && <PrismPart slotProps={{ model: vm }} as="span" {...hint} style={{ ...hint.style, left: `${Math.min(65, vm.hover[0])}%`, top: `${vm.hover[1]}%` }}>{vm.labels.hint}</PrismPart>}
               {vm.rubber.length > 0 && <PrismPart slotProps={{ model: vm }} as="svg" {...stroke} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{vm.pen ? <polyline points={vm.rubber.map(p => p.join(',')).join(' ')} fill="none" stroke={vm.color} strokeWidth="2" vectorEffect="non-scaling-stroke" /> : <rect x={Math.min(vm.rubber[0][0], vm.rubber.at(-1)![0])} y={Math.min(vm.rubber[0][1], vm.rubber.at(-1)![1])} width={Math.abs(vm.rubber[0][0] - vm.rubber.at(-1)![0])} height={Math.abs(vm.rubber[0][1] - vm.rubber.at(-1)![1])} fill="color-mix(in srgb, var(--prism-mockup-accent, var(--prism-accent-text)) 8%, transparent)" stroke="var(--prism-mockup-accent, var(--prism-accent-text))" vectorEffect="non-scaling-stroke" />}</PrismPart>}
             </PrismPart>
-            {[...vm.resolved, ...vm.state.items].map(item => <Marker key={item.id} item={item as FeedbackItem} vm={vm} />)}{vm.editing && !vm.submitted && <Comment {...popoverPart} style={{ ...popoverPart.style, ...vm.popoverPosition(vm.state.items.find(item => item.id === vm.editing?.id)?.x ?? 0, vm.state.items.find(item => item.id === vm.editing?.id)?.y ?? 0) }} model={vm} role="dialog" aria-label={vm.labels.comment.replace('{n}', String(vm.state.items.find(item => item.id === vm.editing?.id)?.n ?? '')).replace('{text}', vm.comment)} />}
+            {[...vm.resolved, ...vm.state.items].map(item => <Marker key={item.id} item={item as FeedbackItem} vm={vm} />)}
           </>}
         </PrismPart></PrismPart>
       </PrismPart><PrismPart slotProps={{ model: vm }} as="div" {...list} data-prism-flash={vm.flash ? "" : undefined}>{vm.state.items.length || vm.resolved.length ? [...vm.resolved, ...vm.state.items].map(item => <Row key={item.id} {...itemPart} item={item as FeedbackItem} model={vm} onMouseEnter={() => vm.setActive(item.id)} onMouseLeave={() => vm.setActive(null)} onFocus={() => vm.setActive(item.id)} onBlur={() => vm.setActive(null)} />) : <EmptyState {...emptyPart} model={vm} />}</PrismPart></PrismPart>
@@ -60,6 +60,7 @@ export function MockupView({ vm, feedback = true, embedded = false }: { vm: Mock
       </>}
       <PrismPart slotProps={{ model: vm }} as="span" {...live} aria-live="polite">{vm.announcement}</PrismPart>
     </ComponentFrame>
+    {vm.visible && vm.editing && !vm.submitted && <Comment {...popoverPart} style={{ ...popoverPart.style, ...vm.popoverPosition(vm.state.items.find(item => item.id === vm.editing?.id)?.x ?? 0, vm.state.items.find(item => item.id === vm.editing?.id)?.y ?? 0) }} model={vm} role="dialog" aria-label={vm.labels.comment.replace('{n}', String(vm.state.items.find(item => item.id === vm.editing?.id)?.n ?? '')).replace('{text}', vm.comment)} />}
   </PrismPart>;
 }
 function SingleMockup({ props }: { props: MockupProps }) { return <MockupView vm={useMockup(props, usePrism())} />; }
