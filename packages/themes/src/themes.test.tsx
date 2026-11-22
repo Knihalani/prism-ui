@@ -253,6 +253,30 @@ test('Instrument faders use the Pick model fallback for malformed saved weights'
   expect(actions.at(-1)).toMatchObject({ type: 'choose', payload: { option: 'beta', weights: { learning: 2, cost: 3 } } });
 });
 
+for (const theme of [print, objects, instrument]) {
+  test(`${theme.name} dotted criterion sliders update nested weights, ranking, Undo and submission`, () => {
+    const store = createStore(), actions: { type: string; payload: unknown }[] = [];
+    store.set('dotted.weights', { cost: { total: 1, monthly: 2 }, learning: 2 });
+    const source = '```ui:pick\n' + JSON.stringify({ id: 'dotted', criteria: [{ id: 'cost.total', label: 'Cost' }, { id: 'learning', label: 'Learning' }], options: [{ id: 'alpha', title: 'Alpha', scores: { 'cost.total': 0, learning: 1 } }, { id: 'beta', title: 'Beta', scores: { 'cost.total': 1, learning: 0 } }] }) + '\n```';
+    const view = render(<Prism source={source} theme={theme} store={store} animate={false} onAction={action => actions.push(action)} />), ui = within(view.container);
+    const slider = ui.getByRole('slider', { name: 'Cost weight' }) as HTMLInputElement;
+    const announcement = view.container.querySelector('[data-prism="pick"][data-part="live"]')!;
+    expect(announcement.textContent).toContain('Alpha');
+    fireEvent.input(slider, { target: { value: '3' } });
+    expect(store.get('dotted.weights.cost.total')).toBe(3);
+    expect((store.get('dotted.weights') as Record<string, unknown>)['cost.total']).toBeUndefined();
+    expect(store.get('dotted.weights.cost.monthly')).toBe(2);
+    expect(slider.value).toBe('3');
+    expect(announcement.textContent).toContain('Beta');
+    fireEvent.click(ui.getByRole('button', { name: 'Undo' }));
+    expect(slider.value).toBe('1');
+    expect(announcement.textContent).toContain('Alpha');
+    fireEvent.input(slider, { target: { value: '3' } });
+    fireEvent.click(ui.getAllByRole('button', { name: 'Choose Beta ↗' })[0]);
+    expect(actions.at(-1)).toMatchObject({ type: 'choose', payload: { option: 'beta', weights: { 'cost.total': 3, learning: 2 } } });
+  });
+}
+
 const workflowSource = [
   ':badge[Pilot]{tone="accent"}',
   ':::callout{title="Keep it small"}\nOne useful conversation.\n:::',

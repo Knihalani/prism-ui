@@ -54,16 +54,16 @@ const Total = forwardRef<HTMLDivElement, SlotProps & { estimate: EstimateModel }
   return <div {...props} ref={ref} data-print-total=""><PrismPart as="span" {...label}>{estimate.totalLabel} / {currencyCode(context.props.currency, format.currencyCode)}</PrismPart><PrismPart as="span" {...value} aria-hidden="true"><sup>{currency}</sup><span>{format.number(estimate.displayedTotal, { maximumFractionDigits: 2 })}</span></PrismPart><PrismPart as="span" {...live} aria-live="polite">{estimate.finalTotalText}</PrismPart></div>;
 });
 
-const Criteria = forwardRef<HTMLDivElement, SlotProps>(function Criteria({ as, model, frame, overflow, children, ...props }, ref) {
+const Criteria = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<typeof usePick> }>(function Criteria({ as, model, frame, overflow, pick, children, ...props }, ref) {
   const context = useContext(ComponentContext)!, { store } = usePrism(), strings = useStrings('pick');
   const id = context.props.id ?? context.id;
-  const saved = useStoreValue<Record<string, number>>(`${id}.weights`);
+  useStoreValue(`${id}.weights`);
   const initial = context.props.weights as Record<string, number> | undefined;
   const criteria = context.props.criteria as { id: string; label: string }[];
   return <div {...props} ref={ref}>{criteria.map(criterion => {
-    const raw = saved?.[criterion.id] ?? initial?.[criterion.id] ?? 1;
+    const raw = store.get(`${id}.weights.${criterion.id}`) ?? initial?.[criterion.id] ?? 1;
     const weight = typeof raw === 'number' && Number.isFinite(raw) ? Math.max(0, Math.min(3, Math.round(raw))) : 1;
-    return <label className="print-weight" key={criterion.id}><span>{criterion.label}<output>{weight}</output></span><input type="range" min={0} max={3} step={1} value={weight} aria-label={`${criterion.label} ${strings.weightLabel}`} onInput={event => store.set(`${id}.weights`, { ...store.get(`${id}.weights`) as Record<string, number>, [criterion.id]: Number(event.currentTarget.value) })} /></label>;
+    return <label className="print-weight" key={criterion.id}><span>{criterion.label}<output>{weight}</output></span><input type="range" min={0} max={3} step={1} value={weight} aria-label={`${criterion.label} ${strings.weightLabel}`} onInput={event => pick.setWeight(criterion.id, Number(event.currentTarget.value))} /></label>;
   })}</div>;
 });
 function Option({ row }: { row: PickRow }) {

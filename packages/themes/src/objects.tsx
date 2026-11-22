@@ -41,15 +41,16 @@ const Total = forwardRef<HTMLDivElement, SlotProps & { estimate: EstimateModel }
   const label = usePart('estimate', 'total-label'), value = usePart('estimate', 'total-value'), live = usePart('estimate', 'live');
   return <div {...props} ref={ref}><PrismPart as="span" {...label}>{estimate.totalLabel}</PrismPart><PrismPart as="span" {...value} aria-hidden="true">{estimate.totalText}</PrismPart><PrismPart as="span" {...live} aria-live="polite">{estimate.finalTotalText}</PrismPart></div>;
 });
-const StickyNotes = forwardRef<HTMLDivElement, SlotProps>(function StickyNotes({ as, model, frame, overflow, children, ...props }, ref) {
+const StickyNotes = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<typeof usePick> }>(function StickyNotes({ as, model, frame, overflow, pick, children, ...props }, ref) {
   const context = useContext(ComponentContext)!, { store } = usePrism(), strings = useStrings('pick');
-  const id = context.props.id ?? context.id, saved = useStoreValue<Record<string, number>>(`${id}.weights`);
+  const id = context.props.id ?? context.id;
+  useStoreValue(`${id}.weights`);
   const initial = context.props.weights as Record<string, number> | undefined;
   const criteria = context.props.criteria as { id: string; label: string }[];
   return <div {...props} ref={ref} data-objects-sticky-notes="">{criteria.filter(criterion => criterion.id).map(criterion => {
-    const raw = saved?.[criterion.id] ?? initial?.[criterion.id] ?? 1;
+    const raw = store.get(`${id}.weights.${criterion.id}`) ?? initial?.[criterion.id] ?? 1;
     const weight = typeof raw === 'number' && Number.isFinite(raw) ? Math.max(0, Math.min(3, Math.round(raw))) : 1;
-    return <label className="objects-sticky" key={criterion.id} data-objects-sticky=""><span>{criterion.label}<output>{weight}</output></span><input type="range" min={0} max={3} step={1} value={weight} aria-label={`${criterion.label} ${strings.weightLabel}`} onInput={event => store.set(`${id}.weights`, { ...store.get(`${id}.weights`) as Record<string, number>, [criterion.id]: Number(event.currentTarget.value) })} /></label>;
+    return <label className="objects-sticky" key={criterion.id} data-objects-sticky=""><span>{criterion.label}<output>{weight}</output></span><input type="range" min={0} max={3} step={1} value={weight} aria-label={`${criterion.label} ${strings.weightLabel}`} onInput={event => pick.setWeight(criterion.id, Number(event.currentTarget.value))} /></label>;
   })}</div>;
 });
 const IndexCard = forwardRef<HTMLElement, SlotProps & { row: PickRow }>(function IndexCard({ as = 'article', model, frame, overflow, row, children, ...props }, ref) {

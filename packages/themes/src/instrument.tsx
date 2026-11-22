@@ -52,14 +52,15 @@ export const SegmentedTotal = forwardRef<HTMLDivElement, SlotProps & { estimate:
     <PrismPart as="span" {...live} aria-live="polite">{estimate.finalTotalText}</PrismPart>
   </div>;
 });
-const Faders = forwardRef<HTMLDivElement, SlotProps>(function Faders({ as, model, frame, overflow, children, ...props }, ref) {
+const Faders = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<typeof usePick> }>(function Faders({ as, model, frame, overflow, pick, children, ...props }, ref) {
   const context = useContext(ComponentContext)!, { store } = usePrism(), strings = useStrings('pick');
-  const id = context.props.id ?? context.id, saved = useStoreValue<Record<string, number>>(`${id}.weights`);
+  const id = context.props.id ?? context.id;
+  useStoreValue(`${id}.weights`);
   const initial = context.props.weights as Record<string, number> | undefined;
   const criteria = context.props.criteria as { id: string; label: string }[];
   return <div {...props} ref={ref} data-instrument-faders="">{criteria.filter(criterion => criterion.id).map(criterion => {
-    const weight = weightValue(saved?.[criterion.id], weightValue(initial?.[criterion.id]));
-    return <label className="instrument-fader" key={criterion.id}><span>{criterion.label}<output>{weight}</output></span><input type="range" min={0} max={3} step={1} value={weight} aria-label={`${criterion.label} ${strings.weightLabel}`} onInput={event => store.set(`${id}.weights`, { ...store.get(`${id}.weights`) as Record<string, number>, [criterion.id]: Number(event.currentTarget.value) })} /><i aria-hidden="true" /></label>;
+    const weight = weightValue(store.get(`${id}.weights.${criterion.id}`), weightValue(initial?.[criterion.id]));
+    return <label className="instrument-fader" key={criterion.id}><span>{criterion.label}<output>{weight}</output></span><input type="range" min={0} max={3} step={1} value={weight} aria-label={`${criterion.label} ${strings.weightLabel}`} onInput={event => pick.setWeight(criterion.id, Number(event.currentTarget.value))} /><i aria-hidden="true" /></label>;
   })}</div>;
 });
 const Module = forwardRef<HTMLElement, SlotProps & { row: PickRow }>(function Module({ as = 'article', model, frame, overflow, row, children, ...props }, ref) {
