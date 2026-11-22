@@ -7,6 +7,18 @@ import { num, calc } from '../src/num';
 
 afterEach(cleanup);
 
+test('num and calc tolerate streaming and invalid currency overrides', () => {
+  const store = createStore(), view = render(<Prism source="" done={false} store={store} animate={false} locale="en-US" currency="GBP" />);
+  for (const currency of ['', 'U', 'US', 'U1D', 'USDD', 'USD', 'EUR']) {
+    const source = `:num[12]{id=n format=currency currency="${currency}"} :calc[n*2]{format=currency currency="${currency}"}`;
+    view.rerender(<Prism source={source} done={false} store={store} animate={false} locale="en-US" currency="GBP" />);
+    const code = /^[A-Z]{3}$/.test(currency) ? currency : 'GBP';
+    const format = new Intl.NumberFormat('en-US', { style: 'currency', currency: code });
+    expect(view.getByRole('slider').textContent).toBe(format.format(12));
+    expect(view.container.querySelector('[data-prism="calc"]')?.textContent).toBe(format.format(24));
+  }
+});
+
 function setup(source = ':num[1200]{id=rent min=0 max=5000 step=50 format=currency} :calc[rent * 12]{format=currency}', store = createStore()) {
   const actions: Action[] = [];
   return { store, actions, ...render(<Prism source={source} store={store} animate={false} locale="en-US" onAction={a => actions.push(a)} />) };

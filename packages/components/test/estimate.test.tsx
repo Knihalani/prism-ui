@@ -7,6 +7,18 @@ import { estimate } from '../src/estimate';
 import '../src/num';
 
 afterEach(cleanup);
+
+test('streaming partial and invalid currencies fall back until a complete code arrives', () => {
+  const store = createStore();
+  const view = render(<Prism source={'```ui:estimate\n{"id":"quote","items":[{"id":"seats","label":"Seats","price":20}],"currency":"'} done={false} store={store} animate={false} locale="en-US" currency="GBP" />);
+  for (const currency of ['', 'U', 'US', 'U1D', 'USDD', 'USD', 'EUR']) {
+    view.rerender(<Prism source={'```ui:estimate\n{"id":"quote","items":[{"id":"seats","label":"Seats","price":20}],"currency":"' + currency} done={false} store={store} animate={false} locale="en-US" currency="GBP" />);
+    const code = /^[A-Z]{3}$/.test(currency) ? currency : 'GBP';
+    expect(view.container.querySelector('[data-part="total-value"]')?.textContent).toBe(new Intl.NumberFormat('en-US', { style: 'currency', currency: code }).format(20));
+  }
+  view.rerender(<Prism source={source({ currency: 'EUR', items: [{ id: 'seats', label: 'Seats', price: 20 }] })} store={store} animate={false} locale="en-US" currency="GBP" />);
+  expect(view.container.querySelector('[data-part="total-value"]')?.textContent).toBe('€20.00');
+});
 const items = [{ id: 'seats', label: 'Seats', description: 'Team access', price: 20, qty: 3, min: 1, max: 20, unit: 'seat' }, { id: 'support', label: 'Support', price: 10, optional: true }];
 function source(props: object = {}) { return '```ui:estimate\n' + JSON.stringify({ id: 'quote', title: 'Team plan', items, ...props }) + '\n```\n\n'; }
 function setup(props: object = {}, suffix = '') {

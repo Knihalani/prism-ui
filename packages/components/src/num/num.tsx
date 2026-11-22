@@ -16,7 +16,7 @@ function rawText(node: Node): string {
 function useNumberFormat(props: Pick<NumProps, 'format' | 'currency' | 'decimals'>) {
   const format = useFormat();
   return useMemo(() => (value: number) => format.number(value, {
-    ...(props.format === 'currency' ? { style: 'currency', currency: props.currency ?? format.currencyCode } : props.format === 'percent' ? { style: 'percent' } : props.format === 'compact' ? { notation: 'compact' } : {}),
+    ...(props.format === 'currency' ? { style: 'currency', currency: props.currency && /^[A-Z]{3}$/.test(props.currency) ? props.currency : format.currencyCode } : props.format === 'percent' ? { style: 'percent' } : props.format === 'compact' ? { notation: 'compact' } : {}),
     ...(props.decimals !== undefined ? { minimumFractionDigits: props.decimals, maximumFractionDigits: props.decimals } : {}),
   }), [format, props.format, props.currency, props.decimals]);
 }

@@ -37,7 +37,8 @@ export function useEstimate(props: EstimateProps, ctx: PrismComponentProps<Estim
   const state = useStoreValue<ItemState | undefined>(`${id}.items`) ?? empty;
   const storedSubtotal = useStoreValue(`${id}.subtotal`), storedTotal = useStoreValue(`${id}.total`);
   const totals = useMemo(() => calculate(props, state), [props, state]);
-  const money = (value: number) => format.currency(value, props.currency);
+  const currency = props.currency && /^[A-Z]{3}$/.test(props.currency) ? props.currency : undefined;
+  const money = (value: number) => format.currency(value, currency);
   const writeTotals = () => { const next = calculate(props, store.get(`${id}.items`) ?? empty); store.set(`${id}.subtotal`, next.subtotal); store.set(`${id}.total`, next.total); };
   useLayoutEffect(() => {
     store.batch(() => {
