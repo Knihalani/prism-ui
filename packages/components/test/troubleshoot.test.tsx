@@ -36,6 +36,35 @@ test('resolved report emits exact action and persists sent state; restart and un
   expect(view.getByText('Report sent')).toBeDefined();
 });
 
+test('sending a report is one undo step without rewriting a valid path', () => {
+  const store = createStore();
+  const view = render(<Prism source={fence(props)} registry={registry} store={store} />);
+  fireEvent.click(view.getByRole('button', { name: 'Yes' }));
+  const path = store.get('wifi.path');
+  fireEvent.click(view.getByRole('button', { name: 'Send report' }));
+  expect(store.get('wifi.path')).toBe(path);
+  expect(store.get('wifi.sent')).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Undo' }));
+  expect(store.get('wifi.sent')).toBe(false);
+  expect(store.get('wifi.path')).toEqual([{ step: 'a', answer: 'yes' }]);
+  expect(view.queryByText('Report sent')).toBeNull();
+  fireEvent.click(view.getByRole('button', { name: 'Undo' }));
+  expect(store.get('wifi.path')).toEqual([]);
+  expect(view.getByText('Step 1')).toBeDefined();
+});
+
+test('report path normalization and sent state are undone together', () => {
+  const path = [{ step: 'a', answer: 'no' }, { step: 'b', answer: 'yes' }];
+  const store = createStore({ initial: { wifi: { path, sent: false } } });
+  const updated = { ...props, steps: { ...props.steps, a: { ...props.steps.a, no: '$fixed' } } };
+  const view = render(<Prism source={fence(updated)} registry={registry} store={store} />);
+  fireEvent.click(view.getByRole('button', { name: 'Send report' }));
+  expect(store.get('wifi')).toEqual({ path: [{ step: 'a', answer: 'no' }], sent: true });
+  fireEvent.click(view.getByRole('button', { name: 'Undo' }));
+  expect(store.get('wifi')).toEqual({ path, sent: false });
+  expect(store.canUndo).toBe(false);
+});
+
 test('changed branch targets truncate stale answers before advancing and reporting', () => {
   const actions: Action[] = [], store = createStore();
   const initial = { ...props, steps: { ...props.steps, b: { ...props.steps.b, no: 'c' }, c: { text: 'Old branch.' }, d: { text: 'New branch.', no: 'e' }, e: { text: 'Final check.' } } };

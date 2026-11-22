@@ -56,7 +56,7 @@ export function useTroubleshoot(props: TroubleshootProps, ctx: PrismContextValue
     position: `${labels.step} ${format.number(path.length + 1)}`,
     result: derived.resolved ? resultLabel.replace('{count}', format.number(path.length)) : labels.notFixed,
     answer, back, restart() { edit([]); },
-    report() { if (!derived.ended || sent) return; edit(path); emit('troubleshoot', { resolved: derived.resolved, path }, reportMessage(props.title, derived.resolved, path, format.number(path.length))); setSent(true); },
+    report() { if (!derived.ended || sent) return; ctx.store.batch(() => { if (path.length !== storedPath.length) setPath(path); emit('troubleshoot', { resolved: derived.resolved, path }, reportMessage(props.title, derived.resolved, path, format.number(path.length))); setSent(true); }); },
     onKeyDown(event: KeyboardEvent<HTMLElement>) {
       const element = event.target as HTMLElement;
       if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || element.closest('input, textarea, select, [contenteditable="true"]')) return;
