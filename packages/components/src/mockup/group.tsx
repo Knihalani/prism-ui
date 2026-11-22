@@ -4,7 +4,7 @@ import type { Store } from '@prism-ui/state';
 import { ComponentFrame } from '../frame';
 import { toMessage, type FeedbackPayload } from './engine';
 import { MockupView } from './mockup';
-import { MockupToolbar, MockupPenTools, MockupSource, MockupFooter } from './chrome';
+import { MockupToolbar, MockupSource, MockupFooter, MockupOverall } from './chrome';
 import { MockupIcon as Icon } from './icon';
 import { mockupLabels, useMockup, type MockupOptions, type MockupProps, type MockupModel, type MockupDevice, type MockupControls } from './use-mockup';
 
@@ -93,7 +93,7 @@ function MockupGroupView({ members, options }: { members: Member[]; options?: Mo
   const selected = vm.compare ? 'compare' : vm.active.key;
   return <div {...root} {...presentation} ref={rootRef} data-expanded={expanded || undefined} data-state={vm.submitted ? 'sent' : presentation['data-state']}>
     <ComponentFrame component="mockup" title={members[0].props.title ?? vm.labels.title} ask undo={false} toolbar={<div {...tabs} role="tablist" aria-label={vm.labels.variants}>{[...members.map((m, i) => ({ key: m.key, label: variant(m, i), complete: m.complete })), { key: 'compare', label: vm.labels.compare, complete: true }].map((entry, index) => <button key={entry.key} {...tab} id={`${id}-tab-${entry.key}`} role="tab" aria-label={entry.label} aria-description={!entry.complete ? vm.labels.streaming : undefined} aria-selected={selected === entry.key} aria-controls={`${id}-panel-${entry.key}`} tabIndex={selected === entry.key ? 0 : -1} onClick={() => vm.setTab(entry.key)} onKeyDown={event => vm.navigate(event, index)}>{entry.label}{!entry.complete && <span {...dot} aria-label={vm.labels.streaming} />}</button>)}</div>}>
-      <div {...sharedTools}>{!vm.submitted && <MockupPenTools vm={chrome} />}<MockupToolbar vm={chrome} /></div>
+      <div {...sharedTools}><MockupToolbar vm={chrome} submitted={vm.submitted} /></div>
       {showSource && <MockupSource vm={{ labels: vm.labels, source, copy: async () => { try { await navigator.clipboard?.writeText(source); } catch {} } }} />}
       <div {...columns} data-compare={vm.compare || undefined} role={vm.compare ? 'tabpanel' : undefined} id={vm.compare ? `${id}-panel-compare` : undefined} aria-labelledby={vm.compare ? `${id}-tab-compare` : undefined}>
         {members.map((member, index) => { const label = variant(member, index), visible = vm.compare || vm.active.key === member.key; return <div key={member.key} {...column} hidden={!visible} role={!vm.compare ? 'tabpanel' : undefined} id={`${id}-panel-${member.key}`} aria-labelledby={!vm.compare ? `${id}-tab-${member.key}` : undefined}>
@@ -101,7 +101,7 @@ function MockupGroupView({ members, options }: { members: Member[]; options?: Mo
           <ComponentContext.Provider value={member.context}><GroupMember key={member.id} member={member} label={label} visible={visible} submitted={vm.submitted} register={vm.register} refresh={vm.refresh} controls={controls} options={options} /></ComponentContext.Provider>
         </div>; })}
       </div>
-      <label><span className="prism-mockup__sr">{vm.labels.overall}</span><textarea {...input} rows={2} placeholder="Add overall feedback…" readOnly={vm.submitted} value={vm.overall} onChange={event => vm.setOverall(event.target.value)} /></label>
+      <MockupOverall label={vm.labels.overall} value={vm.overall} submitted={vm.submitted} onChange={vm.setOverall} />
       <MockupFooter labels={vm.labels} locale={vm.locale} count={vm.count} submitted={vm.submitted} edit={() => vm.setSubmitted(false)} canUndo={!!vm.model?.feedback.canUndo} canRedo={!!vm.model?.feedback.canRedo} undo={() => { vm.model?.close(); vm.model?.feedback.undo(); }} redo={() => { vm.model?.close(); vm.model?.feedback.redo(); }} canSubmit={vm.canSubmit} submit={vm.submit} />
     </ComponentFrame>
   </div>;

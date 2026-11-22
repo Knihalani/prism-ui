@@ -23,6 +23,47 @@ function setup(props: MockupProps = {}, done = true, store = createStore()) {
   function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); }
   return { view, actions, store, renders, target, hits, canvas, pointer, change, send(message: FrameMessage) { act(() => { listeners.forEach(fn => fn(message)); }); }, rerender(props: MockupProps, done = true, nextStore = store) { view.rerender(<Prism source={source(props)} done={done} registry={registry} store={nextStore} onAction={a => actions.push(a)} />); } };
 }
+test('overflow tools focus on open, retain controls, close on Escape and outside press', () => {
+  const x = setup({ source: '<h1>Review</h1>' }), toggle = x.view.getByRole('button', { name: 'More mockup tools' });
+  expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  expect(x.view.queryByRole('button', { name: 'Tablet' })).toBeNull();
+  fireEvent.click(toggle);
+  const tablet = x.view.getByRole('button', { name: 'Tablet' });
+  expect(document.activeElement).toBe(tablet);
+  expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  fireEvent.click(tablet);
+  expect(x.view.container.querySelector('iframe')!.style.width).toBe('834px');
+  fireEvent.keyDown(tablet, { key: 'Escape' });
+  expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  expect(document.activeElement).toBe(toggle);
+  fireEvent.click(toggle);
+  fireEvent.pointerDown(x.view.getByRole('textbox', { name: 'Overall feedback' }));
+  expect(x.view.queryByRole('dialog')).toBeNull();
+});
+test('unframed overflow omits device controls and overall feedback grows and shrinks', () => {
+  const x = setup({ kind: 'svg', source: '<svg />' });
+  fireEvent.click(x.view.getByRole('button', { name: 'More mockup tools' }));
+  expect(x.view.queryByRole('button', { name: 'Tablet' })).toBeNull();
+  fireEvent.keyDown(x.view.getByRole('dialog'), { key: 'Escape' });
+  const input = x.view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement;
+  expect(input.getAttribute('rows')).toBe('1');
+  Object.defineProperty(input, 'scrollHeight', { configurable: true, get: () => input.value ? 80 : 32 });
+  x.change(input, 'A longer overall note');
+  expect(input.style.height).toBe('80px');
+  x.change(input, '');
+  expect(input.style.height).toBe('32px');
+});
+test('run-in metadata follows comments and the sent receipt', () => {
+  const x = setup({ variant: 'Design 01' }), meta = () => x.view.container.querySelector('.prism-mockup__meta')!.textContent;
+  expect(meta()).toBe('Design 01 · open for feedback');
+  x.pointer('pointerdown', 250, 100); x.pointer('pointerup', 250, 100);
+  x.change(x.view.getByRole('textbox', { name: 'Add a comment…' }), 'A thought');
+  fireEvent.click(x.view.getByRole('button', { name: 'Submit feedback' }));
+  expect(meta()).toBe('Design 01 · Feedback sent');
+  fireEvent.click(x.view.getByRole('button', { name: 'Edit feedback' }));
+  expect(meta()).toBe('Design 01 · 1 comment');
+  expect(x.view.queryByText('Click anywhere on the design to leave a comment.')).toBeNull();
+});
 test('recreating the playground store does not resurrect an old feedback draft', () => {
   const props = { source: '<h1>Review</h1>' }, x = setup(props);
   x.change(x.view.getByRole('textbox', { name: 'Overall feedback' }), 'Old draft');
@@ -142,7 +183,7 @@ test('Escape and empty outside-cancel restore history, including a prior redo, a
   }
 });
 test('drawings hit test their bounding-box centre, follow layout and still submit their path', async () => {
-  const x = setup(); fireEvent.click(x.view.getByRole('button', { name: 'Draw' }));
+  const x = setup(); fireEvent.click(x.view.getByRole('button', { name: 'More mockup tools' })); fireEvent.click(x.view.getByRole('button', { name: 'Draw' }));
   await act(async () => { x.pointer('pointerdown', 400, 50); x.pointer('pointerup', 600, 100); });
   expect(x.hits).toEqual([{ x: 50, y: 15 }]);
   const draft = x.store.get('review.feedback') as any;
@@ -219,7 +260,7 @@ test('region, drawing, undo/redo and escape cancellation use percentage space', 
   a.pointer('pointerdown', 100, 50); a.pointer('pointermove', 400, 200); a.pointer('pointerup', 400, 200);
   expect((a.store.get('review.feedback') as any).items[0]).toMatchObject({ kind: 'region', x: 10, y: 10, w: 30, h: 30 });
   fireEvent.keyDown(a.view.getByRole('textbox', { name: 'Add a comment…' }), { key: 'Escape' }); expect((a.store.get('review.feedback') as any).items).toHaveLength(0);
-  fireEvent.click(a.view.getByRole('button', { name: 'Draw' })); a.pointer('pointerdown', 100, 50); a.pointer('pointermove', 200, 100); a.pointer('pointerup', 300, 150); fireEvent.click(a.view.getByRole('dialog').querySelector<HTMLButtonElement>('.prism-mockup__primary')!);
+  fireEvent.click(a.view.getByRole('button', { name: 'More mockup tools' })); fireEvent.click(a.view.getByRole('button', { name: 'Draw' })); a.pointer('pointerdown', 100, 50); a.pointer('pointermove', 200, 100); a.pointer('pointerup', 300, 150); fireEvent.click(a.view.getByRole('dialog').querySelector<HTMLButtonElement>('.prism-mockup__primary')!);
   expect((a.store.get('review.feedback') as any).items[0]).toMatchObject({ kind: 'drawing', x: 10, y: 10, path: 'M10 10L30 30' });
   fireEvent.click(a.view.getByRole('button', { name: 'Undo' })); expect((a.store.get('review.feedback') as any).items).toHaveLength(0); fireEvent.click(a.view.getByRole('button', { name: 'Redo' })); expect((a.store.get('review.feedback') as any).items).toHaveLength(1);
 });

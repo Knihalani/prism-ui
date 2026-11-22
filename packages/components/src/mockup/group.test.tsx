@@ -57,6 +57,7 @@ test('two streamed blocks form one switcher; tabs switch and compare shows both 
 test('compare has one shared toolbar, propagates controls, and saves pending drafts on submit', () => {
   const x = setup(a + b + '</h1>\n```', true);
   fireEvent.click(x.view.getByRole('tab', { name: 'Compare' }));
+  fireEvent.click(x.view.getByRole('button', { name: 'More mockup tools' }));
   expect(x.view.getAllByRole('button', { name: 'Draw' })).toHaveLength(1);
   expect(x.view.getAllByRole('button', { name: 'Mobile' })).toHaveLength(1);
   fireEvent.click(x.view.getByRole('button', { name: 'Mobile' }));

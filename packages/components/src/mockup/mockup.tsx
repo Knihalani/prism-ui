@@ -3,7 +3,7 @@ import { defineComponent, usePart, usePresentation, usePrism, useSlot, type Pris
 import { s } from '@prism-ui/schema';
 import { Pill } from '../shared';
 import { ComponentFrame } from '../frame';
-import { MockupToolbar, MockupPenTools, MockupSource, MockupFooter } from './chrome';
+import { MockupToolbar, MockupSource, MockupFooter, MockupOverall, commentCount } from './chrome';
 import { WIREFRAME_DOCS, type FeedbackItem } from './engine';
 import { MockupIcon as Icon } from './icon';
 import { GroupedMockup } from './group';
@@ -40,9 +40,9 @@ export function MockupView({ vm, feedback = true, embedded = false }: { vm: Mock
   const root = usePart('mockup', 'member'), layout = usePart('mockup', 'layout'), viewport = usePart('mockup', 'viewport'), spacer = usePart('mockup', 'spacer'), stage = usePart('mockup', 'stage'), canvas = usePart('mockup', 'canvas'), media = usePart('mockup', 'media'), skeleton = usePart('mockup', 'skeleton'), list = usePart('mockup', 'list'), input = usePart('mockup', 'input'), hint = usePart('mockup', 'hint'), live = usePart('mockup', 'live'), reticle = usePart('mockup', 'reticle'), stroke = usePart('mockup', 'stroke'), overall = usePart('mockup', 'overall');
   const Row = useSlot('mockup', 'item', Item), EmptyState = useSlot('mockup', 'empty', Empty), Comment = useSlot('mockup', 'popover', Popover);
   return <div {...root} {...presentation} ref={vm.root} style={{ ...root.style, '--mockup-scale': vm.scale, '--mockup-inverse-scale': 1 / vm.scale } as CSSProperties} onKeyDown={vm.onKeyDown} data-device={vm.device} data-kind={vm.kind} data-embedded={embedded || undefined} data-expanded={vm.expanded || undefined} data-state={vm.submitted ? 'sent' : presentation['data-state']}>
-    <ComponentFrame component="mockup" title={embedded ? undefined : vm.title} label={vm.title} ask={!embedded} undo={false} state={vm.submitted ? 'sent' : vm.complete ? 'ready' : 'streaming'}>
+    <ComponentFrame component="mockup" title={embedded ? undefined : vm.title} label={vm.title} ask={!embedded} undo={false} toolbar={!embedded && <span className="prism-mockup__meta">{vm.props.variant ?? vm.kind} · {vm.submitted ? "Feedback sent" : vm.state.items.length ? commentCount(vm.labels, vm.locale, vm.state.items.length) : "open for feedback"}</span>} state={vm.submitted ? 'sent' : vm.complete ? 'ready' : 'streaming'}>
       {!embedded && vm.showSource && <MockupSource vm={vm} />}
-      <div {...layout}><div {...artboard}>{!embedded && <div className="prism-mockup__glass"><MockupToolbar vm={vm} />{!vm.submitted && <MockupPenTools vm={vm} />}</div>}<div {...viewport} ref={vm.viewport} style={{ ...viewport.style, maxHeight: vm.props.height ?? '70vh' }}>
+      <div {...layout}><div {...artboard}>{!embedded && <div className="prism-mockup__glass"><MockupToolbar vm={vm} submitted={vm.submitted} /></div>}<div {...viewport} ref={vm.viewport} style={{ ...viewport.style, maxHeight: vm.props.height ?? '70vh' }}>
         <div {...spacer} style={{ ...spacer.style, width: vm.width * vm.scale, height: vm.framed ? Math.ceil(vm.contentHeight * vm.scale) : vm.contentHeight * vm.scale }}><div {...stage} style={{ ...stage.style, width: vm.width, height: vm.contentHeight, transform: `scale(${vm.scale})` }}>
           {!vm.visible ? <div {...skeleton} role="status" aria-label={vm.labels.loading} /> : <>
             {vm.framed ? <iframe {...media} ref={vm.iframe} title={vm.title} sandbox="allow-scripts" style={{ ...media.style, width: vm.width, height: vm.contentHeight }} /> : vm.kind === 'svg' ? <div {...media} ref={vm.graphic} dangerouslySetInnerHTML={{ __html: vm.svg }} /> : vm.imageSrc && !vm.imageError ? <img {...media} src={vm.imageSrc} alt={vm.title} loading="lazy" decoding="async" onLoad={event => vm.imageLoaded(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight)} onError={() => vm.setImageError(true)} /> : <div {...skeleton} role="status">{vm.source || vm.props.src ? vm.labels.imageError : vm.labels.loading}</div>}
@@ -56,7 +56,7 @@ export function MockupView({ vm, feedback = true, embedded = false }: { vm: Mock
         </div></div>
       </div>{vm.editing && !vm.submitted && <Comment vm={vm} />}{feedback && <MockupFooter labels={vm.labels} locale={vm.locale} count={vm.submitted ? vm.feedback.toPayload().items.length : vm.state.items.length} submitted={vm.submitted} edit={() => vm.setSubmitted(false)} canUndo={vm.feedback.canUndo} canRedo={vm.feedback.canRedo} undo={() => { vm.close(); vm.feedback.undo(); }} redo={() => { vm.close(); vm.feedback.redo(); }} canSubmit={vm.canSubmit} submit={vm.submit} />}</div><div {...list} data-prism-flash={vm.flash ? '' : undefined}>{vm.state.items.length || vm.resolved.length ? [...vm.resolved, ...vm.state.items].map(item => <Row key={item.id} item={item as FeedbackItem} vm={vm} />) : <EmptyState vm={vm} />}</div></div>
       {feedback && <>
-        <label {...overall}><span className="prism-mockup__sr">{vm.labels.overall}</span><textarea {...input} rows={2} placeholder="Add overall feedback…" readOnly={vm.submitted} value={vm.state.overall} onChange={event => vm.feedback.setOverall(event.target.value)} /></label>
+        <MockupOverall label={vm.labels.overall} value={vm.state.overall} submitted={vm.submitted} onChange={value => vm.feedback.setOverall(value)} />
       </>}
       <span {...live} aria-live="polite">{vm.announcement}</span>
     </ComponentFrame>
