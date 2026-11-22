@@ -41,13 +41,13 @@ export function useEstimate(props: EstimateProps, ctx: PrismComponentProps<Estim
   const code = props.currency?.trim().toUpperCase();
   const currency = code && /^[A-Z]{3}$/.test(code) ? code : undefined;
   const money = (value: number) => format.currency(value, currency);
-  const writeTotals = () => { const next = calculate(props, readItem); store.set(`${id}.subtotal`, next.subtotal); store.set(`${id}.total`, next.total); };
+  const writeTotals = () => { const next = calculate(props, readItem); store.set(`${id}.subtotal`, next.subtotal, { history: false }); store.set(`${id}.total`, next.total, { history: false }); };
   useLayoutEffect(() => {
     store.batch(() => {
       for (const row of totals.rows) {
         if (!row.ready || !ctx.complete) continue;
-        if (store.get(`${id}.items.${row.id}.qty`) === undefined) setRecordPath(store, `${id}.items`, `${row.id}.qty`, row.qty);
-        if (store.get(`${id}.items.${row.id}.enabled`) === undefined) setRecordPath(store, `${id}.items`, `${row.id}.enabled`, row.enabled);
+        if (store.get(`${id}.items.${row.id}.qty`) === undefined) setRecordPath(store, `${id}.items`, `${row.id}.qty`, row.qty, { history: false });
+        if (store.get(`${id}.items.${row.id}.enabled`) === undefined) setRecordPath(store, `${id}.items`, `${row.id}.enabled`, row.enabled, { history: false });
       }
       writeTotals();
     });
