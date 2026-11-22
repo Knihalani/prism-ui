@@ -48,7 +48,7 @@ export function App({ pace = { chars: 8, delay: 20 } }: { pace?: { chars: number
     });
     running.current = replay; follow.current = true;
     setMessages(current => [...current, { id: nextId(), role: 'user', text: prompt, action }, { id, role: 'assistant', text, stream: replay.stream, pending: true }]);
-    setActive(id); setMenu(false); setDraft('');
+    setActive(id); setMenu(false);
   }
   function onAction(action: Action) {
     let reply = 'Got it — I’ve noted your choice. Your changes stay in this conversation. You can keep exploring above, or ask me for the next part of the plan.';
@@ -63,7 +63,7 @@ export function App({ pace = { chars: 8, delay: 20 } }: { pace?: { chars: number
     respond(action.message || 'Use this choice', undefined, action, reply);
   }
   function newChat() { stop(); setMessages([]); setDraft(''); setStore(makeStore(true)); setMenu(false); follow.current = true; composer.current?.focus(); }
-  function send() { const text = draft.trim(); if (text) respond(text, replyFor(text)); }
+  function send() { const text = draft.trim(); if (text) { respond(text, replyFor(text)); setDraft(''); } }
   function choose(item: Demo) { respond(item.prompt, item); }
   return <ThemeScope theme={theme} className="chat-app">
     {menu && <button className="sidebar-backdrop" aria-label="Close component menu" onClick={() => setMenu(false)} />}

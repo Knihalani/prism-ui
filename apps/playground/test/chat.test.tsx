@@ -47,10 +47,23 @@ test('composer ignores empty input, routes typed requests and new chat clears st
   expect(x.container.querySelectorAll('[data-message]')).toHaveLength(0);
   fireEvent.keyDown(input, { key: 'Enter' });
   await waitFor(() => expect(x.getByText('Make the pilot feel personal')).toBeDefined());
+  expect((input as HTMLTextAreaElement).value).toBe('');
   makeStore().set('oldDraft', 'Clear this');
   fireEvent.click(x.getByRole('button', { name: 'New chat' }));
   expect(x.container.querySelectorAll('[data-message]')).toHaveLength(0);
   expect(makeStore().get('oldDraft')).toBeUndefined();
+});
+
+test.each(['sidebar', 'action'])('%s preserves an unsent composer draft', async trigger => {
+  const x = render(<App pace={fast} />);
+  fireEvent.click(x.getByRole('button', { name: 'Cards & badges' }));
+  await waitFor(() => expect(x.getByRole('button', { name: 'Choose concierge' })).toBeDefined());
+  const input = x.getByRole('textbox', { name: 'Message Prism' }) as HTMLTextAreaElement;
+  act(() => input.focus());
+  fireEvent.change(input, { target: { value: 'A draft\nnot sent yet' } });
+  fireEvent.keyUp(input, { key: 'Unidentified' });
+  fireEvent.click(x.getByRole('button', { name: trigger === 'sidebar' ? 'Callout' : 'Choose concierge' }));
+  expect(input.value).toBe('A draft\nnot sent yet');
 });
 
 test('estimate actions demonstrate an agent state patch in the same shared store', async () => {
