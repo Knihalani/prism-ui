@@ -9,6 +9,7 @@ export interface PrismComponentProps<P = Record<string, unknown>> {
 export interface ComponentDef<S extends Schema<any> = Schema<any>> {
   name: string; schema?: S; component: ComponentType<PrismComponentProps<Infer<S>>>;
   fallback?: ComponentType<PrismComponentProps<Infer<S>>>;
+  skeleton?: ComponentType<PrismComponentProps<Infer<S>>>;
   requiresFinalId?: boolean;
   docs?: string; examples?: string[]; inline?: boolean; syntax?: Definition['syntax'];
   message?(action: Action): string;
