@@ -27,14 +27,15 @@ export function migrateComponentState(store: Store, from: string, to: string) {
   }, { history: false });
 }
 
-export function useComponentId(node: Node, requested: unknown, store: Store) {
-  const target = node.complete === false || !Object.isFrozen(node) ? node.key : String(requested ?? node.key);
+export function useComponentId(node: Node, requested: unknown, store: Store, scope: string) {
+  const provisional = `${scope}:${node.key}`;
+  const target = node.complete === false || !Object.isFrozen(node) ? provisional : String(requested ?? provisional);
   const previous = useRef(target), [, refresh] = useState(0);
-  const migrating = previous.current === node.key && target !== node.key;
+  const migrating = previous.current === provisional && target !== provisional;
   useLayoutEffect(() => {
-    if (migrating) migrateComponentState(store, node.key, target);
+    if (migrating) migrateComponentState(store, provisional, target);
     previous.current = target;
     if (migrating) refresh(value => value + 1);
-  }, [target, node.key, store, migrating]);
+  }, [target, provisional, store, migrating]);
   return { id: target, ready: !migrating };
 }

@@ -1,4 +1,4 @@
-import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
+import { memo, useCallback, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { createParser, type Node, type Plugin } from '@prism-ui/core';
 import { createStore, type Store, type Adapter, type Patch } from '@prism-ui/state';
 import { ComponentContext, PrismContext, cx, usePrism, type Action, type Middleware, type Components, type Slots, type ClassNames, type Styles } from './context';
@@ -57,7 +57,7 @@ function Directive({ node }: { node: Node }) {
   const def = context.registry.get(name), raw = useBindings(node, context.store);
   const result = def?.schema?.coerce(raw) ?? { value: raw, issues: [], partial: false };
   const coerced = result.value ?? {}, complete = node.complete !== false;
-  const { id, ready } = useComponentId(node, coerced.id ?? raw.id, context.store);
+  const { id, ready } = useComponentId(node, coerced.id ?? raw.id, context.store, context.scope);
   const props = coerced.id === undefined ? coerced : { ...coerced, id };
   const View = !complete && result.partial && def?.fallback ? def.fallback : context.components[name] ?? def?.component;
   const children = renderChildren(node);
@@ -77,13 +77,14 @@ const NodeView = memo(function NodeView({ node }: { node: Node }) {
 
 export interface PrismProps {
   source?: string; done?: boolean; stream?: PrismStream; components?: Components; plugins?: Plugin[];
-  store?: Store; persist?: Adapter; namespace?: string; registry?: Registry;
+  store?: Store; persist?: Adapter; namespace?: string; registry?: Registry; scope?: string;
   onAction?(action: Action): void; middleware?: Middleware[];
   theme?: Theme; density?: Density; animate?: boolean; unstyled?: boolean;
   locale?: string; currency?: string; slots?: Slots; classNames?: ClassNames; styles?: Styles;
   className?: string; style?: CSSProperties;
 }
-export function Prism({ source = '', done = true, stream, plugins, store: provided, persist, namespace, registry = defaultRegistry, components = empty, onAction, middleware, theme = 'auto', density = 'comfortable', animate = true, unstyled = false, locale, currency = 'USD', slots = empty, classNames = empty, styles = empty, className, style }: PrismProps) {
+export function Prism({ scope: providedScope, source = '', done = true, stream, plugins, store: provided, persist, namespace, registry = defaultRegistry, components = empty, onAction, middleware, theme = 'auto', density = 'comfortable', animate = true, unstyled = false, locale, currency = 'USD', slots = empty, classNames = empty, styles = empty, className, style }: PrismProps) {
+  const instance = useId(), scope = providedScope ?? instance;
   components = useStable(components); slots = useStable(slots, 1); classNames = useStable(classNames, 1);
   styles = useStable(styles, 2); theme = useStable(theme); middleware = useStable(middleware);
   const [owned] = useState(() => provided ?? createStore({ persist, namespace })), store = provided ?? owned;
@@ -95,7 +96,7 @@ export function Prism({ source = '', done = true, stream, plugins, store: provid
     next(0, action);
   }, []);
   const format = useMemo(() => createFormat(locale, currency), [locale, currency]);
-  const context = useMemo(() => ({ registry, components, store, emit, theme, unstyled, slots, classNames, styles, format, animate: motion, applied }), [registry, components, store, emit, theme, unstyled, slots, classNames, styles, format, motion, applied]);
+  const context = useMemo(() => ({ registry, components, store, emit, theme, unstyled, slots, classNames, styles, format, animate: motion, applied, scope }), [registry, components, store, emit, theme, unstyled, slots, classNames, styles, format, motion, applied, scope]);
   const current = useRef<{ parser: ReturnType<typeof createParser>; text: string; ended: boolean; plugins?: Plugin[] } | null>(null);
   if (!current.current || current.current.plugins !== plugins || !source.startsWith(current.current.text) || (current.current.ended && (source !== current.current.text || !done))) current.current = { parser: createParser({ plugins }), text: '', ended: false, plugins };
   const state = current.current;

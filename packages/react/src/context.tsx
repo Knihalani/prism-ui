@@ -18,6 +18,7 @@ export interface PrismContextValue {
   registry: Registry; components: Components; store: Store; emit(action: Action): void;
   theme: Theme; unstyled: boolean; slots: Slots; classNames: ClassNames; styles: Styles; format: Format; animate: boolean;
   applied: Set<string>;
+  scope: string;
 }
 export const PrismContext = createContext<PrismContextValue | null>(null);
 export const ComponentContext = createContext<{ name: string; id: string; props: Record<string, unknown>; node: Node; def?: ComponentDef } | null>(null);
