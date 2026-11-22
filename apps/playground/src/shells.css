@@ -8,7 +8,7 @@
   position: relative; font-family: var(--shell-font);
 }
 .shell.shell-chat:not([data-mode="dark"]) { --app-muted: #6f746e; }
-.shell[data-prism-theme-name="host"] {
+.shell[data-theme="host"] {
   --prism-bg: var(--app-bg); --prism-surface: var(--app-fill); --prism-surface-raised: var(--app-bg);
   --prism-text: var(--app-text); --prism-text-muted: var(--app-muted); --prism-border: var(--app-line);
   --prism-accent: var(--app-accent); --prism-accent-text: var(--app-accent); --prism-on-accent: var(--app-bg); --prism-focus: var(--app-accent);
@@ -16,6 +16,8 @@
 .shell-stage { width: 100%; height: 100%; min-width: 0; animation: shell-arrive 320ms var(--shell-spring) both; }
 @keyframes shell-arrive { from { opacity: .35; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .chat-shell { display: flex; height: 100%; min-width: 0; }
+.shell-chat .thread { width: min(100%, calc(var(--chat-content-width, 720px) + 64px)); max-width: none; }
+.shell-chat .composer-footer { width: min(100%, calc(var(--chat-content-width, 720px) + 64px)); }
 .shell .sidebar-backdrop[hidden] { display: none; }
 .shell .composer-footer { padding-bottom: 80px; }
 .shell .composer { border-radius: var(--shell-radius); }
@@ -106,7 +108,7 @@
 .ide-assistant { display: flex; min-width: 0; min-height: 0; border-left: 1px solid var(--app-line); background: var(--app-bg); }
 .ide-assistant { --panel-font-size: 13px; --panel-line-height: 1.5; }
 .compact-conversation { font-size: var(--panel-font-size); line-height: var(--panel-line-height); width: 100%; min-height: 0; }
-.compact-conversation .reply-content > .prism-root {
+.compact-conversation .reply-content > .prism-root[data-prism-theme-name="host"] {
   --prism-text-xs: calc(var(--panel-font-size) - 2px);
   --prism-text-sm: calc(var(--panel-font-size) - 1px);
   --prism-text-base: var(--panel-font-size);
@@ -114,7 +116,7 @@
   font-size: var(--panel-font-size);
   line-height: var(--panel-line-height);
 }
-.compact-conversation .reply-content :is(.prism-paragraph__root, .prism-list__root, .prism-blockquote__root) { line-height: var(--panel-line-height); }
+.compact-conversation .reply-content > .prism-root[data-prism-theme-name="host"] :is(.prism-paragraph__root, .prism-list__root, .prism-blockquote__root) { line-height: var(--panel-line-height); }
 .compact-conversation .prism-codeblock__body[data-wrap="false"] {
   overflow-x: auto;
   scrollbar-width: thin;
@@ -182,9 +184,9 @@
 .assistant-toggle svg { width: 13px; height: 13px; }
 .assistant-toggle kbd { margin-left: 8px; color: var(--app-muted); font: 12px inherit; }
 .workspace-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0,1fr) 0px; grid-template-rows: minmax(0,1fr); transition: grid-template-columns 420ms var(--shell-spring); }
-.workspace-body.drawer-visible { grid-template-columns: minmax(0,1fr) 420px; }
+.workspace-body.drawer-visible { grid-template-columns: minmax(0,1fr) var(--workspace-drawer-width, 420px); }
 .workspace-drawer-clip { overflow: hidden; min-width: 0; min-height: 0; }
-.workspace-assistant { --panel-font-size: 14px; --panel-line-height: 1.55; --shell-font: "Shell Inter", "Liberation Sans", Arial, sans-serif; font-family: var(--shell-font); display: flex; width: 420px; height: 100%; border-left: 1px solid var(--app-line); background: var(--app-bg); transform: translateX(36px); opacity: 0; transition: transform 420ms var(--shell-spring), opacity 220ms; }
+.workspace-assistant { --panel-font-size: 14px; --panel-line-height: 1.55; --shell-font: "Shell Inter", "Liberation Sans", Arial, sans-serif; font-family: var(--shell-font); display: flex; width: var(--workspace-drawer-width, 420px); height: 100%; border-left: 1px solid var(--app-line); background: var(--app-bg); transform: translateX(36px); opacity: 0; transition: transform 420ms var(--shell-spring), opacity 220ms; }
 .drawer-visible .workspace-assistant { transform: none; opacity: 1; }
 .workspace-assistant .chat-header, .workspace-assistant .conversation-picker, .workspace-assistant .model-status, .workspace-assistant .composer { font-family: "Shell Inter", "Liberation Sans", Arial, sans-serif; }
 .workspace-assistant .thread { padding: 25px 22px; font-size: 14px; }

@@ -8,6 +8,7 @@ import '@prism-ui/components/artifact.css';
 import './adaptive-preview.css';
 
 import { agentSource, adaptiveArtifactOptions } from './adaptive-source';
+import { artifactFontStyle } from './artifact-fonts';
 const plugins = [artifactPlugin];
 const themes = [defineTheme({ name: 'adaptive-sage', tokens: { accent: '#387663', accentText: '#387663' } }), defineTheme({ name: 'adaptive-blue', tokens: { accent: '#4169bc', accentText: '#4169bc' } })];
 function Heatmap({ data, complete, tokens }: RendererProps<{ values: number[] }>) {
@@ -37,7 +38,7 @@ function App() {
     <main className="host-thread" style={{ width, maxWidth: 'calc(100% - 32px)' }}>
       <div className="host-user">How’s our team doing? Build me something useful, and let me choose what’s next.</div>
       <div className="host-avatar">P <span>Prism</span></div>
-      <ArtifactProvider options={adaptiveArtifactOptions}><Prism source={source} done={done} plugins={plugins} theme={themes[theme]} mode={dark ? 'dark' : 'light'} store={store} onAction={action} /></ArtifactProvider>
+      <ArtifactProvider options={adaptiveArtifactOptions}><Prism source={source} done={done} plugins={plugins} theme={themes[theme]} mode={dark ? 'dark' : 'light'} style={artifactFontStyle} store={store} onAction={action} /></ArtifactProvider>
       <details className="developer-examples" open><summary>Developer renderers · the small escape hatch</summary><p>Or bring an existing React component. Same streaming, state and feedback.</p><button onClick={() => stream(true)}>Stream custom renderer</button><Prism source={custom} done={customDone} renderers={{ heatmap: Heatmap, priority }} feedback theme={themes[theme]} mode={dark ? 'dark' : 'light'} store={store} onAction={action} /></details>
       <details className="event-log"><summary>Actions ({actions.length})</summary><pre data-testid="actions">{JSON.stringify(actions.map(({ type, component, id, payload }) => ({ type, component, id, payload })), null, 2)}</pre></details>
     </main>
