@@ -25,17 +25,19 @@ function target(step: TroubleshootStep, answer: 'yes' | 'no') { return answer ==
 function reportMessage(title: unknown, resolved: boolean, path: TroubleshootAnswer[], count: string) { return `Troubleshooting "${title ?? 'Troubleshoot'}": ${resolved ? 'fixed at step' : 'not fixed after'} ${count}${resolved ? '' : ' steps'} (${path.map(entry => entry.answer === 'yes' ? 'Yes' : 'No').join(' → ')}).`; }
 export function useTroubleshoot(props: TroubleshootProps, ctx: PrismContextValue) {
   const component = useContext(ComponentContext), format = useFormat(), emit = useEmit();
-  const [path, setPath] = useComponentState<TroubleshootAnswer[]>('path', []), [sent, setSent] = useComponentState('sent', false);
+  const [storedPath, setPath] = useComponentState<TroubleshootAnswer[]>('path', []), [sent, setSent] = useComponentState('sent', false);
   const steps = useMemo(() => validateSteps(props.steps), [props.steps]);
   const labels = useMemo(() => ({ ...defaults, ...props.labels }), [props.labels]);
   const derived = useMemo(() => {
     let current = props.start;
-    for (const entry of path) { const step = current ? steps[current] : undefined; if (!step || entry.step !== current) break; current = target(step, entry.answer); }
+    const path: TroubleshootAnswer[] = [];
+    for (const entry of storedPath) { const step = current ? steps[current] : undefined; if (!step || entry.step !== current) break; path.push(entry); current = target(step, entry.answer); }
     const resolved = current === '$fixed';
     const step = current && !current.startsWith('$') ? steps[current] : undefined;
     const ended = resolved || (path.length > 0 && !step) || (component?.node.complete !== false && !step);
-    return { current, step, resolved, ended };
-  }, [props.start, path, steps, component?.node.complete]);
+    return { current, step, resolved, ended, path };
+  }, [props.start, storedPath, steps, component?.node.complete]);
+  const { path } = derived;
   const readyTarget = (value: string | undefined) => value === '$fixed' || value === '$escalate' || !!(value && steps[value]?.text.trim());
   const ready = !!derived.step?.text.trim() && (component?.node.complete !== false || (readyTarget(target(derived.step, 'yes')) && readyTarget(target(derived.step, 'no'))));
   const commandNode = useMemo<Node | undefined>(() => derived.step?.command ? Object.freeze({ type: 'code', key: `${component?.id}.cmd.${derived.current}`, lang: 'bash', value: derived.step.command, complete: true }) : undefined, [component?.id, derived.current, derived.step?.command]);
@@ -51,7 +53,7 @@ export function useTroubleshoot(props: TroubleshootProps, ctx: PrismContextValue
     position: `${labels.step} ${format.number(path.length + 1)}`,
     result: derived.resolved ? labels.fixed.replace('{count}', format.number(path.length)) : labels.notFixed,
     answer, back, restart() { edit([]); },
-    report() { if (!derived.ended || sent) return; emit('troubleshoot', { resolved: derived.resolved, path }, reportMessage(props.title, derived.resolved, path, format.number(path.length))); setSent(true); },
+    report() { if (!derived.ended || sent) return; edit(path); emit('troubleshoot', { resolved: derived.resolved, path }, reportMessage(props.title, derived.resolved, path, format.number(path.length))); setSent(true); },
     onKeyDown(event: KeyboardEvent<HTMLElement>) {
       const element = event.target as HTMLElement;
       if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || element.closest('input, textarea, select, [contenteditable="true"]')) return;

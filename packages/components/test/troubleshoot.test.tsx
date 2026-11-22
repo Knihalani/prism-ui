@@ -36,6 +36,44 @@ test('resolved report emits exact action and persists sent state; restart and un
   expect(view.getByText('Report sent')).toBeDefined();
 });
 
+test('changed branch targets truncate stale answers before advancing and reporting', () => {
+  const actions: Action[] = [], store = createStore();
+  const initial = { ...props, steps: { ...props.steps, b: { ...props.steps.b, no: 'c' }, c: { text: 'Old branch.' }, d: { text: 'New branch.', no: 'e' }, e: { text: 'Final check.' } } };
+  const view = render(<Prism source={fence(initial)} registry={registry} store={store} onAction={action => actions.push(action)} />);
+  fireEvent.click(view.getByRole('button', { name: 'No' }));
+  fireEvent.click(view.getByRole('button', { name: 'No' }));
+  expect(view.getByText('Old branch.')).toBeDefined();
+  const updated = { ...initial, steps: { ...initial.steps, a: { ...initial.steps.a, no: 'd' } } };
+  view.rerender(<Prism source={fence(updated)} registry={registry} store={store} onAction={action => actions.push(action)} />);
+  expect(view.getByText('New branch.')).toBeDefined();
+  expect(view.getByText('Step 2')).toBeDefined();
+  expect(view.queryByText('Restart the router.')).toBeNull();
+  fireEvent.click(view.getByRole('button', { name: 'No' }));
+  expect(view.getByText('Final check.')).toBeDefined();
+  fireEvent.click(view.getByRole('button', { name: 'Yes' }));
+  fireEvent.click(view.getByRole('button', { name: 'Send report' }));
+  const path = [{ step: 'a', answer: 'no' }, { step: 'd', answer: 'no' }, { step: 'e', answer: 'yes' }];
+  expect(store.get('wifi.path')).toEqual(path);
+  expect(actions).toEqual([{ type: 'troubleshoot', component: 'troubleshoot', id: 'wifi', payload: { resolved: true, path }, context: { component: 'troubleshoot', props: updated, state: { path, sent: false } }, message: 'Troubleshooting "Wi-Fi drops": fixed at step 3 (No → No → Yes).' }]);
+});
+
+test('backtracking and reporting use only the replayed prefix after a target changes', () => {
+  const store = createStore({ initial: { wifi: { path: [{ step: 'a', answer: 'no' }, { step: 'b', answer: 'no' }] } } });
+  const updated = { ...props, steps: { ...props.steps, a: { ...props.steps.a, no: 'c' }, c: { text: 'New branch.' } } };
+  const view = render(<Prism source={fence(updated)} registry={registry} store={store} />);
+  fireEvent.keyDown(view.getByRole('button', { name: 'Yes' }), { key: 'Backspace' });
+  expect(store.get('wifi.path')).toEqual([]);
+  expect(view.getByText('Step 1')).toBeDefined();
+  act(() => store.set('wifi.path', [{ step: 'a', answer: 'no' }, { step: 'b', answer: 'no' }]));
+  const terminal = { ...updated, steps: { ...updated.steps, a: { ...updated.steps.a, no: '$fixed' } } };
+  const actions: Action[] = [];
+  view.rerender(<Prism source={fence(terminal)} registry={registry} store={store} onAction={action => actions.push(action)} />);
+  expect(view.getByText('Fixed after 1 steps')).toBeDefined();
+  fireEvent.click(view.getByRole('button', { name: 'Send report' }));
+  expect(store.get('wifi.path')).toEqual([{ step: 'a', answer: 'no' }]);
+  expect(actions[0].payload).toEqual({ resolved: true, path: [{ step: 'a', answer: 'no' }] });
+});
+
 test('unknown and missing targets end unresolved; yes defaults to fixed', () => {
   const actions: Action[] = [], input = { id: 'dead', start: 'a', steps: { a: { text: 'Try again.', no: 'unknown' } } };
   const view = render(<Prism source={fence(input)} registry={registry} onAction={action => actions.push(action)} />);
