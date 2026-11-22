@@ -253,6 +253,22 @@ test('saved feedback survives unmount while unsaved device and zoom choices stay
   const draft = a.store.get('review.feedback'); a.view.unmount();
   const b = setup({}, true, a.store); expect(b.store.get('review.feedback')).toEqual(draft); expect((b.view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('Keep this draft'); expect(b.view.getByRole('button', { name: /^Desktop$/ }).getAttribute('aria-pressed')).toBe('true'); expect(b.view.getByRole('button', { name: 'Fit' })).toBeDefined();
 });
+test('saved mockup submitted state is reactive and explicit new feedback takes precedence', () => {
+  const store = createStore({ initial: { review: { submitted: true, feedback: createFeedback({ overall: 'Previously submitted' }).toJSON() } } });
+  const x = setup({}, true, store);
+  expect(x.model.submitted).toBe(true);
+  expect(x.view.queryByRole('textbox', { name: 'Overall feedback' })).toBeNull();
+  fireEvent.click(x.view.getByText('Edit feedback'));
+  expect(x.model.submitted).toBe(false);
+  x.change(x.view.getByRole('textbox', { name: 'Overall feedback' }), 'Edited legacy receipt');
+  expect(x.model.submitted).toBe(false);
+  expect(store.get('review.feedback.submitted')).toBe(false);
+  act(() => store.undo('review'));
+  expect(x.model.submitted).toBe(true);
+  act(() => store.set('review.submitted', false));
+  expect(x.model.submitted).toBe(false);
+  expect(x.actions).toEqual([]);
+});
 test('image errors show a calm fallback and a changed URL can load again', () => {
   const a = setup({ kind: 'image', src: 'https://example.com/missing.png' }); fireEvent.error(a.view.getByRole('img')); expect(a.view.getByText('Image unavailable')).toBeDefined(); a.rerender({ kind: 'image', src: 'https://example.com/ok.png' }); expect(a.view.getByRole('img')).toBeDefined();
 });

@@ -22,8 +22,9 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const labels = useMockupStrings(props), title = labels.title, source = props.source ?? '';
   const path = `${component!.id}.feedback`;
   const draft = useStoreValue<(FeedbackState & { submitted?: boolean }) | undefined>(path);
+  const savedSubmitted = useStoreValue<boolean | undefined>(`${component!.id}.submitted`);
   const [localDevice, writeDevice] = useState<MockupDevice>(props.device ?? 'desktop'), [localZoom, writeZoom] = useState(1), [editSubmitted, setEditSubmitted] = useState(false);
-  const submitted = !!draft?.submitted && !editSubmitted, setSubmitted = (value: boolean) => setEditSubmitted(!value);
+  const submitted = !!(draft?.submitted ?? savedSubmitted) && !editSubmitted, setSubmitted = (value: boolean) => setEditSubmitted(!value);
   const device = options.controls?.device ?? localDevice, setDevice = options.controls?.setDevice ?? writeDevice, zoom = options.controls?.zoom ?? localZoom, setZoom = options.controls?.setZoom ?? writeZoom;
   const [feedback] = useState(() => createFeedback({ ...draft, mockup: title, variant: props.variant, device }));
   const state = useSyncExternalStore(feedback.subscribe, feedback.getState, feedback.getState);
@@ -48,7 +49,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     feedback.load(createFeedback({ ...draft, mockup: title, variant: props.variant, device, items, overall }).toJSON());
     if (editing && !editing.fresh) { const item = items.find(item => item.id === editing.id); if (!item) { setEditing(null); setComment(''); } else if (item.comment !== editing.text) { setEditing({ ...editing, text: item.comment }); setComment(item.comment); } }
     setEditSubmitted(false);
-  }, [draft, path, feedback]);
+  }, [draft, path, savedSubmitted, feedback]);
   useEffect(() => { feedback.setContext({ mockup: title, variant: props.variant, device }); }, [feedback, title, props.variant, device]);
   useEffect(() => { if (visible || !root.current || typeof IntersectionObserver === 'undefined') return; const observer = new IntersectionObserver(entries => { if (entries.some(e => e.isIntersecting)) { setVisible(true); observer.disconnect(); } }, { rootMargin: '200px' }); observer.observe(root.current); return () => observer.disconnect(); }, [visible]);
   useEffect(() => { if (!viewport.current || typeof ResizeObserver === 'undefined') return; const observer = new ResizeObserver(entries => setContainerWidth(entries[0].contentRect.width || 1280)); observer.observe(viewport.current); return () => observer.disconnect(); }, []);
