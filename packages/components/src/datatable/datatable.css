@@ -2,7 +2,6 @@
   position: relative;
   min-width: 0;
   container-type: inline-size;
-  font-variant-numeric: tabular-nums;
 }
 .prism-root :where(*) + .prism-datatable__root { margin-block-start: var(--prism-space-5); }
 .prism-datatable__toolbar {
@@ -44,8 +43,8 @@
   border-spacing: 0;
   border-collapse: separate;
   font-family: var(--prism-font-body); font-size: var(--prism-text-base); line-height: 20px; font-weight: var(--prism-weight-regular);
-  font-variant-numeric: tabular-nums;
 }
+.prism-datatable__cell[data-align="right"], .prism-datatable__cell:has(.prism-odometer) { font-variant-numeric: tabular-nums; }
 .prism-datatable__table[data-virtual] { table-layout: fixed; }
 .prism-datatable__caption {
   text-align: start;

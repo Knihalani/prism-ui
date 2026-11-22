@@ -11,7 +11,7 @@
   line-height: 1.65;
   letter-spacing: var(--prism-prose-letter-spacing, normal);
   font-feature-settings: var(--prism-prose-font-features, normal);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: proportional-nums;
   overflow-wrap: break-word;
   -webkit-font-smoothing: antialiased;
 }
@@ -107,9 +107,9 @@
   border-block-end: 1px solid var(--prism-border);
   text-align: start;
   vertical-align: top;
-  font-variant-numeric: tabular-nums;
 }
 .prism-root .prism-tableHeader__root { color: var(--prism-text-muted); font-weight: var(--prism-weight-semibold); }
+.prism-root .prism-tableCell__root[style*="text-align: right"] { font-variant-numeric: tabular-nums; }
 .prism-root .prism-thematicBreak__root { border: 0; border-block-start: 1px solid var(--prism-border); }
 .prism-root .prism-image__root { display: block; max-width: 100%; height: auto; border-radius: var(--prism-radius-md); }
 

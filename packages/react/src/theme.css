@@ -6,9 +6,9 @@
   --prism-surface: color-mix(in srgb, currentColor 3%, transparent);
   --prism-surface-raised: Canvas;
   --prism-text: currentColor;
-  --prism-text-muted: color-mix(in srgb, currentColor 65%, transparent);
-  --prism-text-subtle: color-mix(in srgb, currentColor 50%, transparent);
-  --prism-border: color-mix(in srgb, currentColor 15%, transparent);
+  --prism-text-muted: color-mix(in srgb, currentColor 72%, transparent);
+  --prism-text-subtle: color-mix(in srgb, currentColor 65%, transparent);
+  --prism-border: color-mix(in srgb, currentColor 10%, transparent);
   --prism-border-strong: color-mix(in srgb, currentColor 30%, transparent);
   --prism-accent-text: var(--prism-accent, #525252);
   --prism-on-accent: #fff;
@@ -62,6 +62,33 @@
   --prism-motion-distance: 6px;
   --prism-motion-scale: .97;
   --prism-motion-blur: 2px;
+}
+:where([data-prism-theme-name="host"]) {
+  --prism-accent: light-dark(#171717, #ececec);
+  --prism-accent-text: var(--prism-accent);
+  --prism-on-accent: light-dark(#fff, #212121);
+  --prism-focus: color-mix(in srgb, var(--prism-accent) 35%, transparent);
+  --prism-surface: color-mix(in srgb, currentColor 2.5%, transparent);
+  --prism-text-xs: 13px;
+  --prism-text-sm: 14px;
+  --prism-text-base: 15px;
+  --prism-radius-sm: 6px;
+  --prism-space-1: 4px;
+  --prism-space-2: 8px;
+  --prism-space-3: 12px;
+  --prism-space-4: 16px;
+  --prism-space-5: 16px;
+  --prism-space-6: 24px;
+  --prism-space-7: 32px;
+  --prism-space-8: 40px;
+  --prism-surface-raised: light-dark(#fff, #2b2b2b);
+  --prism-positive: light-dark(#18704f, #7cc8a5);
+  --prism-danger: light-dark(#b6322d, #f28b85);
+  --prism-warning: light-dark(#80520b, #d9b66e);
+  --prism-info: light-dark(#286d8c, #86c5df);
+  --prism-elevation-1: 0 1px 2px #00000008;
+  --prism-elevation-2: 0 4px 16px #0000000f;
+  --prism-elevation-3: 0 12px 32px #00000018;
 }
 :where([data-prism-theme="dark"]) { color-scheme: dark; }
 @media (prefers-color-scheme: dark) { :where([data-prism-theme="auto"]) { color-scheme: dark; } }

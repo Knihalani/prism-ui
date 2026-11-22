@@ -38,7 +38,8 @@
 .prism-chart__tooltip { position: absolute; z-index: 2; min-width: 140px; max-width: 240px; padding: var(--prism-space-3); background: var(--prism-surface-raised); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-md); box-shadow: var(--prism-elevation-2); pointer-events: none; font-size: var(--prism-text-xs); }
 .prism-chart__tooltip-title { font-weight: var(--prism-weight-semibold); margin-bottom: var(--prism-space-2); }
 .prism-chart__tooltip-annotation { color: var(--prism-accent-text, var(--prism-accent, #525252)); margin-bottom: var(--prism-space-2); }
-.prism-chart__tooltip-row { display: flex; justify-content: space-between; gap: var(--prism-space-4); color: var(--prism-text-muted); font-variant-numeric: tabular-nums; }
+.prism-chart__tooltip-row { display: flex; justify-content: space-between; gap: var(--prism-space-4); color: var(--prism-text-muted); }
+.prism-chart__tooltip-row > strong { font-variant-numeric: tabular-nums; }
 .prism-chart__tooltip-row[data-state="active"] { color: var(--prism-text); }
 .prism-chart__legend { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--prism-space-2); padding: var(--prism-space-2) var(--prism-space-4) var(--prism-space-4); }
 .prism-chart__legend-item { display: inline-flex; align-items: center; gap: var(--prism-space-2); }

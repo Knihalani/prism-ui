@@ -1,7 +1,8 @@
 .prism-root .prism-table__root { position: relative; min-width: 0; }
 .prism-root :where(*) + div.prism-table__root { margin-block-start: var(--prism-space-5); }
 .prism-root .prism-table__scroll { overflow: auto; max-height: var(--prism-table-max-height, 480px); scrollbar-width: thin; scrollbar-color: var(--prism-border) transparent; }
-.prism-root .prism-table__table { width: 100%; border-collapse: separate; border-spacing: 0; font-family: var(--prism-font-body); font-size: var(--prism-text-base); line-height: 1.4; font-weight: var(--prism-weight-regular); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.prism-root .prism-table__table { width: 100%; border-collapse: separate; border-spacing: 0; font-family: var(--prism-font-body); font-size: var(--prism-text-base); line-height: 1.4; font-weight: var(--prism-weight-regular); white-space: nowrap; }
+.prism-root .prism-table__cell[data-align="right"] { font-variant-numeric: tabular-nums; }
 .prism-root .prism-table__head { position: sticky; inset-block-start: 0; z-index: 1; background: var(--prism-table-header-bg, var(--prism-bg)); }
 .prism-root .prism-table__header { padding: 0; border-block-end: 1px solid var(--prism-border); color: var(--prism-text-subtle); font-size: var(--prism-text-xs); font-weight: var(--prism-weight-semibold); }
 .prism-root .prism-table__sort {
