@@ -54,7 +54,7 @@ test('receipt keeps both labels in one reserved slot while toggling accessible c
   expect(past.getAttribute('aria-hidden')).toBe('false');
 });
 
-test('store-driven FLIP snapshots every visual item before cancelling an interrupted reorder', () => {
+test('store-driven FLIP waits for the React commit and snapshots visual items before cancelling an interrupted reorder', async () => {
   const store = createStore(); store.set('order', ['a', 'b']);
   function List() {
     const ref = useFlip(true), order = useStoreValue<string[]>('order') ?? [];
@@ -73,7 +73,10 @@ test('store-driven FLIP snapshots every visual item before cancelling an interru
     };
     item.animate = mock(() => ({ cancel() { calls.push('cancel'); inFlight = false; }, onfinish: null, oncancel: null }) as unknown as Animation);
   }
-  act(() => store.set('order', ['b', 'a']));
+  await act(async () => {
+    store.set('order', ['b', 'a']);
+    await Promise.resolve();
+  });
   expect(items[0].animate).toHaveBeenCalled();
   inFlight = true; calls.length = 0;
   act(() => store.set('order', ['a', 'b']));
@@ -86,5 +89,22 @@ test('component CSS timings use tokens and entry/rolling keyframes are absent', 
     expect(css).not.toMatch(/(?<![\w-])\d*\.?\d+m?s\b/);
     expect(css).not.toContain('cubic-bezier(');
     expect(css).not.toMatch(/@keyframes\s+prism-[\w-]*(?:-enter|-in|digit-out)\b/);
+  }
+});
+
+test('disabled FLIP still guards existing items against CSS re-entry without animating', async () => {
+  const store = createStore(); store.set('order', ['a', 'b']);
+  function List() {
+    const ref = useFlip(false), order = useStoreValue<string[]>('order') ?? [];
+    return <div ref={ref}>{order.map(id => <div key={id} data-option={id}>{id}</div>)}</div>;
+  }
+  const registry = createRegistry([{ name: 'list', component: List }]);
+  const view = render(<Prism registry={registry} store={store} source="::list" />);
+  const items = Array.from(view.container.querySelectorAll<HTMLElement>('[data-option]'));
+  for (const item of items) item.animate = mock();
+  await act(async () => { store.set('order', ['b', 'a']); await Promise.resolve(); });
+  for (const item of items) {
+    expect(item.hasAttribute('data-prism-entered')).toBe(true);
+    expect(item.animate).not.toHaveBeenCalled();
   }
 });
