@@ -44,7 +44,7 @@ test('component labels override frame strings while missing labels use frame fal
     const own = level === 'frame' ? {} : { askLabel: 'Prop ask', undoLabel: 'Prop undo' };
     const source = '~~~ui:example\n' + JSON.stringify({ id: 'demo', ...own }) + '\n~~~';
     const theme = defineTheme({ name: 'frame-labels', components: {
-      frame: { strings: { askLabel: 'Frame ask', undoLabel: 'Frame undo' } },
+      frame: { strings: level === 'props' ? {} : { askLabel: 'Frame ask', undoLabel: 'Frame undo' } },
       example: { strings: level === 'theme' ? { askLabel: 'Theme ask', undoLabel: 'Theme undo' } : {} },
     } });
     const view = setup({ undo: true }, { source, theme });

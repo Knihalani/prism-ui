@@ -1,5 +1,5 @@
 import { createElement, forwardRef, useCallback, useContext, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ElementType, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from 'react';
-import { ComponentContext, Icon, cx, useEmit, usePart, usePresentation, usePrism, useSlot, useStrings } from '@prism-ui/react';
+import { ComponentContext, Icon, cx, useEmit, usePart, usePresentation, usePrism, useSlot, useStrings, useTheme } from '@prism-ui/react';
 
 export interface FrameOptions {
   component: string; title?: string; label?: string; state?: string; ask?: boolean; undo?: boolean;
@@ -56,7 +56,8 @@ export function ComponentFrame({ toolbar, actions, as = 'section', variant = 'in
   const Root = useFrameSlot(options.component, 'root'), Header = useFrameSlot(options.component, 'header'), Title = useFrameSlot(options.component, 'title');
   const Toolbar = useFrameSlot(options.component, 'toolbar'), Body = useFrameSlot(options.component, 'body'), Footer = useFrameSlot(options.component, 'footer');
   const Undo = useFrameSlot(options.component, 'undo'), Ask = useFrameSlot(options.component, 'ask');
-  const strings = { ...useStrings('frame', frameStrings), ...useStrings(options.component) };
+  const theme = useTheme().theme.components;
+  const strings = { ...useStrings('frame', frameStrings), ...useStrings(options.component), ...theme.frame?.strings, ...theme[options.component]?.strings };
   const modelProps = { model: frame, frame, ...slotProps };
   const iconClass = !frame.unstyled && 'prism-icon-btn';
   return <Root {...modelProps} {...frame.rootProps} as={as} data-variant={variant} className={cx(parts.root.className, className) || undefined} style={{ ...parts.root.style, ...style }}>
