@@ -63,3 +63,22 @@ for (const kind of ['pin', 'region'] as const) test(`clearing the only ${kind} c
   expect(actions).toHaveLength(1);
   expect(actions[0].payload).toMatchObject({ overall: 'A meaningful overall comment', items: [] });
 });
+
+test('comment portals follow the target into fullscreen and return without losing text', () => {
+  const descriptor = Object.getOwnPropertyDescriptor(document, 'fullscreenElement');
+  const { view } = setup(), target = view.container.querySelector('.prism-inline-feedback__target')!;
+  const fullscreen = (element: Element | null) => act(() => { Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: element }); document.dispatchEvent(new Event('fullscreenchange')); });
+  try {
+    fullscreen(target);
+    fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+    change(view.getByPlaceholderText('Add a comment…'), 'Fullscreen draft');
+    expect(view.getByRole('dialog').closest('.prism-inline-feedback__popover-layer')?.parentElement).toBe(target);
+    fullscreen(view.getByRole('button', { name: 'Target' }));
+    expect(view.getByRole('dialog').closest('.prism-inline-feedback__popover-layer')?.parentElement).toBe(document.body);
+    fullscreen(target);
+    expect(target.contains(view.getByRole('dialog'))).toBe(true);
+    fullscreen(null);
+    expect((view.getByPlaceholderText('Add a comment…') as HTMLTextAreaElement).value).toBe('Fullscreen draft');
+    expect(view.getByRole('dialog').closest('.prism-inline-feedback__popover-layer')?.parentElement).toBe(document.body);
+  } finally { if (descriptor) Object.defineProperty(document, 'fullscreenElement', descriptor); else delete (document as any).fullscreenElement; }
+});

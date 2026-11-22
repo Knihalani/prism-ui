@@ -43,6 +43,12 @@ function FeedbackEditor({ open, close, surface }: { open: boolean; close(): void
 }
 function FeedbackPopover({ vm, surface }: { vm: MockupModel; surface: NonNullable<import('./mockup/use-mockup').MockupOptions['surface']> }) {
   const theme = useTheme();
+  const [portal, setPortal] = useState<Element>(document.body);
+  useLayoutEffect(() => {
+    const sync = () => { const full = document.fullscreenElement, target = surface.viewport.current; setPortal(full && target && full.contains(target) ? full : document.body); };
+    sync(); document.addEventListener('fullscreenchange', sync);
+    return () => document.removeEventListener('fullscreenchange', sync);
+  }, [surface]);
   const [appearance, setAppearance] = useState<{ style: CSSProperties; name?: string; mode?: string }>({ style: {} });
   const layer = useRef<HTMLSpanElement>(null), [position, setPosition] = useState({ left: 12, top: 12, width: 256 });
   useLayoutEffect(() => {
@@ -73,6 +79,6 @@ function FeedbackPopover({ vm, surface }: { vm: MockupModel; surface: NonNullabl
     if (surface.viewport.current) observer?.observe(surface.viewport.current);
     return () => { observer?.disconnect(); window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
   }, [surface, vm.editing?.id, vm.state]);
-  return createPortal(<span ref={layer} className="prism-root prism-inline-feedback__popover-layer" data-prism-theme-name={appearance.name} data-prism-theme={appearance.mode} style={{ ...appearance.style, ...position, position: 'fixed', display: 'block', zIndex: 1000, maxHeight: 'calc(100dvh - 24px)', overflow: 'auto' }}><MockupComment vm={vm} style={{ position: 'relative', display: 'block', left: 0, top: 0, width: '100%' }} /></span>, document.body);
+  return createPortal(<span ref={layer} className="prism-root prism-inline-feedback__popover-layer" data-prism-theme-name={appearance.name} data-prism-theme={appearance.mode} style={{ ...appearance.style, ...position, position: 'fixed', display: 'block', zIndex: 1000, maxHeight: 'calc(100dvh - 24px)', overflow: 'auto' }}><MockupComment vm={vm} style={{ position: 'relative', display: 'block', left: 0, top: 0, width: '100%' }} /></span>, portal);
 }
 registerFeedbackSurface(InlineFeedback);
