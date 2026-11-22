@@ -16,7 +16,7 @@
 .prism-root .prism-calc__root[data-status="error"] { color: var(--prism-calc-text-muted, var(--prism-text-muted)); }
 .prism-root .prism-calc__value[data-state="loading"] { display: inline-block; inline-size: 7ch; border-radius: var(--prism-calc-radius-sm, var(--prism-radius-sm)); background: var(--prism-calc-border, var(--prism-border)); }
 .prism-root .prism-num__root[data-prism-flash] { background: color-mix(in srgb, var(--prism-num-accent, var(--prism-accent, var(--prism-text))) 14%, transparent); }
-.prism-root .prism-calc__root[data-prism-flash] { background: color-mix(in srgb, var(--prism-calc-accent, var(--prism-accent, var(--prism-text))) 14%, transparent); }
+.prism-root .prism-calc__root[data-prism-flash] { --prism-stream-flash-shadow: var(--prism-calc-flash-shadow, transparent); background: color-mix(in srgb, var(--prism-calc-accent, var(--prism-accent, var(--prism-text))) 14%, transparent); }
 @container prism-numbers (max-width: 420px) {
   .prism-root .prism-num__readout { max-inline-size: min(var(--prism-num-readout-width, 100cqi), 100cqi); }
   .prism-root .prism-num__root[data-status="editing"] { max-inline-size: 100cqi; }
