@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { Prism, createRegistry, usePrism, type Action, type PrismComponentProps } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { replayStart } from './harness/replay';
-import { MockupView, mockupDefinition, mockupPlugin, parseMockupMeta, useMockup, toMessage, type FrameController, type FrameMessage, type HitRect, type MockupProps } from './index';
+import { MockupView, createFeedback, mockupDefinition, mockupPlugin, parseMockupMeta, useMockup, toMessage, type FrameController, type FrameMessage, type HitRect, type MockupProps } from './index';
 
 const { render, cleanup, fireEvent, act } = await import('@testing-library/react');
 const observer = globalThis.IntersectionObserver;
@@ -40,6 +40,29 @@ test('an incomplete replay retains the last measured height even through empty c
   x.rerender({ source: '<h1>Partial' }, false); size(1000); size(100); expect(stage.style.height).toBe('1000px');
   expect(x.view.container.querySelector('iframe')).toBe(iframe);
   x.rerender({ source: '<h1>Done</h1>' }); size(500); expect(stage.style.height).toBe('500px');
+});
+test('a named replay restores its saved feedback instead of overwriting it with the provisional model', () => {
+  const previous = createFeedback({ mockup: 'Mockup', device: 'desktop', overall: 'Keep the saved reviewer notes' });
+  const item = previous.addPin({ x: 20, y: 30 }); previous.edit(item.id, { comment: 'Keep the saved pin' });
+  const saved = previous.toJSON();
+  const store = createStore({ initial: { review: { feedback: saved } } });
+  const props = { source: '<h1>Review</h1>' };
+  const x = setup(props, false, store);
+  expect(store.get('review.feedback')).toEqual(saved);
+  x.rerender(props);
+  expect((x.view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe(saved.overall);
+  expect(x.view.getByRole('button', { name: 'Comment 1: Keep the saved pin' })).toBeDefined();
+  expect(store.get('review.feedback')).toEqual(saved);
+});
+test('a named replay with no saved draft keeps provisional feedback edits when it completes', () => {
+  const store = createStore(), props = { source: '<h1>Review</h1>' };
+  const x = setup(props, false, store);
+  x.change(x.view.getByRole('textbox', { name: 'Overall feedback' }), 'Keep the in-flight edit');
+  const provisional = Object.keys(store.snapshot())[0];
+  x.rerender(props);
+  expect((x.view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('Keep the in-flight edit');
+  expect(store.get('review.feedback.overall')).toBe('Keep the in-flight edit');
+  expect(store.get(provisional)).toBeUndefined();
 });
 test('Escape and Enter in a comment return focus to the keyboard canvas', () => {
   const x = setup(); const canvas = x.canvas(); act(() => canvas.focus()); fireEvent.keyDown(canvas, { key: 'Enter' });
