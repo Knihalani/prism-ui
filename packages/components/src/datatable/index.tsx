@@ -82,8 +82,8 @@ export function DataTable({ props: inputProps, complete, node }: PrismComponentP
   useLayoutEffect(() => {
     if (!sortPending.current) return;
     sortPending.current = false;
-    if (ctx.animate) flip.play(rows()); else flip.cancel();
-  }, [vm.sort, ctx.animate, flip]);
+    if (ctx.animate && !vm.virtual) flip.play(rows()); else flip.cancel();
+  }, [vm.sort, ctx.animate, vm.virtual, flip]);
   useLayoutEffect(() => () => flip.cancel(), [flip]);
   useLayoutEffect(() => {
     if (vm.focusIndex !== null) scroll.current?.querySelector<HTMLElement>(`tr[data-index="${vm.focusIndex}"]`)?.focus({ preventScroll: true });
@@ -126,10 +126,8 @@ export function DataTable({ props: inputProps, complete, node }: PrismComponentP
   const resetScroll = () => { if (scroll.current) scroll.current.scrollTop = 0; };
   const sortBy = (key: string) => {
     resetScroll();
-    if (ctx.animate && !vm.virtual) {
-      flip.measure(rows());
-      sortPending.current = true;
-    }
+    flip.measure(rows());
+    sortPending.current = true;
     vm.toggleSort(key);
   };
   return <Part part="root" className={styled('prism-materialise')} role="region" aria-label={props.title ?? props.caption ?? 'Data table'} onKeyDown={frame.rootProps.onKeyDown} data-state={frame.rootProps['data-state']} data-entering={frame.rootProps['data-entering']} data-animate={ctx.animate ? undefined : 'false'} data-density={props.density} data-hide-details={canHideDetails && !showDetails ? '' : undefined}>
