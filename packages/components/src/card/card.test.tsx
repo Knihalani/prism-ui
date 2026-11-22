@@ -6,6 +6,17 @@ import { cardDef } from './index';
 
 afterEach(cleanup);
 
+test('card only links safe URL protocols and relative references', () => {
+  const view = render(<Prism source="" />);
+  for (const href of ['https://example.com', 'http://example.com', 'mailto:a@example.com', '/plan', '../plan', '#plan', '//example.com', 'javascript:alert(1)', 'JaVaScRiPt:alert(1)', 'java\tscript:alert(1)', 'data:text/html,hello', 'vbscript:hello', 'file:///etc/passwd', '', 'http://[']) {
+    view.rerender(<Prism source={':::card{title="Plan" href=' + JSON.stringify(href) + '}\nBody\n:::'} />);
+    const allowed = ['https://example.com', 'http://example.com', 'mailto:a@example.com', '/plan', '../plan', '#plan', '//example.com'].includes(href);
+    expect(view.queryByRole('link', { name: 'Plan' })?.getAttribute('href') ?? null).toBe(allowed ? href : null);
+    expect(root(view.container).hasAttribute('data-linked')).toBe(allowed);
+    expect(view.getByRole('heading', { name: 'Plan' })).toBeDefined();
+  }
+});
+
 const source = ":::card{id=demo title=\"Plan\" subtitle=\"Details\" href=\"/plan\" action=\"Choose\"}\nBody text\n:::";
 function root(container: HTMLElement) { return container.querySelector('[data-prism="card"][data-part="root"]') as HTMLElement; }
 
