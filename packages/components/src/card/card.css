@@ -31,6 +31,25 @@
 .prism-root .prism-card__body { flex: 1; min-width: 0; }
 .prism-root .prism-card__body:empty { display: none; }
 .prism-root .prism-card__ask { position: absolute; inset-block-start: -4px; inset-inline-end: 0; }
+.prism-root .prism-card__root:has(> .prism-card__header[data-utility-only]) {
+  display: grid;
+  grid-template:
+    "image image" auto
+    "body ask" 1fr
+    "actions actions" auto / minmax(0, 1fr) auto;
+  gap: 0 var(--prism-space2);
+}
+.prism-root .prism-card__root:has(> .prism-card__header[data-utility-only]) > .prism-card__image {
+  grid-area: image;
+  margin-block-end: var(--prism-card-gap, var(--prism-space3));
+}
+.prism-root .prism-card__header[data-utility-only] { grid-area: ask; padding: 0; }
+.prism-root .prism-card__header[data-utility-only] .prism-card__ask { position: static; }
+.prism-root .prism-card__header[data-utility-only] + .prism-card__body { grid-area: body; }
+.prism-root .prism-card__root:has(> .prism-card__header[data-utility-only]) > .prism-card__actions {
+  grid-area: actions;
+  margin-block-start: var(--prism-card-gap, var(--prism-space3));
+}
 .prism-root .prism-card__skeleton { height: .85em; width: 70%; margin-block: .3em; }
 @media (hover: hover) {
   .prism-root .prism-card__root:not(:hover, :focus-within) > .prism-card__header .prism-card__ask { opacity: 0; }

@@ -27,7 +27,15 @@ export function Card({ props, children, ...ctx }: PrismComponentProps<CardProps>
   const HeaderSlot = useSlot('card', 'header', Header), TitleSlot = useSlot('card', 'title', Title), BodySlot = useSlot('card', 'body', Body), ActionsSlot = useSlot('card', 'actions', Actions);
   return <article {...model.rootProps} data-variant={model.variant} data-size={model.size} data-linked={model.href ? '' : undefined}>
     {props.image && <img {...parts.image} src={props.image} alt="" />}
-    <HeaderSlot {...parts.header}><div {...parts.toolbar}>{props.title && <TitleSlot {...parts.title}>{model.href ? <a {...parts.link} href={model.href}>{props.title}</a> : props.title}</TitleSlot>}<button {...parts.ask} className={cx(parts.ask.className, !model.unstyled && 'prism-icon-btn') || undefined} type="button" onClick={model.onAsk} aria-label="Ask about this" title="Ask about this"><FrameIcon name="ask" /></button></div>{props.subtitle && <p {...parts.subtitle}>{props.subtitle}</p>}</HeaderSlot>
+    <HeaderSlot {...parts.header} data-utility-only={!props.title && !props.subtitle ? '' : undefined}>
+      <div {...parts.toolbar}>
+        {props.title && <TitleSlot {...parts.title}>{model.href ? <a {...parts.link} href={model.href}>{props.title}</a> : props.title}</TitleSlot>}
+        <button {...parts.ask} className={cx(parts.ask.className, !model.unstyled && 'prism-icon-btn') || undefined} type="button" onClick={model.onAsk} aria-label="Ask about this" title="Ask about this">
+          <FrameIcon name="ask" />
+        </button>
+      </div>
+      {props.subtitle && <p {...parts.subtitle}>{props.subtitle}</p>}
+    </HeaderSlot>
     <BodySlot {...parts.body}>{model.empty ? <div {...parts.skeleton} className={cx(parts.skeleton.className, !model.unstyled && 'prism-skeleton') || undefined} aria-hidden="true" /> : children}</BodySlot>
     {props.action && <ActionsSlot {...parts.actions}>
       <button {...parts.action} className={cx(parts.action.className, !model.unstyled && 'prism-pill') || undefined} type="button" data-feedback="" data-sent={sent ? '' : undefined} onClick={() => { model.onSelect(); setSentAction(props.action); }}>
