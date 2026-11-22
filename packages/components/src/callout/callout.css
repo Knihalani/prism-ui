@@ -41,6 +41,6 @@
 @media (hover: hover) {
   .prism-root .prism-callout__root:not(:hover, :focus-within) > .prism-callout__header .prism-callout__ask { opacity: 0; }
 }
-@media (max-width: 520px) {
+@container (max-width: 520px) {
   .prism-root .prism-callout__root { padding-inline-start: var(--prism-space-5); }
 }

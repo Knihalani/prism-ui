@@ -122,6 +122,12 @@ export function mountArtifactFrame(container: HTMLElement, imports: Record<strin
   container.append(frame);
   return {
     frame,
+    taskPath(value: string) {
+      if (value === taskPath) return;
+      taskPath = value;
+      unsubscribeTasks?.(); unsubscribeTasks = render?.tasks ? store.subscribe(taskPath, publishTasks) : undefined;
+      publishTasks();
+    },
     render(value: Render) {
       render = value;
       if (value.tasks && !unsubscribeTasks) unsubscribeTasks = store.subscribe(taskPath, publishTasks);

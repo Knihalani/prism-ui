@@ -14,7 +14,7 @@ export function MockupToolbar({ vm }: { vm: Pick<MockupModel, 'labels' | 'framed
 }
 export function MockupPenTools({ vm }: { vm: Pick<MockupModel, 'labels' | 'pen' | 'setPen' | 'color' | 'setColor'> }) {
   const toolbar = usePart('mockup', 'tools'), button = usePart('mockup', 'button');
-  return <PrismPart as="div" {...toolbar}><PrismPart as="button" {...button} aria-pressed={vm.pen} onClick={() => vm.setPen(!vm.pen)}><Icon name="pen" />{vm.labels.draw}</PrismPart>{['var(--prism-accent, #525252)', 'var(--prism-danger)', 'var(--prism-positive)', 'var(--prism-warning)'].map((color, i) => <PrismPart as="button" key={color} {...button} title={`${vm.labels.color} ${i + 1}`} aria-label={`${vm.labels.color} ${i + 1}`} aria-pressed={vm.color === color} onClick={() => vm.setColor(color)} style={{ ...button.style, color }}><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="currentColor" /></svg></PrismPart>)}</PrismPart>;
+  return <PrismPart as="span" {...toolbar}><PrismPart as="button" {...button} aria-pressed={vm.pen} onClick={() => vm.setPen(!vm.pen)}><Icon name="pen" />{vm.labels.draw}</PrismPart>{['var(--prism-accent, #525252)', 'var(--prism-danger)', 'var(--prism-positive)', 'var(--prism-warning)'].map((color, i) => <PrismPart as="button" key={color} {...button} title={`${vm.labels.color} ${i + 1}`} aria-label={`${vm.labels.color} ${i + 1}`} aria-pressed={vm.color === color} onClick={() => vm.setColor(color)} style={{ ...button.style, color }}><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="currentColor" /></svg></PrismPart>)}</PrismPart>;
 }
 export function MockupSource({ vm }: { vm: Pick<MockupModel, 'labels' | 'source' | 'copy'> }) {
   const source = usePart('mockup', 'source'), button = usePart('mockup', 'button');
@@ -29,6 +29,6 @@ export function MockupFooter({ labels, locale, count, submitted, edit, canUndo, 
   canUndo: boolean; canRedo: boolean; undo(): void; redo(): void; canSubmit: boolean; submit(): void;
 }) {
   const footer = usePart('mockup', 'feedbackFooter'), button = usePart('mockup', 'button'), primary = usePart('mockup', 'primary');
-  return submitted ? <PrismPart as="div" {...footer} role="status">{commentCount(labels, locale, count, true)}<PrismPart as="button" {...button} onClick={edit}>{labels.editFeedback}</PrismPart></PrismPart> :
-    <PrismPart as="div" {...footer}><PrismPart as="button" {...button} disabled={!canUndo} onClick={undo}><Icon name="undo" />{labels.undo}</PrismPart><PrismPart as="button" {...button} disabled={!canRedo} onClick={redo}><Icon name="redo" />{labels.redo}</PrismPart><span>{commentCount(labels, locale, count)}</span><PrismPart as="button" {...primary} disabled={!canSubmit} onClick={submit}>{labels.submit}</PrismPart></PrismPart>;
+  return submitted ? <PrismPart as="span" {...footer} role="status">{commentCount(labels, locale, count, true)}<PrismPart as="button" {...button} onClick={edit}>{labels.editFeedback}</PrismPart></PrismPart> :
+    <PrismPart as="span" {...footer}><PrismPart as="button" {...button} disabled={!canUndo} onClick={undo}><Icon name="undo" />{labels.undo}</PrismPart><PrismPart as="button" {...button} disabled={!canRedo} onClick={redo}><Icon name="redo" />{labels.redo}</PrismPart><span>{commentCount(labels, locale, count)}</span><PrismPart as="button" {...primary} disabled={!canSubmit} onClick={submit}>{labels.submit}</PrismPart></PrismPart>;
 }

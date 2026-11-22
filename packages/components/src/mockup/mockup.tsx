@@ -19,7 +19,7 @@ function Item({ item, vm }: { item: FeedbackItem; vm: MockupModel }) {
 function Popover({ vm }: { vm: MockupModel }) {
   const part = usePart('mockup', 'popover'), input = usePart('mockup', 'input'), primary = usePart('mockup', 'primary'), button = usePart('mockup', 'button');
   const item = vm.state.items.find(item => item.id === vm.editing?.id); if (!item) return null;
-  return <PrismPart as="div" {...part} role="dialog" aria-label={vm.labels.comment.replace('{n}', String(item.n)).replace('{text}', item.comment)} style={{ ...part.style, ...vm.popoverPosition(item.x, item.y) }}>
+  return <PrismPart as="span" {...part} role="dialog" aria-label={vm.labels.comment.replace('{n}', String(item.n)).replace('{text}', item.comment)} style={{ ...part.style, ...vm.popoverPosition(item.x, item.y) }}>
     <PrismPart as="textarea" {...input} autoFocus aria-label={vm.labels.placeholder} placeholder={vm.labels.placeholder} value={vm.comment} onChange={event => vm.setComment(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); vm.save(true); } if (event.key === 'Escape') { event.stopPropagation(); vm.cancel(); } }} />
     <PrismPart as="button" {...primary} onClick={() => vm.save()}>{vm.labels.save}</PrismPart><PrismPart as="button" {...button} onClick={() => vm.remove(item.id)}>{vm.labels.delete}</PrismPart>
   </PrismPart>;
@@ -30,6 +30,18 @@ function Marker({ item, vm }: { item: FeedbackItem; vm: MockupModel }) {
   return <>
     {item.kind === 'drawing' && <PrismPart as="svg" {...stroke} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d={item.path} fill="none" stroke={item.color ?? 'var(--prism-accent, #525252)'} strokeWidth="2" vectorEffect="non-scaling-stroke" style={{ pointerEvents: 'stroke', cursor: 'pointer' }} onClick={() => { if (!item.resolved && !vm.submitted) vm.open(item.id); }} /></PrismPart>}
     <PrismPart as="button" {...marker} type="button" data-kind={item.kind} data-resolved={item.resolved || undefined} data-active={vm.active === item.id || undefined} style={{ ...marker.style, left: `${item.x}%`, top: `${item.y}%`, ...(item.kind === 'region' ? { width: `${item.w}%`, height: `${item.h}%` } : {}) }} aria-label={label} aria-disabled={item.resolved || undefined} onMouseEnter={() => vm.setActive(item.id)} onMouseLeave={() => vm.setActive(null)} onFocus={() => vm.setActive(item.id)} onBlur={() => vm.setActive(null)} onClick={() => { if (!item.resolved && !vm.submitted) vm.open(item.id); }} onKeyDown={event => { if (!item.resolved && !vm.submitted && (event.key === 'Delete' || event.key === 'Backspace')) { event.preventDefault(); vm.remove(item.id); } }}><span>{item.resolved ? '✓' : item.n}</span></PrismPart>
+  </>;
+}
+export function MockupAnnotations({ vm }: { vm: MockupModel }) {
+  const canvas = usePart('mockup', 'canvas'), reticle = usePart('mockup', 'reticle'), hint = usePart('mockup', 'hint'), stroke = usePart('mockup', 'stroke');
+  const Comment = useSlot('mockup', 'popover', Popover);
+  return <>
+    <PrismPart as="span" {...canvas} {...vm.pointer} ref={vm.canvas} tabIndex={0} role="application" aria-label={vm.labels.canvas} onKeyDown={vm.canvasKey} onFocus={() => vm.setFocused(true)} onBlur={() => vm.setFocused(false)} data-disabled={vm.submitted || undefined}>
+      {vm.focused && <PrismPart as="span" {...reticle} style={{ ...reticle.style, left: `${vm.reticle[0]}%`, top: `${vm.reticle[1]}%` }}>+</PrismPart>}
+      {vm.hover && !vm.state.items.length && !vm.submitted && <PrismPart as="span" {...hint} style={{ ...hint.style, left: `${Math.min(65, vm.hover[0])}%`, top: `${vm.hover[1]}%` }}>{vm.labels.hint}</PrismPart>}
+      {vm.rubber.length > 0 && <PrismPart as="svg" {...stroke} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{vm.pen ? <polyline points={vm.rubber.map(p => p.join(',')).join(' ')} fill="none" stroke={vm.color} strokeWidth="2" vectorEffect="non-scaling-stroke" /> : <rect x={Math.min(vm.rubber[0][0], vm.rubber.at(-1)![0])} y={Math.min(vm.rubber[0][1], vm.rubber.at(-1)![1])} width={Math.abs(vm.rubber[0][0] - vm.rubber.at(-1)![0])} height={Math.abs(vm.rubber[0][1] - vm.rubber.at(-1)![1])} fill="color-mix(in srgb, var(--prism-accent, #525252) 8%, transparent)" stroke="var(--prism-accent, #525252)" vectorEffect="non-scaling-stroke" />}</PrismPart>}
+    </PrismPart>
+    {[...vm.resolved, ...vm.state.items].map(item => <Marker key={item.id} item={item as FeedbackItem} vm={vm} />)}{vm.editing && !vm.submitted && <Comment vm={vm} />}
   </>;
 }
 export function MockupView({ vm, feedback = true, embedded = false }: { vm: MockupModel; feedback?: boolean; embedded?: boolean }) {
@@ -44,12 +56,7 @@ export function MockupView({ vm, feedback = true, embedded = false }: { vm: Mock
         <PrismPart as="div" {...spacer} style={{ ...spacer.style, width: vm.width * vm.scale, height: vm.framed ? Math.ceil(vm.contentHeight * vm.scale) : vm.contentHeight * vm.scale }}><PrismPart as="div" {...stage} style={{ ...stage.style, width: vm.width, height: vm.contentHeight, transform: `scale(${vm.scale})` }}>
           {!vm.visible ? <PrismPart as="div" {...skeleton} role="status" aria-label={vm.labels.loading} /> : <>
             {vm.framed ? <PrismPart as="iframe" {...media} ref={vm.iframe} title={vm.title} sandbox="allow-scripts" style={{ ...media.style, width: vm.width, height: vm.contentHeight }} /> : vm.kind === 'svg' ? <PrismPart as="div" {...media} ref={vm.graphic} dangerouslySetInnerHTML={{ __html: vm.svg }} /> : vm.imageSrc && !vm.imageError ? <PrismPart as="img" {...media} src={vm.imageSrc} alt={vm.title} loading="lazy" decoding="async" onLoad={event => vm.imageLoaded(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight)} onError={() => vm.setImageError(true)} /> : <PrismPart as="div" {...skeleton} role="status">{vm.source || vm.props.src ? vm.labels.imageError : vm.labels.loading}</PrismPart>}
-            <PrismPart as="div" {...canvas} {...vm.pointer} ref={vm.canvas} tabIndex={0} role="application" aria-label={vm.labels.canvas} onKeyDown={vm.canvasKey} onFocus={() => vm.setFocused(true)} onBlur={() => vm.setFocused(false)} data-disabled={vm.submitted || undefined}>
-              {vm.focused && <PrismPart as="span" {...reticle} style={{ ...reticle.style, left: `${vm.reticle[0]}%`, top: `${vm.reticle[1]}%` }}>+</PrismPart>}
-              {vm.hover && !vm.state.items.length && !vm.submitted && <PrismPart as="span" {...hint} style={{ ...hint.style, left: `${Math.min(65, vm.hover[0])}%`, top: `${vm.hover[1]}%` }}>{vm.labels.hint}</PrismPart>}
-              {vm.rubber.length > 0 && <PrismPart as="svg" {...stroke} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{vm.pen ? <polyline points={vm.rubber.map(p => p.join(',')).join(' ')} fill="none" stroke={vm.color} strokeWidth="2" vectorEffect="non-scaling-stroke" /> : <rect x={Math.min(vm.rubber[0][0], vm.rubber.at(-1)![0])} y={Math.min(vm.rubber[0][1], vm.rubber.at(-1)![1])} width={Math.abs(vm.rubber[0][0] - vm.rubber.at(-1)![0])} height={Math.abs(vm.rubber[0][1] - vm.rubber.at(-1)![1])} fill="color-mix(in srgb, var(--prism-accent, #525252) 8%, transparent)" stroke="var(--prism-accent, #525252)" vectorEffect="non-scaling-stroke" />}</PrismPart>}
-            </PrismPart>
-            {[...vm.resolved, ...vm.state.items].map(item => <Marker key={item.id} item={item as FeedbackItem} vm={vm} />)}{vm.editing && !vm.submitted && <Comment vm={vm} />}
+            <MockupAnnotations vm={vm} />
           </>}
         </PrismPart></PrismPart>
       </PrismPart><PrismPart as="div" {...list}>{vm.state.items.length || vm.resolved.length ? [...vm.resolved, ...vm.state.items].map(item => <Row key={item.id} item={item as FeedbackItem} vm={vm} />) : <EmptyState vm={vm} />}</PrismPart></PrismPart>

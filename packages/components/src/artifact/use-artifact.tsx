@@ -23,14 +23,21 @@ function present(kind: ArtifactProps['kind'], source: string): Pick<Render, 'sou
   return { source: kind === 'svg' ? sanitizeSvg(source) : source };
 }
 const heights = { sm: 160, md: 252, lg: 384 };
-const maxAutoHeight = 4096;
+const maxAutoHeight = 1_000_000;
 
 function readTheme(element: HTMLElement): ThemeSnapshot {
   const win = element.ownerDocument.defaultView;
   const tokens: Record<string, string> = {};
   if (!win) return { tokens, dark: false };
   const computed = win.getComputedStyle(element);
-  for (const property of Array.from(computed)) if (property.startsWith('--prism-')) tokens[property] = computed.getPropertyValue(property).trim();
+  for (const property of Array.from(computed)) if (property.startsWith('--prism-')) {
+    let value = computed.getPropertyValue(property).trim().replace(/currentcolor/gi, computed.color);
+    if (value === 'inherit' && property.startsWith('--prism-font-')) value = computed.fontFamily;
+    tokens[property] = value;
+  }
+  tokens['--prism-font-body'] = computed.fontFamily;
+  tokens['--prism-host-font-size'] = computed.fontSize;
+  tokens['--prism-reduced-motion'] = win.matchMedia?.('(prefers-reduced-motion: reduce)').matches || element.closest('[data-animate="false"]') ? '1' : '0';
   const scheme = computed.colorScheme;
   const dark = scheme === 'dark' ||
     ((!scheme || scheme === 'normal' || scheme.includes('dark')) && !!win.matchMedia?.('(prefers-color-scheme: dark)').matches);
@@ -41,6 +48,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   const options = useContext(Options), emit = useEmit();
   const component = useContext(ComponentContext)!;
   const taskPath = markdownTaskPath(component.id);
+  const owner = component.receipt ?? taskPath;
   const headerId = component.node.lang?.startsWith('artifact:') ? component.node.props?.id : undefined;
   const historyId = typeof headerId === 'string' ? headerId : props.id;
   const { store } = ctx, enabled = options.enabled !== false;
@@ -64,13 +72,14 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   const revision = useRef(0);
   const current = useRef({ emit, title: selected.title ?? 'Artifact', autoMax });
   current.current = { emit, title: selected.title ?? 'Artifact', autoMax };
+  const streaming = useRef(!complete); streaming.current = !complete;
   const [failure, setFailure] = useState<{ source: string; kind: string; error: string }>();
   const [notice, setNotice] = useState('');
   const [fullscreen, setFullscreen] = useState(false);
-  const [displayed, setDisplayed] = useState<{ taskPath: string; kind: ArtifactProps['kind']; source: string }>();
-  const rendered = displayed?.taskPath === taskPath;
-  const [measured, setMeasured] = useState<{ taskPath: string; height: number }>();
-  const height = measured?.taskPath === taskPath ? measured.height : 0;
+  const [displayed, setDisplayed] = useState<{ owner: typeof owner; kind: ArtifactProps['kind']; source: string }>();
+  const rendered = displayed?.owner === owner;
+  const [measured, setMeasured] = useState<{ owner: typeof owner; height: number }>();
+  const height = measured?.owner === owner ? measured.height : 0;
   const last = useRef<{ kind: ArtifactProps['kind']; source: string; complete: boolean } | undefined>(undefined);
   const error = failure?.source === source && failure.kind === kind ? failure.error : undefined;
   const updating = enabled && !error && !!version &&
@@ -108,19 +117,19 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   useEffect(() => {
     if (!container || !enabled || !visible || !runnable) return;
     return () => { sessionRef.current?.destroy(); sessionRef.current = null; last.current = undefined; };
-  }, [container, enabled, visible, runnable, imports, store, grants, reloadKey, taskPath]);
+  }, [container, enabled, visible, runnable, imports, store, grants, reloadKey, owner]);
 
   useEffect(() => {
     if (!container || !visible || !runnable) return;
     let cancelled = false;
-    const number = ++revision.current;
+    const number = revision.current + 1;
     const report = (text: string, received = number) => {
       if (!cancelled && received === number) setFailure({ source, kind, error: text.slice(0, 2400) });
     };
     const mount = () => {
       const session = mountArtifactFrame(container, importMap(imports, container.ownerDocument.baseURI), store, grants, taskPath, {
-        height: value => setMeasured({ taskPath, height: Math.min(maxAutoHeight, value) }),
-        rendered: value => { if (value === revision.current && last.current) setDisplayed({ taskPath, ...last.current }); },
+        height: value => setMeasured(old => ({ owner, height: Math.min(maxAutoHeight, streaming.current ? Math.max(old?.owner === owner ? old.height : 0, value) : value) })),
+        rendered: value => { if (value === revision.current && last.current) setDisplayed({ owner, ...last.current }); },
         error: (text, value) => {
           if (value === revision.current) {
             const active = last.current;
@@ -144,7 +153,11 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
           (kind === 'js' || (kind === 'html' && /<script[\s>]/i.test(prior.source)))))) {
         sessionRef.current?.destroy(); sessionRef.current = null; setDisplayed(undefined); setMeasured(undefined);
       }
-      const session = sessionRef.current ?? mount();
+      const existing = sessionRef.current;
+      const session = existing ?? mount();
+      session.taskPath(taskPath);
+      if (existing && markup(kind) && prior?.kind === kind && prior.source === source && prior.complete === readySource) return;
+      revision.current = number;
       last.current = { kind, source, complete: readySource };
       const render = (code: Pick<Render, 'source' | 'tasks'>) => {
         if (!cancelled) session.render({ kind, ...code, complete: readySource, revision: number });
@@ -154,7 +167,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
       else render(present(kind, source));
     } catch (error) { report(errorMessage(error)); }
     return () => { cancelled = true; };
-  }, [container, visible, runnable, imports, store, grants, reloadKey, kind, source, readySource, taskPath, options.compilerUrl, updateTheme, fullscreenTarget]);
+  }, [container, visible, runnable, imports, store, grants, reloadKey, kind, source, readySource, taskPath, owner, options.compilerUrl, updateTheme, fullscreenTarget]);
 
   useEffect(() => {
     if (!container || !visible) return;
@@ -164,8 +177,13 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
       observer.observe(root, { attributes: true, attributeFilter: ['class', 'style', 'data-prism-theme', 'data-prism-theme-name', 'data-density', 'data-animate'] });
     }
     const media = win?.matchMedia?.('(prefers-color-scheme: dark)');
+    const motion = win?.matchMedia?.('(prefers-reduced-motion: reduce)');
     media?.addEventListener('change', updateTheme);
-    return () => { observer.disconnect(); media?.removeEventListener('change', updateTheme); };
+    motion?.addEventListener('change', updateTheme);
+    const settled = (event: Event) => { if ((event.target as Element | null)?.contains?.(container)) updateTheme(); };
+    container.ownerDocument.addEventListener('transitionend', settled);
+    container.ownerDocument.addEventListener('animationend', settled);
+    return () => { observer.disconnect(); media?.removeEventListener('change', updateTheme); motion?.removeEventListener('change', updateTheme); container.ownerDocument.removeEventListener('transitionend', settled); container.ownerDocument.removeEventListener('animationend', settled); };
   }, [container, visible, updateTheme]);
 
   useEffect(() => { if (sessionRef.current) sessionRef.current.frame.title = current.current.title; }, [selected.title]);
@@ -200,7 +218,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   }
   return {
     selected, versions, version, selectVersion, mode, setMode, diff, previous, enabled, rendered, updating, error, notice, ref, fullscreen,
-    height: typeof selected.height === 'number' ? selected.height : Math.max(heights[selected.size], height),
+    height: typeof selected.height === 'number' ? selected.height : height ? complete ? height : Math.max(heights[selected.size], height) : heights[selected.size],
     copy, download, reload, toggleFullscreen,
     fix() { if (error) emit('fix', { error, source, kind, version: version?.number ?? 1 }); },
   };

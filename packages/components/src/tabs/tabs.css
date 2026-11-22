@@ -93,6 +93,6 @@
   line-height: inherit;
 }
 .prism-root .prism-tab__body > :last-child { margin-bottom: 0; }
-@media (max-width: 760px) {
+@container (max-width: 760px) {
   .prism-root .prism-tabs__root[data-variant="underline"] .prism-tabs__list { gap: 25px; }
 }

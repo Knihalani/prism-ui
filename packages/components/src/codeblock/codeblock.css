@@ -88,7 +88,7 @@
 @media (hover: hover) {
   .prism-codeblock__root:not(:hover, :focus-within) .prism-codeblock__copy:not([data-state="copied"]) { opacity: 0; }
 }
-@media (max-width: 480px) {
+@container (max-width: 480px) {
   .prism-codeblock__header, .prism-codeblock__line { padding-inline: 15px; }
   .prism-codeblock__body pre { font-size: var(--prism-text-xs); }
   .prism-codeblock__root[data-lines] .prism-codeblock__gutter { flex-basis: 28px; }
