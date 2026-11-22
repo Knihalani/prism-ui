@@ -1,0 +1,31 @@
+import '../../../packages/react/test/setup';
+import { afterEach, expect, test } from 'bun:test';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
+import { App } from '../src/App';
+
+const previousUrl = window.location.href;
+afterEach(() => { cleanup(); localStorage.clear(); window.location.href = previousUrl; });
+test('Escape cancels Num editing without dismissing the workspace drawer', async () => {
+  window.location.href = 'http://localhost/?shell=workspace';
+  const view = render(<App agentFactory={() => ({ id: 'review', label: 'Review', async *respond() { yield { type: 'text', delta: ':num[10]{min=0 max=100}' }; } })} />);
+  fireEvent.click(view.getByRole('button', { name: /Pick a laptop/ }));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+  fireEvent.click(view.getByRole('slider'));
+  const input = view.getByRole('spinbutton');
+  fireEvent.change(input, { target: { value: '99' } });
+  fireEvent.keyDown(input, { key: 'Escape' });
+  const toggle = view.getByRole('button', { name: /Assistant/ });
+  expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  expect(view.queryByRole('spinbutton')).toBeNull();
+  expect(view.getByRole('slider').getAttribute('aria-valuenow')).toBe('10');
+  const aside = view.container.querySelector('.workspace-assistant')!;
+  const handled = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+  handled.preventDefault();
+  fireEvent(aside, handled);
+  expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  fireEvent.keyDown(view.getByRole('textbox', { name: 'Message Prism' }), { key: 'Escape' });
+  expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  fireEvent.keyDown(aside, { key: 'Escape' });
+  expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  expect(document.activeElement).toBe(toggle);
+});
