@@ -1,12 +1,13 @@
 import { componentStrings } from '../strings';
 import { useContext, useId, useMemo, useRef, type HTMLAttributes, type KeyboardEvent, type ReactNode } from 'react';
 import { s } from '@prism-ui/schema';
-import { useStrings, PrismPart, StreamSkeleton, ComponentContext, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, useSlot, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
+import { useStrings, PrismPart, StreamSkeleton, ComponentContext, cx, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, useSlot, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
+import { SentContent } from '../shared/controls';
 
 export type AskValue = string | number | boolean | null;
 export interface AskField { id?: string; label?: string; type?: 'text' | 'number' | 'select' | 'date' | 'toggle' | 'textarea'; options?: (string | { value: string; label: string })[]; value?: AskValue; required?: boolean; hint?: string; placeholder?: string; min?: number; max?: number; step?: number; unit?: string }
-const defaults = { title: 'Details', send: 'Send', edit: 'Edit', suggested: 'Suggested', required: 'Required', minimum: 'Enter at least {min}', maximum: 'Enter no more than {max}', stepMismatch: 'Use steps of {step}', invalidNumber: 'Enter a number', empty: 'Not provided', yes: 'Yes', no: 'No', loading: 'Loading fields', select: 'Select an option' };
+const defaults = { title: 'Details', send: 'Send', sent: 'Sent', edit: 'Edit', suggested: 'Suggested', required: 'Required', minimum: 'Enter at least {min}', maximum: 'Enter no more than {max}', stepMismatch: 'Use steps of {step}', invalidNumber: 'Enter a number', empty: 'Not provided', yes: 'Yes', no: 'No', loading: 'Loading fields', select: 'Select an option' };
 export type AskLabels = Partial<typeof defaults>;
 export interface AskProps { id?: string; title?: string; submit?: string; fields?: AskField[]; labels?: AskLabels }
 function normalize(field: AskField, value: unknown): AskValue {
@@ -101,14 +102,15 @@ function Field({ field, index, vm }: { field: AskField; index: number; vm: Model
   </PrismPart>;
 }
 export function Ask({ props }: PrismComponentProps<AskProps>) {
-  const vm = useAsk(props, usePrism());
+  const ctx = usePrism(), vm = useAsk(props, ctx);
   const form = usePart('ask', 'form'), grid = usePart('ask', 'fields'), actions = usePart('ask', 'actions'), primary = usePart('ask', 'submit'), edit = usePart('ask', 'edit'), summary = usePart('ask', 'summary'), row = usePart('ask', 'summaryRow'), label = usePart('ask', 'summaryLabel'), value = usePart('ask', 'summaryValue');
   const Item = useSlot('ask', 'field', Field), EmptyState = useSlot('ask', 'empty', Empty), Actions = useSlot('ask', 'actions', Box), Summary = useSlot('ask', 'summary', Box);
   return <ComponentFrame component="ask" title={vm.title} state={vm.submitted ? 'submitted' : 'editing'} ask undo>
-    {vm.submitted ? <Summary {...summary} aria-live="polite">{vm.fields.map((field, index) => <PrismPart as="div" {...row} key={field.id ?? index}><PrismPart as="span" {...label}>{field.label}</PrismPart><PrismPart as="span" {...value}>{vm.display(field)}</PrismPart></PrismPart>)}<Actions {...actions}><PrismPart as="button" {...edit} type="button" onClick={vm.edit}>{vm.labels.edit}</PrismPart></Actions></Summary> : <PrismPart as="form" {...form} noValidate onKeyDown={vm.onKeyDown} onSubmit={event => { event.preventDefault(); vm.submit(); }}>
-      <PrismPart as="div" {...grid}>{vm.fields.length ? vm.fields.map((field, index) => <Item key={field.id ?? index} field={field} index={index} vm={vm} />) : <EmptyState label={vm.labels.loading} />}</PrismPart>
-      <Actions {...actions}><PrismPart as="button" {...primary} type="submit" disabled={!vm.canSubmit}>{vm.submitLabel}</PrismPart></Actions>
-    </PrismPart>}
+    {vm.submitted && <Summary {...summary} aria-live="polite">{vm.fields.map((field, index) => <PrismPart as="div" {...row} key={field.id ?? index}><PrismPart as="span" {...label}>{field.label}</PrismPart><PrismPart as="span" {...value}>{vm.display(field)}</PrismPart></PrismPart>)}<Actions {...actions}><PrismPart as="button" {...edit} type="button" onClick={vm.edit}>{vm.labels.edit}</PrismPart></Actions></Summary>}
+    <PrismPart as="form" {...form} noValidate onKeyDown={vm.onKeyDown} onSubmit={event => { event.preventDefault(); if (!vm.submitted) vm.submit(); }}>
+      <PrismPart as="div" {...grid} hidden={vm.submitted}>{!vm.submitted && (vm.fields.length ? vm.fields.map((field, index) => <Item key={field.id ?? index} field={field} index={index} vm={vm} />) : <EmptyState label={vm.labels.loading} />)}</PrismPart>
+      <Actions {...actions}><PrismPart as="button" {...primary} className={cx(primary.className, !ctx.unstyled && 'prism-pill')} data-variant="primary" data-feedback="" data-sent={vm.submitted ? '' : undefined} type="submit" disabled={!vm.canSubmit || vm.submitted}><SentContent sent={vm.submitted} receipt={vm.labels.sent}>{vm.submitLabel}</SentContent></PrismPart></Actions>
+    </PrismPart>
   </ComponentFrame>;
 }
 const optionSchema = s.union(s.string().describe('Option value and label').example('Indoor'), s.object({ value: s.string().describe('Submitted value').example('outdoor'), label: s.string().describe('Visible option label').example('Outdoor') }).describe('Option with distinct label').example({ value: 'outdoor', label: 'Outdoor' }));

@@ -181,9 +181,9 @@ export function DataTable({ props: inputProps, complete, node }: PrismComponentP
       <Part part="actions">
       {vm.pageSize > 0 && <><Part part="previous" className={styled('prism-icon-btn')} as="button" type="button" aria-label={themeStrings.previousPage} title={themeStrings.previousPage} disabled={vm.currentPage === 0} onClick={() => { vm.changePage(vm.currentPage - 1); resetScroll(); }}>‹</Part><Part part="next" className={styled('prism-icon-btn')} as="button" type="button" aria-label={themeStrings.nextPage} title={themeStrings.nextPage} disabled={vm.currentPage >= vm.pageCount - 1} onClick={() => { vm.changePage(vm.currentPage + 1); resetScroll(); }}>›</Part></>}
       {vm.mode && <Part part="submission">
-        <Part part="submit" className={styled('prism-pill')} as="button" type="button" disabled={!vm.selected.length} aria-describedby={props.actionHint ? hintId : undefined} data-feedback="" data-sent={sent ? '' : undefined} onClick={vm.submit}>
+        <Part part="submit" className={styled('prism-pill')} as="button" type="button" disabled={!vm.selected.length || sent} aria-describedby={props.actionHint ? hintId : undefined} data-feedback="" data-sent={sent ? '' : undefined} onClick={vm.submit}>
           <span aria-hidden={sent || undefined} hidden={ctx.unstyled && sent}>{props.actionLabel || `Use ${vm.selected.length} selected`}</span>
-          <span aria-hidden={!sent || undefined} hidden={ctx.unstyled && !sent}>{ctx.unstyled ? <FrameIcon name="check" /> : <CheckMark />} {themeStrings.sent.replace('{count}', String(sentCount))}</span>
+          <span aria-hidden={!sent || undefined} hidden={ctx.unstyled && !sent}><CheckMark /> {themeStrings.sent.replace('{count}', String(sentCount))}</span>
         </Part>
         {props.actionHint && <Part part="action-hint" as="span" id={hintId}>{props.actionHint}</Part>}
       </Part>}

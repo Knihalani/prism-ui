@@ -112,7 +112,7 @@ test('Choose emits exact option and current weights and marks chosen card', () =
   const card = view.container.querySelector('[data-option="premium"]')!;
   fireEvent.click(within(card as HTMLElement).getByRole('button', { name: 'Choose' }));
   expect(view.actions.map(({ type, payload }) => ({ type, payload }))).toEqual([{ type: 'choose', payload: { option: 'premium', weights: { price: 2, quality: 3 } } }]);
-  expect(view.store.get('plans.chosen')).toBe('premium'); expect(card.getAttribute('data-state')).toBe('chosen'); expect(view.getByText('Chosen').querySelector('svg')).not.toBeNull();
+  expect(view.store.get('plans.chosen')).toBe('premium'); expect(card.getAttribute('data-state')).toBe('chosen'); expect(view.getByRole('button', { name: 'Chosen' }).querySelector('.prism-check-mark path')).not.toBeNull();
 });
 
 test('streaming option without scores renders a skeleton then becomes ranked', () => {

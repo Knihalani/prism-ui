@@ -3,7 +3,7 @@ import { parse, type Node } from '@prism-ui/core';
 import { s, type Infer } from '@prism-ui/schema';
 import { PrismPart, ComponentContext, StreamSkeleton, cx, defaultRenderers, defineComponent, registerComponent, usePart, usePrism, useSent, useTheme, useStrings, useFlash, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
-import { Odometer } from '../shared/controls';
+import { Odometer, SentContent } from '../shared/controls';
 import { useFlip } from '../lib/use-flip';
 import { ViewIcon, iconNames } from './icons';
 import { gallery } from './fixtures';
@@ -33,8 +33,9 @@ export interface ViewConfig {
 export const ViewConfigContext = createContext<ViewConfig>({});
 export interface ViewRuntime { readonly model: ViewModel; strings: Record<string, string>; id: string; streaming: boolean; format: Formatter; prism: PrismContextValue; config: ViewConfig; send(type: string, payload?: unknown, message?: string): void }
 const ViewContext = createContext<ViewRuntime | null>(null);
+const buttonReceipts = new WeakMap<ViewRuntime, { path: string; previous: ViewModel['sent'] }>();
 
-export const viewStrings = { title: 'Interactive view', yes: 'Yes', no: 'No', empty: 'Nothing here yet', askMessage: 'Tell me more about this view…', actionMessage: 'User {type} in view: {payload}' };
+export const viewStrings = { title: 'Interactive view', sent: 'Sent', yes: 'Yes', no: 'No', empty: 'Nothing here yet', askMessage: 'Tell me more about this view…', actionMessage: 'User {type} in view: {payload}' };
 export function viewFormatter(f: Format, strings: Record<string, string> = viewStrings): Formatter {
   return (value, kind) => {
     if (value == null || typeof value === 'number' && !Number.isFinite(value)) return '';
@@ -124,7 +125,7 @@ export function useViewNode(node: ViewNode, scope: ViewScope) {
   }, [node, scope, values, store, view.format]);
 }
 
-function useActions(scope: ViewScope) {
+function useActions(scope: ViewScope, onSend?: () => void) {
   const view = useContext(ViewContext)!;
   const { store } = view.prism;
   return useCallback((spec: unknown, extra?: Record<string, unknown>) => {
@@ -138,8 +139,11 @@ function useActions(scope: ViewScope) {
       },
     };
     store.batch(() => { action = run(spec, scope, writer, view.format, extra); });
-    if (action) view.send(action.type, action.payload, view.strings.actionMessage !== viewStrings.actionMessage ? view.strings.actionMessage.replace('{type}', action.type).replace('{payload}', JSON.stringify(action.payload ?? {}).slice(0, 200)) : action.message);
-  }, [store, scope, view]);
+    if (action) {
+      onSend?.();
+      view.send(action.type, action.payload, view.strings.actionMessage !== viewStrings.actionMessage ? view.strings.actionMessage.replace('{type}', action.type).replace('{payload}', JSON.stringify(action.payload ?? {}).slice(0, 200)) : action.message);
+    }
+  }, [store, scope, view, onSend]);
 }
 
 const PRIMITIVES = new Set(['stack', 'row', 'column', 'grid', 'box', 'card', 'text', 'markdown', 'heading', 'stat', 'badge', 'image', 'icon', 'divider', 'spacer', 'button', 'input', 'select', 'segmented', 'toggle', 'slider', 'checkbox', 'list', 'table', 'progress', 'avatar', 'tabs']);
@@ -259,11 +263,19 @@ function Divider(p: PrimitiveProps) { return p.props.label ? <PrismPart as="div"
 function Spacer(p: PrimitiveProps) { return <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('spacer')} data-size={pick(p.props.size, SIZES)} aria-hidden="true" />; }
 function Button(p: PrimitiveProps) {
   const view = useContext(ViewContext)!;
+  const { sent: acknowledged } = useSent();
+  const receipt = buttonReceipts.get(view);
+  const sent = !!acknowledged && receipt?.path === p.path && receipt.previous !== acknowledged;
+  const handlers = Array.isArray(p.node.onClick) ? p.node.onClick : [p.node.onClick];
+  const submits = handlers.some(handler => handler && typeof handler === 'object' && !Array.isArray(handler) && typeof handler.action === 'string' && handler.action);
+  const act = useActions(p.scope, () => buttonReceipts.set(view, { path: p.path, previous: acknowledged }));
   const get: Read = path => view.prism.store.get(path);
   const disabled = flag(p.node.disabled, p.props.disabled, p.scope, get) || isOpen(p.node.onClick) || (p.open && p.node.onClick === undefined);
-  return <PrismPart as="button" type="button" slotProps={{ model: p.model, primitive: p }} {...p.part('button')} {...tokens(p.props)} data-variant={pick(p.props.variant, new Set(['primary', 'secondary', 'ghost', 'outline', 'danger', 'link'])) ?? 'secondary'} data-full={p.props.full ? '' : undefined}
-    disabled={disabled} aria-label={p.props.ariaLabel ? text(p.props.ariaLabel) : undefined} onClick={() => p.act(p.node.onClick)}>
-    <Icon name={p.props.icon} p={p} />{p.props.label !== undefined && <span>{text(p.props.label)}</span>}<Icon name={p.props.iconRight} p={p} />
+  const part = p.part('button');
+  const label = <><Icon name={p.props.icon} p={p} />{p.props.label !== undefined && <span>{text(p.props.label)}</span>}<Icon name={p.props.iconRight} p={p} /></>;
+  return <PrismPart as="button" type="button" slotProps={{ model: p.model, primitive: p }} {...part} className={cx(part.className, submits && !view.prism.unstyled && 'prism-pill')} {...tokens(p.props)} data-feedback={submits ? '' : undefined} data-sent={sent ? '' : undefined} data-variant={pick(p.props.variant, new Set(['primary', 'secondary', 'ghost', 'outline', 'danger', 'link'])) ?? 'secondary'} data-full={p.props.full ? '' : undefined}
+    disabled={disabled || sent} aria-label={sent ? view.strings.sent : p.props.ariaLabel ? text(p.props.ariaLabel) : undefined} onClick={() => submits ? act(p.node.onClick) : p.act(p.node.onClick)}>
+    {submits ? <SentContent sent={sent} receipt={view.strings.sent}>{label}</SentContent> : label}
   </PrismPart>;
 }
 function Field({ p, children, id, inline }: { p: PrimitiveProps; children: ReactNode; id: string; inline?: boolean }) {

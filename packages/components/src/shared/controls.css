@@ -39,7 +39,8 @@
   color: var(--prism-text-muted);
   box-shadow: none;
 }
-.prism-pill[data-feedback] { display: inline-grid; }
+.prism-root .prism-pill[data-feedback], .prism-pill[data-feedback] { display: inline-grid; position: relative; }
+.prism-root .prism-pill[data-feedback][data-sent] { opacity: 1; cursor: default; color: var(--prism-text); box-shadow: none; }
 .prism-pill[data-feedback] > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 .prism-pill[data-feedback] > span {
   position: relative; z-index: 1; opacity: 1; translate: 0 0; filter: blur(0);

@@ -1,7 +1,8 @@
 import { componentStrings, formatComponentMessage } from '../strings';
 import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
-import { useStrings, Icon, PrismPart, StreamSkeleton, useSent, useComponentState, useEmit, useFormat, usePart, type PrismComponentProps } from '@prism-ui/react';
+import { useStrings, Icon, PrismPart, cx, StreamSkeleton, useSent, useComponentState, useEmit, useFormat, usePart, usePrism, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
+import { SentContent } from '../shared/controls';
 
 export interface SummarySource { quote?: string; title?: string; url?: string }
 export interface SummaryPoint { text: string; source?: SummarySource }
@@ -64,8 +65,8 @@ export function SummarySkeleton() {
   return <StreamSkeleton {...root}>{[0, 1, 2, 3, 4].map(index => <PrismPart as="div" {...skeleton} key={index} data-prism-skeleton-line="" />)}</StreamSkeleton>;
 }
 export function Summary({ props, complete }: PrismComponentProps<SummaryProps>) {
-  const model = useSummary(props, { complete }), { parts, strings: themeStrings } = model;
-  return <ComponentFrame component="summary" title={complete ? model.title : ''} label={model.title} state={model.state} ask undo actions={<><PrismPart slotProps={{ summary: model } satisfies SummarySlotProps} as="span" {...parts.progress}>{model.actions.length > 0 ? model.completed + themeStrings.of + model.actions.length + themeStrings.complete : ''}</PrismPart><PrismPart slotProps={{ summary: model } satisfies SummarySlotProps} as="button" {...parts.send} type="button" disabled={!model.canSend} onClick={model.send}>{model.sent ? themeStrings.sent : themeStrings.sendActionItems}<Icon name={model.sent ? "check" : "send"} /></PrismPart></>}>
+  const model = useSummary(props, { complete }), { parts, strings: themeStrings } = model, { unstyled } = usePrism();
+  return <ComponentFrame component="summary" title={complete ? model.title : ''} label={model.title} state={model.state} ask undo actions={<><PrismPart slotProps={{ summary: model } satisfies SummarySlotProps} as="span" {...parts.progress}>{model.actions.length > 0 ? model.completed + themeStrings.of + model.actions.length + themeStrings.complete : ''}</PrismPart><PrismPart slotProps={{ summary: model } satisfies SummarySlotProps} as="button" {...parts.send} className={cx(parts.send.className, !unstyled && 'prism-pill')} data-variant="primary" data-feedback="" data-sent={model.sent ? '' : undefined} type="button" disabled={!model.canSend} onClick={model.send}><SentContent sent={model.sent} receipt={themeStrings.sent}>{themeStrings.sendActionItems}<Icon name="send" /></SentContent></PrismPart></>}>
     <PrismPart slotProps={{ summary: model } satisfies SummarySlotProps} as="ul" {...parts.points} ref={model.pointListRef}>
       {model.loadingPoints && [0, 1, 2].map(index => <StreamSkeleton slotProps={{ summary: model } satisfies SummarySlotProps} as="li" {...parts.skeleton} key={index} />)}
       {model.points.map(point => <PrismPart slotProps={{ summary: model, point } satisfies SummarySlotProps} as="li" {...parts.point} key={point.index}>

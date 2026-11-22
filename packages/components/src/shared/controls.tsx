@@ -1,18 +1,27 @@
-import { forwardRef, type ComponentPropsWithoutRef, type ReactNode } from 'react';
-import { PrismPart, Icon, cx, useReducedMotion } from '@prism-ui/react';
+import { forwardRef, useContext, type ComponentPropsWithoutRef, type ReactNode } from 'react';
+import { PrismContext, PrismPart, Icon, cx, useReducedMotion } from '@prism-ui/react';
 
 type ButtonProps = ComponentPropsWithoutRef<'button'>;
 type InputProps = ComponentPropsWithoutRef<'input'>;
 type SpanProps = ComponentPropsWithoutRef<'span'>;
 
 export function CheckMark({ draw, className, ...props }: ComponentPropsWithoutRef<'svg'> & { draw?: boolean }) {
-  return <Icon width="14" height="14" {...props} name="check" className={cx('prism-check-mark', className)} data-draw={draw ? '' : undefined} />;
+  const unstyled = useContext(PrismContext)?.unstyled;
+  return <Icon width="14" height="14" {...props} name="check" className={cx(!unstyled && 'prism-check-mark', className)} data-draw={draw ? '' : undefined} />;
 }
 
 export interface PillProps extends ButtonProps {
   variant?: 'primary' | 'secondary' | 'ghost';
   sent?: boolean;
   receipt?: ReactNode;
+}
+
+export function SentContent({ sent, receipt, children }: { sent: boolean; receipt: ReactNode; children: ReactNode }) {
+  const unstyled = useContext(PrismContext)?.unstyled;
+  return <>
+    <span aria-hidden={sent} hidden={unstyled && sent}>{children}</span>
+    <span aria-hidden={!sent} hidden={unstyled && !sent}><CheckMark />{receipt}</span>
+  </>;
 }
 
 /** Keep the ready and receipt labels in the same layout slot to avoid shifting adjacent controls. */
@@ -22,10 +31,7 @@ export const Pill = forwardRef<HTMLButtonElement, PillProps>(function Pill(
   return <PrismPart as="button" ref={ref} type="button" {...props} className={cx('prism-pill', className)}
     disabled={disabled || sent} data-variant={variant} data-sent={sent ? '' : undefined}
     data-feedback={receipt != null ? '' : undefined}>
-    {receipt == null ? children : <>
-      <span aria-hidden={sent}>{children}</span>
-      <span aria-hidden={!sent}><CheckMark />{receipt}</span>
-    </>}
+    {receipt == null ? children : <SentContent sent={sent} receipt={receipt}>{children}</SentContent>}
   </PrismPart>;
 });
 

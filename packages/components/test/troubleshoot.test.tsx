@@ -33,7 +33,7 @@ test('resolved report emits exact action and persists sent state; restart and un
   expect(view.getByRole('group').dataset.state).toBe('sent'); expect(store.get('wifi.sent')).toBe(true);
   fireEvent.click(view.getByRole('button', { name: 'Start over' })); expect(view.getByText('Step 1')).toBeDefined();
   fireEvent.keyDown(view.getByRole('group'), { key: 'z', ctrlKey: true });
-  expect(view.getByText('Report sent')).toBeDefined();
+  expect(view.getByRole('button', { name: 'Report sent' })).toBeDefined();
 });
 
 test('sending a report is one undo step without rewriting a valid path', () => {
@@ -47,7 +47,7 @@ test('sending a report is one undo step without rewriting a valid path', () => {
   fireEvent.click(view.getByRole('button', { name: 'Undo' }));
   expect(store.get('wifi.sent')).toBe(false);
   expect(store.get('wifi.path')).toEqual([{ step: 'a', answer: 'yes' }]);
-  expect(view.queryByText('Report sent')).toBeNull();
+  expect(view.queryByRole('button', { name: 'Report sent' })).toBeNull();
   fireEvent.click(view.getByRole('button', { name: 'Undo' }));
   expect(store.get('wifi.path')).toEqual([]);
   expect(view.getByText('Step 1')).toBeDefined();
