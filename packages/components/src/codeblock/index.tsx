@@ -87,8 +87,15 @@ export function useCodeBlock(props: CodeBlockProps, ctx: PrismContextValue) {
   useLayoutEffect(() => {
     const element = pre.current, body = element?.parentElement;
     if (!element || !body) return;
-    const style = getComputedStyle(body), lines = Array.from(element.querySelectorAll<HTMLElement>('[data-part="line"]'));
-    setPreviewHeight(lines.slice(0, threshold).reduce((height, line) => height + line.getBoundingClientRect().height, 0) + parseFloat(style.paddingTop || '0') + parseFloat(style.paddingBottom || '0'));
+    const measure = () => {
+      const style = getComputedStyle(body), lines = Array.from(element.querySelectorAll<HTMLElement>('[data-part="line"]'));
+      setPreviewHeight(lines.slice(0, threshold).reduce((height, line) => height + line.getBoundingClientRect().height, 0) + parseFloat(style.paddingTop || '0') + parseFloat(style.paddingBottom || '0'));
+    };
+    measure();
+    if (typeof ResizeObserver !== 'function') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
   }, [code, html, threshold, wrap]);
   const collapse = useCollapse(!collapsed, previewHeight);
   const language = !ctx.unstyled && Object.hasOwn(languageLabels, lang) ? strings[languageLabels[lang]] : lang;
