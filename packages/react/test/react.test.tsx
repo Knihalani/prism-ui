@@ -70,7 +70,7 @@ test('default markdown renderers provide semantic elements, safety and part attr
   expect(container.querySelector('input')?.checked).toBe(true); expect(container.querySelector('input')?.readOnly).toBe(true);
   expect(container.querySelector('a')?.getAttribute('rel')).toBe('noopener noreferrer'); expect(container.querySelector('a')?.target).toBe('_blank');
   expect(container.querySelector('img')?.getAttribute('loading')).toBe('lazy');
-  expect(container.querySelector('pre code')?.className).toBe('language-js');
+  expect(container.querySelector('pre code')?.classList.contains('language-js')).toBe(true);
   expect(container.querySelectorAll('th')[1].style.textAlign).toBe('right');
   expect(container.querySelector('h1')?.getAttribute('data-part')).toBe('root');
 });

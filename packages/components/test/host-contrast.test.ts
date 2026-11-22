@@ -15,7 +15,7 @@ test('filled shared controls pair explicit accent backgrounds with on-accent for
 test('solid component foregrounds never use the translucent surface token', () => {
   for (const file of ['summary/summary', 'badge/badge', 'artifact/artifact', 'runbook/runbook']) {
     expect(css(file)).not.toMatch(/(?<![-\w])color:\s*var\(--prism-surface\)/);
-    expect(css(file)).toContain('color: var(--prism-on-accent)');
+    expect(css(file)).toMatch(/color:\s*var\(--prism-(?:[a-z]+-on-accent,\s*var\(--prism-)?on-accent\)/);
   }
-  expect(css('badge/badge')).toContain('--prism-badge-color: var(--prism-accent, #525252)');
+  expect(css('badge/badge')).toMatch(/--prism-badge-color:\s*var\(--prism-(?:badge-accent,\s*var\(--prism-)?accent,/);
 });
