@@ -44,7 +44,7 @@
   transform: translateX(var(--prism-tabs-indicator-left));
   border-radius: var(--prism-tabs-radius-pill, var(--prism-radius-pill));
   pointer-events: none;
-  transition: transform var(--prism-tabs-motion-slow, var(--prism-motion-slow)) var(--prism-tabs-motion-ease, var(--prism-motion-ease)), width var(--prism-tabs-motion-slow, var(--prism-motion-slow)) var(--prism-tabs-motion-ease, var(--prism-motion-ease));
+  transition: transform var(--prism-tabs-motion-slow, var(--prism-motion-slow)) var(--prism-tabs-motion-spring, var(--prism-motion-spring)), width var(--prism-tabs-motion-slow, var(--prism-motion-slow)) var(--prism-tabs-motion-spring, var(--prism-motion-spring));
 }
 .prism-root .prism-tabs__root[data-variant="underline"] .prism-tabs__list:focus-within .prism-tabs__indicator {
   background: var(--prism-tabs-highlight, var(--prism-accent, var(--prism-tabs-accent-text, var(--prism-accent-text))));
@@ -69,7 +69,7 @@
 .prism-root .prism-tab__root[hidden] { display: none; }
 .prism-root .prism-tab__root { min-width: 0; }
 .prism-root .prism-tab__root[role="tabpanel"]:not([hidden]) {
-  animation: prism-tab-in var(--prism-tabs-motion-slow, var(--prism-motion-slow)) var(--prism-tabs-motion-ease, var(--prism-motion-ease));
+  animation: prism-tab-in var(--prism-tabs-motion-slow, var(--prism-motion-slow)) var(--prism-tabs-motion-spring, var(--prism-motion-spring));
 }
 @keyframes prism-tab-in { from { opacity: 0; } }
 .prism-root .prism-tab__title { margin: 0 0 var(--prism-tabs-space-2, var(--prism-space-2)); font-size: var(--prism-tabs-text-base, var(--prism-text-base)); letter-spacing: var(--prism-tabs-size-neg--015em, calc(var(--prism-tabs-space-1, var(--prism-space-1)) * -0.06)); }
@@ -93,7 +93,7 @@
   line-height: inherit;
 }
 .prism-root .prism-tab__body > :last-child { margin-bottom: 0; }
-@media (max-width: 760px) {
+@container prism-tabs (max-width: 760px) {
   .prism-root .prism-tabs__root[data-variant="underline"] .prism-tabs__list { gap: var(--prism-tabs-size-25px, calc(var(--prism-tabs-space-1, var(--prism-space-1)) * 6.25)); }
 }
 
@@ -105,3 +105,5 @@
 @keyframes prism-tabs-enter { from { opacity: 0; transform: translateY(var(--prism-tabs-space-1, var(--prism-space-1))); } to { opacity: 1; transform: none; } }
 .prism-root[data-animate="false"] [data-prism="tabs"], .prism-root [data-animate="false"] [data-prism="tabs"] { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-root [data-prism="tabs"] { animation: none; transition: none; } }
+
+.prism-root .prism-tabs__root { container: prism-tabs / inline-size; }

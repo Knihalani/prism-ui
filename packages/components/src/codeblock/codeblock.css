@@ -88,7 +88,7 @@
 @media (hover: hover) {
   .prism-codeblock__root:not(:hover, :focus-within) .prism-codeblock__copy:not([data-state="copied"]) { opacity: 0; }
 }
-@media (max-width: 480px) {
+@container prism-codeblock (max-width: 480px) {
   .prism-codeblock__header, .prism-codeblock__line { padding-inline: var(--prism-codeblock-size-15px, calc(var(--prism-codeblock-space-1, var(--prism-space-1)) * 3.75)); }
   .prism-codeblock__body pre { font-size: var(--prism-codeblock-text-xs, var(--prism-text-xs)); }
   .prism-codeblock__root[data-lines] .prism-codeblock__gutter { flex-basis: var(--prism-codeblock-size-28px, calc(var(--prism-codeblock-space-1, var(--prism-space-1)) * 7)); }
@@ -108,3 +108,5 @@
 @keyframes prism-codeblock-enter { from { opacity: 0; transform: translateY(var(--prism-codeblock-space-1, var(--prism-space-1))); } to { opacity: 1; transform: none; } }
 .prism-root[data-animate="false"] [data-prism="codeblock"], .prism-root [data-animate="false"] [data-prism="codeblock"] { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-root [data-prism="codeblock"] { animation: none; transition: none; } }
+
+.prism-root .prism-codeblock__root { container: prism-codeblock / inline-size; }

@@ -41,8 +41,8 @@
 @media (hover: hover) {
   .prism-root .prism-callout__root:not(:hover, :focus-within) > .prism-callout__header .prism-callout__ask { opacity: 0; }
 }
-@media (max-width: 520px) {
-  .prism-root .prism-callout__root { padding-inline-start: var(--prism-callout-space-5, var(--prism-space-5)); }
+@container prism-callout (max-width: 360px) {
+  .prism-root .prism-callout__header { gap: var(--prism-callout-space-2, var(--prism-space-2)); }
 }
 
 .prism-root .prism-callout__root { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
@@ -53,3 +53,5 @@
 @keyframes prism-callout-enter { from { opacity: 0; transform: translateY(var(--prism-callout-space-1, var(--prism-space-1))); } to { opacity: 1; transform: none; } }
 .prism-root[data-animate="false"] [data-prism="callout"], .prism-root [data-animate="false"] [data-prism="callout"] { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-root [data-prism="callout"] { animation: none; transition: none; } }
+
+.prism-root .prism-callout__root { container: prism-callout / inline-size; }

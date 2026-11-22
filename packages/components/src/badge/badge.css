@@ -32,3 +32,6 @@
 @keyframes prism-badge-enter { from { opacity: 0; transform: translateY(var(--prism-badge-space-1, var(--prism-space-1))); } to { opacity: 1; transform: none; } }
 .prism-root[data-animate="false"] [data-prism="badge"], .prism-root [data-animate="false"] [data-prism="badge"] { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-root [data-prism="badge"] { animation: none; transition: none; } }
+
+.prism-root .prism-badge__root { max-inline-size: 100%; white-space: normal; }
+.prism-root .prism-badge__body { min-inline-size: 0; overflow-wrap: anywhere; }

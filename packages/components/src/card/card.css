@@ -83,3 +83,6 @@
 .prism-root[data-animate="false"] [data-prism="card"], .prism-root [data-animate="false"] [data-prism="card"] { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-root [data-prism="card"] { animation: none; transition: none; } }
 .prism-root .prism-card__action:not([data-variant="quiet"]) { background: var(--prism-accent, var(--prism-card-accent-text, var(--prism-accent-text))); color: var(--prism-card-on-accent, var(--prism-on-accent)); }
+
+.prism-root .prism-card__root { container: prism-card / inline-size; }
+@container prism-card (max-width: 360px) { .prism-root .prism-card__footer { flex-wrap: wrap; } }
