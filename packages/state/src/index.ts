@@ -29,7 +29,8 @@ function merge(a: any, b: any): any {
   return out;
 }
 export function createStore({ persist, namespace = '', initial = {} }: { persist?: Adapter; namespace?: string; initial?: Record<string, unknown> } = {}) {
-  let state = clean(initial), depth = 0, before = state;
+  let state = clean(initial), depth = 0, before = state, loading = false;
+  const pending = new Set<string>();
   const past: any[] = [], future: any[] = [], changed = new Set<string>();
   const listeners = new Map<string, Set<() => void>>();
   function flush(history = true) {
@@ -37,7 +38,8 @@ export function createStore({ persist, namespace = '', initial = {} }: { persist
     const paths = [...changed];
     if (history) { past.push({ state: before, paths }); if (past.length > 100) past.shift(); future.length = 0; }
     changed.clear(); before = state;
-    persist?.save(namespace, copy(state));
+    if (loading) paths.forEach(path => pending.add(path));
+    else persist?.save(namespace, copy(state));
     for (const [path, fns] of listeners) if (paths.some(p => path === '*' || p === path || p.startsWith(path + '.') || path.startsWith(p + '.'))) for (const fn of [...fns]) fn();
   }
   function change(path: string, value: unknown, remove = false) {
@@ -74,12 +76,18 @@ export function createStore({ persist, namespace = '', initial = {} }: { persist
   }
   function load(data: object) {
     const previous = state; state = merge(state, clean(data)); before = state;
+    for (const path of pending) {
+      const keys = path.split('.'), parent = read(previous, keys.slice(0, -1));
+      state = write(state, keys, read(previous, keys), parent == null || !Object.hasOwn(parent, keys.at(-1)!));
+    }
+    before = state; loading = false;
+    if (pending.size) { pending.clear(); persist?.save(namespace, copy(state)); }
     for (const [p, fns] of listeners) if (p === '*' ? previous !== state : !Object.is(read(previous, p.split('.')), store.get(p))) for (const fn of [...fns]) fn();
   }
   if (persist) {
     try {
       const data = persist.load(namespace);
-      if (data instanceof Promise) store.ready = data.then(load);
+      if (data instanceof Promise) { loading = true; store.ready = data.then(load); }
       else load(data);
     } catch (error) { store.ready = Promise.reject(error); }
   }
