@@ -6,9 +6,9 @@
 .prism-inline-feedback__trigger:focus-visible { outline: 2px solid var(--prism-focus); outline-offset: 2px; }
 .prism-inline-feedback__editor { border-top: 1px solid var(--prism-border); padding-block: var(--prism-space-3); display: grid; gap: var(--prism-space-2); }
 .prism-inline-feedback__editor[hidden] { display: none; }
-.prism-inline-feedback__target > .prism-mockup__canvas { z-index: 6; background: color-mix(in srgb,var(--prism-accent,#525252) 3%,transparent); }
-.prism-inline-feedback__target > :is(.prism-mockup__marker,.prism-mockup__stroke) { z-index: 7; }
-.prism-inline-feedback__target > .prism-mockup__popover { z-index: 9; }
+.prism-inline-feedback :is(.prism-inline-feedback__target,[data-feedback-target]) > .prism-mockup__canvas { z-index: 6; background: color-mix(in srgb,var(--prism-accent,#525252) 3%,transparent); }
+.prism-inline-feedback :is(.prism-inline-feedback__target,[data-feedback-target]) > :is(.prism-mockup__marker,.prism-mockup__stroke) { z-index: 7; }
+.prism-inline-feedback :is(.prism-inline-feedback__target,[data-feedback-target]) > .prism-mockup__popover { z-index: 9; }
 .prism-inline-feedback__live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 @media (hover: none) { .prism-inline-feedback__trigger { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .prism-inline-feedback__trigger { transition: none; } }

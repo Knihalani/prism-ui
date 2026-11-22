@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { ComponentContext, Icon, PrismPart, registerFeedbackSurface, usePart, usePrism, useStrings, type FeedbackSurfaceProps } from '@prism-ui/react';
 import { MockupAnnotations } from './mockup/mockup';
@@ -7,16 +7,21 @@ import { useMockup } from './mockup/use-mockup';
 import './mockup/mockup.css';
 import './feedback.css';
 
+const FeedbackTarget = createContext<((target: HTMLDivElement | null) => void) | undefined>(undefined);
+export function useFeedbackTarget() { return useContext(FeedbackTarget); }
+
 export function InlineFeedback({ children, targetKey }: FeedbackSurfaceProps) {
   const component = useContext(ComponentContext)!, inline = usePrism().registry.get(component.name)?.inline;
   const [open, setOpen] = useState(false), [activated, setActivated] = useState(false), trigger = useRef<HTMLButtonElement>(null);
-  const root = useRef<HTMLDivElement>(null), viewport = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLDivElement>(null), fallback = useRef<HTMLDivElement>(null), viewport = useRef<HTMLDivElement>(null);
+  const [target, setTarget] = useState<HTMLDivElement | null>(null);
+  viewport.current = target ?? fallback.current;
   const labels = useStrings('feedback', { open: 'Give feedback', close: 'Close feedback' });
   const close = () => { setOpen(false); trigger.current?.focus(); };
   return <PrismPart as="span" className="prism-inline-feedback" ref={root} style={{ '--prism-mockup-scale': 1, '--prism-mockup-inverse-scale': 1 } as CSSProperties} data-inline={inline || undefined} data-feedback-open={open || undefined}>
     <button ref={trigger} type="button" className="prism-inline-feedback__trigger" aria-label={open ? labels.close : labels.open} title={labels.open} aria-expanded={open} onKeyDown={event => { if (event.key === 'Escape') close(); }} onClick={() => { setActivated(true); open ? close() : setOpen(true); }}><Icon name={open ? 'close' : 'ask'} /></button>
-    <PrismPart as="span" className="prism-inline-feedback__target" ref={viewport}>
-      {children}
+    <PrismPart as="span" className="prism-inline-feedback__target" ref={fallback}>
+      <FeedbackTarget.Provider value={setTarget}>{children}</FeedbackTarget.Provider>
     </PrismPart>
     {activated && <FeedbackEditor key={targetKey} open={open} close={close} surface={{ root, viewport }} />}
   </PrismPart>;

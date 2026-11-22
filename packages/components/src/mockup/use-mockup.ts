@@ -60,10 +60,11 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   function close(restoreFocus = false) { pending.current = null; setEditing(null); if (restoreFocus) canvas.current?.focus({ preventScroll: true }); }
   function popoverPosition(x: number, y: number) {
     if (options.inline) {
-      const popupWidth = Math.max(160, Math.min(320, containerWidth - 24)), popupHeight = 180;
-      const left = Math.max(12 / scale, Math.min(width - (popupWidth + 12) / scale, x / 100 * width));
-      const anchor = y / 100 * contentHeight, bottom = Math.min(contentHeight, ((viewport.current?.scrollTop ?? 0) + (viewport.current?.clientHeight || contentHeight * scale)) / scale);
-      const top = Math.max(12 / scale, Math.min(bottom - (popupHeight + 12) / scale, anchor + 20 / scale));
+      const bounds = viewport.current?.getBoundingClientRect();
+      const availableWidth = bounds?.width || containerWidth, availableHeight = bounds?.height || contentHeight;
+      const popupWidth = Math.min(320, Math.max(0, availableWidth - 24)), popupHeight = 180;
+      const left = Math.max(12, Math.min(availableWidth - popupWidth - 12, x / 100 * availableWidth));
+      const top = Math.max(12, Math.min(availableHeight - popupHeight - 12, y / 100 * availableHeight + 20));
       return { left, top, width: popupWidth };
     }
     const bounds = root.current?.getBoundingClientRect(), artboard = canvas.current?.getBoundingClientRect();

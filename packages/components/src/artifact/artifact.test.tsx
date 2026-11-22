@@ -94,6 +94,20 @@ test('reloading migrated artifact feedback preserves its iframe and document on 
   } finally { cleanup(); restore(); }
 });
 
+test('artifact feedback measures and annotates only preview content, excluding the toolbar', async () => {
+  const restore = observeFrames(), view = render(<Prism source={snippet} plugins={plugins} registry={registry} />);
+  try {
+    await waitFor(() => { if (!view.container.querySelector('iframe')) throw Error('No frame'); });
+    fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+    const preview = view.container.querySelector<HTMLElement>('[data-prism="artifact"][data-part="preview"]')!;
+    const canvas = view.getByRole('application');
+    expect(canvas.parentElement).toBe(preview);
+    expect(canvas.parentElement!.contains(view.container.querySelector('[data-part="header"]'))).toBe(false);
+    fireEvent.keyDown(canvas, { key: 'Enter' });
+    expect(view.getByRole('dialog').parentElement).toBe(preview);
+  } finally { cleanup(); restore(); }
+});
+
 test('streaming partial React source reserves its preview without a frame or compiler', () => {
   const partial = '```artifact:react {title="A calculator" height=267}\nexport default function A(';
   const view = render(<Prism source={partial} plugins={plugins} registry={registry} done={false} />);
