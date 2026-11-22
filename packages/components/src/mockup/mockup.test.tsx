@@ -35,6 +35,28 @@ test('popover stays within the content box near its lower right edge', () => {
   expect(parseFloat(popover.style.left) + parseFloat(popover.style.width)).toBeLessThanOrEqual(1280);
   expect(parseFloat(popover.style.top) + 180).toBeLessThanOrEqual(400);
 });
+test('open typed drafts enable submit, save before payload creation and pluralize one comment', () => {
+  const x = setup(); x.pointer('pointerdown', 300, 200); x.pointer('pointerup', 300, 200);
+  const area = x.view.getByRole('textbox', { name: 'Add a comment…' }), submit = x.view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement;
+  expect(submit.disabled).toBe(true); x.change(area, '   '); expect(submit.disabled).toBe(true);
+  x.change(area, 'Keep this draft'); expect(submit.disabled).toBe(false);
+  expect(x.view.getByText('1 comment')).toBeDefined(); fireEvent.click(submit);
+  expect((x.actions[0].payload as any).items[0].comment).toBe('Keep this draft');
+  expect(x.view.getByText('Feedback sent · 1 comment')).toBeDefined();
+});
+test('clicking another canvas point saves the previous draft; Escape still removes the fresh pin', () => {
+  const x = setup(); x.pointer('pointerdown', 200, 100); x.pointer('pointerup', 200, 100);
+  x.change(x.view.getByRole('textbox', { name: 'Add a comment…' }), 'Saved outside');
+  x.pointer('pointerdown', 700, 300); x.pointer('pointerup', 700, 300);
+  expect((x.store.get('review.feedback') as any).items[0].comment).toBe('Saved outside');
+  x.change(x.view.getByRole('textbox', { name: 'Add a comment…' }), 'Cancel me');
+  fireEvent.keyDown(x.view.getByRole('textbox', { name: 'Add a comment…' }), { key: 'Escape' });
+  expect((x.store.get('review.feedback') as any).items).toHaveLength(1);
+});
+test('plural rules use the Prism locale and translated forms, including zero', () => {
+  const view = render(<Prism source={source({ kind: 'image', labels: { countOne: '{n} remarque', countOther: '{n} remarques' } })} locale="fr" done />);
+  expect(view.getByText('0 remarque')).toBeDefined();
+});
 test('all four source kinds render, SVG is sanitised, unsafe image URLs are refused', () => {
   const a = setup({ kind: 'html', source: '<h1>Hello</h1>' }); expect(a.renders.at(-1)).toEqual(['<h1>Hello</h1>', true]); a.view.unmount();
   const b = setup({ kind: 'wire', source: 'hero: # Hello / Welcome / [Start]' }); expect(b.renders.at(-1)![0]).toContain('Hello'); b.view.unmount();

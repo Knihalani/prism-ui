@@ -1,13 +1,13 @@
-import type { CSSProperties, HTMLAttributes } from 'react';
+import type { CSSProperties } from 'react';
 import { defineComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
 import { s } from '@prism-ui/schema';
 import { ComponentFrame } from '../frame';
+import { MockupToolbar, MockupPenTools, MockupSource, MockupFooter } from './chrome';
 import { WIREFRAME_DOCS, type FeedbackItem } from './engine';
 import { MockupIcon as Icon } from './icon';
 import { GroupedMockup } from './group';
 import { mockupLabels, useMockup, type MockupModel, type MockupProps } from './use-mockup';
 
-function Box(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
 function Empty({ vm }: { vm: MockupModel }) { return <p {...usePart('mockup', 'empty')}>{vm.labels.empty}</p>; }
 function Item({ item, vm }: { item: FeedbackItem; vm: MockupModel }) {
   const row = usePart('mockup', 'item'), badge = usePart('mockup', 'badge'), chip = usePart('mockup', 'target'), button = usePart('mockup', 'button');
@@ -33,19 +33,15 @@ function Marker({ item, vm }: { item: FeedbackItem; vm: MockupModel }) {
   </>;
 }
 export function MockupView({ vm, feedback = true, embedded = false }: { vm: MockupModel; feedback?: boolean; embedded?: boolean }) {
-  const root = usePart('mockup', 'member'), toolbar = usePart('mockup', 'tools'), button = usePart('mockup', 'button'), layout = usePart('mockup', 'layout'), viewport = usePart('mockup', 'viewport'), spacer = usePart('mockup', 'spacer'), stage = usePart('mockup', 'stage'), canvas = usePart('mockup', 'canvas'), media = usePart('mockup', 'media'), skeleton = usePart('mockup', 'skeleton'), list = usePart('mockup', 'list'), input = usePart('mockup', 'input'), footer = usePart('mockup', 'feedbackFooter'), primary = usePart('mockup', 'primary'), source = usePart('mockup', 'source'), hint = usePart('mockup', 'hint'), live = usePart('mockup', 'live'), reticle = usePart('mockup', 'reticle'), stroke = usePart('mockup', 'stroke'), overall = usePart('mockup', 'overall');
-  const Actions = useSlot('mockup', 'headerActions', Box), Row = useSlot('mockup', 'item', Item), EmptyState = useSlot('mockup', 'empty', Empty), Comment = useSlot('mockup', 'popover', Popover);
-  const tools = <Actions {...toolbar}>
-    {vm.framed && <div role="group" aria-label={vm.labels.desktop}>{(['desktop', 'tablet', 'mobile'] as const).map(device => <button key={device} {...button} aria-label={vm.labels[device]} title={vm.labels[device]} aria-pressed={vm.device === device} onClick={() => vm.setDevice(device)}><Icon name={device} /></button>)}</div>}
-    <button {...button} aria-label={vm.labels.zoomOut} title={vm.labels.zoomOut} disabled={vm.zoom <= .5} onClick={() => vm.setZoom(Math.max(.5, vm.zoom - .25))}><Icon name="minus" /></button><button {...button} title={vm.labels.fit} onClick={() => vm.setZoom(1)}>{vm.zoom === 1 ? vm.labels.fit : `${Math.round(vm.zoom * 100)}%`}</button><button {...button} aria-label={vm.labels.zoomIn} title={vm.labels.zoomIn} disabled={vm.zoom >= 2} onClick={() => vm.setZoom(Math.min(2, vm.zoom + .25))}><Icon name="plus" /></button>
-    <button {...button} title={vm.labels.fullscreen} aria-label={vm.labels.fullscreen} onClick={vm.fullscreen}><Icon name="fullscreen" /></button><button {...button} title={vm.labels.source} aria-label={vm.labels.source} aria-pressed={vm.showSource} onClick={() => vm.setShowSource(!vm.showSource)}><Icon name="source" /></button>
-  </Actions>;
+  const root = usePart('mockup', 'member'), layout = usePart('mockup', 'layout'), viewport = usePart('mockup', 'viewport'), spacer = usePart('mockup', 'spacer'), stage = usePart('mockup', 'stage'), canvas = usePart('mockup', 'canvas'), media = usePart('mockup', 'media'), skeleton = usePart('mockup', 'skeleton'), list = usePart('mockup', 'list'), input = usePart('mockup', 'input'), hint = usePart('mockup', 'hint'), live = usePart('mockup', 'live'), reticle = usePart('mockup', 'reticle'), stroke = usePart('mockup', 'stroke'), overall = usePart('mockup', 'overall');
+  const Row = useSlot('mockup', 'item', Item), EmptyState = useSlot('mockup', 'empty', Empty), Comment = useSlot('mockup', 'popover', Popover);
+  const tools = embedded ? undefined : <MockupToolbar vm={vm} />;
   return <div {...root} ref={vm.root} style={{ ...root.style, '--mockup-scale': vm.scale, '--mockup-inverse-scale': 1 / vm.scale } as CSSProperties} onKeyDown={vm.onKeyDown} data-device={vm.device} data-kind={vm.kind} data-embedded={embedded || undefined} data-state={vm.expanded ? 'expanded' : vm.submitted ? 'submitted' : vm.complete ? 'done' : 'streaming'}>
     <ComponentFrame component="mockup" title={embedded ? undefined : vm.title} label={vm.title} ask={!embedded} undo={false} state={vm.submitted ? 'submitted' : vm.complete ? 'done' : 'streaming'} toolbar={tools}>
-      {vm.showSource && <div {...source}><button {...button} onClick={vm.copy}>{vm.labels.copy}</button><pre>{vm.source}</pre></div>}
-      {!vm.submitted && <div {...toolbar}><button {...button} aria-pressed={vm.pen} onClick={() => vm.setPen(!vm.pen)}><Icon name="pen" />{vm.labels.draw}</button>{['var(--prism-accent)', 'var(--prism-danger)', 'var(--prism-success)', 'var(--prism-warning)'].map((color, i) => <button key={color} {...button} title={`${vm.labels.color} ${i + 1}`} aria-label={`${vm.labels.color} ${i + 1}`} aria-pressed={vm.color === color} onClick={() => vm.setColor(color)} style={{ ...button.style, color }}><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="currentColor" /></svg></button>)}</div>}
+      {!embedded && vm.showSource && <MockupSource vm={vm} />}
+      {!embedded && !vm.submitted && <MockupPenTools vm={vm} />}
       <div {...layout}><div {...viewport} ref={vm.viewport} style={{ ...viewport.style, maxHeight: vm.props.height ?? '70vh' }}>
-        <div {...spacer} style={{ ...spacer.style, width: vm.width * vm.scale, height: vm.contentHeight * vm.scale }}><div {...stage} style={{ ...stage.style, width: vm.width, height: vm.contentHeight, transform: `scale(${vm.scale})` }}>
+        <div {...spacer} style={{ ...spacer.style, width: vm.width * vm.scale, height: vm.framed ? Math.ceil(vm.contentHeight * vm.scale) : vm.contentHeight * vm.scale }}><div {...stage} style={{ ...stage.style, width: vm.width, height: vm.contentHeight, transform: `scale(${vm.scale})` }}>
           {!vm.visible ? <div {...skeleton} role="status" aria-label={vm.labels.loading} /> : <>
             {vm.framed ? <iframe {...media} ref={vm.iframe} title={vm.title} sandbox="allow-scripts" style={{ ...media.style, width: vm.width, height: vm.contentHeight }} /> : vm.kind === 'svg' ? <div {...media} ref={vm.graphic} dangerouslySetInnerHTML={{ __html: vm.svg }} /> : vm.imageSrc && !vm.imageError ? <img {...media} src={vm.imageSrc} alt={vm.title} loading="lazy" decoding="async" onLoad={event => vm.imageLoaded(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight)} onError={() => vm.setImageError(true)} /> : <div {...skeleton} role="status">{vm.source || vm.props.src ? vm.labels.imageError : vm.labels.loading}</div>}
             <div {...canvas} {...vm.pointer} tabIndex={0} role="application" aria-label={vm.labels.canvas} onKeyDown={vm.canvasKey} onFocus={() => vm.setFocused(true)} onBlur={() => vm.setFocused(false)} data-disabled={vm.submitted || undefined}>
@@ -57,10 +53,10 @@ export function MockupView({ vm, feedback = true, embedded = false }: { vm: Mock
           </>}
         </div></div>
       </div><div {...list}>{vm.state.items.length || vm.resolved.length ? [...vm.resolved, ...vm.state.items].map(item => <Row key={item.id} item={item as FeedbackItem} vm={vm} />) : <EmptyState vm={vm} />}</div></div>
-      {feedback && (vm.submitted ? <div {...footer} role="status">{vm.labels.sent.replace('{n}', String(vm.feedback.toPayload().items.length))}<button {...button} onClick={() => vm.setSubmitted(false)}>{vm.labels.editFeedback}</button></div> : <>
-        <label {...overall}>{vm.labels.overall}<textarea {...input} value={vm.state.overall} onChange={event => vm.feedback.setOverall(event.target.value)} /></label>
-        <div {...footer}><button {...button} disabled={!vm.feedback.canUndo} onClick={() => { vm.close(); vm.feedback.undo(); }}><Icon name="undo" />{vm.labels.undo}</button><button {...button} disabled={!vm.feedback.canRedo} onClick={() => { vm.close(); vm.feedback.redo(); }}><Icon name="redo" />{vm.labels.redo}</button><span>{vm.labels.count.replace('{n}', String(vm.state.items.length))}</span><button {...primary} disabled={!vm.feedback.canSubmit} onClick={vm.submit}>{vm.labels.submit}</button></div>
-      </>)}
+      {feedback && <>
+        {!vm.submitted && <label {...overall}>{vm.labels.overall}<textarea {...input} value={vm.state.overall} onChange={event => vm.feedback.setOverall(event.target.value)} /></label>}
+        <MockupFooter labels={vm.labels} locale={vm.locale} count={vm.submitted ? vm.feedback.toPayload().items.length : vm.state.items.length} submitted={vm.submitted} edit={() => vm.setSubmitted(false)} canUndo={vm.feedback.canUndo} canRedo={vm.feedback.canRedo} undo={() => { vm.close(); vm.feedback.undo(); }} redo={() => { vm.close(); vm.feedback.redo(); }} canSubmit={vm.canSubmit} submit={vm.submit} />
+      </>}
       <span {...live} aria-live="polite">{vm.announcement}</span>
     </ComponentFrame>
   </div>;

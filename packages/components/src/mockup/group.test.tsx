@@ -33,6 +33,29 @@ test('two streamed blocks form one switcher; tabs switch and compare shows both 
   fireEvent.click(x.view.getByRole('tab', { name: 'B' })); expect(x.view.getByRole('tab', { name: 'B' }).getAttribute('aria-selected')).toBe('true'); expect(x.view.container.querySelectorAll('iframe')).toHaveLength(1);
   fireEvent.click(x.view.getByRole('tab', { name: 'Compare' })); expect(x.view.getAllByRole('application')).toHaveLength(2); expect(x.view.container.querySelectorAll('iframe')).toHaveLength(2); expect(x.view.getAllByRole('textbox', { name: 'Overall feedback' })).toHaveLength(1); expect(x.view.getAllByText('Submit feedback')).toHaveLength(1);
 });
+test('compare has one shared toolbar, propagates controls, and saves pending drafts on submit', () => {
+  const x = setup(a + b + '</h1>\n```', true);
+  fireEvent.click(x.view.getByRole('tab', { name: 'Compare' }));
+  expect(x.view.getAllByRole('button', { name: 'Draw' })).toHaveLength(1);
+  expect(x.view.getAllByRole('button', { name: 'Mobile' })).toHaveLength(1);
+  fireEvent.click(x.view.getByRole('button', { name: 'Mobile' }));
+  expect(Array.from(x.view.container.querySelectorAll('iframe')).map(frame => frame.style.width)).toEqual(['390px', '390px']);
+  fireEvent.click(x.view.getByRole('button', { name: 'Zoom in' }));
+  expect(Array.from(x.view.container.querySelectorAll('.prism-mockup__stage')).map(stage => (stage as HTMLElement).style.transform)).toEqual(['scale(1.25)', 'scale(1.25)']);
+  fireEvent.click(x.view.getByRole('button', { name: 'Draw' }));
+  expect(x.view.getByRole('button', { name: 'Draw' }).getAttribute('aria-pressed')).toBe('true');
+  fireEvent.click(x.view.getByRole('button', { name: 'Prefer this B' }));
+  expect(x.view.getByRole('button', { name: 'Prefer this B' }).querySelector('svg')).not.toBeNull();
+  fireEvent.click(x.view.getByRole('button', { name: 'Prefer this B' }));
+  fireEvent.keyDown(x.view.getAllByRole('application')[1], { key: 'Enter' });
+  x.change(x.view.getByRole('textbox', { name: 'Add a comment…' }), 'Pending B draft');
+  expect((x.view.getByText('Submit feedback') as HTMLButtonElement).disabled).toBe(false);
+  expect(x.view.getByText('1 comment')).toBeDefined();
+  expect(x.view.getByRole('button', { name: 'Undo' }).querySelector('svg')).not.toBeNull();
+  fireEvent.click(x.view.getByText('Submit feedback'));
+  expect((x.actions[0].payload as any).variants).toEqual([{ variant: 'B', items: [{ n: 1, kind: 'pin', x: 50, y: 50, comment: 'Pending B draft' }] }]);
+  expect(x.view.getByText('Feedback sent · 1 comment')).toBeDefined();
+});
 test('group payload includes all commented variants, shared overall and preference exactly', () => {
   const x = setup(a + b + '</h1>\n```', true);
   expect((x.view.getByText('Submit feedback') as HTMLButtonElement).disabled).toBe(true);

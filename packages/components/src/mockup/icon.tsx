@@ -1,4 +1,5 @@
 const paths = {
+  check: 'm5 12 4 4L19 6',
   desktop: 'M3 4h18v12H3zM8 21h8M12 16v5', tablet: 'M5 2h14v20H5zM11 18h2', mobile: 'M7 2h10v20H7zM11 18h2',
   minus: 'M5 12h14', plus: 'M5 12h14M12 5v14', fullscreen: 'M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5',
   source: 'm8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16', pen: 'm15 4 5 5M4 16 16 4a2.1 2.1 0 0 1 3 3L7 19l-4 1z',
