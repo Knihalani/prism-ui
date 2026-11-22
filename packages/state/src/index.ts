@@ -2,6 +2,7 @@ export { compile, evaluate, FormulaError } from './formula';
 export type { Scope, Formula } from './formula';
 export type Adapter = { load(namespace: string): object | Promise<object>; save(namespace: string, data: object): void };
 export type Patch = { set?: Record<string, unknown>; merge?: Record<string, unknown>; delete?: string[] };
+export type WriteOptions = { history?: boolean };
 const safe = (key: string) => !['__proto__', 'prototype', 'constructor'].includes(key);
 const plain = (v: any) => v && Object.getPrototypeOf(v) === Object.prototype;
 function clean(v: any): any {
@@ -28,50 +29,58 @@ function merge(a: any, b: any): any {
   for (const k of Object.keys(b)) out = write(out, [k], plain(b[k]) ? merge(out?.[k], b[k]) : b[k]);
   return out;
 }
+function changedPaths(previous: any, next: any, paths: Set<string>, path = '') {
+  if (Object.is(previous, next)) return;
+  if ((plain(previous) && plain(next)) || (Array.isArray(previous) && Array.isArray(next))) {
+    for (const key of new Set([...Object.keys(previous), ...Object.keys(next)])) changedPaths(previous[key], next[key], paths, path ? path + '.' + key : key);
+  } else if (path) paths.add(path);
+}
 export function createStore({ persist, namespace = '', initial = {} }: { persist?: Adapter; namespace?: string; initial?: Record<string, unknown> } = {}) {
-  let state = clean(initial), depth = 0, before = state, loading = false;
+  let state = clean(initial), depth = 0, before = state, loading = false, recordHistory = false, historyDisabled = 0;
   const pending = new Set<string>();
   const past: any[] = [], future: any[] = [], changed = new Set<string>();
   const listeners = new Map<string, Set<() => void>>();
-  function flush(history = true) {
+  function flush(history = recordHistory) {
     if (!changed.size) return;
     const paths = [...changed], previous = before;
     if (history) { past.push({ state: before, paths }); if (past.length > 100) past.shift(); future.length = 0; }
-    changed.clear(); before = state;
+    changed.clear(); before = state; recordHistory = false;
     if (loading) paths.forEach(path => pending.add(path));
     else persist?.save(namespace, copy(state));
     for (const [path, fns] of listeners) if (paths.some(p => path === '*' || p === path || p.startsWith(path + '.') || path.startsWith(p + '.')) || (path.endsWith('.length') && !Object.is(read(previous, path.split('.')), store.get(path)))) for (const fn of [...fns]) fn();
   }
-  function change(path: string, value: unknown, remove = false) {
+  function change(path: string, value: unknown, remove = false, options: WriteOptions = {}) {
     const keys = path.split('.');
     if (!keys.every(safe)) return;
     const next = write(state, keys, value, remove);
     if (next === state) return;
-    state = next; changed.add(path);
+    state = next; changed.add(path); recordHistory ||= options.history !== false && historyDisabled === 0;
     if (!depth) flush();
   }
   const store = {
     get(path?: string): any { return path === undefined ? state : read(state, path.split('.')); },
-    set(path: string, value: unknown) { if (!Object.is(store.get(path), value)) change(path, value && typeof value === 'object' ? clean(value) : value); },
-    update(path: string, fn: (value: any) => unknown) { const old = store.get(path), next = fn(old); if (!Object.is(old, next)) store.set(path, next); },
+    set(path: string, value: unknown, options: WriteOptions = {}) { if (!Object.is(store.get(path), value)) change(path, value && typeof value === 'object' ? clean(value) : value, false, options); },
+    update(path: string, fn: (value: any) => unknown, options: WriteOptions = {}) { const old = store.get(path), next = fn(old); if (!Object.is(old, next)) store.set(path, next, options); },
     subscribe(path: string, fn: () => void) { let set = listeners.get(path); if (!set) listeners.set(path, set = new Set()); set.add(fn); return () => { set.delete(fn); }; },
-    batch(fn: () => void) { depth++; try { fn(); } finally { if (!--depth) flush(); } },
+    batch(fn: () => void, options: WriteOptions = {}) { depth++; if (options.history === false) historyDisabled++; try { fn(); } finally { if (options.history === false) historyDisabled--; if (!--depth) flush(); } },
     undo() { travel(past, future); },
     redo() { travel(future, past); },
     get canUndo() { return !!past.length; },
     get canRedo() { return !!future.length; },
-    apply(patch: Patch) { if (!plain(patch)) return; store.batch(() => {
+    apply(patch: Patch, options: WriteOptions = {}) { if (!plain(patch)) return; store.batch(() => {
       for (const [p, v] of Object.entries(plain(patch.set) ? patch.set! : {})) store.set(p, v);
       for (const [p, v] of Object.entries(plain(patch.merge) ? patch.merge! : {})) change(p, merge(store.get(p), clean(v)));
       for (const p of Array.isArray(patch.delete) ? patch.delete : []) if (typeof p === 'string') change(p, undefined, true);
-    }); },
+    }, options); },
     snapshot() { return copy(state); },
     ready: Promise.resolve(),
   };
   function travel(from: any[], to: any[]) {
     if (depth || !from.length) return;
-    const step = from.pop(); to.push({ state, paths: step.paths }); state = step.state;
-    for (const p of step.paths) changed.add(p);
+    const step = from.pop(), paths = new Set<string>(step.paths);
+    changedPaths(state, step.state, paths);
+    to.push({ state, paths: [...paths] }); state = step.state;
+    for (const p of paths) changed.add(p);
     flush(false);
   }
   function hydrated() {

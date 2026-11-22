@@ -84,7 +84,8 @@ test('one click and undo restore both quantity and total, with live calc updates
   expect(view.store.get('quote.items.seats.qty')).toBe(4); expect(view.store.get('quote.total')).toBe(90); expect(view.getByText('$1,080.00')).toBeDefined();
   act(() => view.store.undo());
   expect(view.store.get('quote.items.seats.qty')).toBe(3); expect(view.store.get('quote.total')).toBe(70); expect(view.getByText('$840.00')).toBeDefined();
-  act(() => view.store.redo()); expect(view.store.get('quote.total')).toBe(90);
+  expect(view.store.canUndo).toBe(false); expect(view.store.canRedo).toBe(true);
+  act(() => view.store.redo()); expect(view.store.get('quote.items.seats.qty')).toBe(4); expect(view.store.get('quote.subtotal')).toBe(90); expect(view.store.get('quote.total')).toBe(90);
 });
 
 test('optional checkbox updates atomically and excludes disabled items from use', () => {
@@ -114,6 +115,41 @@ test('num writes drive the estimate row and external stale totals reconcile', ()
   expect((view.getByRole('spinbutton', { name: 'Seats' }) as HTMLInputElement).value).toBe('4'); expect(view.store.get('quote.total')).toBe(90);
   act(() => view.store.batch(() => { view.store.set('quote.items.seats.qty', 6); view.store.set('quote.total', -1); }));
   expect(view.store.get('quote.subtotal')).toBe(130); expect(view.store.get('quote.total')).toBe(130);
+});
+
+test('external num edits and derived estimate values undo and redo together', () => {
+  const view = setup({}, ':num[3]{id=quote.items.seats.qty} :calc[quote.total * 12]');
+  const slider = view.getByRole('slider');
+  const input = view.getByRole('spinbutton', { name: 'Seats' }) as HTMLInputElement;
+  expect(view.store.canUndo).toBe(false);
+  expect(view.store.get('quote.total')).toBe(70);
+  fireEvent.keyDown(slider, { key: 'ArrowUp' });
+  expect(input.value).toBe('4'); expect(view.store.get('quote.subtotal')).toBe(90); expect(view.store.get('quote.total')).toBe(90);
+  expect(view.getByText('1,080')).toBeDefined();
+  act(() => view.store.undo());
+  expect(input.value).toBe('3'); expect(slider.textContent).toBe('3');
+  expect(view.store.get('quote.subtotal')).toBe(70); expect(view.store.get('quote.total')).toBe(70);
+  expect(view.getByText('840')).toBeDefined(); expect(view.store.canUndo).toBe(false); expect(view.store.canRedo).toBe(true);
+  act(() => view.store.redo());
+  expect(input.value).toBe('4'); expect(slider.textContent).toBe('4');
+  expect(view.store.get('quote.subtotal')).toBe(90); expect(view.store.get('quote.total')).toBe(90);
+  expect(view.getByText('1,080')).toBeDefined(); expect(view.store.canRedo).toBe(false);
+  act(() => view.store.undo()); act(() => view.store.redo());
+  expect(view.store.get('quote.total')).toBe(90);
+});
+
+test('estimate reconciliation after history travel preserves redo', () => {
+  const store = createStore({ initial: { quote: { items: { seats: { qty: 3 } }, subtotal: 0, total: 0 } } });
+  const view = render(<Prism source={source({ items: [items[0]] })} store={store} animate={false} />);
+  expect(store.get('quote.total')).toBe(60); expect(store.canUndo).toBe(false);
+  act(() => store.set('quote.items.seats.qty', 4));
+  expect(store.get('quote.total')).toBe(80);
+  view.rerender(<Prism source={source({ items: [{ ...items[0], price: 30 }] })} store={store} animate={false} />);
+  expect(store.get('quote.total')).toBe(120);
+  act(() => store.undo());
+  expect(store.get('quote.items.seats.qty')).toBe(3); expect(store.get('quote.total')).toBe(90); expect(store.canRedo).toBe(true);
+  act(() => store.redo());
+  expect(store.get('quote.items.seats.qty')).toBe(4); expect(store.get('quote.total')).toBe(120);
 });
 
 test('streaming partial price uses a skeleton with totals throughout; empty is safe', () => {
