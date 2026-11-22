@@ -4,6 +4,7 @@ import type { Node } from '@prism-ui/core';
 import type { Registry, ComponentDef } from './registry';
 import type { Theme } from './theme';
 import type { Format } from './format';
+import type { Receipt } from './presentation';
 
 export interface Action {
   type: string; component: string; id: string; payload: unknown;
@@ -15,13 +16,16 @@ export type Slots = Record<string, Record<string, ComponentType<any>>>;
 export type ClassNames = Record<string, Record<string, string>>;
 export type Styles = Record<string, Record<string, CSSProperties>>;
 export interface PrismContextValue {
-  registry: Registry; components: Components; store: Store; emit(action: Action): void;
+  registry: Registry; components: Components; store: Store; emit(action: Action, delivered?: (action: Action) => void): void;
   theme: Theme; unstyled: boolean; slots: Slots; classNames: ClassNames; styles: Styles; format: Format; animate: boolean;
   applied: Set<string>;
   scope: string;
 }
 export const PrismContext = createContext<PrismContextValue | null>(null);
-export const ComponentContext = createContext<{ name: string; id: string; props: Record<string, unknown>; node: Node; def?: ComponentDef } | null>(null);
+export const ComponentContext = createContext<{
+  name: string; id: string; props: Record<string, unknown>; node: Node; def?: ComponentDef;
+  settled?: boolean; receipt?: Receipt;
+} | null>(null);
 export function usePrism(): PrismContextValue {
   const value = useContext(PrismContext); if (!value) throw Error('Prism provider required'); return value;
 }
