@@ -37,7 +37,7 @@ test('static inline pills have accessible parts and format live shared values', 
   expect(slider.getAttribute('aria-valuetext')).toBe('$1,200.00');
   expect(slider.className).toBe('prism-num__root');
   expect(view.getByText('$14,400.00').getAttribute('aria-live')).toBeNull();
-  expect(view.getByText('$14,400.00').getAttribute('aria-label')).toBe('$14,400.00');
+  expect(view.container.querySelector('[data-prism="calc"]')?.getAttribute('aria-label')).toBe('$14,400.00');
   fireEvent.keyDown(slider, { key: 'ArrowUp' });
   expect(view.store.get('rent')).toBe(1250); expect(view.getByText('$15,000.00')).toBeDefined();
   expect(changes(view.actions)).toEqual([{ type: 'change', payload: { id: 'rent', value: 1250, previous: 1200 } }]);
@@ -49,7 +49,7 @@ test('streaming truncated input stays stable and initializes once available', ()
   const view = render(<Prism scope="test" source=":num[" done={false} store={store} animate={false} />);
   expect(store.snapshot()).toEqual({});
   view.rerender(<Prism scope="test" source=":num[]{id=rent}" done={false} store={store} animate={false} />);
-  expect(view.getByRole('slider').getAttribute('data-state')).toBe('loading'); expect(store.get('rent')).toBeUndefined();
+  expect(view.getByRole('slider').getAttribute('data-state')).toBe('streaming'); expect(store.get('rent')).toBeUndefined();
   view.rerender(<Prism scope="test" source=":num[12]{id=rent} :calc[rent*" done={false} store={store} animate={false} />);
   expect(view.getByRole('slider').textContent).toBe('12'); expect(store.get('test:num:0:0')).toBe(12); expect(store.get('rent')).toBeUndefined();
   view.rerender(<Prism scope="test" source=":num[12]{id=rent} :calc[rent*12] " done={false} store={store} animate={false} />);
@@ -114,33 +114,18 @@ test('scrub hints track bounded shift drags and a stationary click still edits',
   expect(view.getByRole('spinbutton')).toBeDefined();
 });
 
-test('calc flashes only after a valid update and respects animate and reduced motion', () => {
-  const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'animate');
-  const media = Object.getOwnPropertyDescriptor(window, 'matchMedia');
-  const flashes: KeyframeAnimationOptions[] = [];
-  Object.defineProperty(HTMLElement.prototype, 'animate', { configurable: true, value: (_frames: Keyframe[], options: KeyframeAnimationOptions) => { flashes.push(options); return { cancel() {} }; } });
-  try {
-    const store = createStore({ initial: { n: 2 } });
-    const view = render(<Prism source=":calc[n*2]" store={store} animate />);
-    expect(flashes.length).toBe(0);
-    act(() => store.set('n', 3));
-    expect(flashes.map(item => item.duration)).toEqual([600]);
-    view.rerender(<Prism source=":calc[n*2]" store={store} animate={false} />);
-    act(() => store.set('n', 4));
-    expect(flashes.length).toBe(1);
-    Object.defineProperty(window, 'matchMedia', { configurable: true, value: () => ({ matches: true }) });
-    view.rerender(<Prism source=":calc[n*2]" store={store} animate />);
-    act(() => store.set('n', 5));
-    expect(flashes.length).toBe(1);
-    expect(view.getByText('10')).toBeDefined();
-    act(() => store.set('n', NaN));
-    expect(flashes.length).toBe(1);
-    expect(view.getByText('—')).toBeDefined();
-    view.unmount();
-  } finally {
-    if (descriptor) Object.defineProperty(HTMLElement.prototype, 'animate', descriptor); else Reflect.deleteProperty(HTMLElement.prototype, 'animate');
-    if (media) Object.defineProperty(window, 'matchMedia', media); else Reflect.deleteProperty(window, 'matchMedia');
-  }
+test('calc uses external dependency highlights, with immediate motion-disabled and invalid results', () => {
+  const store = createStore({ initial: { n: 2, other: 9 } });
+  const view = render(<Prism source=":calc[n*2]" store={store} animate={false} />);
+  expect(view.container.querySelector('[data-prism-flash]')).toBeNull();
+  act(() => store.set('other', 10));
+  expect(view.container.querySelector('[data-prism-flash]')).toBeNull();
+  act(() => store.set('n', 3));
+  expect(view.container.querySelector('[data-prism-flash]')).toBeTruthy();
+  expect(view.getByText('6')).toBeDefined();
+  act(() => store.set('n', NaN));
+  expect(view.container.querySelector('[data-prism-flash]')).toBeNull();
+  expect(view.getByText('—')).toBeDefined();
 });
 
 test('calc rebuilds emphasis formulas, handles NaN, and never writes to store', () => {

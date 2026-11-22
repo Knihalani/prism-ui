@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useComponentState, useEmit, type PrismContextValue } from '@prism-ui/react';
+import { useComponentState, useEmit, useSent, type PrismContextValue } from '@prism-ui/react';
 import { s } from '@prism-ui/schema';
 import { arcLabel, arcPath, areaPath, barPath, createExtentTracker, createStableDomain, linePath, niceTicks, pie, pivotLongToWide, pivotWideToLong, placeLabels, relaxPieLabels, scaleBand, scaleLinear, stack, thinAxisLabels, type DataRow, type Point } from '../lib/chart';
 import { format } from '../lib/format';
@@ -43,6 +43,7 @@ export function useChart(inputProps: ChartProps, ctx: PrismContextValue, width =
   const props = useMemo(() => streamProps(inputProps), [inputProps]);
   const [pivot, setPivot] = useComponentState('pivot', -1), [hidden, setHidden] = useComponentState<string[]>('hidden', []);
   const [interaction, setInteraction] = useState<{ index: number; series: number } | null>(null), emit = useEmit();
+  const { sent, send, reset } = useSent();
   const input = useMemo(() => (props.data ?? empty).filter(row => row && typeof row === 'object' && !Array.isArray(row)), [props.data]);
   const activePivot = props.pivots?.[pivot], type = activePivot?.type ?? props.type ?? 'line';
   const x = activePivot?.x ?? props.x ?? Object.keys(input[0] ?? {}).find(key => typeof input[0][key] !== 'number') ?? 'x';
@@ -119,19 +120,23 @@ export function useChart(inputProps: ChartProps, ctx: PrismContextValue, width =
     return { width, height, type, domain, displayDomain, hasValues: !!targetDomain, left, right, top, bottom, xs, yScale, layers, ticks, labels, annotations, slices, pieLabels, cx, cy, total: slices.reduce((sum, slice) => sum + slice.value, 0) };
   }, [data, shown, series, type, props.stacked, props.curve, props.annotations, props.complete, domains, width, height, x, valueFormat, targetDomain, displayDomain]);
   const annotated = props.annotations?.map(annotation => data.findIndex(row => String(row[x]) === String(annotation.x))).find(index => index >= 0) ?? (props.insight && data.length ? 0 : -1);
-  const activeIndex = data.length ? Math.max(0, Math.min(data.length - 1, interaction?.index ?? (annotated >= 0 ? annotated : 0))) : -1;
-  const activeSeries = type === 'pie' ? 0 : Math.max(0, Math.min(shown.length - 1, interaction?.series ?? 0));
-  const active = interaction || annotated >= 0 ? { index: activeIndex, series: activeSeries } : null;
+  const selection = sent?.payload as ChartSelectPayload | undefined;
+  const confirmedIndex = selection ? data.findIndex((row, index) => (row[x] ?? index) === selection.x) : -1;
+  const confirmedSeries = selection ? shown.findIndex(series => series.key === selection.series) : -1;
+  const confirmed = confirmedIndex >= 0 && confirmedSeries >= 0 ? { index: confirmedIndex, series: confirmedSeries } : null;
+  const activeIndex = data.length ? Math.max(0, Math.min(data.length - 1, interaction?.index ?? confirmed?.index ?? (annotated >= 0 ? annotated : 0))) : -1;
+  const activeSeries = type === 'pie' ? 0 : Math.max(0, Math.min(shown.length - 1, interaction?.series ?? confirmed?.series ?? 0));
+  const active = interaction || confirmed || annotated >= 0 ? { index: activeIndex, series: activeSeries } : null;
   const selectPoint = (index: number, seriesIndex: number) => {
     const row = data[index], item = shown[seriesIndex]; if (!row || !item) return;
     const payload: ChartSelectPayload = { x: row[x] ?? index, series: item.key, value: number(row[item.key]) };
-    emit('select', payload);
+    send('select', payload);
   };
-  return { geometry, type, x, series, shown, data, pivot, hidden, active, activeIndex, activeSeries, valueFormat, userActive: interaction !== null,
+  return { geometry, type, x, series, shown, data, pivot, hidden, active, activeIndex, activeSeries, valueFormat, userActive: interaction !== null, confirmed: !!confirmed && confirmed.index === activeIndex && confirmed.series === activeSeries,
     answer: !!(props.insight || props.annotations?.length || props.pivots?.length),
     activate: setInteraction, selectPoint,
     toggleSeries(key: string) { if (!shown.some(item => item.key === key) || shown.length > 1) setHidden(old => old.includes(key) ? old.filter(value => value !== key) : [...old, key]); },
-    choosePivot(index: number) { const item = props.pivots?.[index]; if (!item) return; setPivot(index); setInteraction(null); const payload: ChartPivotPayload = { pivot: index, label: item.label }; emit('pivot', payload); },
+    choosePivot(index: number) { const item = props.pivots?.[index]; if (!item) return; setPivot(index); setInteraction(null); reset(); const payload: ChartPivotPayload = { pivot: index, label: item.label }; emit('pivot', payload); },
     announcement: active && activeIndex >= 0 ? `${String(data[activeIndex][x] ?? activeIndex + 1)}. ${shown.map(item => `${item.label}: ${valueFormat(number(data[activeIndex][item.key]))}`).join('. ')}` : '',
   };
 }

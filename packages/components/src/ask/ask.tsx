@@ -1,7 +1,8 @@
-import { useContext, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode } from 'react';
+import { useContext, useEffect, useId, useMemo, useRef, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode } from 'react';
 import { s } from '@prism-ui/schema';
-import { ComponentContext, cx, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, useSlot, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
+import { ComponentContext, cx, defineComponent, registerComponent, useComponentState, useFlash, useFormat, useLocalWrite, usePart, usePresentation, usePrism, useSent, useSettled, useSlot, StreamSkeleton, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
+import { ActionCheck, useValueTween } from '../num/integration';
 
 export type AskValue = string | number | boolean | null;
 export interface AskField { id?: string; label?: string; type?: 'text' | 'number' | 'select' | 'date' | 'toggle' | 'textarea'; options?: (string | { value: string; label: string })[]; value?: AskValue; required?: boolean; hint?: string; placeholder?: string; min?: number; max?: number; step?: number; unit?: string }
@@ -25,14 +26,16 @@ function formatted(field: AskField, value: AskValue, format: Format, labels: typ
 }
 function sentence(title: unknown, fields: AskField[], values: Record<string, AskValue>, display: (field: AskField, value: AskValue) => string) { return `Here are the details for "${title ?? 'Details'}": ${fields.filter(field => field.id).map(field => `${field.label ?? field.id}: ${display(field, values[field.id!] ?? null)}`).join(', ')}.`; }
 export function useAsk(props: AskProps, ctx: PrismContextValue) {
-  const component = useContext(ComponentContext), format = useFormat(), emit = useEmit();
+  const format = useFormat(), { sent, send, reset } = useSent(), localWrite = useLocalWrite();
   const fields = useMemo(() => { const seen = new Set<string>(); return (props.fields ?? []).filter(field => !field.id || (!seen.has(field.id) && !!seen.add(field.id))); }, [props.fields]);
-  const [values, setValues] = useComponentState<Record<string, AskValue>>('values', {}), [touched, setTouched] = useComponentState<Record<string, boolean>>('touched', {}), [submitted, setSubmitted] = useComponentState('submitted', false);
+  const [values, setValues] = useComponentState<Record<string, AskValue>>('values', {}), [touched, setTouched] = useComponentState<Record<string, boolean>>('touched', {});
   const labels = useMemo(() => ({ ...defaults, ...props.labels }), [props.labels]);
   const current = useMemo<Record<string, AskValue>>(() => Object.fromEntries(fields.filter(field => field.id).map(field => [field.id!, normalize(field, Object.hasOwn(values, field.id!) ? values[field.id!] : field.value)])), [fields, values]);
   const inline = fields.every(inlineField);
+  const receiptValues = (sent?.payload as { values?: Record<string, AskValue> } | undefined)?.values;
   const controls = useRef(new Map<string, HTMLElement>());
-  const complete = component?.node.complete !== false;
+  const complete = useSettled(), submitted = !!sent, version = JSON.stringify(current);
+  useEffect(reset, [version, reset]);
   const errors = useMemo(() => Object.fromEntries(fields.filter(field => field.id).map(field => {
     const value = current[field.id!]; let error = '';
     if (field.required && (value === null || (typeof value === 'string' && !value.trim()))) error = labels.required;
@@ -46,21 +49,21 @@ export function useAsk(props: AskProps, ctx: PrismContextValue) {
     }
     return [field.id!, error];
   })), [fields, current, labels, format]);
-  function change(id: string, value: AskValue) { ctx.store.batch(() => { setValues(old => ({ ...old, [id]: value })); setSubmitted(false); }); }
+  function change(id: string, value: AskValue) { localWrite(() => ctx.store.batch(() => { setValues(old => ({ ...old, [id]: value })); reset(); })); }
   function blur(id: string) { setTouched(old => ({ ...old, [id]: true })); }
   function submit() {
     if (!complete || !fields.length || fields.some(field => !field.id || !field.label || !field.type)) return;
     setTouched(Object.fromEntries(fields.map(field => [field.id!, true])));
     const invalid = fields.find(field => errors[field.id!]);
     if (invalid) { controls.current.get(invalid.id!)?.focus(); return; }
-    ctx.store.batch(() => { setValues(current); setSubmitted(true); });
-    emit('submit', { values: current }, sentence(props.title ?? labels.title, fields, current, (field, value) => formatted(field, value, format, labels)));
+    setValues(current);
+    send('submit', { values: current }, sentence(props.title ?? labels.title, fields, current, (field, value) => formatted(field, value, format, labels)));
   }
-  return { fields, inline, values: current, touched, submitted, labels, errors, controls, complete, title: props.title ?? labels.title, submitLabel: props.submit ?? labels.send,
+  return { fields, inline, receiptValues, values: current, touched, submitted, labels, errors, controls, complete, title: props.title ?? labels.title, submitLabel: props.submit ?? labels.send,
     canSubmit: complete && fields.length > 0 && fields.every(field => field.id && field.label && field.type),
     suggested(field: AskField) { return field.value !== undefined && field.value !== null && !Object.hasOwn(values, field.id ?? ''); },
     loading(index: number) { return !complete && (index === fields.length - 1 || !fields[index]?.type || !fields[index]?.id); },
-    change, blur, submit, edit() { setSubmitted(false); },
+    change, blur, submit, edit() { reset(); },
     display(field: AskField) { return formatted(field, current[field.id ?? ''] ?? null, format, labels); },
     onKeyDown(event: KeyboardEvent<HTMLElement>) {
       const element = event.target as HTMLElement;
@@ -71,38 +74,21 @@ export function useAsk(props: AskProps, ctx: PrismContextValue) {
 }
 type Model = ReturnType<typeof useAsk>;
 function Box(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
-function Empty({ label }: { label: string }) { const root = usePart('ask', 'empty'), part = usePart('ask', 'skeleton'); return <div {...root} role="status" aria-label={label}><div {...part} /></div>; }
+function Empty({ label }: { label: string }) { const root = usePart('ask', 'empty'), part = usePart('ask', 'skeleton'); return <div {...root} role="status" aria-label={label}><StreamSkeleton><span {...part} data-prism-skeleton-line="" /></StreamSkeleton></div>; }
 function Field({ field, index, vm, embedded = false }: { field: AskField; index: number; vm: Model; embedded?: boolean }) {
-  const ctx = usePrism(), element = useRef<HTMLElement | null>(null), local = useRef<AskValue | undefined>(undefined);
-  const [display, setDisplay] = useState<number | null>(null);
+  const ctx = usePrism(), element = useRef<HTMLElement | null>(null);
   const unique = useId(), id = `ask-${unique}`, errorId = `${id}-error`, hintId = `${id}-hint`;
   const root = usePart('ask', 'field', vm.loading(index) ? 'loading' : undefined), label = usePart('ask', 'label', field.label ? undefined : 'loading'), required = usePart('ask', 'required'), suggested = usePart('ask', 'suggested'), control = usePart('ask', 'control'), hint = usePart('ask', 'hint'), errorPart = usePart('ask', 'error'), skeleton = usePart('ask', 'skeleton'), unit = usePart('ask', 'unit'), wrap = usePart('ask', 'inputWrap'), segments = usePart('ask', 'segments'), segment = usePart('ask', 'segment'), switchPart = usePart('ask', 'switch'), thumb = usePart('ask', 'thumb'), optionPart = usePart('ask', 'option');
   const key = field.id ?? '', value = vm.values[key] ?? null, error = vm.touched[key] ? vm.errors[key] : '';
-  const previous = useRef(value);
-  useEffect(() => {
-    const from = previous.current, changed = !Object.is(from, value), user = Object.is(local.current, value);
-    previous.current = value; local.current = undefined;
-    const node = element.current;
-    if (!changed || user || !vm.complete || !ctx.animate || !node?.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || node.closest('.prism-root[data-animate="false"]')) { setDisplay(null); return; }
-    const fill = getComputedStyle(node).getPropertyValue('--prism-accent-soft').trim() || 'color-mix(in oklab, currentColor 8%, transparent)';
-    const animation = node.animate([{ backgroundColor: fill, transform: 'translateY(2px)' }, { backgroundColor: 'transparent', transform: 'translateY(0)' }], { duration: 600, easing: 'ease-out' });
-    animation.finished?.catch(() => {});
-    let frame = 0;
-    if (typeof from === 'number' && typeof value === 'number' && document.activeElement !== node && typeof requestAnimationFrame === 'function') {
-      const began = performance.now(), integers = Number.isInteger(from) && Number.isInteger(value);
-      setDisplay(from);
-      const tick = (now: number) => {
-        const progress = Math.min(1, (now - began) / 250), next = from + (value - from) * (1 - (1 - progress) ** 3);
-        setDisplay(progress === 1 ? null : integers ? Math.round(next) : Number(next.toFixed(2)));
-        if (progress < 1) frame = requestAnimationFrame(tick);
-      };
-      frame = requestAnimationFrame(tick);
-    }
-    return () => { animation.cancel(); cancelAnimationFrame(frame); };
-  }, [value, vm.complete, ctx.animate]);
-  function change(value: AskValue) { local.current = value; setDisplay(null); vm.change(key, value); }
+  const component = useContext(ComponentContext), raw = (component?.node.props?.fields as { id?: string; value?: unknown }[] | undefined)?.find(item => item.id === key)?.value;
+  const bound = raw && typeof raw === 'object' && '$ref' in raw && typeof raw.$ref === 'string' ? raw.$ref : undefined;
+  const ownFlash = useFlash(`${component?.id}.values.${key}`), boundFlash = useFlash(bound ?? `${component?.id}.values.${key}`);
+  const flash = ownFlash || (vm.suggested(field) && boundFlash);
+  const number = useValueTween(typeof value === 'number' ? value : NaN, ctx.animate && flash && document.activeElement !== element.current, element);
+  const display = typeof value === 'number' && flash ? Number.isInteger(value) ? Math.round(number) : number : null;
+  function change(value: AskValue) { vm.change(key, value); }
   const width = Math.min(30, Math.max(field.type === 'number' ? 3 : 8, String(value ?? field.placeholder ?? field.label ?? '').length + 1));
-  const attrs = { id, title: vm.suggested(field) ? vm.labels.suggested : undefined, 'aria-description': vm.suggested(field) ? vm.labels.suggested : undefined, style: { ...control.style, '--ask-width': `${width}ch` } as CSSProperties, 'aria-required': field.required || undefined, 'aria-invalid': !!error, 'aria-describedby': [field.hint && hintId, error && errorId].filter(Boolean).join(' ') || undefined, 'aria-labelledby': `${id}-label` };
+  const attrs = { id, 'data-prism-flash': flash ? '' : undefined, title: vm.suggested(field) ? vm.labels.suggested : undefined, 'aria-description': vm.suggested(field) ? vm.labels.suggested : undefined, style: { ...control.style, '--ask-width': `${width}ch` } as CSSProperties, 'aria-required': field.required || undefined, 'aria-invalid': !!error, 'aria-describedby': [field.hint && hintId, error && errorId].filter(Boolean).join(' ') || undefined, 'aria-labelledby': `${id}-label` };
   const options = field.options?.map(option => typeof option === 'string' ? { value: option, label: option } : option) ?? [];
   const smallSelect = !vm.inline && field.type === 'select' && options.length > 0 && options.length <= 4;
   const ref = (node: HTMLElement | null) => { element.current = node; if (node) vm.controls.current.set(key, node); else vm.controls.current.delete(key); };
@@ -122,12 +108,12 @@ function Field({ field, index, vm, embedded = false }: { field: AskField; index:
   const inline = inlineField(field), Root = inline ? 'span' : 'div', Wrap = inline ? 'span' : 'div', Text = inline ? 'span' : 'div';
   return <Root {...root} style={{ ...root.style, '--ask-index': index, '--ask-width': `${field.type ? width : 4}ch` } as CSSProperties} aria-hidden={vm.loading(index) || undefined} inert={vm.loading(index) || undefined} data-embedded={embedded || undefined} data-type={field.type} data-wide={field.type === 'text' || field.type === 'textarea' || undefined}>
     <label {...label} id={`${id}-label`} htmlFor={id}>{field.label ?? <span aria-hidden="true">&nbsp;</span>}{field.required && <span {...required} aria-hidden="true" />}{vm.suggested(field) && <span {...suggested} aria-hidden="true">{vm.labels.suggested}</span>}</label>
-    {(field.type || inline) && <Wrap {...wrap}>{input}{field.unit && <span {...unit}>{field.unit}</span>}{vm.loading(index) && <span {...skeleton} aria-hidden="true" />}</Wrap>}
+    {(field.type || inline) && <Wrap {...wrap}>{input}{field.unit && <span {...unit}>{field.unit}</span>}{vm.loading(index) && <StreamSkeleton as="span" {...skeleton} data-prism-skeleton-line="" />}</Wrap>}
     {field.hint && <Text {...hint} id={hintId}>{field.hint}</Text>}{error && <Text {...errorPart} id={errorId} role="alert">{error}</Text>}
   </Root>;
 }
 export function Ask({ props }: PrismComponentProps<AskProps>) {
-  const ctx = usePrism(), vm = useAsk(props, ctx);
+  const ctx = usePrism(), presentation = usePresentation(), vm = useAsk(props, ctx), receiptFormat = useFormat();
   const form = usePart('ask', 'form'), grid = usePart('ask', 'fields'), actions = usePart('ask', 'actions'), primary = usePart('ask', 'submit'), edit = usePart('ask', 'edit'), summary = usePart('ask', 'summary'), row = usePart('ask', 'summaryRow'), label = usePart('ask', 'summaryLabel'), value = usePart('ask', 'summaryValue');
   const Item = useSlot('ask', 'field', Field), EmptyState = useSlot('ask', 'empty', Empty), Actions = useSlot('ask', 'actions', Box), Summary = useSlot('ask', 'summary', Box);
   const flow = usePart('ask', 'sentence'), longFields = usePart('ask', 'longFields'), separator = usePart('ask', 'separator');
@@ -136,23 +122,23 @@ export function Ask({ props }: PrismComponentProps<AskProps>) {
   const ids = parts?.filter(part => /^\{[^{}]+\}$/.test(part)).map(part => part.slice(1, -1)) ?? [];
   const templated = !!parts && new Set(ids).size === ids.length && ids.every(id => { const field = vm.fields.find(field => field.id === id); return field ? inlineField(field) : !vm.complete; });
   const renderField = (field: AskField, index: number, embedded = false) => <Item key={field.id ?? index} field={field} index={index} vm={vm} embedded={embedded} />;
-  const sent = vm.fields.filter(field => vm.values[field.id ?? ''] !== null).slice(0, 2).map(field => vm.display(field)).join(', ');
+  const sent = vm.fields.filter(field => vm.values[field.id ?? ''] !== null).slice(0, 2).map(field => formatted(field, vm.receiptValues?.[field.id ?? ''] ?? vm.values[field.id ?? ''] ?? null, receiptFormat, { ...defaults, ...props.labels })).join(', ');
   const formRef = useRef<HTMLFormElement>(null);
   useEffect(() => {
     const root = formRef.current?.closest('[data-prism="ask"][data-part="root"]');
     root?.querySelectorAll<HTMLButtonElement>('[data-part="ask"], [data-part="undo"]').forEach(button => button.classList.toggle('prism-icon-btn', !ctx.unstyled));
   }, [ctx.unstyled]);
-  return <ComponentFrame component="ask" title={vm.title} state={vm.submitted ? 'sent' : 'editing'} ask undo>
+  return <ComponentFrame component="ask" title={vm.title} state={presentation['data-state']} ask undo>
     <form {...form} ref={formRef} data-layout="sentence" noValidate onKeyDown={vm.onKeyDown} onSubmit={event => { event.preventDefault(); vm.submit(); }}>
-      <div {...grid}>{(short.length > 0 || templated) && <div {...flow}>{templated && parts!.map((part, index) => {
+      <div {...grid}>{(short.length > 0 || templated) && <div {...flow} data-templated={templated || undefined}>{templated && parts!.map((part, index) => {
         const id = /^\{([^{}]+)\}$/.exec(part)?.[1];
         if (!id) return part;
         const fieldIndex = vm.fields.findIndex(field => field.id === id);
         return <span key={index}>{renderField(vm.fields[fieldIndex] ?? { id, label: id }, fieldIndex, true)}</span>;
-      })}{short.filter(field => !templated || !ids.includes(field.id ?? '')).map((field, index) => <span key={field.id ?? vm.fields.indexOf(field)}>{(templated || index > 0) && <span {...separator} aria-hidden="true"> · </span>}{renderField(field, vm.fields.indexOf(field))}</span>)}</div>}
+      })}{short.filter(field => !templated || !ids.includes(field.id ?? '')).map((field, index) => <span key={field.id ?? vm.fields.indexOf(field)}>{(templated || index > 0) && <span {...separator} aria-hidden="true" />}{renderField(field, vm.fields.indexOf(field))}</span>)}</div>}
       {long.length > 0 && <div {...longFields}>{long.map(field => renderField(field, vm.fields.indexOf(field)))}</div>}
       {!vm.fields.length && !templated && <EmptyState label={vm.labels.loading} />}</div>
-      <Actions {...actions}><button {...primary} className={cx(primary.className, !ctx.unstyled && 'prism-pill')} type="submit" aria-label={vm.submitLabel} data-sent={vm.submitted || undefined} disabled={!vm.canSubmit}>{vm.submitted ? <><svg className={ctx.unstyled ? undefined : 'prism-check'} width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="m3 8 3 3 7-7" pathLength="1" /></svg><span>Sent{sent && ` · ${sent}`}</span></> : vm.submitLabel}</button>
+      <Actions {...actions}><button {...primary} className={cx(primary.className, !ctx.unstyled && 'prism-pill')} type="submit" aria-label={vm.submitLabel} data-sent={vm.submitted || undefined} disabled={!vm.canSubmit}>{vm.submitted ? <><ActionCheck /><span>Sent{sent && ` · ${sent}`}</span></> : vm.submitLabel}</button>
       {vm.submitted && <button {...edit} type="button" onClick={vm.edit}>{vm.labels.edit}</button>}</Actions>
       {vm.submitted && <Summary {...summary} aria-live="polite">{vm.fields.map((field, index) => <div {...row} key={field.id ?? index}><span {...label}>{field.label}</span><span {...value}>{vm.display(field)}</span></div>)}</Summary>}
     </form>

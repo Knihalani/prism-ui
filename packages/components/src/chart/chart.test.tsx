@@ -6,6 +6,16 @@ import { createStore } from '@prism-ui/state';
 import { chartDefinition, type ChartProps, type ChartType } from './index';
 
 afterEach(cleanup);
+
+test('selecting a point retains a calm confirmed mark after hover leaves', () => {
+  const view = render(<Prism registry={registry} source={source(base)} onAction={() => {}} />);
+  const plot = view.getByRole('img');
+  fireEvent.keyDown(plot, { key: 'Home' });
+  fireEvent.keyDown(plot, { key: 'Enter' });
+  fireEvent.pointerLeave(plot);
+  expect(view.container.querySelector('[data-confirmed="true"]')).toBeTruthy();
+  expect(view.queryByRole('tooltip')).toBeNull();
+});
 const registry = createRegistry([chartDefinition]);
 const source = (props: ChartProps) => '```ui:chart\n' + JSON.stringify(props) + '\n```';
 const data = [{ month: 'Jan', region: 'East', revenue: 10, cost: 4 }, { month: 'Feb', region: 'East', revenue: 12, cost: 5 }, { month: 'Mar', region: 'West', revenue: 8, cost: 3 }];
@@ -206,7 +216,7 @@ test('one ResizeObserver updates viewBox and disconnects on unmount', () => {
   }
   globalThis.ResizeObserver = Observer as unknown as typeof ResizeObserver;
   try {
-    const view = render(<Prism registry={registry} source={source(base)} />);
+    const view = render(<Prism registry={registry} source={source(base)} onAction={() => {}} />);
     expect(observed).toBe(1);
     act(() => callback?.([{ contentRect: { width: 480 } } as ResizeObserverEntry], {} as ResizeObserver));
     expect(view.getByRole('img').getAttribute('viewBox')).toBe('0 0 480 300');
@@ -215,7 +225,7 @@ test('one ResizeObserver updates viewBox and disconnects on unmount', () => {
 });
 
 test('tooltip stays within plot bounds rather than covering axis labels', () => {
-  const view = render(<Prism registry={registry} source={source(base)} />);
+  const view = render(<Prism registry={registry} source={source(base)} onAction={() => {}} />);
   const svg = view.getByRole('img');
   fireEvent.keyDown(svg, { key: 'Home' });
   expect(Number.parseFloat(view.getByRole('tooltip').style.left)).toBeGreaterThanOrEqual(70);

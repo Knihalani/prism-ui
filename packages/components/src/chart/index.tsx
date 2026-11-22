@@ -1,7 +1,8 @@
 import { createElement, memo, useEffect, useId, useMemo, useRef, useState, type ElementType, type HTMLAttributes, type KeyboardEvent, type PointerEvent } from 'react';
-import { defineComponent, registerComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
+import { cx, defineComponent, registerComponent, StreamSkeleton, useFlash, usePart, usePresentation, usePrism, useSettled, useSlot, type PrismComponentProps } from '@prism-ui/react';
 import { nearestX, pointX, pointY } from '../lib/chart';
 import { useFrame } from '../frame';
+import { LinkedValue, referencePaths } from '../num/integration';
 import { chartSchema, seriesColor, useChart, type ChartModel, type ChartProps } from './use-chart';
 import { streamProps } from './stream-props';
 
@@ -10,8 +11,9 @@ export type { ChartProps, ChartSeries, ChartType, ChartPivot, ChartAnnotation, C
 interface ElementProps extends HTMLAttributes<HTMLElement> { as?: ElementType; [key: string]: any }
 function Element({ as = 'div', ...props }: ElementProps) { return createElement(as, props); }
 function Part({ part, state, style, ...props }: ElementProps & { part: string; state?: string }) {
-  const attrs = usePart('chart', part, state), View = useSlot('chart', part, Element);
-  return <View {...attrs} {...props} style={{ ...style, ...attrs.style }} />;
+  const attrs = usePart('chart', part, state), View = useSlot('chart', part, Element), { unstyled } = usePrism();
+  const micro = ['ask', 'undo'].includes(part) ? 'prism-icon-btn' : ['pivot', 'legend-item'].includes(part) ? 'prism-chip' : part === 'tooltip' ? 'prism-tooltip' : undefined;
+  return <View {...attrs} {...props} className={cx(attrs.className, props.className, !unstyled && micro)} style={{ ...style, ...attrs.style }} />;
 }
 const Plot = memo(function Plot({ geometry: g, id, pivot }: { geometry: ChartModel['geometry']; id: string; pivot: number }) {
   return <Part part="plot" as="g" key={pivot}>
@@ -43,12 +45,13 @@ function ActiveMark({ vm }: { vm: ChartModel }) {
   const layer = g.layers[active.series];
   if (vm.type === 'pie') { const slice = g.slices[active.index]; return slice ? <Part part="highlight" as="path" d={slice.d} transform={`translate(${g.cx},${g.cy})`} fill="none" stroke={slice.color} strokeWidth="5" pointerEvents="none" /> : null; }
   const point = layer?.points[active.index];
-  return <g pointerEvents="none"><Part part="crosshair" as="line" x1={g.xs[active.index]} x2={g.xs[active.index]} y1={g.top} y2={g.bottom} />
+  return <g pointerEvents="none" data-confirmed={vm.confirmed || undefined}><Part part="crosshair" as="line" x1={g.xs[active.index]} x2={g.xs[active.index]} y1={g.top} y2={g.bottom} />
     {!vm.userActive && point && <Part part="active-label" as="text" x={Math.min(g.right - 24, (pointX(point) ?? 0) + 12)} y={Math.max(g.top + 12, (pointY(point) ?? g.top) - 12)}>{vm.valueFormat(vm.data[active.index][vm.shown[active.series].key])}</Part>}
     {vm.type === 'bar' ? <Part part="highlight" as="path" d={layer?.bars[active.index]} fill={layer?.color} /> : point && <><circle cx={pointX(point) ?? undefined} cy={pointY(point) ?? undefined} r="10" fill={layer.color} opacity=".15" /><Part part="highlight" as="circle" cx={pointX(point)} cy={pointY(point)} r="5" fill={layer.color} /></>}
   </g>;
 }
-export function Chart({ props: inputProps, complete }: PrismComponentProps<ChartProps>) {
+export function Chart({ props: inputProps, complete, id: componentId, node }: PrismComponentProps<ChartProps>) {
+  const presentation = usePresentation(), settled = useSettled(), flash = useFlash(`${componentId}.pivot`), paths = referencePaths(node.props);
   const props = useMemo(() => streamProps(inputProps), [inputProps]);
   const ctx = usePrism(), container = useRef<HTMLDivElement>(null), [width, setWidth] = useState(640), [duration, setDuration] = useState(180);
   const streamed = useRef(!complete);
@@ -90,9 +93,9 @@ export function Chart({ props: inputProps, complete }: PrismComponentProps<Chart
   const tooltipWidth = Math.min(200, g.right - g.left);
   const tooltipLeft = Math.max(g.left, Math.min(g.right - tooltipWidth, (active && vm.type !== 'pie' ? g.xs[active.index] : width * .55) - tooltipWidth - 12));
   const defaultPivot = props.pivots?.findIndex(pivot => (pivot.type ?? props.type ?? 'line') === (props.type ?? 'line') && (!pivot.x || pivot.x === props.x) && !pivot.series);
-  return <Part part="root" state={complete ? 'done' : 'streaming'} role="figure" aria-labelledby={`${id}-title`} onKeyDown={frame.rootProps.onKeyDown} data-animate={ctx.animate ? undefined : 'false'} data-streamed={streamed.current || undefined} data-mode={vm.answer ? 'answer' : 'chart'}>
+  return <Part part="root" {...presentation} role="figure" aria-labelledby={`${id}-title`} onKeyDown={frame.rootProps.onKeyDown} data-animate={ctx.animate ? undefined : 'false'} data-streamed={streamed.current || undefined} data-mode={vm.answer ? 'answer' : 'chart'}>
     <Part part="header"><div><Part part="title" as="h3" id={`${id}-title`}>{props.insight ?? props.title ?? 'Chart'}</Part>{props.insight && props.title && <Part part="subtitle">{props.title}</Part>}{props.subtitle && <Part part="subtitle">{props.subtitle}</Part>}</div>
-      {!!props.pivots?.length && <Part part="pivots" role="group" aria-label="Chart views">{props.pivots.map((pivot, index) => <Part key={index} part="pivot" as="button" type="button" aria-pressed={vm.pivot === index || vm.pivot === -1 && defaultPivot === index} onClick={() => vm.choosePivot(index)}>{pivot.label}</Part>)}</Part>}
+      {!!props.pivots?.length && <Part part="pivots" role="group" aria-label="Chart views">{props.pivots.map((pivot, index) => <Part key={index} part="pivot" as="button" type="button" data-prism-flash={flash && vm.pivot === index ? '' : undefined} aria-pressed={vm.pivot === index || vm.pivot === -1 && defaultPivot === index} onClick={() => vm.choosePivot(index)}>{pivot.label}</Part>)}</Part>}
       <Part part="actions"><Part part="ask" as="button" type="button" aria-label="Ask about this chart" onClick={frame.onAsk}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-3 2V11.5A8.5 8.5 0 0 1 9.5 3h3a8.5 8.5 0 0 1 8.5 8.5Z" /><path d="M8 11h.01M12 11h.01M16 11h.01" strokeLinecap="round" /></svg></Part><Part part="undo" as="button" type="button" aria-label="Undo chart change" disabled={!frame.canUndo} onClick={frame.onUndo}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="m9 4-5 5 5 5M4 9h10a6 6 0 0 1 0 12h-3" strokeLinecap="round" strokeLinejoin="round" /></svg></Part></Part>
     </Part>
     <div ref={container} {...usePart('chart', 'viewport')} style={{ position: 'relative', height: g.height, ...ctx.styles.chart?.viewport }}>
@@ -101,9 +104,10 @@ export function Chart({ props: inputProps, complete }: PrismComponentProps<Chart
         {g.hasValues && <><Plot geometry={g} id={id} pivot={vm.pivot} /><ActiveMark vm={vm} /></>}
         {vm.type === 'pie' && <><Part part="total" as="text" x={g.cx} y={g.cy - 2} textAnchor="middle">{vm.valueFormat(g.total)}</Part><Part part="total-caption" as="text" x={g.cx} y={g.cy + 18} textAnchor="middle">{vm.shown[0]?.label ?? 'Total'}</Part></>}
         {props.yLabel && vm.type !== 'pie' && <Part part="tick" as="text" x={g.left} y={14}>{props.yLabel}</Part>}
-        {!g.hasValues && <><Part part="skeleton" as="rect" x={g.left} y={g.top} width={g.right - g.left} height={g.bottom - g.top} rx="8" />{[0, .5, 1].map(position => <Part key={position} part="grid" as="line" x1={g.left} x2={g.right} y1={g.top + (g.bottom - g.top) * position} y2={g.top + (g.bottom - g.top) * position} />)}</>}
+        {!g.hasValues && <>{[0, .5, 1].map(position => <Part key={position} part="grid" as="line" x1={g.left} x2={g.right} y1={g.top + (g.bottom - g.top) * position} y2={g.top + (g.bottom - g.top) * position} />)}</>}
       </svg>
-      {active && vm.userActive && <Part part="tooltip" role="tooltip" style={{ left: tooltipLeft, width: tooltipWidth, maxWidth: tooltipWidth, minWidth: 0, top: g.top }}><Part part="tooltip-title">{String(vm.data[active.index][vm.x] ?? active.index + 1)}</Part>{vm.type === 'pie' && props.annotations?.filter(annotation => String(annotation.x) === String(vm.data[active.index][vm.x])).map((annotation, index) => <Part key={index} part="tooltip-annotation">{annotation.label}</Part>)}{vm.shown.map((series, index) => <Part key={series.key} part="tooltip-row" state={index === active.series ? 'active' : undefined}><span><Part part="swatch" as="span" style={{ background: seriesColor(series, vm.series.findIndex(item => item.key === series.key)) }} />{series.label}</span><strong>{vm.valueFormat(vm.data[active.index][series.key])}</strong></Part>)}</Part>}
+      {!g.hasValues && !settled && <StreamSkeleton style={{ position: 'absolute', left: g.left, right: width - g.right, top: g.top, bottom: g.height - g.bottom }}><Part part="skeleton" data-prism-skeleton-line="" style={{ height: '100%' }} /></StreamSkeleton>}
+      {active && vm.userActive && <Part part="tooltip" role="tooltip" style={{ left: tooltipLeft, width: tooltipWidth, maxWidth: tooltipWidth, minWidth: 0, top: g.top }}><Part part="tooltip-title">{String(vm.data[active.index][vm.x] ?? active.index + 1)}</Part>{vm.type === 'pie' && props.annotations?.filter(annotation => String(annotation.x) === String(vm.data[active.index][vm.x])).map((annotation, index) => <Part key={index} part="tooltip-annotation">{annotation.label}</Part>)}{vm.shown.map((series, index) => <Part key={series.key} part="tooltip-row" state={index === active.series ? 'active' : undefined}><span><Part part="swatch" as="span" style={{ background: seriesColor(series, vm.series.findIndex(item => item.key === series.key)) }} />{series.label}</span><strong><LinkedValue paths={paths}>{vm.valueFormat(vm.data[active.index][series.key])}</LinkedValue></strong></Part>)}</Part>}
       {!g.hasValues && <Part part="empty">{complete ? 'No chart data' : 'Loading chart…'}</Part>}
     </div>
     {props.legend !== false && vm.series.length > 1 && <Part part="legend" aria-label="Series">{vm.series.map((series, index) => <Part key={series.key} part="legend-item" as="button" type="button" aria-pressed={vm.shown.some(item => item.key === series.key)} aria-label={`Toggle ${series.label}`} onClick={() => vm.toggleSeries(series.key)} onKeyDown={(event: KeyboardEvent) => { if (event.key === 'Enter') { event.preventDefault(); vm.toggleSeries(series.key); } }}><Part part="swatch" as="span" style={{ background: seriesColor(series, index) }} />{series.label}</Part>)}</Part>}

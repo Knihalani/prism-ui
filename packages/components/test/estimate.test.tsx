@@ -8,6 +8,40 @@ import '../src/num';
 
 afterEach(cleanup);
 
+test('sent receipt describes the final middleware-delivered estimate', () => {
+  const view = render(<Prism source={source()} onAction={() => {}} middleware={[(action, next) => next({ ...action, payload: { items: [{ id: 'seats' }], total: 42 } })]} animate={false} />);
+  fireEvent.click(view.getByRole('button', { name: 'Use this estimate' }));
+  expect(view.getByText('Sent · 1 items, $42.00')).toBeDefined();
+  expect(view.getByRole('group', { name: 'Team plan' }).dataset.state).toBe('sent');
+});
+
+test('use stays in place as a sent check pill and edits permit resending', () => {
+  const view = setup(), button = view.getByRole('button', { name: 'Use this estimate' });
+  fireEvent.click(button);
+  expect(view.getByRole('group', { name: 'Team plan' }).dataset.state).toBe('sent');
+  expect(button.textContent).toBe('Sent · 2 items, $70.00');
+  expect(button.classList.contains('prism-pill')).toBe(true);
+  expect(view.getByRole('spinbutton', { name: 'Seats' })).toBeDefined();
+  fireEvent.click(view.getByRole('button', { name: 'Increase Seats' }));
+  expect(view.getByRole('group', { name: 'Team plan' }).dataset.state).toBe('ready');
+  expect(button.textContent).toBe('Use this estimate');
+  fireEvent.click(button);
+  expect(view.actions).toHaveLength(2);
+  act(() => view.store.set('quote.items.seats.qty', 5));
+  expect(view.getByRole('group', { name: 'Team plan' }).dataset.state).toBe('ready');
+});
+
+test('external quantities highlight the total but its own stepper does not', () => {
+  const store = createStore(), view = render(<Prism source={source()} store={store} animate={false} />);
+  const total = view.container.querySelector('[data-part="total-value"]')!;
+  expect(total.hasAttribute('data-prism-flash')).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: 'Increase Seats' }));
+  expect(total.hasAttribute('data-prism-flash')).toBe(false);
+  act(() => store.set('quote.items.seats.qty', 5));
+  expect(total.hasAttribute('data-prism-flash')).toBe(true);
+  expect(total.textContent).toBe('$110.00');
+});
+
 test('frame undo and keyboard redo affect only their estimate in a shared store', () => {
   const store = createStore(), props = { items: [{ id: 'seats', label: 'Seats', price: 20, qty: 5 }] };
   const view = render(<><Prism source={source({ ...props, id: 'first', title: 'First' })} store={store} animate={false} /><Prism source={source({ ...props, id: 'second', title: 'Second' })} store={store} animate={false} /></>);

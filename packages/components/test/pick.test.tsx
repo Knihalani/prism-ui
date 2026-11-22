@@ -7,6 +7,62 @@ import { pick } from '../src/pick';
 
 afterEach(cleanup);
 
+test('FLIP ignores entrance offsets when choosing without a reorder, but still animates ranking changes', () => {
+  const bounds = HTMLElement.prototype.getBoundingClientRect, animate = HTMLElement.prototype.animate;
+  let offset = 0, animations = 0;
+  HTMLElement.prototype.getBoundingClientRect = function () {
+    if (!this.hasAttribute('data-option')) return bounds.call(this);
+    const y = offset + Array.from(this.parentElement!.children).indexOf(this) * 100;
+    return { x: 0, y, top: y, bottom: y + 100, left: 0, right: 300, width: 300, height: 100, toJSON() {} };
+  };
+  HTMLElement.prototype.animate = (() => { animations++; return { cancel() {} } as Animation; }) as typeof animate;
+  try {
+    const view = render(<Prism source={source()} onAction={() => {}} />);
+    offset = 12;
+    fireEvent.click(within(view.container.querySelector('[data-option="budget"]') as HTMLElement).getByRole('button', { name: 'Choose' }));
+    expect(animations).toBe(0);
+    fireEvent.click(view.getByRole('button', { name: 'Quality, weight 1 of 3' }));
+    expect(animations).toBe(2);
+    cleanup();
+  } finally { HTMLElement.prototype.getBoundingClientRect = bounds; HTMLElement.prototype.animate = animate; }
+});
+
+test('middleware-blocked choices do not create a receipt', () => {
+  const view = render(<Prism source={source()} middleware={[() => {}]} onAction={() => { throw new Error('not dispatched'); }} />);
+  fireEvent.click(within(view.container.querySelector('[data-option="budget"]') as HTMLElement).getByRole('button', { name: 'Choose' }));
+  expect(view.getByRole('group', { name: 'Which plan?' }).dataset.state).toBe('ready');
+  expect(view.queryByText('Chose · Budget')).toBeNull();
+});
+
+test('choose settles in place and adjusting weights allows another choice', () => {
+  const view = setup();
+  const card = view.container.querySelector('[data-option="budget"]') as HTMLElement;
+  const button = within(card).getByRole('button', { name: 'Choose' });
+  fireEvent.click(button);
+  expect(view.getByRole('group', { name: 'Which plan?' }).dataset.state).toBe('sent');
+  expect(within(card).getByRole('button', { name: 'Choose' })).toBe(button);
+  expect(button.textContent).toBe('Chose · Budget');
+  expect(button.querySelector('.prism-check')).toBeTruthy();
+  fireEvent.click(view.getByRole('button', { name: 'Price, weight 1 of 3' }));
+  expect(view.getByRole('group', { name: 'Which plan?' }).dataset.state).toBe('ready');
+  expect(button.textContent).toBe('Choose');
+  fireEvent.click(button);
+  expect(view.actions).toHaveLength(2);
+  act(() => view.store.set('plans.weights.price', 0));
+  expect(view.getByRole('group', { name: 'Which plan?' }).dataset.state).toBe('ready');
+});
+
+test('only external weights highlight the linked score, including static motion-disabled cues', () => {
+  const store = createStore(), view = render(<Prism source={source()} store={store} animate={false} />);
+  const highlights = () => view.container.querySelectorAll('[data-prism-flash]');
+  expect(highlights()).toHaveLength(0);
+  fireEvent.click(view.getByRole('button', { name: 'Price, weight 1 of 3' }));
+  expect(highlights()).toHaveLength(0);
+  act(() => store.set('plans.weights.price', 3));
+  expect(highlights().length).toBeGreaterThan(0);
+  expect(view.getByRole('img', { name: '75% match' })).toBeDefined();
+});
+
 test('numeric and dotted criterion ids preserve named weights through updates and undo', () => {
   const criteria = [{ id: '0', label: 'Cost' }, { id: 'quality', label: 'Quality' }, { id: 'speed.0.value', label: 'Speed' }];
   const view = setup({ criteria, weights: { '0': 1, quality: 2, 'speed.0.value': 3 }, options: [{ id: 'basic', title: 'Basic', scores: { '0': 1, quality: 1, 'speed.0.value': 1 } }] });

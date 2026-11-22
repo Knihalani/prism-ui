@@ -1,5 +1,7 @@
+@import '../num/micro.css';
+
 .prism-root .prism-estimate__root { --estimate-hairline: var(--prism-hairline, color-mix(in oklab, currentColor 10%, transparent)); --estimate-fill: var(--prism-fill, color-mix(in oklab, currentColor 5%, transparent)); --estimate-spring: var(--prism-ease-spring, cubic-bezier(.22,1.2,.36,1)); font-variant-numeric: tabular-nums; color: var(--prism-text); }
-.prism-root .prism-estimate__root:not([data-variant="card"]) { margin-block: 1.25em; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.prism-root .prism-estimate__root:not([data-variant="card"]) { margin-block: var(--prism-flow-gap, 1.25em); border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .prism-root .prism-estimate__root .prism-estimate__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 0 12px; border: 0; background: transparent; }
 .prism-root .prism-estimate__root .prism-estimate__title { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -.025em; line-height: 1.4; }
 .prism-root .prism-estimate__root .prism-estimate__body { padding: 0; min-width: 0; }
@@ -26,6 +28,10 @@
 .prism-root .prism-estimate__item[data-state="disabled"] { color: var(--prism-muted); }
 .prism-root .prism-estimate__item[data-state="disabled"] .prism-estimate__amount { text-decoration: line-through; opacity: .65; }
 .prism-root .prism-estimate__item[data-state="loading"] :is(.prism-estimate__price, .prism-estimate__amount) { border-radius: 4px; background: linear-gradient(100deg, var(--estimate-fill) 20%, var(--prism-fill-strong, #8882) 50%, var(--estimate-fill) 80%); background-size: 200% 100%; animation: prism-estimate-shimmer 1.8s ease-in-out infinite; }
+.prism-root .prism-estimate__item[data-state="loading"] .prism-estimate__stepper { position: relative; }
+.prism-root .prism-estimate__item[data-state="loading"] .prism-estimate__stepper > * { visibility: hidden; }
+.prism-root .prism-estimate__item[data-state="loading"] .prism-estimate__stepper::after { content: '−　·　+'; position: absolute; inset: 3px; display: grid; place-items: center; color: var(--prism-muted); opacity: .35; }
+.prism-root .prism-estimate__item[data-state="loading"] .prism-estimate__amount { min-width: 8ch; }
 .prism-root .prism-estimate__summary { width: min(100%, 280px); margin: 22px 0 0 auto; }
 .prism-root .prism-estimate__summary-row { display: flex; justify-content: space-between; gap: 24px; padding-block: 7px; color: var(--prism-muted); font-size: 12px; }
 .prism-root .prism-estimate__summary-value { text-align: right; }

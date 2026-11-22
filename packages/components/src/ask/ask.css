@@ -1,3 +1,5 @@
+@import '../num/micro.css';
+
 .prism-root .prism-ask__root.prism-ask__root:not([data-variant="card"]) { margin-block: var(--prism-flow-gap, 1.25em); border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; padding: 0; font: inherit; color: inherit; }
 .prism-root .prism-ask__root .prism-ask__header { padding: 0; margin-bottom: 12px; border: 0; background: transparent; }
 .prism-root .prism-ask__root .prism-ask__title { margin: 0; font: 600 1em/1.6 var(--prism-font-sans); letter-spacing: -.015em; }
@@ -11,7 +13,7 @@
 .prism-root .prism-ask__fields { display: block; }
 .prism-root .prism-ask__longFields { display: grid; gap: 12px; }
 .prism-root .prism-ask__sentence + .prism-ask__longFields { margin-top: 12px; }
-.prism-root .prism-ask__separator { margin-inline: .45em; color: var(--prism-muted); }
+.prism-root .prism-ask__separator { display: inline-block; width: 1em; }
 .prism-root .prism-ask__field { display: block; min-width: 0; animation: prism-ask-settle 350ms var(--prism-ease-spring, cubic-bezier(.22,1.2,.36,1)) both; animation-delay: calc(min(var(--ask-index, 0), 5) * 35ms); }
 .prism-root .prism-ask__label { display: block; margin-bottom: 5px; font-size: 12px; color: var(--prism-muted); font-weight: 500; }
 .prism-root .prism-ask__required { display: inline-block; width: 3px; height: 3px; margin-left: 4px; border-radius: 50%; background: var(--prism-accent, #525bdb); vertical-align: middle; }
@@ -47,21 +49,28 @@
 .prism-root .prism-ask__edit:hover { color: var(--prism-text); }
 .prism-root .prism-ask__root :focus-visible { outline: 2px solid var(--prism-accent, #525bdb); outline-offset: 3px; }
 .prism-root .prism-ask__sentence { min-height: 2.4em; line-height: 2; }
+.prism-root .prism-ask__sentence:not([data-templated="true"]) { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 1em; row-gap: 4px; }
+.prism-root .prism-ask__sentence:not([data-templated="true"]) .prism-ask__separator { display: none; }
 .prism-root .prism-ask__sentence .prism-ask__field { display: inline-block; max-width: 100%; vertical-align: baseline; }
-.prism-root .prism-ask__sentence .prism-ask__label { display: inline; margin: 0 4px 0 0; color: inherit; font: inherit; }
+.prism-root .prism-ask__sentence > span { white-space: nowrap; }
+.prism-root .prism-ask__sentence .prism-ask__label { display: inline; margin: 0 4px 0 0; color: var(--prism-muted); font: inherit; }
+.prism-root .prism-ask__sentence .prism-ask__required { display: none; }
 .prism-root .prism-ask__field[data-embedded="true"] .prism-ask__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .prism-root .prism-ask__sentence .prism-ask__inputWrap { display: inline-flex; max-width: 100%; }
 .prism-root .prism-ask__sentence .prism-ask__control { display: inline-block; width: var(--ask-width, 10ch); max-width: 100%; padding: 0 2px; border-bottom: 1px dotted var(--prism-accent, #525bdb); border-radius: 3px 3px 0 0; background: transparent; color: inherit; line-height: 1.6; vertical-align: baseline; }
 .prism-root .prism-ask__sentence .prism-ask__control[aria-description] { color: var(--prism-accent, #525bdb); }
+.prism-root .prism-ask__sentence .prism-ask__control:placeholder-shown { border-bottom-color: var(--prism-muted); }
+.prism-root .prism-ask__sentence .prism-ask__control[data-prism-flash] { background-color: var(--prism-accent-soft, #eef0ff); }
 .prism-root .prism-ask__sentence .prism-ask__control:focus { background: var(--prism-accent-soft, #eef0ff); outline: 0; box-shadow: 0 0 0 3px var(--prism-accent-soft, #eef0ff); }
 .prism-root .prism-ask__sentence :is(.prism-ask__hint, .prism-ask__error) { display: block; line-height: 1.5; }
 @supports (field-sizing: content) {
   .prism-root .prism-ask__sentence .prism-ask__control { field-sizing: content; width: auto; min-width: 2ch; }
 }
-.prism-root .prism-ask__skeleton { display: block; width: 100%; height: 2.6em; border-radius: 4px; background: linear-gradient(100deg, transparent 0%, var(--prism-fill-strong, #8882) 45%, transparent 90%), var(--prism-fill, #8881); background-size: 220% 100%; animation: prism-ask-shimmer 1.5s linear infinite; }
+.prism-root .prism-ask__skeleton { display: block; width: 100%; height: 2.6em; border-radius: 4px; background: linear-gradient(100deg, transparent 0%, var(--prism-fill-strong, #8882) 45%, transparent 90%), var(--prism-fill, #8881); background-size: 220% 100%; }
 .prism-root .prism-ask__sentence .prism-ask__skeleton { display: inline-block; width: var(--ask-width, 8ch); height: 1.2em; vertical-align: baseline; }
 .prism-root .prism-ask__field[data-type="textarea"] .prism-ask__skeleton { height: 5.6em; }
 .prism-root .prism-ask__field[data-state="loading"] :is(.prism-ask__control, .prism-ask__segments, .prism-ask__switch, .prism-ask__unit) { visibility: hidden; opacity: 0; translate: 0 2px; }
+.prism-root .prism-ask__sentence .prism-ask__field[data-state="loading"] .prism-ask__control { min-width: var(--ask-width, 8ch); }
 .prism-root .prism-ask__field[data-state="loading"] .prism-ask__inputWrap > .prism-ask__skeleton { position: absolute; inset: 0; width: 100%; height: 100%; }
 .prism-root .prism-ask__label[data-state="loading"] { min-width: 6ch; background: var(--prism-fill, #8881); border-radius: 3px; }
 .prism-root .prism-ask__root[data-variant="card"] .prism-ask__body { padding: 0 20px 20px; }

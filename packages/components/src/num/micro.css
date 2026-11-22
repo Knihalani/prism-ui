@@ -1,0 +1,25 @@
+.prism-root [data-part="root"] .prism-pill.prism-pill {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; max-width: 100%; padding: 8px 16px; border: 0; border-radius: var(--prism-radius-pill, 999px); background: var(--prism-accent, #525bdb); color: var(--prism-accent-contrast, var(--prism-bg, #fff)); font: 550 13px/20px var(--prism-font-sans); font-variant-numeric: tabular-nums; cursor: pointer; transition: background var(--prism-duration-fast, 150ms), color var(--prism-duration-fast, 150ms);
+}
+.prism-root [data-part="root"] .prism-pill.prism-pill[data-primary="false"] { background: var(--prism-fill, color-mix(in oklab, currentColor 5%, transparent)); color: var(--prism-text); }
+.prism-root [data-part="root"] .prism-pill.prism-pill[data-sent="true"] { background: var(--prism-accent-soft, #eef0ff); color: var(--prism-accent, #525bdb); }
+.prism-root [data-part="root"] .prism-pill.prism-pill:disabled { opacity: .45; cursor: not-allowed; }
+.prism-root [data-part="root"] .prism-pill > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prism-root [data-part="root"] .prism-check { flex-shrink: 0; width: 15px; height: 15px; }
+.prism-root [data-part="root"] .prism-check path { stroke-dasharray: 1; animation: prism-action-check 350ms ease-out both; }
+.prism-root [data-part="root"] .prism-chip.prism-chip { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 30px; padding: 6px 11px; border: 0; border-radius: var(--prism-radius-pill, 999px); background: var(--prism-fill, color-mix(in oklab, currentColor 5%, transparent)); color: var(--prism-muted); font: 500 12px/1.5 var(--prism-font-sans); cursor: pointer; }
+.prism-root [data-part="root"] .prism-chip.prism-chip:is([aria-pressed="true"], [aria-checked="true"]) { background: var(--prism-accent-soft, #eef0ff); color: var(--prism-accent, #525bdb); box-shadow: none; }
+.prism-root [data-part="root"] .prism-icon-btn.prism-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; min-width: 28px; height: 28px; min-height: 28px; padding: 0; border: 0; border-radius: var(--prism-radius-pill, 999px); background: transparent; color: var(--prism-muted); font-size: 0; box-shadow: none; cursor: pointer; }
+.prism-root [data-part="root"] .prism-icon-btn.prism-icon-btn:hover:not(:disabled) { background: var(--prism-fill, color-mix(in oklab, currentColor 5%, transparent)); color: var(--prism-text); }
+.prism-root [data-part="root"] .prism-icon-btn svg { width: 15px; height: 15px; }
+.prism-root [data-part="root"] .prism-stepper.prism-stepper { display: inline-flex; align-items: center; padding: 3px; border: 0; border-radius: var(--prism-radius-pill, 999px); background: var(--prism-fill, color-mix(in oklab, currentColor 5%, transparent)); }
+.prism-root [data-part="root"] .prism-stepper > button { width: 26px; height: 26px; border: 0; border-radius: 50%; background: transparent; color: var(--prism-muted); }
+.prism-root [data-part="root"] .prism-stepper > button:hover:not(:disabled) { background: var(--prism-fill-strong, color-mix(in oklab, currentColor 10%, transparent)); color: var(--prism-text); }
+.prism-root [data-part="root"] .prism-tooltip.prism-tooltip, .prism-root .prism-num__root.prism-num__root::after { border: 0; border-radius: var(--prism-radius-md, 10px); background: var(--prism-text, #20232c); color: var(--prism-bg, #fff); box-shadow: var(--prism-shadow-float, 0 3px 12px #0002); font: 500 12px/1.4 var(--prism-font-sans); font-variant-numeric: tabular-nums; }
+.prism-root [data-part="root"] .prism-switch.prism-switch { width: 30px; height: 18px; border: 0; border-radius: var(--prism-radius-pill, 999px); background: var(--prism-fill-strong, color-mix(in oklab, currentColor 18%, transparent)); transition: background var(--prism-duration-fast, 150ms) var(--prism-ease-spring, cubic-bezier(.22,1.2,.36,1)); }
+.prism-root [data-part="root"] .prism-switch.prism-switch:is(:checked, [data-state="on"]) { background: var(--prism-accent, #525bdb); }
+.prism-root [data-part="root"] .prism-switch::before, .prism-root [data-part="root"] .prism-switch > span { width: 12px; height: 12px; background: #fff; box-shadow: 0 1px 3px #0003; transition-duration: var(--prism-duration-fast, 150ms); transition-timing-function: var(--prism-ease-spring, cubic-bezier(.22,1.2,.36,1)); }
+.prism-root .prism-tooltip :is([data-part="tooltip-title"], [data-part="tooltip-row"], [data-part="tooltip-annotation"], strong) { color: inherit; }
+@keyframes prism-action-check { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.prism-root[data-animate="false"] :is(.prism-pill, .prism-chip, .prism-icon-btn, .prism-check path) { animation: none; transition: none; }
+@media (prefers-reduced-motion: reduce) { .prism-root :is(.prism-pill, .prism-chip, .prism-icon-btn, .prism-check path) { animation: none; transition: none; } }

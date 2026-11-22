@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties, type KeyboardEvent } from 'react';
 import { s, type Infer } from '@prism-ui/schema';
-import { defineComponent, registerComponent, useEmit, useFormat, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
+import { cx, defineComponent, registerComponent, StreamSkeleton, useFlash, useFormat, useLocalWrite, usePart, usePresentation, usePrism, useSent, useSettled, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
+import { ActionCheck, MicroActions, useValueTween } from '../num/integration';
 import { setRecordPath } from '../store-record';
 
 const itemSchema = s.object({ id: s.string(), label: s.string(), description: s.string().optional(), price: s.number({ min: 0 }).optional(), qty: s.number().default(1), min: s.number().default(0), max: s.number().optional(), step: s.number({ min: 0 }).default(1), unit: s.string().optional(), optional: s.boolean().default(false), enabled: s.boolean().default(true) });
@@ -22,39 +23,32 @@ function calculate(props: EstimateProps, readItem: (id: string) => ItemState | u
   const subtotal = rows.reduce((sum, row) => sum + row.amount, 0), discount = subtotal * props.discount, tax = (subtotal - discount) * props.taxRate;
   return { rows, subtotal, discount, tax, total: subtotal - discount + tax };
 }
-function useTween(value: number, animate: boolean) {
-  const [display, setDisplay] = useState(value), shown = useRef(value);
-  useEffect(() => {
-    if (!animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { shown.current = value; setDisplay(value); return; }
-    const from = shown.current, start = performance.now(); let frame: number;
-    const tick = (now: number) => { const t = Math.min(1, (now - start) / 380); shown.current = t === 1 ? value : from + (value - from) * (1 - (1 + 7 * t) * Math.exp(-7 * t)); setDisplay(shown.current); if (t < 1) frame = requestAnimationFrame(tick); };
-    frame = requestAnimationFrame(tick); return () => cancelAnimationFrame(frame);
-  }, [value, animate]);
-  return animate ? display : value;
-}
 export function useEstimate(props: EstimateProps, ctx: PrismComponentProps<EstimateProps>) {
-  const { store, animate } = usePrism(), format = useFormat(), emit = useEmit(), id = props.id ?? ctx.id;
+  const { store, animate } = usePrism(), format = useFormat(), { sent, send, reset } = useSent(), localWrite = useLocalWrite(), id = props.id ?? ctx.id;
   const state = useStoreValue(`${id}.items`);
   const storedSubtotal = useStoreValue(`${id}.subtotal`), storedTotal = useStoreValue(`${id}.total`);
   const readItem = (itemId: string): ItemState | undefined => store.get(`${id}.items.${itemId}`);
   const totals = useMemo(() => calculate(props, readItem), [props, state, store, id]);
+  const version = JSON.stringify([totals.rows.map(row => [row.id, row.qty, row.enabled, row.price]), totals.total]);
+  const itemsFlash = useFlash(`${id}.items`), totalFlash = useFlash(`${id}.total`);
+  useEffect(reset, [version, reset]);
   const code = props.currency?.trim().toUpperCase();
   const currency = code && /^[A-Z]{3}$/.test(code) ? code : undefined;
   const money = (value: number) => format.currency(value, currency);
   const writeTotals = () => { const next = calculate(props, readItem); store.set(`${id}.subtotal`, next.subtotal, { history: false }); store.set(`${id}.total`, next.total, { history: false }); };
   useLayoutEffect(() => {
-    store.batch(() => {
+    localWrite(() => store.batch(() => {
       for (const row of totals.rows) {
         if (!row.ready || !ctx.complete) continue;
         if (store.get(`${id}.items.${row.id}.qty`) === undefined) setRecordPath(store, `${id}.items`, `${row.id}.qty`, row.qty, { history: false });
         if (store.get(`${id}.items.${row.id}.enabled`) === undefined) setRecordPath(store, `${id}.items`, `${row.id}.enabled`, row.enabled, { history: false });
       }
       writeTotals();
-    });
-  }, [store, id, totals, storedSubtotal, storedTotal, ctx.complete]);
-  const update = (item: Item, key: 'qty' | 'enabled', value: number | boolean) => store.batch(() => {
+    }));
+  }, [store, id, totals, storedSubtotal, storedTotal, ctx.complete, localWrite]);
+  const update = (item: Item, key: 'qty' | 'enabled', value: number | boolean) => { reset(); localWrite(() => store.batch(() => {
     setRecordPath(store, `${id}.items`, `${item.id}.${key}`, key === 'qty' ? quantity(item, value as number) : value); writeTotals();
-  });
+  })); };
   const rows = totals.rows.map((row, index) => {
     const setQuantity = (text: string) => { const n = text.trim() ? Number(text) : NaN; if (Number.isFinite(n)) update(row, 'qty', n); };
     const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -71,30 +65,39 @@ export function useEstimate(props: EstimateProps, ctx: PrismComponentProps<Estim
   const onUse = () => {
     const current = calculate(props, readItem);
     const items = current.rows.filter(row => row.enabled && row.ready).map(({ id, label, qty, price, amount }) => ({ id, label, qty, price: price!, amount }));
-    emit('use', { items, total: current.total }, `${props.submit}: ${format.number(items.length)} ${props.itemCountLabel}, ${props.totalLabel.toLowerCase()} ${money(current.total)}`);
+    send('use', { items, total: current.total }, `${props.submit}: ${format.number(items.length)} ${props.itemCountLabel}, ${props.totalLabel.toLowerCase()} ${money(current.total)}`);
   };
-  const displayedTotal = useTween(totals.total, animate);
+  const totalRef = useRef<HTMLSpanElement>(null), displayedTotal = useValueTween(totals.total, animate && ctx.complete, totalRef);
+  const receipt = sent?.payload as { items?: unknown[]; total?: number } | undefined;
   const parts = { list: usePart('estimate', 'list'), empty: usePart('estimate', 'empty'), summary: usePart('estimate', 'summary'), summaryRow: usePart('estimate', 'summary-row'), summaryLabel: usePart('estimate', 'summary-label'), summaryValue: usePart('estimate', 'summary-value'), total: usePart('estimate', 'total'), totalLabel: usePart('estimate', 'total-label'), totalValue: usePart('estimate', 'total-value'), live: usePart('estimate', 'live'), actions: usePart('estimate', 'actions'), submit: usePart('estimate', 'submit') };
-  return { rows, parts, title: props.title, emptyLabel: props.emptyLabel, submit: props.submit, onUse, canUse: rows.length > 0 && rows.every(row => row.ready), totalText: money(displayedTotal), finalTotalText: money(totals.total), totalLabel: props.totalLabel,
+  return { rows, parts, totalRef, flash: itemsFlash || totalFlash, sent, sentLabel: `Sent · ${format.number(Array.isArray(receipt?.items) ? receipt.items.length : 0)} ${props.itemCountLabel}, ${money(typeof receipt?.total === 'number' ? receipt.total : totals.total)}`, title: props.title, emptyLabel: props.emptyLabel, submit: props.submit, onUse, canUse: ctx.complete && rows.length > 0 && rows.every(row => row.ready), totalText: money(displayedTotal), finalTotalText: money(totals.total), totalLabel: props.totalLabel,
     summary: [{ label: props.subtotalLabel, value: money(totals.subtotal) }, ...(props.discount ? [{ label: props.discountLabel, value: `−${money(totals.discount)}` }] : []), ...(props.taxRate ? [{ label: props.taxLabel, value: money(totals.tax) }] : [])] };
 }
 type Row = ReturnType<typeof useEstimate>['rows'][number];
 function EstimateItem({ row }: { row: Row }) {
+  const { unstyled } = usePrism();
   const parts = { root: usePart('estimate', 'item', !row.ready ? 'loading' : row.enabled ? 'ready' : 'disabled'), checkbox: usePart('estimate', 'checkbox'), details: usePart('estimate', 'details'), label: usePart('estimate', 'label'), description: usePart('estimate', 'description'), price: usePart('estimate', 'price'), stepper: usePart('estimate', 'stepper'), decrease: usePart('estimate', 'decrease'), input: usePart('estimate', 'input'), increase: usePart('estimate', 'increase'), amount: usePart('estimate', 'amount') };
   return <div {...parts.root} style={{ ...parts.root.style, '--estimate-index': row.index } as CSSProperties} aria-busy={!row.ready}>
     <div {...parts.details}><div {...parts.label}>{row.label}</div>{row.description && <div {...parts.description}>{row.description}</div>}<div {...parts.price}>{row.priceText}</div></div>
-    {row.optional && <input {...parts.checkbox} {...row.checkboxProps} />}
-    <div {...parts.stepper}><button {...parts.decrease} {...row.decreaseProps}>−</button><input {...parts.input} {...row.inputProps} /><button {...parts.increase} {...row.increaseProps}>+</button></div>
+    {row.optional && <input {...parts.checkbox} className={cx(parts.checkbox.className, !unstyled && 'prism-switch')} {...row.checkboxProps} />}
+    <div {...parts.stepper} className={cx(parts.stepper.className, !unstyled && 'prism-stepper')}><button {...parts.decrease} {...row.decreaseProps}>−</button><input {...parts.input} {...row.inputProps} /><button {...parts.increase} {...row.increaseProps}>+</button></div>
     <span {...parts.amount}>{row.amountText}</span>
   </div>;
 }
+function EstimateSkeleton() {
+  const { unstyled } = usePrism(), input = usePart('estimate', 'input');
+  const item = usePart('estimate', 'item', 'loading'), details = usePart('estimate', 'details'), label = usePart('estimate', 'label'), price = usePart('estimate', 'price'), stepper = usePart('estimate', 'stepper'), amount = usePart('estimate', 'amount');
+  return <StreamSkeleton style={{ display: 'contents' }}><div {...item} aria-hidden="true"><div {...details}><div {...label} data-prism-skeleton-line="">&nbsp;</div><div {...price}>&nbsp;</div></div><div {...stepper} className={cx(stepper.className, !unstyled && 'prism-stepper')}><button disabled>−</button><input {...input} disabled size={2} value="" readOnly /><button disabled>+</button></div><span {...amount}>&nbsp;</span></div></StreamSkeleton>;
+}
 export function Estimate(ctx: PrismComponentProps<EstimateProps>) {
+  const { unstyled } = usePrism(), presentation = usePresentation(), settled = useSettled();
   const estimate = useEstimate(ctx.props, ctx), { parts } = estimate;
   const Item = useSlot('estimate', 'item', EstimateItem), Empty = useSlot('estimate', 'empty', 'div' as any), Actions = useSlot('estimate', 'actions', 'div' as any);
-  return <ComponentFrame component="estimate" title={estimate.title} undo ask actions={<Actions {...parts.actions}><button {...parts.submit} type="button" disabled={!estimate.canUse} onClick={estimate.onUse}>{estimate.submit}</button></Actions>}>
-    <div {...parts.list}>{estimate.rows.length ? estimate.rows.map(row => <Item key={row.id} row={row} />) : <Empty {...parts.empty}>{estimate.emptyLabel}</Empty>}</div>
+  return <ComponentFrame component="estimate" title={estimate.title} state={presentation['data-state']} undo ask actions={<Actions {...parts.actions}><button {...parts.submit} className={cx(parts.submit.className, !unstyled && 'prism-pill')} aria-label={estimate.submit} data-sent={!!estimate.sent || undefined} type="button" disabled={!estimate.canUse} onClick={estimate.onUse}>{estimate.sent ? <><ActionCheck /><span>{estimate.sentLabel}</span></> : estimate.submit}</button></Actions>}>
+    <MicroActions />
+    <div {...parts.list}>{estimate.rows.map(row => <Item key={row.id} row={row} />)}{!settled && Array.from({ length: Math.max(0, 2 - estimate.rows.length) }, (_, index) => <EstimateSkeleton key={`pending-${index}`} />)}{settled && !estimate.rows.length && <Empty {...parts.empty}>{estimate.emptyLabel}</Empty>}</div>
     <div {...parts.summary}>{estimate.summary.map(line => <div key={line.label} {...parts.summaryRow}><span {...parts.summaryLabel}>{line.label}</span><span {...parts.summaryValue}>{line.value}</span></div>)}
-      <div {...parts.total}><span {...parts.totalLabel}>{estimate.totalLabel}</span><span {...parts.totalValue} aria-hidden="true">{estimate.totalText}</span><span {...parts.live} aria-live="polite">{estimate.finalTotalText}</span></div>
+      <div {...parts.total}><span {...parts.totalLabel}>{estimate.totalLabel}</span><span {...parts.totalValue} ref={estimate.totalRef} data-prism-flash={estimate.flash ? '' : undefined} aria-hidden="true">{estimate.totalText}</span><span {...parts.live} aria-live="polite">{estimate.finalTotalText}</span></div>
     </div>
   </ComponentFrame>;
 }
