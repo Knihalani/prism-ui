@@ -37,11 +37,13 @@ test('automatic content height can shrink after completion but never collapses w
     const size = (height: number) => act(() => { window.dispatchEvent(new MessageEvent('message', { data: { ns: 'prism-artifact', id, type: 'size', height }, source: frame.contentWindow, origin: 'null' })); });
     size(320); size(80);
     expect(view.container.querySelector<HTMLElement>('[data-part=viewport]')!.style.height).toBe('320px');
-    view.rerender(ui(true)); size(80);
+    view.rerender(ui(true));
     expect(view.container.querySelector<HTMLElement>('[data-part=viewport]')!.style.height).toBe('80px');
     expect(view.container.querySelector('iframe')).toBe(frame);
     expect(frame.srcdoc).toBe(document);
     expect(sent.mock.calls.filter(([message]) => message.ns === 'prism-artifact' && message.type === 'render' && message.render.complete)).toHaveLength(1);
+    size(0);
+    expect(view.container.querySelector<HTMLElement>('[data-part=viewport]')!.style.height).toBe('0px');
     sent.mockRestore();
   } finally { cleanup(); restore(); }
 });

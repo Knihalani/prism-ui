@@ -72,14 +72,14 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   const revision = useRef(0);
   const current = useRef({ emit, title: selected.title ?? 'Artifact', autoMax });
   current.current = { emit, title: selected.title ?? 'Artifact', autoMax };
-  const streaming = useRef(!complete); streaming.current = !complete;
   const [failure, setFailure] = useState<{ source: string; kind: string; error: string }>();
   const [notice, setNotice] = useState('');
   const [fullscreen, setFullscreen] = useState(false);
   const [displayed, setDisplayed] = useState<{ owner: typeof owner; kind: ArtifactProps['kind']; source: string }>();
   const rendered = displayed?.owner === owner;
-  const [measured, setMeasured] = useState<{ owner: typeof owner; height: number }>();
-  const height = measured?.owner === owner ? measured.height : 0;
+  const [measured, setMeasured] = useState<{ owner: typeof owner; height: number; maximum: number }>();
+  const measurement = measured?.owner === owner ? measured : undefined;
+  const height = measurement ? complete ? measurement.height : Math.max(heights[selected.size], measurement.maximum) : heights[selected.size];
   const last = useRef<{ kind: ArtifactProps['kind']; source: string; complete: boolean } | undefined>(undefined);
   const error = failure?.source === source && failure.kind === kind ? failure.error : undefined;
   const updating = enabled && !error && !!version &&
@@ -128,7 +128,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
     };
     const mount = () => {
       const session = mountArtifactFrame(container, importMap(imports, container.ownerDocument.baseURI), store, grants, taskPath, {
-        height: value => setMeasured(old => ({ owner, height: Math.min(maxAutoHeight, streaming.current ? Math.max(old?.owner === owner ? old.height : 0, value) : value) })),
+        height: value => setMeasured(old => ({ owner, height: Math.min(maxAutoHeight, value), maximum: Math.min(maxAutoHeight, Math.max(old?.owner === owner ? old.maximum : 0, value)) })),
         rendered: value => { if (value === revision.current && last.current) setDisplayed({ owner, ...last.current }); },
         error: (text, value) => {
           if (value === revision.current) {
@@ -218,7 +218,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   }
   return {
     selected, versions, version, selectVersion, mode, setMode, diff, previous, enabled, rendered, updating, error, notice, ref, fullscreen,
-    height: typeof selected.height === 'number' ? selected.height : height ? complete ? height : Math.max(heights[selected.size], height) : heights[selected.size],
+    height: typeof selected.height === 'number' ? selected.height : height,
     copy, download, reload, toggleFullscreen,
     fix() { if (error) emit('fix', { error, source, kind, version: version?.number ?? 1 }); },
   };
