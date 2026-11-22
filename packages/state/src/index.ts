@@ -118,8 +118,8 @@ export function createStore({ persist, namespace = '', initial = {} }: { persist
   function restore(target: any, source: any, paths: string[]) {
     function pathValue(target: any, source: any, keys: string[]): any {
       const [key, ...rest] = keys, absent = source == null || !Object.hasOwn(source, key);
-      const remove = absent && (!rest.length || Array.isArray(source));
-      const value = rest.length && !remove ? pathValue(target?.[key], source?.[key], rest) : source?.[key];
+      const value = rest.length ? pathValue(target?.[key], source?.[key], rest) : source?.[key];
+      const remove = absent && (!rest.length || value != null && typeof value === 'object' && !Object.keys(value).length);
       const next = write(target, [key], value, remove);
       if (Array.isArray(next) && Array.isArray(source) && next.length > source.length) {
         let length = next.length;
@@ -141,7 +141,7 @@ export function createStore({ persist, namespace = '', initial = {} }: { persist
       if (index < 0) return;
       const step = from[index], paths = step.paths.filter(path => within(path, scope));
       const next = restore(state, step.state, paths);
-      for (let i = index + 1; i < from.length; i++) from[i].state = restore(from[i].state, next, paths);
+      for (let i = index + 1; i < from.length; i++) from[i].state = restore(from[i].state, step.state, paths);
       step.paths = step.paths.filter(path => !within(path, scope));
       if (!step.paths.length) from.splice(index, 1);
       to.push({ state, paths }); state = next;

@@ -19,6 +19,16 @@ test('undoing an earlier array index preserves a later unrelated index', () => {
   store.redo('items.2'); expect(store.get('items')).toEqual(['a', 'b', 'c', 'd']);
 });
 
+test('undoing an appended field preserves later sibling edits in the same item', () => {
+  const store = createStore({ initial: { items: [] } });
+  store.set('items.0.label', 'Seat'); store.set('items.0.qty', 2);
+  store.undo('items.0.label');
+  expect(store.snapshot()).toEqual({ items: [{ qty: 2 }] });
+  store.undo(); expect(store.snapshot()).toEqual({ items: [] });
+  store.redo(); expect(store.snapshot()).toEqual({ items: [{ qty: 2 }] });
+  store.redo('items.0.label'); expect(store.snapshot()).toEqual({ items: [{ label: 'Seat', qty: 2 }] });
+});
+
 test('scoped undo skips unrelated entries and rebases their snapshots for global travel', () => {
   const store = createStore({ initial: { first: { qty: 5 }, second: { qty: 5 } } });
   store.set('first.qty', 6); store.set('second.qty', 7);
