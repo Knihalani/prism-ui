@@ -3,6 +3,10 @@
 `createStore()` provides dotted-path reads/writes, subscriptions, batching, persistence,
 and snapshot-based undo/redo.
 
+With persistence, `store.hydrated` reports whether the initial load has finished.
+Await `store.ready` before namespace migrations that must preserve saved fields;
+it resolves after successful or failed asynchronous loads.
+
 ```ts
 import { createStore } from '@prism-ui/state';
 

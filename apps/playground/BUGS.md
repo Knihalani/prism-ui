@@ -2,7 +2,7 @@
 
 Both issues below are resolved by the follow-up React identity/table changes on `playground`. The original observations are retained as reproduction context.
 
-- **#1:** provisional component IDs now resolve to `node.key` in the shared React identity layer (including `props.id` passed to components). Once a node is completed and frozen, provisional state is migrated in one no-history batch and empty key ancestors are removed. Existing persisted final-ID fields win conflicts; missing fields are filled from provisional state. The parser does not expose individual ID-field closure; inline/leaf completion flags can precede attribute closure, so freezing is also required.
+- **#1:** provisional component IDs now resolve to an instance-scoped key in the shared React identity layer (including `props.id` passed to components). Once a node is completed and frozen, provisional state is migrated after hydration in one no-history batch and empty key ancestors are removed. Existing persisted final-ID fields win conflicts; missing fields are filled from provisional state. The parser does not expose individual ID-field closure; inline/leaf completion flags can precede attribute closure, so freezing is also required.
 - **#2:** the table fallback now formats typed columns using the current locale/currency and supports `pageSize`, applying pagination after sorting raw values.
 
 ## Existing streaming bug: provisional component state namespaces

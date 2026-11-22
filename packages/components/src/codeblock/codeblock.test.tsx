@@ -44,11 +44,11 @@ test('copy emits exact structured payload and announces success', async () => {
   const previous = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text: string) => { copied.push(text); } } });
   try {
-    const view = render(<Prism registry={registry} source={fence('a\nb', 'js')} onAction={action => actions.push(action)} />);
+    const view = render(<Prism scope="test" registry={registry} source={fence('a\nb', 'js')} onAction={action => actions.push(action)} />);
     fireEvent.click(view.getByRole('button', { name: 'Copy code' }));
     await waitFor(() => expect(actions.length).toBe(1));
     expect(copied).toEqual(['a\nb']);
-    expect(actions[0]).toEqual({ type: 'copy', component: 'code', id: '0', payload: { lang: 'js', lines: 2 },
+    expect(actions[0]).toEqual({ type: 'copy', component: 'code', id: 'test:0', payload: { lang: 'js', lines: 2 },
       context: { component: 'code', props: {}, state: { wrap: false, expanded: false } },
       message: 'User copy in code: {"lang":"js","lines":2}' });
     expect(view.getByRole('status').textContent).toBe('Copied');

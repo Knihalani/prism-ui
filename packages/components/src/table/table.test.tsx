@@ -13,23 +13,23 @@ test('markdown table preserves component and registry node overrides while sorti
   function Cell({ children }: { children?: React.ReactNode }) { return <td data-override="cell">{children}</td>; }
   function Ignored({ children }: { children?: React.ReactNode }) { return <td data-ignored="yes">{children}</td>; }
   const components = { tableRow: Row, tableHeader: Header, tableCell: Cell };
-  const view = render(<Prism source="" />);
+  const view = render(<Prism scope="test" source="" />);
   for (const mode of ['components', 'registry', 'precedence'] as const) {
     const store = createStore();
     const registry = createRegistry([tableDef, ...Object.entries(components).map(([name, component]) => ({ name, component: mode === 'precedence' ? Ignored : component }))]);
-    view.rerender(<Prism source={source} store={store} registry={mode === 'components' ? createRegistry([tableDef]) : registry} components={mode === 'registry' ? {} : components} />);
+    view.rerender(<Prism scope="test" source={source} store={store} registry={mode === 'components' ? createRegistry([tableDef]) : registry} components={mode === 'registry' ? {} : components} />);
     expect(view.container.querySelectorAll('tr[data-override="row"]').length).toBe(4);
     expect(view.container.querySelectorAll('th[data-override="header"]').length).toBe(4);
     expect(view.container.querySelectorAll('td[data-override="cell"]').length).toBe(12);
     expect(view.container.querySelector('[data-ignored]')).toBeNull();
     const firstRow = view.container.querySelector('tbody tr');
     expect(order(view)).toEqual(['Team 10', 'Team 2', 'Team 1']);
-    act(() => store.set('0.sort', { column: 1, dir: 'asc' }));
+    act(() => store.set('test:0.sort', { column: 1, dir: 'asc' }));
     expect(order(view)).toEqual(['Team 2', 'Team 1', 'Team 10']);
     expect(view.container.querySelector('tbody tr:last-child')).toBe(firstRow);
-    act(() => store.set('0.sort', { column: 1, dir: 'desc' }));
+    act(() => store.set('test:0.sort', { column: 1, dir: 'desc' }));
     expect(order(view)).toEqual(['Team 10', 'Team 1', 'Team 2']);
-    act(() => store.set('0.sort', null));
+    act(() => store.set('test:0.sort', null));
     expect(order(view)).toEqual(['Team 10', 'Team 2', 'Team 1']);
   }
 });
@@ -52,14 +52,14 @@ test('markdown table renders semantic parts, rich cells, inferred numeric and ex
 });
 
 test('sort cycles ascending, descending and original, with exact aria-sort and stored state', () => {
-  const store = createStore(), view = render(<Prism source={source} store={store} />);
+  const store = createStore(), view = render(<Prism scope="test" source={source} store={store} />);
   const price = view.getByRole('button', { name: 'Price' }), header = view.getAllByRole('columnheader')[1];
   fireEvent.click(price);
   expect(order(view)).toEqual(['Team 2', 'Team 1', 'Team 10']); expect(header.getAttribute('aria-sort')).toBe('ascending');
-  expect(store.get('0.sort')).toEqual({ column: 1, dir: 'asc' });
+  expect(store.get('test:0.sort')).toEqual({ column: 1, dir: 'asc' });
   fireEvent.click(price); expect(order(view)).toEqual(['Team 10', 'Team 1', 'Team 2']); expect(header.getAttribute('aria-sort')).toBe('descending');
   fireEvent.click(price); expect(order(view)).toEqual(['Team 10', 'Team 2', 'Team 1']); expect(header.getAttribute('aria-sort')).toBe('none');
-  expect(store.get('0.sort')).toBeNull();
+  expect(store.get('test:0.sort')).toBeNull();
   fireEvent.click(view.getByRole('button', { name: 'Plan' }));
   expect(order(view)).toEqual(['Team 1', 'Team 2', 'Team 10']);
 });
@@ -114,10 +114,10 @@ test('component-node dispatch delegates all props unchanged but never delegates 
 });
 
 test('empty/mixed cells do not break numeric detection, stable sorting or invalid agent sort state', () => {
-  const store = createStore(), view = render(<Prism source={'| Name | Value |\n| --- | --- |\n| A | 2 |\n| B | 2 |\n| C | note |\n| D | |'} store={store} />);
+  const store = createStore(), view = render(<Prism scope="test" source={'| Name | Value |\n| --- | --- |\n| A | 2 |\n| B | 2 |\n| C | note |\n| D | |'} store={store} />);
   expect(view.getAllByRole('columnheader')[1].style.textAlign).toBe('left');
   fireEvent.click(view.getByRole('button', { name: 'Value' })); expect(order(view)).toEqual(['D', 'A', 'B', 'C']);
-  act(() => store.set('0.sort', { column: 100, dir: 'asc' })); expect(order(view)).toEqual(['A', 'B', 'C', 'D']);
+  act(() => store.set('test:0.sort', { column: 100, dir: 'asc' })); expect(order(view)).toEqual(['A', 'B', 'C', 'D']);
 });
 
 test('unstyled mode, slots and horizontal overflow state are supported', () => {

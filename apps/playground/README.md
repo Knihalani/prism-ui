@@ -17,7 +17,7 @@ bun run --cwd apps/playground test
 ## Workflow
 
 - Edit Markdown on the left; the right pane renders `<Prism source>` immediately.
-- **Stream** creates a real AsyncIterable passed to `<Prism stream>`. Configure characters/tick and milliseconds/tick before or during playback. Pause/resume preserves the iterator; Stop finalizes the received prefix. Source is read-only during playback. Replay starts a new Prism reply; shared store values persist until Reset or selecting another example.
+- **Stream** creates a real AsyncIterable passed to `<Prism stream>`. Configure characters/tick and milliseconds/tick before or during playback. Pause/resume preserves the iterator; Stop finalizes the received prefix. Source is read-only during playback. Shared store values persist across reloads and example changes using `localStorageAdapter('prism-ui')` with namespace `playground`. **Reset state** in the State drawer clears this saved snapshot and restores defaults.
 - The example menu is built from `defaultRegistry.list()` after importing `@prism-ui/components`. Every registered directive gets its declared examples, with a basic syntax fallback if it has none. `tab` is wrapped in `tabs`, and `calc` gets a seed state. Utility exports such as hooks and ComponentFrame are not standalone directives. New exports that register definitions automatically appear after Vite reloads; component CSS is discovered by a Vite glob.
 - The kitchen sink is a realistic assistant reply combining Markdown, badges, callout, comparison, live numbers, an estimate, a data table, and a sourced summary.
 - **Actions** stores every `onAction` object, including payload, context and message, displaying the newest first. Selecting another fixture or Clear explicitly clears the log.
