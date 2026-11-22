@@ -7,12 +7,24 @@ import { parsePatch } from '../src/patch';
 import { createReplay } from '../src/replay';
 import { createParser } from '../src/instrumented-core';
 import { metrics, resetMetrics } from '../src/metrics';
+import { playgroundPlugins } from '../src/plugins';
 
 test('every registered directive has a parseable fixture', () => {
   const fixtures = examples();
   expect(fixtures.map(f => f.id).sort()).toEqual(defaultRegistry.list().map(d => d.name).sort());
   for (const fixture of fixtures) expect(parse(fixture.source).children.length).toBeGreaterThan(0);
   expect(parse(kitchenSink).children.filter(n => n.type === 'component').length).toBeGreaterThanOrEqual(5);
+});
+
+test('artifact and mockup fixture fences use their registered playground plugins', () => {
+  for (const name of ['artifact', 'mockup']) {
+    const fixture = examples().find(fixture => fixture.id === name)!;
+    const root = parse(fixture.source, { plugins: playgroundPlugins });
+    expect(root.children.length).toBeGreaterThan(0);
+    for (const node of root.children) expect({ type: node.type, name: node.name }).toEqual({ type: 'component', name });
+    expect(parse('```' + name + ':unknown\nsource\n```', { plugins: playgroundPlugins }).children[0].type).toBe('code');
+  }
+  expect(parse('', { plugins: playgroundPlugins }).children).toEqual([]);
 });
 
 test('agent patches apply set/merge/delete, including empty maps', () => {
