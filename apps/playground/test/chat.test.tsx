@@ -26,6 +26,28 @@ function type(view: ReturnType<typeof render>, text: string) {
 }
 function send(view: ReturnType<typeof render>, text: string) { const input = type(view, text); fireEvent.keyDown(input, { key: 'Enter' }); }
 
+test('sidebar utilities share the appearance row and system appearance remains reachable', () => {
+  const view = render(<App pace={fast} />);
+  const row = view.container.querySelector('.theme-row')!;
+  for (const label of ['Components', 'Settings', 'Use system appearance']) {
+    expect(row.contains(view.getByRole('button', { name: label }))).toBe(true);
+  }
+  fireEvent.click(view.getByRole('switch', { name: 'Dark appearance' }));
+  expect(localStorage.getItem('prism-theme')).not.toBeNull();
+  fireEvent.click(view.getByRole('button', { name: 'Use system appearance' }));
+  expect(localStorage.getItem('prism-theme')).toBeNull();
+  expect(view.queryByText('Scripted demo · Connect a model')).toBeNull();
+});
+
+test('the ink send control stays disabled for empty input', () => {
+  const view = render(<App pace={fast} />);
+  expect(view.getByRole('button', { name: 'Send message' }).hasAttribute('disabled')).toBe(true);
+  type(view, 'Hello');
+  expect(view.getByRole('button', { name: 'Send message' }).hasAttribute('disabled')).toBe(false);
+  type(view, '   ');
+  expect(view.getByRole('button', { name: 'Send message' }).hasAttribute('disabled')).toBe(true);
+});
+
 test.each(['Settings', 'Components'])('opening %s from the mobile drawer closes the drawer', label => {
   const previous = window.matchMedia;
   window.matchMedia = (query: string) => ({ matches: query.includes('max-width'), media: query, onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; } });
