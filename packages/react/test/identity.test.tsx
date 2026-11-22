@@ -7,8 +7,21 @@ import { Prism, createRegistry, useComponentState, type PrismComponentProps } fr
 import { migrateComponentState } from '../src/identity';
 import { estimate } from '../../components/src/estimate';
 import { pick } from '../../components/src/pick';
+import { num } from '../../components/src/num';
 
 afterEach(cleanup);
+
+test('a container and edited nested num finalize without moving each other state', () => {
+  function Box({ children }: PrismComponentProps) { useComponentState('local', 10); return <div>{children}</div>; }
+  const registry = createRegistry([num, { name: 'box', component: Box }]), store = createStore();
+  const source = ':::box{id="box"}\n:num[5]{id="amount" step=1}';
+  const view = render(<Prism scope="nested" registry={registry} store={store} source={source} done={false}/>);
+  fireEvent.keyDown(view.getByRole('slider'), { key: 'ArrowUp' });
+  expect(view.getByRole('slider').textContent).toBe('6');
+  view.rerender(<Prism scope="nested" registry={registry} store={store} source={source + '\n:::\n'}/>);
+  expect(view.getByRole('slider').textContent).toBe('6');
+  expect(store.snapshot()).toEqual({ box: { local: 10 }, amount: 6 });
+});
 
 test('async hydration preserves saved final fields when a stream finishes before load', async () => {
   let resolve!: (value: object) => void;
@@ -141,7 +154,7 @@ test('inline and leaf attributes never persist a truncated id while their block 
     for (let end = 1; end <= source.length; end++) view.rerender(<Prism scope="test" store={store} registry={registry} source={source.slice(0, end)} done={false}/>);
     view.rerender(<Prism scope="test" store={store} registry={registry} source={source}/>);
     expect(store.snapshot()).toEqual({ 'final-id': { count: 3 } });
-    for (const snapshot of saved) expect(Object.keys(snapshot).every(key => key === 'test:0' || key === 'final-id')).toBe(true);
+    for (const snapshot of saved) expect(Object.keys(snapshot).every(key => ['test:0', 'test:0:0', 'final-id'].includes(key))).toBe(true);
     view.unmount();
   }
 });
