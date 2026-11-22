@@ -9,13 +9,14 @@ const { act, cleanup, fireEvent, render } = await import('@testing-library/react
 
 afterEach(cleanup);
 const registry = createRegistry([troubleshootDefinition]);
+const liveRegistry = createRegistry([{ ...troubleshootDefinition, skeleton: undefined }]);
 const props = { id: 'wifi', title: 'Wi-Fi drops', start: 'a', steps: { a: { title: 'Restart', text: 'Restart the adapter.', command: '$ nmcli radio wifi on', no: 'b' }, b: { text: 'Restart the router.', yes: '$fixed', no: '$escalate', hint: 'Wait for the lights.' } } };
 const fence = (value: unknown) => '```ui:troubleshoot\n' + JSON.stringify(value) + '\n```\n';
 
 test('static render has a step card, command, position, question and keyboard-accessible buttons', () => {
   const view = render(<Prism source={fence(props)} registry={registry} />);
   expect(view.getByText('Step 1')).toBeDefined(); expect(view.getByText('Restart the adapter.')).toBeDefined();
-  expect(view.getByText('Step 1').parentElement).toBe(view.getByText('Restart'));
+  expect(view.getByText('Step 1').parentElement).toBe(view.getByRole('heading', { level: 4, name: /Restart/ }));
   expect(view.getByRole('button', { name: 'Copy' }).parentElement?.dataset.part).toBe('command');
   expect(view.getByText('$ nmcli radio wifi on').tagName).toBe('CODE');
   expect(view.getByText('Did this fix it?')).toBeDefined();
@@ -28,7 +29,7 @@ test('resolved report emits exact action and persists sent state; restart and un
   fireEvent.click(view.getByRole('button', { name: 'No' }));
   fireEvent.click(view.getByRole('button', { name: 'Yes' }));
   expect(view.getByText('Fixed after 2 steps')).toBeDefined();
-  fireEvent.click(view.getByRole('button', { name: 'Send report' }));
+  fireEvent.click(view.getByRole('button', { name: /Send resolution|Send what we tried/ }));
   expect(actions).toEqual([{ type: 'troubleshoot', component: 'troubleshoot', id: 'wifi', payload: { resolved: true, path: [{ step: 'a', answer: 'no' }, { step: 'b', answer: 'yes' }] }, context: { component: 'troubleshoot', props, state: { path: [{ step: 'a', answer: 'no' }, { step: 'b', answer: 'yes' }], sent: false } }, message: 'Troubleshooting "Wi-Fi drops": fixed at step 2 (No → Yes).' }]);
   expect(view.getByRole('group').dataset.state).toBe('sent'); expect(store.get('wifi.sent')).toBe(true);
   fireEvent.click(view.getByRole('button', { name: 'Start over' })); expect(view.getByText('Step 1')).toBeDefined();
@@ -41,13 +42,13 @@ test('sending a report is one undo step without rewriting a valid path', () => {
   const view = render(<Prism source={fence(props)} registry={registry} store={store} />);
   fireEvent.click(view.getByRole('button', { name: 'Yes' }));
   const path = store.get('wifi.path');
-  fireEvent.click(view.getByRole('button', { name: 'Send report' }));
+  fireEvent.click(view.getByRole('button', { name: /Send resolution|Send what we tried/ }));
   expect(store.get('wifi.path')).toBe(path);
   expect(store.get('wifi.sent')).toBe(true);
   fireEvent.click(view.getByRole('button', { name: 'Undo' }));
   expect(store.get('wifi.sent')).toBe(false);
   expect(store.get('wifi.path')).toEqual([{ step: 'a', answer: 'yes' }]);
-  expect(view.queryByText('Report sent')).toBeNull();
+  expect(view.getByText('Report sent').getAttribute('aria-hidden')).toBe('true');
   fireEvent.click(view.getByRole('button', { name: 'Undo' }));
   expect(store.get('wifi.path')).toEqual([]);
   expect(view.getByText('Step 1')).toBeDefined();
@@ -58,7 +59,7 @@ test('report path normalization and sent state are undone together', () => {
   const store = createStore({ initial: { wifi: { path, sent: false } } });
   const updated = { ...props, steps: { ...props.steps, a: { ...props.steps.a, no: '$fixed' } } };
   const view = render(<Prism source={fence(updated)} registry={registry} store={store} />);
-  fireEvent.click(view.getByRole('button', { name: 'Send report' }));
+  fireEvent.click(view.getByRole('button', { name: /Send resolution|Send what we tried/ }));
   expect(store.get('wifi')).toEqual({ path: [{ step: 'a', answer: 'no' }], sent: true });
   fireEvent.click(view.getByRole('button', { name: 'Undo' }));
   expect(store.get('wifi')).toEqual({ path, sent: false });
@@ -71,16 +72,16 @@ test('changed branch targets truncate stale answers before advancing and reporti
   const view = render(<Prism source={fence(initial)} registry={registry} store={store} onAction={action => actions.push(action)} />);
   fireEvent.click(view.getByRole('button', { name: 'No' }));
   fireEvent.click(view.getByRole('button', { name: 'No' }));
-  expect(view.getByText('Old branch.')).toBeDefined();
+  expect(view.getByRole('heading', { level: 4, name: /Old branch\./ })).toBeDefined();
   const updated = { ...initial, steps: { ...initial.steps, a: { ...initial.steps.a, no: 'd' } } };
   view.rerender(<Prism source={fence(updated)} registry={registry} store={store} onAction={action => actions.push(action)} />);
-  expect(view.getByText('New branch.')).toBeDefined();
+  expect(view.getByRole('heading', { level: 4, name: /New branch\./ })).toBeDefined();
   expect(view.getByText('Step 2')).toBeDefined();
   expect(view.queryByText('Restart the router.')).toBeNull();
   fireEvent.click(view.getByRole('button', { name: 'No' }));
-  expect(view.getByText('Final check.')).toBeDefined();
+  expect(view.getByRole('heading', { level: 4, name: /Final check\./ })).toBeDefined();
   fireEvent.click(view.getByRole('button', { name: 'Yes' }));
-  fireEvent.click(view.getByRole('button', { name: 'Send report' }));
+  fireEvent.click(view.getByRole('button', { name: /Send resolution|Send what we tried/ }));
   const path = [{ step: 'a', answer: 'no' }, { step: 'd', answer: 'no' }, { step: 'e', answer: 'yes' }];
   expect(store.get('wifi.path')).toEqual(path);
   expect(actions).toEqual([{ type: 'troubleshoot', component: 'troubleshoot', id: 'wifi', payload: { resolved: true, path }, context: { component: 'troubleshoot', props: updated, state: { path, sent: false } }, message: 'Troubleshooting "Wi-Fi drops": fixed at step 3 (No → No → Yes).' }]);
@@ -98,7 +99,7 @@ test('backtracking and reporting use only the replayed prefix after a target cha
   const actions: Action[] = [];
   view.rerender(<Prism source={fence(terminal)} registry={registry} store={store} onAction={action => actions.push(action)} />);
   expect(view.getByText('Fixed after 1 step')).toBeDefined();
-  fireEvent.click(view.getByRole('button', { name: 'Send report' }));
+  fireEvent.click(view.getByRole('button', { name: /Send resolution|Send what we tried/ }));
   expect(store.get('wifi.path')).toEqual([{ step: 'a', answer: 'no' }]);
   expect(actions[0].payload).toEqual({ resolved: true, path: [{ step: 'a', answer: 'no' }] });
 });
@@ -121,7 +122,7 @@ test('unknown and missing targets end unresolved; yes defaults to fixed', () => 
   const actions: Action[] = [], input = { id: 'dead', start: 'a', steps: { a: { text: 'Try again.', no: 'unknown' } } };
   const view = render(<Prism source={fence(input)} registry={registry} onAction={action => actions.push(action)} />);
   fireEvent.click(view.getByRole('button', { name: 'No' }));
-  expect(view.getByText('Not fixed yet')).toBeDefined(); fireEvent.click(view.getByRole('button', { name: 'Send report' }));
+  expect(view.getByText('Not fixed yet')).toBeDefined(); fireEvent.click(view.getByRole('button', { name: /Send resolution|Send what we tried/ }));
   expect(actions).toEqual([{ type: 'troubleshoot', component: 'troubleshoot', id: 'dead', payload: { resolved: false, path: [{ step: 'a', answer: 'no' }] }, context: { component: 'troubleshoot', props: input, state: { path: [{ step: 'a', answer: 'no' }], sent: false } }, message: 'Troubleshooting "Troubleshoot": not fixed after 1 steps (No).' }]);
   fireEvent.click(view.getByRole('button', { name: 'Start over' })); fireEvent.click(view.getByRole('button', { name: 'Yes' })); expect(view.getByText('Fixed after 1 step')).toBeDefined();
   view.rerender(<Prism source={fence({ start: 'a', steps: { a: { text: 'No target.' } } })} registry={registry} />);
@@ -139,22 +140,22 @@ test('keyboard answers and backtracking, clickable history truncation and undo',
   fireEvent.keyDown(view.getByRole('button', { name: 'Yes' }), { key: 'y' }); expect(view.getByText('Fixed after 1 step')).toBeDefined();
 });
 
-test('streaming skeleton stays safe until text and branch targets arrive', () => {
+test('headless streaming view stays safe until text and branch targets arrive', () => {
   const initial = '```ui:troubleshoot\n{"id":"stream","start":"a","steps":{';
-  const view = render(<Prism source={initial} done={false} registry={registry} />);
+  const view = render(<Prism source={initial} done={false} registry={liveRegistry} />);
   expect(view.getByRole('status', { name: 'Loading step' })).toBeDefined();
   expect((view.getByRole('button', { name: 'Yes' }) as HTMLButtonElement).disabled).toBe(true);
   const partial = initial + '"a":{"text":"Restart';
-  view.rerender(<Prism source={partial} done={false} registry={registry} />);
+  view.rerender(<Prism source={partial} done={false} registry={liveRegistry} />);
   expect(view.getByRole('status', { name: 'Loading step' })).toBeDefined();
   expect((view.getByRole('button', { name: 'Yes' }) as HTMLButtonElement).disabled).toBe(true);
-  view.rerender(<Prism source={partial + ' the adapter.","no":"b"},"b":{"text":"Next"}}}'} done={false} registry={registry} />);
+  view.rerender(<Prism source={partial + ' the adapter.","no":"b"},"b":{"text":"Next"}}}'} done={false} registry={liveRegistry} />);
   expect((view.getByRole('button', { name: 'No' }) as HTMLButtonElement).disabled).toBe(true);
   fireEvent.click(view.getByRole('button', { name: 'No' }));
   fireEvent.keyDown(view.getByRole('button', { name: 'Yes' }), { key: 'y' });
   expect(view.getByText('Step 1')).toBeDefined();
   expect((view.getByRole('button', { name: 'Ask about this' }) as HTMLButtonElement).disabled).toBe(false);
-  view.rerender(<Prism source={partial + ' the adapter.","no":"b"},"b":{"text":"Next"},"c":{'} done={false} registry={registry} />);
+  view.rerender(<Prism source={partial + ' the adapter.","no":"b"},"b":{"text":"Next"},"c":{'} done={false} registry={liveRegistry} />);
   expect(view.getByText('Restart the adapter.')).toBeDefined();
   expect((view.getByRole('button', { name: 'No' }) as HTMLButtonElement).disabled).toBe(false);
   fireEvent.click(view.getByRole('button', { name: 'No' })); expect(view.getByText('Step 2')).toBeDefined();
@@ -163,7 +164,7 @@ test('streaming skeleton stays safe until text and branch targets arrive', () =>
 test('an unfinished current step cannot resolve through an implicit yes target', () => {
   const store = createStore();
   const partial = '```ui:troubleshoot\n{"id":"stream","start":"adapter","steps":{"adapter":{"title":"Reconnect","text":"Reconnect the adapter.","command":"nmcli radio wifi on","no":"$escalate"';
-  const view = render(<Prism scope="test" source={partial} done={false} registry={registry} store={store} />);
+  const view = render(<Prism scope="test" source={partial} done={false} registry={liveRegistry} store={store} />);
   expect((view.getByRole('button', { name: 'Yes' }) as HTMLButtonElement).disabled).toBe(true);
   expect((view.getByRole('button', { name: 'No' }) as HTMLButtonElement).disabled).toBe(true);
   fireEvent.click(view.getByRole('button', { name: 'Yes' }));
@@ -171,7 +172,7 @@ test('an unfinished current step cannot resolve through an implicit yes target',
   expect(store.get('test:troubleshoot:0.path')).toEqual([]); expect(store.get('stream')).toBeUndefined();
   expect(view.queryByText('Fixed after 1 step')).toBeNull();
   const full = partial + ',"yes":"router"},"router":{"text":"Restart the router.","no":"$escalate"}}}\n```\n';
-  view.rerender(<Prism scope="test" source={full} registry={registry} store={store} />);
+  view.rerender(<Prism scope="test" source={full} registry={liveRegistry} store={store} />);
   expect((view.getByRole('button', { name: 'Yes' }) as HTMLButtonElement).disabled).toBe(false);
   fireEvent.click(view.getByRole('button', { name: 'Yes' }));
   expect(store.get('stream.path')).toEqual([{ step: 'adapter', answer: 'yes' }]);
@@ -187,14 +188,14 @@ test.each([
   { yes: '$fixed', no: undefined, ready: false },
 ])('streaming terminal targets: $yes / $no', ({ yes, no, ready }) => {
   const source = fence({ start: 'a', steps: { a: { text: 'Try this.', yes, no } } });
-  const view = render(<Prism scope="test" source={source.slice(0, -5)} done={false} registry={registry} />);
+  const view = render(<Prism scope="test" source={source.slice(0, -5)} done={false} registry={liveRegistry} />);
   expect((view.getByRole('button', { name: 'Yes' }) as HTMLButtonElement).disabled).toBe(true);
   expect((view.getByRole('button', { name: 'No' }) as HTMLButtonElement).disabled).toBe(true);
   const streamed = '```ui:troubleshoot\n' + JSON.stringify({ start: 'a', steps: { a: { text: 'Try this.', yes, no } } }).slice(0, -2) + ',"later":{';
-  view.rerender(<Prism scope="test" source={streamed} done={false} registry={registry} />);
+  view.rerender(<Prism scope="test" source={streamed} done={false} registry={liveRegistry} />);
   expect((view.getByRole('button', { name: 'Yes' }) as HTMLButtonElement).disabled).toBe(!ready);
   expect((view.getByRole('button', { name: 'No' }) as HTMLButtonElement).disabled).toBe(!ready);
-  view.rerender(<Prism scope="test" source={source} registry={registry} />);
+  view.rerender(<Prism scope="test" source={source} registry={liveRegistry} />);
   expect((view.getByRole('button', { name: 'Yes' }) as HTMLButtonElement).disabled).toBe(false);
 });
 

@@ -1,39 +1,49 @@
-.prism-root .prism-troubleshoot__conversation { max-width: 100%; }
-.prism-root .prism-troubleshoot__history { display: grid; gap: var(--prism-space2); margin-bottom: var(--prism-space4); padding-left: var(--prism-space3); border-left: 1px solid var(--prism-border); }
-.prism-root .prism-troubleshoot__historyItem { min-width: 0; }
-.prism-root .prism-troubleshoot__historyItem > button { display: flex; align-items: center; justify-content: space-between; gap: var(--prism-space3); width: 100%; text-align: left; }
-.prism-root .prism-troubleshoot__historyItem .prism-troubleshoot__text { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin: 0; }
-.prism-root .prism-troubleshoot__chip { flex-shrink: 0; padding: var(--prism-space1) var(--prism-space2); border: 1px solid var(--prism-border-soft); border-radius: var(--prism-radius-sm); color: var(--prism-muted); font-size: var(--prism-text-xs); line-height: 1.2; }
-.prism-root .prism-troubleshoot__chip[data-state="yes"] { background: var(--prism-success-soft); color: var(--prism-success); }
-.prism-root .prism-troubleshoot__step { min-height: 240px; padding: var(--prism-space5); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-md); background: var(--prism-surface-soft); box-shadow: var(--prism-shadow-sm); }
-.prism-root .prism-troubleshoot__position { display: inline-block; margin-right: var(--prism-space3); color: var(--prism-muted); font-size: var(--prism-text-sm); font-weight: 400; font-variant-numeric: tabular-nums; }
-.prism-root .prism-troubleshoot__stepTitle { margin: 0 0 var(--prism-space3); color: var(--prism-text); font-size: var(--prism-text-lg); font-weight: 600; line-height: 1.4; letter-spacing: -.015em; }
-.prism-root .prism-troubleshoot__text { margin: 0 0 var(--prism-space4); white-space: pre-wrap; }
-.prism-root .prism-troubleshoot__hint { margin: var(--prism-space3) 0; color: var(--prism-muted); font-size: var(--prism-text-sm); }
-.prism-root .prism-troubleshoot__question { margin: var(--prism-space5) 0 var(--prism-space3); font-size: var(--prism-text-sm); font-weight: 500; }
-.prism-root .prism-troubleshoot__actions { display: flex; flex-wrap: wrap; gap: var(--prism-space2); }
-.prism-root :is(.prism-troubleshoot__primary, .prism-troubleshoot__ghost) { display: inline-flex; align-items: center; justify-content: center; min-height: var(--prism-space7); padding: var(--prism-space2) var(--prism-space4); border: 1px solid transparent; border-radius: var(--prism-radius-sm); font: 500 var(--prism-text-sm)/1.4 var(--prism-font-sans); cursor: pointer; transition: background var(--prism-duration-fast) var(--prism-ease), border-color var(--prism-duration-fast) var(--prism-ease); }
-.prism-root .prism-troubleshoot__primary { background: var(--prism-accent); color: var(--prism-bg); box-shadow: var(--prism-shadow-sm); }
-.prism-root .prism-troubleshoot__primary:hover:not(:disabled) { background: color-mix(in srgb, var(--prism-accent) 90%, var(--prism-text)); }
-.prism-root .prism-troubleshoot__ghost { background: transparent; color: var(--prism-muted); }
-.prism-root .prism-troubleshoot__command { position: relative; }
-.prism-root .prism-troubleshoot__command pre { padding-right: calc(var(--prism-space8) * 2 + var(--prism-space4)); }
-.prism-root .prism-troubleshoot__command > .prism-troubleshoot__ghost { position: absolute; top: var(--prism-space2); right: var(--prism-space2); padding: var(--prism-space1) var(--prism-space2); background: var(--prism-surface); opacity: 0; transition: opacity var(--prism-duration-fast) var(--prism-ease), background var(--prism-duration-fast) var(--prism-ease); }
-.prism-root .prism-troubleshoot__command:is(:hover, :focus-within) > .prism-troubleshoot__ghost { opacity: 1; }
-@media (hover: none), (pointer: coarse) {
-  .prism-root .prism-troubleshoot__command > .prism-troubleshoot__ghost { opacity: 1; }
-}
-.prism-root .prism-troubleshoot__ghost:hover:not(:disabled) { color: var(--prism-text); background: var(--prism-muted-soft); border-color: var(--prism-border-soft); }
-.prism-root .prism-troubleshoot__actions > .prism-troubleshoot__ghost { border-color: var(--prism-border); }
-.prism-root :is(.prism-troubleshoot__primary, .prism-troubleshoot__ghost):disabled { opacity: .45; cursor: not-allowed; }
-.prism-root :is(.prism-troubleshoot__primary, .prism-troubleshoot__ghost):focus-visible { outline: 2px solid var(--prism-accent); outline-offset: var(--prism-space1); }
-.prism-root .prism-troubleshoot__result { min-height: 180px; padding: var(--prism-space5); border-radius: var(--prism-radius-md); border: 1px solid var(--prism-warning); background: var(--prism-warning-soft); }
-.prism-root .prism-troubleshoot__result[data-state="resolved"] { border-color: var(--prism-success); background: var(--prism-success-soft); }
-.prism-root .prism-troubleshoot__result[data-state="sent"] { border-color: var(--prism-border); background: var(--prism-surface-soft); }
-.prism-root .prism-troubleshoot__skeleton { min-height: var(--prism-space6); margin-bottom: var(--prism-space4); border-radius: var(--prism-radius-sm); background: linear-gradient(100deg, var(--prism-muted-soft) 20%, var(--prism-surface) 45%, var(--prism-muted-soft) 70%); background-size: 220% 100%; animation: prism-troubleshoot-shimmer calc(var(--prism-duration-base) * 6) linear infinite; }
-@keyframes prism-troubleshoot-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
-.prism-root[data-animate="false"] .prism-troubleshoot__skeleton, .prism-root [data-animate="false"] .prism-troubleshoot__skeleton { animation: none; }
-@media (prefers-reduced-motion: reduce) {
-  .prism-root .prism-troubleshoot__skeleton { animation: none; }
-  .prism-root :is(.prism-troubleshoot__primary, .prism-troubleshoot__ghost) { transition: none; }
-}
+.prism-root .prism-troubleshoot__header { gap: 16px; margin-bottom: 20px; }
+.prism-root .prism-troubleshoot__title { margin: 0; font: 600 15px/1.4 var(--prism-font-sans); }
+/* Work around the shared Pill selector specificity. */
+.prism-root .prism-troubleshoot__root .prism-pill:is([data-variant="secondary"], [data-sent]) { background: var(--prism-fill-strong); color: var(--prism-text); box-shadow: none; }
+.prism-root .prism-troubleshoot__toolbar > :is(.prism-troubleshoot__ask, .prism-troubleshoot__undo) { position: absolute; top: -32px; right: 0; }
+.prism-root .prism-troubleshoot__toolbar > .prism-troubleshoot__undo { right: 32px; }
+.prism-root .prism-troubleshoot__rewind { display: inline-flex; align-items: center; gap: 7px; padding: 6px 0; border: 0; background: transparent; color: var(--prism-muted); font: 400 13px/1.65 var(--prism-font-sans); cursor: pointer; }
+.prism-root .prism-troubleshoot__rewind:disabled { opacity: .35; cursor: default; }
+.prism-root .prism-troubleshoot__rewind svg { width: 14px; height: 14px; }
+.prism-root .prism-troubleshoot__map { display: block; width: 100%; max-width: 520px; height: 68px; margin: 0 0 14px; overflow: visible; }
+.prism-root .prism-troubleshoot__map path { stroke: var(--prism-hairline); fill: none; stroke-width: 1.5; }
+.prism-root .prism-troubleshoot__map circle { stroke: var(--prism-ink-3); fill: var(--prism-bg); stroke-width: 1.3; }
+.prism-root .prism-troubleshoot__map circle[data-station="current"] { stroke-width: 3.5; }
+.prism-root .prism-troubleshoot__map circle[data-station="taken"] { fill: var(--prism-text); stroke: var(--prism-text); }
+.prism-root .prism-troubleshoot__map circle[data-station="unexplored"] { opacity: .35; }
+.prism-root .prism-troubleshoot__map [data-route="visited"] { stroke: var(--prism-muted); stroke-width: 2; }
+.prism-root .prism-troubleshoot__map [data-route="future"] { stroke: var(--prism-ink-3); opacity: .25; }
+.prism-root .prism-troubleshoot__map text { font: 12px var(--prism-font-sans); fill: var(--prism-muted); }
+.prism-root .prism-troubleshoot__map [data-branch] { fill: var(--prism-ink-3); }
+.prism-root .prism-troubleshoot__history { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 24px; }
+.prism-root .prism-troubleshoot__historyItem > button { display: inline-flex; align-items: center; gap: 5px; width: auto; padding: 5px 10px; font: 400 12px/1.6 var(--prism-font-sans); color: var(--prism-muted); border: 1px solid var(--prism-hairline); border-radius: var(--prism-radius-pill); background: var(--prism-fill); text-align: left; cursor: pointer; }
+.prism-root .prism-troubleshoot__historyItem > button:hover { background: var(--prism-fill-strong); color: var(--prism-text); }
+.prism-root .prism-troubleshoot__historyItem [data-answer="yes"] { color: var(--prism-success); }
+.prism-root .prism-troubleshoot__historyItem [data-answer="no"] { color: var(--prism-ink-3); }
+.prism-root .prism-troubleshoot__chip { font-weight: 550; }
+.prism-root .prism-troubleshoot__stepTitle { font: 400 34px/1.13 var(--prism-font-display); letter-spacing: -.01em; max-width: 580px; margin: 0 0 12px; }
+.prism-root .prism-troubleshoot__position { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.prism-root .prism-troubleshoot__result .prism-troubleshoot__stepTitle { font-size: 36px; }
+.prism-root .prism-troubleshoot__text { margin: 0 0 24px; color: var(--prism-muted); font-size: 14px; line-height: 1.75; }
+.prism-root .prism-troubleshoot__hint { color: var(--prism-muted); font-size: 13px; }
+.prism-root .prism-troubleshoot__question { margin: 20px 0 0; color: var(--prism-muted); font-size: 15px; }
+.prism-root .prism-troubleshoot__actions { display: flex; align-items: center; gap: 16px; margin-top: 24px; flex-wrap: wrap; }
+.prism-root .prism-troubleshoot__actions[data-options] > button { min-width: 114px; min-height: 42px; gap: 20px; }
+.prism-root .prism-troubleshoot__actions .prism-kbd { font-size: 10px; opacity: .5; background: transparent; color: inherit; padding: 0; }
+.prism-root .prism-troubleshoot__ghost:not(.prism-pill, .prism-chip) { padding: 0; border: 0; background: none; color: var(--prism-muted); font: 400 13px/1.65 var(--prism-font-sans); cursor: pointer; }
+.prism-root .prism-troubleshoot__resolution { color: var(--prism-success); margin-bottom: 10px; }
+.prism-root .prism-troubleshoot__resolution svg { width: 28px; height: 28px; }
+.prism-root .prism-troubleshoot__command { position: relative; display: flex; align-items: center; gap: 12px; padding: 11px 14px; margin: 16px 0; background: var(--prism-fill-strong); border-radius: 6px; font: 13px/1.65 var(--prism-font-mono); }
+.prism-root .prism-troubleshoot__command > span { color: var(--prism-ink-3); }
+.prism-root .prism-troubleshoot__command > :is(pre, [data-prism="codeblock"]) { flex: 1; min-width: 0; margin: 0; padding: 0; border: 0; box-shadow: none; background: transparent; }
+.prism-root .prism-troubleshoot__command :is(pre, code) { margin: 0; padding: 0; border: 0; background: transparent; font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+.prism-root .prism-troubleshoot__command [data-part="header"] { display: none; }
+.prism-root .prism-troubleshoot__command [data-part="body"], .prism-root .prism-troubleshoot__command [data-part="line"] { background: transparent; padding: 0; min-height: 0; line-height: 1.65; }
+.prism-root .prism-troubleshoot__command [data-part="actions"] { position: absolute; top: 0; left: 0; margin: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.prism-root .prism-troubleshoot__command [data-part="actions"]:focus-within { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+.prism-root .prism-troubleshoot__copy { margin-left: auto; margin-block: -4px; }
+.prism-root .prism-troubleshoot__skeleton { display: block; margin: 12px 0; }
+@media (max-width: 760px) { .prism-root .prism-troubleshoot__text { font-size: 16px; } .prism-root .prism-troubleshoot__actions .prism-pill { font-size: 14px; } }
+@media (max-width: 760px) { .prism-root .prism-troubleshoot__header { gap: 12px; } .prism-root .prism-troubleshoot__map { margin-bottom: 16px; } .prism-root .prism-troubleshoot__history { gap: 6px; margin-bottom: 22px; } .prism-root .prism-troubleshoot__stepTitle { font-size: 31px; } .prism-root .prism-troubleshoot__command { font-size: 11px; padding: 10px; } }
