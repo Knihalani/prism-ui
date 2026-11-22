@@ -7,6 +7,19 @@ import { runbookDefinition, stepDefinition } from '../src/runbook';
 const { act, cleanup, fireEvent, render } = await import('@testing-library/react');
 
 afterEach(cleanup);
+test('each command row copies only its own fence', async () => {
+  const copied: string[] = [];
+  const previous = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (value: string) => { copied.push(value); } } });
+  try {
+    const source = '::::runbook\n:::step{title="Commands"}\n```sh\n$ echo one\n```\n\n```sh\necho two\n```\n:::\n::::';
+    const view = render(<Prism source={source} registry={registry} />);
+    const buttons = view.getAllByRole('button', { name: 'Copy' });
+    await act(async () => { fireEvent.click(buttons[0]); });
+    await act(async () => { fireEvent.click(buttons[1]); });
+    expect(copied).toEqual(['echo one', 'echo two']);
+  } finally { if (previous) Object.defineProperty(navigator, 'clipboard', previous); else Reflect.deleteProperty(navigator, 'clipboard'); }
+});
 const registry = createRegistry([runbookDefinition, stepDefinition]);
 const source = '::::runbook{title="Deploy to Fly" id=deploy}\n:::step{title="Install the CLI" id=install}\nRun:\n```bash\n$ fly install\n```\n:::\n:::step{title="Log in"}\nLog in now.\n:::\n::::\n';
 

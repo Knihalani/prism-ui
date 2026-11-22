@@ -68,9 +68,9 @@ export function useStep(props: StepProps, ctx: PrismContextValue, node: Node) {
         buttons?.[Math.max(0, Math.min(buttons.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)))]?.focus();
       }
     },
-    async copy() {
+    async copy(command = commands) {
       clearTimeout(timer.current);
-      try { await navigator.clipboard.writeText(commands); setCopyState('copied'); } catch { setCopyState('error'); }
+      try { await navigator.clipboard.writeText(command.replace(/^\$ /gm, '')); setCopyState('copied'); } catch { setCopyState('error'); }
       timer.current = setTimeout(() => setCopyState('idle'), 1500);
     },
   };
@@ -86,7 +86,7 @@ export function Step({ props, node, children, complete }: PrismComponentProps<St
   <PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="div" {...actions}>
     {vm.index >= 0 && <PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="button" {...stuck} type="button" disabled={vm.disabled} aria-disabled={vm.disabled} onClick={vm.stuck}>{vm.labels.stuck}</PrismPart>}
   </PrismPart></PrismPart><PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="div" {...body}>{Children.map(children, child => isValidElement<{ node: Node }>(child) && child.props.node?.type === 'code'
-    ? <PrismPart as="div" {...command} slotProps={{ step: vm } satisfies StepSlotProps} tabIndex={0}>{child}<PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="button" {...copy} type="button" onClick={vm.copy} aria-live="polite">{vm.copyState === 'copied' ? vm.labels.copied : vm.copyState === 'error' ? vm.labels.copyError : vm.labels.copy}</PrismPart></PrismPart>
+    ? <PrismPart as="div" {...command} slotProps={{ step: vm } satisfies StepSlotProps} tabIndex={0}>{child}<PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="button" {...copy} type="button" onClick={() => vm.copy(child.props.node.value ?? '')} aria-live="polite">{vm.copyState === 'copied' ? vm.labels.copied : vm.copyState === 'error' ? vm.labels.copyError : vm.labels.copy}</PrismPart></PrismPart>
     : child)}</PrismPart></PrismPart>;
 }
 const labelsSchema = s.object({
