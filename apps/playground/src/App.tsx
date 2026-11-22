@@ -45,6 +45,7 @@ export function App({ pace = realistic, agentFactory }: AppProps) {
   const theme = themeChoice === 'system' ? darkSystem ? 'dark' : 'light' : themeChoice;
   const scroll = useRef<HTMLDivElement>(null), textarea = useRef<HTMLTextAreaElement>(null), sidebarRef = useRef<HTMLElement>(null), sidebarToggle = useRef<HTMLButtonElement>(null);
   const frame = useRef<number | undefined>(undefined), mounted = useRef(true);
+  const focusComposer = useRef(false);
   const notify = useCallback(() => { if (mounted.current) redraw(); }, []);
   const closeOverlay = useCallback(() => setOverlay(undefined), []);
   const openOverlay = (value: 'palette' | 'settings') => { setDrawer(false); setOverlay(value); };
@@ -72,6 +73,7 @@ export function App({ pace = realistic, agentFactory }: AppProps) {
   useLayoutEffect(() => {
     const element = textarea.current; if (!element) return;
     element.style.height = 'auto'; element.style.height = Math.min(element.scrollHeight || 24, 192) + 'px';
+    if (focusComposer.current) { focusComposer.current = false; element.focus(); }
   }, [current.draft, currentId, current.messages.length]);
   useLayoutEffect(() => {
     const element = scroll.current; if (!element) return;
@@ -129,6 +131,7 @@ export function App({ pace = realistic, agentFactory }: AppProps) {
   }
   function send(text: string, demoId?: string) {
     if (!text.trim()) return;
+    if (!current.messages.length) focusComposer.current = true;
     if (!current.messages.length && !demoId) {
       const route = routeMessage(text);
       if (route.kind === 'scenario') current.originScenario = route.scenario.id;

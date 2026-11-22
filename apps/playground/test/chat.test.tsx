@@ -68,6 +68,23 @@ test('live history keeps component submissions in order without adding visible u
   expect(view.container.textContent).not.toContain('[UI interaction]');
 });
 
+test.each(['Enter', 'Send message', 'suggestion'])('first message via %s moves focus to the footer composer', method => {
+  const view = render(<App pace={{ ...fast, thinking: () => 10000 }} />);
+  const original = view.getByRole('textbox', { name: 'Message Prism' });
+  act(() => original.focus());
+  if (method === 'suggestion') fireEvent.click(view.getByRole('button', { name: /Pick a laptop Find/ }));
+  else {
+    type(view, 'Help me pick a laptop');
+    if (method === 'Enter') fireEvent.keyDown(original, { key: 'Enter' });
+    else fireEvent.click(view.getByRole('button', { name: 'Send message' }));
+  }
+  const composer = view.getByRole('textbox', { name: 'Message Prism' });
+  expect(composer === original).toBe(false);
+  expect(document.activeElement === composer).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Settings' }));
+  expect(document.activeElement === view.getByLabelText('Assistant')).toBe(true);
+});
+
 test('pick action adds only an assistant continuation and no payload or syntax', async () => {
   const view = render(<App pace={fast} />); send(view, 'which laptop should I buy'); await done(view);
   expect(view.getAllByRole('button', { name: 'Your next laptop' })).toHaveLength(1);
