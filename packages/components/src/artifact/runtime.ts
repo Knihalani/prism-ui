@@ -1,11 +1,12 @@
 import { buildSrcdoc } from '../mockup/engine/frame';
 import type { ArtifactKind } from './policy';
 
-export type Render = { kind: ArtifactKind; source: string; complete: boolean; revision: number };
+export type Render = { kind: ArtifactKind; source: string; complete: boolean; revision: number; tasks?: Record<string, boolean> };
 export type HostMessage =
   | { type: 'value'; path: string; value: unknown }
   | { type: 'theme'; tokens: Record<string, string>; dark: boolean }
   | { type: 'size-mode'; maxHeight: number | undefined }
+  | { type: 'task-values'; revision: number; values: Record<string, boolean> }
   | { type: 'render'; render: Render; values: Record<string, unknown> };
 export type FrameMessage =
   | { type: 'ready' }
@@ -15,6 +16,7 @@ export type FrameMessage =
   | { type: 'subscribe' | 'unsubscribe'; path: string }
   | { type: 'set'; path: string; value: unknown }
   | { type: 'send'; action: string; payload: unknown }
+  | { type: 'task-toggle'; revision: number; task: string; checked: boolean }
   | { type: 'exitFullscreen' };
 
 function installArtifact(id: string, initial?: Render) {
@@ -25,6 +27,7 @@ function installArtifact(id: string, initial?: Render) {
   const theme: Record<string, string> = Object.create(null);
   let revision = 0, resizeFrame = 0, lastHeight = 0;
   let maxHeight: number | undefined;
+  let taskValues: Record<string, boolean> | undefined;
   let reactRoot: { render(node: unknown): void } | undefined;
   let react: typeof import('react') | undefined;
   const send = (message: FrameMessage) => {
@@ -32,6 +35,14 @@ function installArtifact(id: string, initial?: Render) {
   };
   const report = (error: unknown, version = revision) => {
     if (version === revision) send({ type: 'error', error: error instanceof Error ? error.message : String(error), revision: version });
+  };
+  const syncTasks = () => {
+    const values = taskValues;
+    if (!values) return;
+    document.querySelectorAll<HTMLInputElement>('[data-artifact-markdown] input[data-task-key]').forEach(input => {
+      const key = input.dataset.taskKey!;
+      if (Object.hasOwn(values, key)) input.checked = values[key]!;
+    });
   };
   const resize = () => {
     if (resizeFrame) return;
@@ -106,8 +117,9 @@ function installArtifact(id: string, initial?: Render) {
       });
     } finally { if (!src) URL.revokeObjectURL(url); script.remove(); }
   };
-  const run = async ({ kind, source, complete, revision: version }: Render) => {
+  const run = async ({ kind, source, complete, revision: version, tasks }: Render) => {
     revision = version;
+    taskValues = tasks;
     try {
       if (kind === 'react') {
         if (!complete) return;
@@ -133,6 +145,7 @@ function installArtifact(id: string, initial?: Render) {
         // The mockup engine handles the actual incremental render on its next frame.
         await frame();
         if (revision !== version) return;
+        if (kind === 'markdown') syncTasks();
         if (kind === 'html' && complete && /<script[\s>]/i.test(source)) {
           const parsed = new DOMParser().parseFromString(source, 'text/html');
           for (const script of Array.from(parsed.scripts)) {
@@ -147,6 +160,14 @@ function installArtifact(id: string, initial?: Render) {
   };
   window.addEventListener('error', event => report(event.error ?? event.message));
   window.addEventListener('unhandledrejection', event => report(event.reason));
+  document.addEventListener('change', event => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !input.closest('[data-artifact-markdown]')) return;
+    const task = input.dataset.taskKey;
+    if (task && taskValues && Object.hasOwn(taskValues, task)) {
+      send({ type: 'task-toggle', revision, task, checked: input.checked });
+    }
+  });
   window.addEventListener('keydown', event => { if (event.key === 'Escape') send({ type: 'exitFullscreen' }); });
   window.addEventListener('message', event => {
     const data = event.data as HostMessage & { ns?: string; id?: string };
@@ -159,6 +180,8 @@ function installArtifact(id: string, initial?: Render) {
     } else if (data.type === 'size-mode') {
       maxHeight = data.maxHeight;
       resize();
+    } else if (data.type === 'task-values') {
+      if (data.revision === revision) { taskValues = data.values; syncTasks(); }
     } else if (data.type === 'render') {
       for (const [path, value] of Object.entries(data.values)) { grants.add(path); adopt(path, value); }
       void run(data.render);

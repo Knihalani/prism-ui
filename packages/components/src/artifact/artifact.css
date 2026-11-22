@@ -33,6 +33,13 @@
   gap: var(--prism-space1);
 }
 .prism-artifact__controls { margin-inline-start: auto; }
+.prism-artifact__updating {
+  inline-size: 9ch;
+  white-space: nowrap;
+  text-align: end;
+  color: var(--prism-accent);
+  font: 550 var(--prism-text-xs)/1.2 var(--prism-font-sans);
+}
 .prism-root .prism-artifact__body { min-width: 0; padding: 0; }
 .prism-artifact__ask { opacity: 0; }
 .prism-artifact__root:is(:hover, :focus-within) .prism-artifact__ask { opacity: 1; }

@@ -11,17 +11,21 @@ type Slot = { model: VM } & HTMLAttributes<HTMLDivElement>;
 
 function Controls({ model, ...part }: Slot) {
   const button = usePart('artifact', 'button'), select = usePart('artifact', 'version'), format = useFormat();
+  const updating = usePart('artifact', 'updating', model.updating ? 'active' : undefined);
   const modelVersion = model.version?.number ?? 0;
   const viewingCode = model.mode === 'source';
   const codeLabel = viewingCode ? 'Preview' : 'Code';
+  const sourceDownload = model.mode !== 'preview' || (!model.enabled && model.selected.kind === 'react');
+  const downloadLabel = sourceDownload ? 'Download source' : 'Download';
   return <div {...part}>
+    <span {...updating} role="status">{model.updating ? 'Updating…' : ''}</span>
     {!!model.versions.length && model.versions.length > 1 && <select {...select} aria-label="Artifact version" value={modelVersion} onChange={event => model.selectVersion(Number(event.currentTarget.value))}>
       {[...model.versions].reverse().map(version => <option key={version.number} value={version.number}>v{format.number(version.number)}</option>)}
     </select>}
     {model.previous && <button {...button} type="button" aria-pressed={model.mode === 'diff'} onClick={() => model.setMode(model.mode === 'diff' ? 'preview' : 'diff')}>Changes</button>}
     <button {...button} type="button" data-state={viewingCode ? 'active' : undefined} aria-label={codeLabel} title={codeLabel} onClick={() => model.setMode(viewingCode ? 'preview' : 'source')}><Icon kind={viewingCode ? 'preview' : 'code'} /></button>
     <button {...button} type="button" aria-label="Copy" title="Copy" onClick={() => void model.copy()}><Icon kind="copy" /></button>
-    <button {...button} type="button" aria-label="Download" title="Download" onClick={() => model.download(model.selected.kind !== 'react')}><Icon kind="download" /></button>
+    <button {...button} type="button" aria-label={downloadLabel} title={downloadLabel} onClick={() => void model.download(!sourceDownload)}><Icon kind="download" /></button>
     {model.enabled && <>
       <button {...button} type="button" aria-label="Reload preview" title="Reload preview" onClick={model.reload}><Icon kind="reload" /></button>
       <button {...button} type="button" aria-label={model.fullscreen ? 'Exit fullscreen' : 'Open fullscreen'} title={model.fullscreen ? 'Exit fullscreen' : 'Open fullscreen'} onClick={() => void model.toggleFullscreen()}><Icon kind={model.fullscreen ? 'close' : 'fullscreen'} /></button>
@@ -92,7 +96,7 @@ export function Artifact({ props, complete }: PrismComponentProps<ArtifactProps>
   return <div {...shell} data-artifact-shell="" data-variant={selected.variant} data-size={selected.size}>
     <ComponentFrame component="artifact" title={title} state={!model.enabled ? 'disabled' : model.error ? 'error' : model.rendered ? 'ready' : 'pending'}
       undo toolbar={<ControlsSlot {...controls} model={model} />}>
-      <div {...preview} hidden={model.mode !== 'preview'} style={{ ...preview.style, minHeight: model.height }} aria-busy={model.enabled && !model.rendered && !model.error}>
+      <div {...preview} hidden={model.mode !== 'preview'} style={{ ...preview.style, minHeight: model.height }} aria-busy={model.updating || (model.enabled && !model.rendered && !model.error)}>
         <div {...viewport} ref={model.ref} style={{ height: model.height, ...viewport.style }} hidden={!!model.error || !model.enabled} />
         {model.error ? <ErrorSlot {...error} model={model} /> : (!model.rendered || !model.enabled) && <EmptySlot {...empty} model={model} />}
       </div>

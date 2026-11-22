@@ -52,7 +52,7 @@ function jsonValue(input: unknown): boolean {
   return budget > 0;
 }
 
-export function mountArtifactFrame(container: HTMLElement, imports: Record<string, string>, store: Store, grants: readonly string[], events: FrameEvents) {
+export function mountArtifactFrame(container: HTMLElement, imports: Record<string, string>, store: Store, grants: readonly string[], taskPath: string, events: FrameEvents) {
   const { ownerDocument: doc } = container;
   const win = doc.defaultView!;
   const id = `artifact-${globalThis.crypto.randomUUID?.() ?? Array.from(globalThis.crypto.getRandomValues(new Uint32Array(4))).join('-')}`;
@@ -62,6 +62,7 @@ export function mountArtifactFrame(container: HTMLElement, imports: Record<strin
   let theme: Extract<HostMessage, { type: 'theme' }> | undefined;
   let maxHeight: number | undefined;
   let ready = false;
+  let unsubscribeTasks: (() => void) | undefined;
   const post = (message: HostMessage) => frame.contentWindow?.postMessage({ ...message, ns: 'prism-artifact', id }, '*');
   const engine = (message: HostPayload) => frame.contentWindow?.postMessage({ ...message, ns: 'prism-mockup', id, v: 1 }, '*');
   const publish = (path: string) => post({ type: 'value', path, value: store.get(path) });
@@ -71,10 +72,20 @@ export function mountArtifactFrame(container: HTMLElement, imports: Record<strin
   const sendTheme = () => {
     if (theme) { engine({ type: 'config', theme: theme.tokens }); post(theme); }
   };
+  const taskValues = (defaults: Record<string, boolean>) => {
+    const saved = store.get(taskPath);
+    return Object.fromEntries(Object.entries(defaults).map(([key, fallback]) => [
+      key, saved && Object.hasOwn(saved, key) && typeof saved[key] === 'boolean' ? saved[key] : fallback,
+    ]));
+  };
+  const publishTasks = () => {
+    if (render?.tasks) post({ type: 'task-values', revision: render.revision, values: taskValues(render.tasks) });
+  };
   const sendRender = () => {
     if (!render) return;
     if (markup(render.kind)) engine({ type: 'render', html: render.source, done: render.complete });
-    post({ type: 'render', render, values: Object.fromEntries(grants.map(path => [path, store.get(path)])) });
+    const current = render.tasks ? { ...render, tasks: taskValues(render.tasks) } : render;
+    post({ type: 'render', render: current, values: Object.fromEntries(grants.map(path => [path, store.get(path)])) });
   };
   const receive = (event: MessageEvent) => {
     if (event.source !== frame.contentWindow || event.origin !== 'null') return;
@@ -96,6 +107,13 @@ export function mountArtifactFrame(container: HTMLElement, imports: Record<strin
     else if (data.type === 'subscribe' && allowedPath(data.path, grants)) { watch(data.path); publish(data.path); }
     else if (data.type === 'unsubscribe' && !grants.includes(data.path)) { subscriptions.get(data.path)?.(); subscriptions.delete(data.path); }
     else if (data.type === 'set' && allowedPath(data.path, grants) && jsonValue(data.value)) store.set(data.path, data.value);
+    else if (data.type === 'task-toggle' && render?.kind === 'markdown' && data.revision === render.revision &&
+      render.tasks && typeof data.task === 'string' && Object.hasOwn(render.tasks, data.task) && typeof data.checked === 'boolean') {
+      const path = `${taskPath}.${data.task}`, saved = store.get(path);
+      if ((typeof saved === 'boolean' ? saved : render.tasks[data.task]) === data.checked) return;
+      store.set(path, data.checked);
+      events.send('toggle', { task: data.task, checked: data.checked });
+    }
     else if (data.type === 'send' && typeof data.action === 'string' && /^[\w:-]{1,80}$/.test(data.action) && (data.payload === undefined || jsonValue(data.payload))) events.send(data.action, data.payload);
     else if (data.type === 'exitFullscreen') events.exitFullscreen();
   };
@@ -104,7 +122,12 @@ export function mountArtifactFrame(container: HTMLElement, imports: Record<strin
   container.append(frame);
   return {
     frame,
-    render(value: Render) { render = value; if (ready) sendRender(); },
+    render(value: Render) {
+      render = value;
+      if (value.tasks && !unsubscribeTasks) unsubscribeTasks = store.subscribe(taskPath, publishTasks);
+      if (!value.tasks && unsubscribeTasks) { unsubscribeTasks(); unsubscribeTasks = undefined; }
+      if (ready) sendRender();
+    },
     sizeMode(value: number | undefined) {
       if (maxHeight === value) return;
       maxHeight = value;
@@ -113,6 +136,7 @@ export function mountArtifactFrame(container: HTMLElement, imports: Record<strin
     theme(tokens: Record<string, string>, dark: boolean) { theme = { type: 'theme', tokens, dark }; if (ready) sendTheme(); },
     destroy() {
       win.removeEventListener('message', receive);
+      unsubscribeTasks?.();
       for (const off of subscriptions.values()) off();
       release();
     },

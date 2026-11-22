@@ -36,7 +36,9 @@ Use `artifact:html`, `artifact:svg`, `artifact:js`, or `artifact:markdown` for t
 - Grant only paths the generated code may read **and** write. A granted path includes its descendants; by default no path is granted. The sandbox isolates the host DOM and storage; it is not a way to give untrusted code secrets.
 - `window.prism.state.get(path)` reads the latest mirrored value. `set(path, value)` writes a JSON value through the shared store, including undo and the host's persistence adapter. `subscribe(path, fn)` calls `fn(value)` for updates and returns an unsubscribe function. React can use `useSyncExternalStore` with these methods.
 - `window.prism.send(type, payload)` emits a structured action through Prism's middleware. **Fix this** emits `fix` with `{ error, source, kind, version }`. `window.prism.theme` exposes the CSS variable names also applied to the frame root. `window.prism.resize()` requests a measurement; automatic height also follows content changes.
-- Reusing an `id` with the same Prism store publishes a version; history lives in memory for that store. React versions replace the component inside the existing frame; use store-backed state for values that must outlive a module replacement. Reload resets frame-local state.
+- Markdown task lists use native checkboxes. Toggling saves the choice in the artifact's shared store state with undo and emits `toggle` with `{ task, checked }`. Give the artifact an explicit ID to keep its choices across replies.
+- Reusing an `id` with the same Prism store publishes a version; history lives in memory for that store. While a new version streams, the previous preview stays visible and the toolbar says **Updating…**. React versions replace the component inside the existing frame; use store-backed state for values that must outlive a module replacement. Reload resets frame-local state.
+- **Download** in preview saves runnable HTML, including compiled React and the configured import map. External modules must still be available to the browser. The standalone bridge uses local state and has no host action handler. **Download source** in Code or Changes saves the original source.
 
 ## Customizing
 
@@ -44,4 +46,4 @@ Use `artifact:html`, `artifact:svg`, `artifact:js`, or `artifact:markdown` for t
 
 ## Local gallery
 
-`bun build packages/components/src/artifact/harness.tsx --outdir <site> --target browser --splitting`, then copy `harness.html` there and serve that directory on localhost. Use the gallery, stream, finish, version and error buttons to exercise the component. `?theme=dark` opens dark mode; `?bench` starts with an unfinished React fence. `?vendor` expects the pinned dependencies at their matching local URL paths.
+`bun build packages/components/src/artifact/harness.tsx --outdir <site> --target browser --splitting`, then copy `harness.html` there and serve that directory on localhost. **Stream** starts a new artifact with a skeleton; **Stream update** starts a new version of the gallery's loan calculator. **Finish** completes either stream. `?theme=dark` opens dark mode; `?bench` starts with an unfinished React fence. `?vendor` expects the pinned dependencies at their matching local URL paths.
