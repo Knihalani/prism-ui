@@ -2,7 +2,7 @@ import '../../../react/test/setup';
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { Prism, createRegistry, type Action, type PrismComponentProps } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
-import { GroupedMockup, mockupDefinition, mockupPlugin, toMessage, type FrameController, type MockupProps } from './index';
+import { GroupedMockup, createFeedback, mockupDefinition, mockupPlugin, toMessage, type FrameController, type MockupProps } from './index';
 
 const { render, cleanup, fireEvent, act, within } = await import('@testing-library/react');
 const observer = globalThis.IntersectionObserver;
@@ -37,6 +37,17 @@ test('group Redo stays subscribed to the streaming feedback model after completi
   expect((x.view.getByRole('button', { name: 'Redo' }) as HTMLButtonElement).disabled).toBe(false);
   fireEvent.click(x.view.getByRole('button', { name: 'Redo' }));
   expect(x.view.getByRole('button', { name: 'Comment 1: Streaming B edit' })).toBeDefined();
+});
+test('a grouped variant id change restores its destination draft instead of the old model', () => {
+  const previous = createFeedback({ mockup: 'Pricing', variant: 'B', device: 'desktop' });
+  previous.addPin({ x: 20, y: 30, comment: 'Saved destination' });
+  const saved = previous.toJSON(), store = createStore({ initial: { gamma: { feedback: saved } } });
+  const x = setup(a + b + '</h1>\n```', true, store);
+  fireEvent.click(x.view.getByRole('tab', { name: 'B' }));
+  comment(x.view.getByRole('application'), 'Old variant edit', x.view);
+  x.rerender(a + b.replace('id=beta', 'id=gamma') + '</h1>\n```', true);
+  expect(store.get('gamma.feedback')).toEqual(saved);
+  expect(x.view.getByRole('button', { name: 'Comment 1: Saved destination' })).toBeDefined();
 });
 test('two streamed blocks form one switcher; tabs switch and compare shows both with one overall and submit', () => {
   const x = setup(); expect(x.view.getAllByRole('tablist')).toHaveLength(1); expect(x.view.getAllByRole('tab').map(el => el.textContent)).toEqual(['A', 'B', 'Compare']); expect(x.view.getByLabelText('Streaming')).toBeDefined(); expect(x.view.getAllByRole('application')).toHaveLength(1); expect(x.view.container.querySelectorAll('iframe')).toHaveLength(1);

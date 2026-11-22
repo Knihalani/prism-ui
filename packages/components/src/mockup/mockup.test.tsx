@@ -21,8 +21,16 @@ function setup(props: MockupProps = {}, done = true, store = createStore()) {
   const canvas = () => { const element = view.getByRole('application'); element.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 1000, bottom: 500, width: 1000, height: 500, toJSON() {} }); return element; };
   const pointer = (type: string, x: number, y: number) => fireEvent(canvas(), new window.PointerEvent(type, { bubbles: true, button: 0, clientX: x, clientY: y, pointerId: 1 }));
   function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); }
-  return { view, actions, store, renders, target, hits, canvas, pointer, change, send(message: FrameMessage) { act(() => { listeners.forEach(fn => fn(message)); }); }, rerender(props: MockupProps, done = true) { view.rerender(<Prism source={source(props)} done={done} registry={registry} store={store} onAction={a => actions.push(a)} />); } };
+  return { view, actions, store, renders, target, hits, canvas, pointer, change, send(message: FrameMessage) { act(() => { listeners.forEach(fn => fn(message)); }); }, rerender(props: MockupProps, done = true, nextStore = store) { view.rerender(<Prism source={source(props)} done={done} registry={registry} store={nextStore} onAction={a => actions.push(a)} />); } };
 }
+test('recreating the playground store does not resurrect an old feedback draft', () => {
+  const props = { source: '<h1>Review</h1>' }, x = setup(props);
+  x.change(x.view.getByRole('textbox', { name: 'Overall feedback' }), 'Old draft');
+  const fresh = createStore({ initial: { rent: 1200 } });
+  x.rerender(props, true, fresh);
+  expect((x.view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('');
+  expect(fresh.get('review.feedback.overall')).toBe('');
+});
 test('replay begins with a valid mockup and visible content past large styles without replacing its iframe', () => {
   const markdown = '```mockup:html {id=replay}\n<style>' + 'body{margin:0}'.repeat(300) + '</style><h1>First text</h1><p>' + 'More text '.repeat(100) + '</p>\n```';
   const initial = replayStart(markdown), plugins = [mockupPlugin];

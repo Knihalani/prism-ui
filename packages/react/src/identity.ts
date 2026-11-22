@@ -3,6 +3,8 @@ import type { Node } from '@prism-ui/core';
 import type { Store } from '@prism-ui/state';
 
 const owners = new WeakMap<Store, Map<string, { final: boolean; id: string | undefined; generation: number }>>();
+const storeKeys = new WeakMap<Store, number>();
+let nextStoreKey = 0;
 
 const record = (value: unknown): value is Record<string, unknown> => !!value && Object.getPrototypeOf(value) === Object.prototype;
 function fillMissing(source: unknown, destination: unknown): unknown {
@@ -31,6 +33,8 @@ export function migrateComponentState(store: Store, from: string, to: string) {
 }
 
 export function useComponentId(node: Node, requested: unknown, store: Store, scope: string, requiresFinalId = false) {
+  let storeKey = storeKeys.get(store);
+  if (storeKey === undefined) storeKeys.set(store, storeKey = ++nextStoreKey);
   const key = `${encodeURIComponent(scope).replaceAll('.', '%2E')}:${encodeURIComponent(node.name ?? node.type).replaceAll('.', '%2E')}:${encodeURIComponent(node.key).replaceAll('.', ':')}`;
   const final = node.complete !== false && Object.isFrozen(node) || requiresFinalId && node.idComplete === true;
   const explicit = requested == null ? undefined : String(requested);
@@ -64,5 +68,6 @@ export function useComponentId(node: Node, requested: unknown, store: Store, sco
     else void store.ready.then(finish);
     return () => { active = false; };
   }, [target, provisional, store, preparing]);
-  return { id: preparing ? provisional : target, ready: store.hydrated && awaiting.current !== store && (!requiresFinalId || final && !preparing) };
+  const id = preparing ? provisional : target;
+  return { id, key: `${storeKey}:${id}`, ready: store.hydrated && awaiting.current !== store && (!requiresFinalId || final && !preparing) };
 }
