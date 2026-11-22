@@ -3,15 +3,16 @@ import { ComponentContext, useComponentState, useEmit, type PrismContextValue } 
 import { createFeedback, createFrameController, previousAsResolved, sanitizeSvg, toMessage, wireframeDocument, type FeedbackPayload, type FeedbackState, type FeedbackPoint, type FrameController, type HitRect } from './engine';
 
 export type MockupDevice = 'desktop' | 'tablet' | 'mobile';
-export const mockupLabels = { title: 'Mockup', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobile', zoomOut: 'Zoom out', zoomIn: 'Zoom in', fit: 'Fit', fullscreen: 'Fullscreen', source: 'View source', copy: 'Copy', draw: 'Draw', color: 'Pen colour', canvas: 'Design canvas. Press Enter to add a comment', hint: 'Click to comment · drag to select', empty: 'Click anywhere on the design to leave a comment.', overall: 'Overall feedback', save: 'Save', delete: 'Delete', edit: 'Edit', placeholder: 'Add a comment…', undo: 'Undo', redo: 'Redo', submit: 'Submit feedback', sent: 'Feedback sent · {n} comments', editFeedback: 'Edit feedback', count: '{n} comments', comment: 'Comment {n}: {text}', added: 'Comment {n} added', removed: 'Comment removed', loading: 'Loading design', imageError: 'Image unavailable', resolved: 'Resolved' };
+export const mockupLabels = { variants: 'Variants', compare: 'Compare', prefer: 'Prefer this', streaming: 'Streaming', title: 'Mockup', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobile', zoomOut: 'Zoom out', zoomIn: 'Zoom in', fit: 'Fit', fullscreen: 'Fullscreen', source: 'View source', copy: 'Copy', draw: 'Draw', color: 'Pen colour', canvas: 'Design canvas. Press Enter to add a comment', hint: 'Click to comment · drag to select', empty: 'Click anywhere on the design to leave a comment.', overall: 'Overall feedback', save: 'Save', delete: 'Delete', edit: 'Edit', placeholder: 'Add a comment…', undo: 'Undo', redo: 'Redo', submit: 'Submit feedback', sent: 'Feedback sent · {n} comments', editFeedback: 'Edit feedback', count: '{n} comments', comment: 'Comment {n}: {text}', added: 'Comment {n} added', removed: 'Comment removed', loading: 'Loading design', imageError: 'Image unavailable', resolved: 'Resolved' };
 export type MockupLabels = Partial<typeof mockupLabels>;
 export interface MockupProps { id?: string; kind?: 'html' | 'svg' | 'wire' | 'image'; source?: string; src?: string; title?: string; device?: MockupDevice; variant?: string; group?: string; height?: number; previous?: FeedbackPayload; labels?: MockupLabels }
-export interface MockupOptions { createController?: () => FrameController }
+export interface MockupOptions { createController?: () => FrameController; enabled?: boolean }
 const widths = { desktop: 1280, tablet: 834, mobile: 390 };
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
 
 export function useMockup(props: MockupProps, ctx: PrismContextValue, options: MockupOptions = {}) {
   const component = useContext(ComponentContext), emit = useEmit();
+  const enabled = options.enabled !== false;
   const complete = component?.node.complete !== false, kind = props.kind ?? 'html', framed = kind === 'html' || kind === 'wire';
   const labels = { ...mockupLabels, ...props.labels }, title = props.title ?? labels.title, source = props.source ?? '';
   const [device, setDevice] = useComponentState<MockupDevice>('device', props.device ?? 'desktop'), [zoom, setZoom] = useComponentState('zoom', 1), [draft] = useComponentState<FeedbackState | undefined>('feedback', undefined), [submitted, setSubmitted] = useComponentState('submitted', false);
@@ -28,18 +29,18 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   useEffect(() => { if (visible || !root.current || typeof IntersectionObserver === 'undefined') return; const observer = new IntersectionObserver(entries => { if (entries.some(e => e.isIntersecting)) { setVisible(true); observer.disconnect(); } }, { rootMargin: '200px' }); observer.observe(root.current); return () => observer.disconnect(); }, [visible]);
   useEffect(() => { if (!viewport.current || typeof ResizeObserver === 'undefined') return; const observer = new ResizeObserver(entries => setContainerWidth(entries[0].contentRect.width || 1280)); observer.observe(viewport.current); return () => observer.disconnect(); }, []);
   useEffect(() => {
-    if (!visible || !framed || !iframe.current) return;
+    if (!enabled || !visible || !framed || !iframe.current) return;
     const frame = (options.createController ?? createFrameController)(); controller.current = frame; frame.attach(iframe.current);
     const offSize = frame.on('size', message => grow(message.height));
     const offLayout = frame.on('layout', message => feedback.reanchor(Object.fromEntries(message.anchors.map(a => [a.key, a.box]))));
     return () => { offSize(); offLayout(); frame.destroy(); controller.current = null; };
-  }, [visible, framed, options.createController, feedback]);
-  useEffect(() => { controller.current?.render(kind === 'wire' ? wireframeDocument(source) : source, complete); }, [source, complete, kind, visible, options.createController]);
-  useEffect(() => { controller.current?.setAnchors(feedback.anchorRequests()); }, [state, visible, feedback]);
+  }, [visible, enabled, framed, options.createController, feedback]);
+  useEffect(() => { controller.current?.render(kind === 'wire' ? wireframeDocument(source) : source, complete); }, [source, complete, kind, visible, enabled, options.createController]);
+  useEffect(() => { controller.current?.setAnchors(feedback.anchorRequests()); }, [state, visible, enabled, feedback]);
   useEffect(() => { const escape = (event: globalThis.KeyboardEvent) => { if (event.key === 'Escape') { setExpanded(false); setPen(false); } }; document.addEventListener('keydown', escape); return () => document.removeEventListener('keydown', escape); }, []);
   const svg = kind === 'svg' ? sanitizeSvg(source) : '';
   useEffect(() => { setImageError(false); }, [props.src, source]);
-  useEffect(() => { const element = graphic.current?.querySelector('svg'); if (!element) return; const box = element.getAttribute('viewBox')?.split(/[\s,]+/).map(Number); setNaturalWidth(box?.[2] || Number(element.getAttribute('width')) || 800); grow(box?.[3] || Number(element.getAttribute('height')) || 400); }, [svg, visible]);
+  useEffect(() => { const element = graphic.current?.querySelector('svg'); if (!element) return; const box = element.getAttribute('viewBox')?.split(/[\s,]+/).map(Number); setNaturalWidth(box?.[2] || Number(element.getAttribute('width')) || 800); grow(box?.[3] || Number(element.getAttribute('height')) || 400); }, [svg, visible, enabled]);
   const width = framed ? widths[device] : naturalWidth, scale = Math.min(1, containerWidth / width) * zoom;
   const resolved = props.previous ? previousAsResolved(props.previous) : [];
   function open(id: string, fresh = false) { const item = feedback.getState().items.find(item => item.id === id); if (!item) return; setEditing({ id, fresh, text: item.comment }); setComment(item.comment); setActive(id); }
@@ -68,7 +69,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   };
   function onKeyDown(event: KeyboardEvent<HTMLElement>) { if (event.key === 'Escape') { cancel(); setPen(false); setExpanded(false); } if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.stopPropagation(); setEditing(null); event.shiftKey ? feedback.redo() : feedback.undo(); } }
   function canvasKey(event: KeyboardEvent<HTMLDivElement>) { if (event.target !== event.currentTarget || submitted) return; const step = event.shiftKey ? 10 : 2; if (event.key.startsWith('Arrow')) { event.preventDefault(); setReticle(([x, y]) => [clamp(x + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0)), clamp(y + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0))]); } if (event.key === 'Enter') { event.preventDefault(); add({ x: reticle[0], y: reticle[1] }); } }
-  return { props, kind, framed, complete, labels, title, source, svg, root, viewport, iframe, graphic, visible, width, scale, contentHeight, device, setDevice, zoom, setZoom, expanded, showSource, setShowSource, pen, setPen, color, setColor, active, setActive, editing, comment, setComment, announcement, reticle, focused, setFocused, hover, rubber, pointer, onKeyDown, canvasKey, feedback, state, resolved, submitted, setSubmitted, open, remove, save, cancel, close, imageError, setImageError,
+  return { props, kind, framed, complete, labels, title, source, svg, root, viewport, iframe, graphic, visible: visible && enabled, width, scale, contentHeight, device, setDevice, zoom, setZoom, expanded, showSource, setShowSource, pen, setPen, color, setColor, active, setActive, editing, comment, setComment, announcement, reticle, focused, setFocused, hover, rubber, pointer, onKeyDown, canvasKey, feedback, state, resolved, submitted, setSubmitted, open, remove, save, cancel, close, imageError, setImageError,
     imageSrc: /^(https:|data:image\/)/i.test((props.src ?? source).trim()) ? (props.src ?? source).trim() : undefined,
     imageLoaded(width: number, height: number) { setNaturalWidth(width || 800); grow(height || 400); },
     async fullscreen() { try { if (document.fullscreenElement) await document.exitFullscreen(); else if (root.current?.requestFullscreen) await root.current.requestFullscreen(); else setExpanded(old => !old); } catch { setExpanded(old => !old); } },

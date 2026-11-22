@@ -3,6 +3,7 @@ import { defineComponent, registerComponent, usePart, usePrism, useSlot, type Pr
 import { s } from '@prism-ui/schema';
 import { ComponentFrame } from '../frame';
 import { WIREFRAME_DOCS, type FeedbackItem } from './engine';
+import { GroupedMockup } from './group';
 import { mockupLabels, useMockup, type MockupModel, type MockupProps } from './use-mockup';
 
 function Box(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
@@ -30,7 +31,7 @@ function Marker({ item, vm }: { item: FeedbackItem; vm: MockupModel }) {
     <button {...marker} type="button" data-kind={item.kind} data-resolved={item.resolved || undefined} data-active={vm.active === item.id || undefined} style={{ ...marker.style, left: `${item.x}%`, top: `${item.y}%`, ...(item.kind === 'region' ? { width: `${item.w}%`, height: `${item.h}%` } : {}) }} aria-label={label} aria-disabled={item.resolved || undefined} onMouseEnter={() => vm.setActive(item.id)} onMouseLeave={() => vm.setActive(null)} onFocus={() => vm.setActive(item.id)} onBlur={() => vm.setActive(null)} onClick={() => { if (!item.resolved && !vm.submitted) vm.open(item.id); }} onKeyDown={event => { if (!item.resolved && !vm.submitted && (event.key === 'Delete' || event.key === 'Backspace')) { event.preventDefault(); vm.remove(item.id); } }}><span>{item.resolved ? '✓' : item.n}</span></button>
   </>;
 }
-export function MockupView({ vm }: { vm: MockupModel }) {
+export function MockupView({ vm, feedback = true }: { vm: MockupModel; feedback?: boolean }) {
   const root = usePart('mockup', 'member'), toolbar = usePart('mockup', 'tools'), button = usePart('mockup', 'button'), layout = usePart('mockup', 'layout'), viewport = usePart('mockup', 'viewport'), spacer = usePart('mockup', 'spacer'), stage = usePart('mockup', 'stage'), canvas = usePart('mockup', 'canvas'), media = usePart('mockup', 'media'), skeleton = usePart('mockup', 'skeleton'), list = usePart('mockup', 'list'), input = usePart('mockup', 'input'), footer = usePart('mockup', 'feedbackFooter'), primary = usePart('mockup', 'primary'), source = usePart('mockup', 'source'), hint = usePart('mockup', 'hint'), live = usePart('mockup', 'live'), reticle = usePart('mockup', 'reticle'), stroke = usePart('mockup', 'stroke'), overall = usePart('mockup', 'overall');
   const Actions = useSlot('mockup', 'headerActions', Box), Row = useSlot('mockup', 'item', Item), EmptyState = useSlot('mockup', 'empty', Empty), Comment = useSlot('mockup', 'popover', Popover);
   const tools = <Actions {...toolbar}>
@@ -55,15 +56,16 @@ export function MockupView({ vm }: { vm: MockupModel }) {
           </>}
         </div></div>
       </div><div {...list}>{vm.state.items.length || vm.resolved.length ? [...vm.resolved, ...vm.state.items].map(item => <Row key={item.id} item={item as FeedbackItem} vm={vm} />) : <EmptyState vm={vm} />}</div></div>
-      {vm.submitted ? <div {...footer} role="status">{vm.labels.sent.replace('{n}', String(vm.feedback.toPayload().items.length))}<button {...button} onClick={() => vm.setSubmitted(false)}>{vm.labels.editFeedback}</button></div> : <>
+      {feedback && (vm.submitted ? <div {...footer} role="status">{vm.labels.sent.replace('{n}', String(vm.feedback.toPayload().items.length))}<button {...button} onClick={() => vm.setSubmitted(false)}>{vm.labels.editFeedback}</button></div> : <>
         <label {...overall}>{vm.labels.overall}<textarea {...input} value={vm.state.overall} onChange={event => vm.feedback.setOverall(event.target.value)} /></label>
         <div {...footer}><button {...button} disabled={!vm.feedback.canUndo} onClick={() => { vm.close(); vm.feedback.undo(); }}>{vm.labels.undo}</button><button {...button} disabled={!vm.feedback.canRedo} onClick={() => { vm.close(); vm.feedback.redo(); }}>{vm.labels.redo}</button><span>{vm.labels.count.replace('{n}', String(vm.state.items.length))}</span><button {...primary} disabled={!vm.feedback.canSubmit} onClick={vm.submit}>{vm.labels.submit}</button></div>
-      </>}
+      </>)}
       <span {...live} aria-live="polite">{vm.announcement}</span>
     </ComponentFrame>
   </div>;
 }
-export function Mockup({ props }: PrismComponentProps<MockupProps>) { return <MockupView vm={useMockup(props, usePrism())} />; }
+function SingleMockup({ props }: { props: MockupProps }) { return <MockupView vm={useMockup(props, usePrism())} />; }
+export function Mockup({ props }: PrismComponentProps<MockupProps>) { return props.group ? <GroupedMockup props={props} /> : <SingleMockup props={props} />; }
 
 const previousItemSchema = s.object({
   n: s.number().describe('Original comment number').example(1),
@@ -84,7 +86,7 @@ export const mockupSchema = s.object({
   title: s.string().optional().describe('Design title used in feedback').example('Pricing'),
   device: s.enum(['desktop', 'tablet', 'mobile']).default('desktop').describe('Initial viewport; 1280, 834 or 390 pixels').example('mobile'),
   variant: s.string().optional().describe('Variant name included in feedback').example('A'),
-  group: s.string().optional().describe('Reserved group identifier for related designs').example('pricing-options'),
+  group: s.string().optional().describe('Consecutive mockups sharing this identifier become switchable variants with side-by-side compare').example('pricing-options'),
   height: s.number().optional().describe('Maximum visible viewport height in pixels; content scrolls outside the frame').example(600),
   previous: s.object({
     mockup: s.string().optional().describe('Earlier design title').example('Pricing'),
@@ -95,5 +97,5 @@ export const mockupSchema = s.object({
   }).optional().describe('Earlier feedback payload object').example({ mockup: 'Pricing', variant: 'A', device: 'desktop', overall: '', items: [] }),
   labels: s.object(Object.fromEntries(Object.entries(mockupLabels).map(([key, value]) => [key, s.string().optional().describe(`Translated ${key} label; retain placeholders`).example(value)]))).optional().describe('Interface label overrides').example(mockupLabels),
 });
-export const mockupDefinition = defineComponent({ name: 'mockup', schema: mockupSchema, component: Mockup, syntax: 'leaf', docs: `Interactive design review. Use mockupPlugin for mockup:html|svg|wire|image fences; without it they remain ordinary code blocks. Direct ::mockup directives need no plugin. Submit emits feedback and a readable summary. HTML/wire run in an opaque sandbox; SVG is sanitised inline. Image URLs allow only https: and data:image/. ${WIREFRAME_DOCS}`, examples: ['```mockup:html {id=pricing title="Pricing" device=mobile}\n<h1>Pricing</h1>\n```', '```mockup:svg {title="Logo"}\n<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/></svg>\n```', '```mockup:wire {title="Landing"}\nnav: Logo | Home | [Sign up]\nhero: # Hello / Welcome / [Start]\ngrid 3: card*3\n```', '::mockup{kind=image src="https://example.com/design.png" title="Poster"}'] });
+export const mockupDefinition = defineComponent({ name: 'mockup', schema: mockupSchema, component: Mockup, syntax: 'leaf', docs: `Interactive design review. Use mockupPlugin for mockup:html|svg|wire|image fences; without it they remain ordinary code blocks. Direct ::mockup directives need no plugin. Consecutive blocks sharing group become variants with tabs and Compare. Group feedback includes variants with items and optional preferred variant. Submit emits feedback and a readable summary. HTML/wire run in an opaque sandbox; SVG is sanitised inline. Image URLs allow only https: and data:image/. ${WIREFRAME_DOCS}`, examples: ['```mockup:html {id=pricing title="Pricing" device=mobile}\n<h1>Pricing</h1>\n```', '```mockup:svg {title="Logo"}\n<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/></svg>\n```', '```mockup:wire {title="Landing"}\nnav: Logo | Home | [Sign up]\nhero: # Hello / Welcome / [Start]\ngrid 3: card*3\n```', '::mockup{kind=image src="https://example.com/design.png" title="Poster"}'] });
 registerComponent(mockupDefinition);
