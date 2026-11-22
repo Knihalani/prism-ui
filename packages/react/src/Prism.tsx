@@ -84,7 +84,7 @@ export interface PrismProps {
   className?: string; style?: CSSProperties;
 }
 export function Prism({ scope: providedScope, source = '', done = true, stream, plugins, store: provided, persist, namespace, registry = defaultRegistry, components = empty, onAction, middleware, theme = 'auto', density = 'comfortable', animate = true, unstyled = false, locale, currency = 'USD', slots = empty, classNames = empty, styles = empty, className, style }: PrismProps) {
-  const instance = useId(), baseScope = providedScope ?? instance;
+  const instance = useId(), scope = providedScope ?? instance;
   components = useStable(components); slots = useStable(slots, 1); classNames = useStable(classNames, 1);
   styles = useStable(styles, 2); theme = useStable(theme); middleware = useStable(middleware);
   const [owned] = useState(() => provided ?? createStore({ persist, namespace })), store = provided ?? owned;
@@ -103,11 +103,6 @@ export function Prism({ scope: providedScope, source = '', done = true, stream, 
   state.text = source;
   if (done && !state.ended) { state.parser.end(); state.ended = true; }
   const streamed = usePrismStream(stream, { plugins }), root = stream ? streamed.root : state.parser.root;
-  const flow = stream ?? state.parser, owner = useRef({ flow, scope: baseScope, version: 0 });
-  if (owner.current.scope !== baseScope) owner.current = { flow, scope: baseScope, version: 0 };
-  else if (owner.current.flow !== flow) owner.current = { flow, scope: baseScope, version: owner.current.version + 1 };
-  const escapedScope = baseScope.replaceAll('~', '~~');
-  const scope = owner.current.version ? `${escapedScope}~${owner.current.version}` : escapedScope;
   const context = useMemo(() => ({ registry, components, store, emit, theme, unstyled, slots, classNames, styles, format, animate: motion, applied, scope }), [registry, components, store, emit, theme, unstyled, slots, classNames, styles, format, motion, applied, scope]);
   return <PrismContext.Provider value={context}><ThemeScope theme={theme} density={density} animate={motion} className={cx('prism-root', className)} style={style}>{root.children.map(node => <NodeView key={node.key} node={node} />)}</ThemeScope></PrismContext.Provider>;
 }

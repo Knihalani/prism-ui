@@ -35,12 +35,12 @@ test('a named num replacing a completed anonymous num does not inherit its edit'
   expect(store.get('named')).toBe(9);
 });
 
-test('replacement generations cannot collide with a different explicit scope', () => {
+test('anonymous prop updates retain edits without being mistaken for a new owner', () => {
   const registry = createRegistry([num]), store = createStore();
-  const message = (scope: string, value: number) => <Prism scope={scope} registry={registry} store={store} source={`:num[${value}]{step=1}`}/>;
-  const view = render(<>{message('shared', 5)}{message('shared~1', 9)}</>);
-  view.rerender(<>{message('shared', 7)}{message('shared~1', 9)}</>);
-  expect(view.getAllByRole('slider').map(node => node.textContent)).toEqual(['7', '9']);
+  const view = render(<Prism scope="stable" registry={registry} store={store} source=":num[5]{step=1}"/>);
+  fireEvent.keyDown(view.getByRole('slider'), { key: 'ArrowUp' });
+  view.rerender(<Prism scope="stable" registry={registry} store={store} source=":num[7]{step=1}"/>);
+  expect(view.getByRole('slider').textContent).toBe('6');
 });
 
 test('different directive names at the same position own separate provisional values', () => {

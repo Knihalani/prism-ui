@@ -1,6 +1,8 @@
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Node } from '@prism-ui/core';
 import type { Store } from '@prism-ui/state';
+
+const owners = new WeakMap<Store, Map<string, { final: boolean; id: string | undefined; generation: number }>>();
 
 const record = (value: unknown): value is Record<string, unknown> => !!value && Object.getPrototypeOf(value) === Object.prototype;
 function fillMissing(source: unknown, destination: unknown): unknown {
@@ -29,24 +31,38 @@ export function migrateComponentState(store: Store, from: string, to: string) {
 }
 
 export function useComponentId(node: Node, requested: unknown, store: Store, scope: string) {
-  const provisional = `${encodeURIComponent(scope).replaceAll('.', '%2E')}:${encodeURIComponent(node.name ?? node.type).replaceAll('.', '%2E')}:${encodeURIComponent(node.key).replaceAll('.', ':')}`;
-  const requestedId = String(requested ?? provisional);
+  const key = `${encodeURIComponent(scope).replaceAll('.', '%2E')}:${encodeURIComponent(node.name ?? node.type).replaceAll('.', '%2E')}:${encodeURIComponent(node.key).replaceAll('.', ':')}`;
+  const final = node.complete !== false && Object.isFrozen(node);
+  const explicit = requested == null ? undefined : String(requested);
+  let identities = owners.get(store);
+  if (!identities) owners.set(store, identities = new Map());
+  const previous = identities.get(key);
+  const generation = (previous?.generation ?? 0) + Number(!!previous?.final && (!final || previous.id !== explicit));
+  identities.set(key, { final, id: explicit, generation });
+  const provisional = generation ? `${key}#${generation}` : key;
+  const requestedId = explicit ?? provisional;
   const valid = requestedId.split('.').every(key => !['__proto__', 'constructor', 'prototype'].includes(key));
-  const target = node.complete === false || !Object.isFrozen(node) || !valid ? provisional : requestedId;
+  const target = !final || !valid ? provisional : requestedId;
   const [prepared, setPrepared] = useState<{ store: Store; from: string; to: string }>();
-  const needsPreparation = !store.hydrated || target !== provisional && store.get(provisional) !== undefined;
-  const ready = !needsPreparation || prepared?.store === store && prepared.from === provisional && prepared.to === target;
-  useLayoutEffect(() => {
-    if (ready) return;
+  const awaiting = useRef<Store | undefined>(undefined);
+  if (!store.hydrated) awaiting.current = store;
+  const current = useRef({ store, from: provisional, to: target });
+  current.current = { store, from: provisional, to: target };
+  const needsPreparation = awaiting.current === store || target !== provisional && store.get(provisional) !== undefined;
+  const preparedForTarget = prepared?.store === store && prepared.from === provisional && prepared.to === target;
+  const preparing = needsPreparation && !preparedForTarget;
+  useEffect(() => {
+    if (!preparing) return;
     let active = true;
     const finish = () => {
-      if (!active) return;
+      if (!active || current.current.store !== store || current.current.from !== provisional || current.current.to !== target) return;
       migrateComponentState(store, provisional, target);
+      awaiting.current = undefined;
       setPrepared({ store, from: provisional, to: target });
     };
     if (store.hydrated) finish();
     else void store.ready.then(finish);
     return () => { active = false; };
-  }, [target, provisional, store, ready]);
-  return { id: target, ready };
+  }, [target, provisional, store, preparing]);
+  return { id: preparing ? provisional : target, ready: store.hydrated && awaiting.current !== store };
 }
