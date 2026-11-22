@@ -1,26 +1,67 @@
 .prism-root .prism-frame__root {
-  margin-block: var(--prism-space5);
-  border: 1px solid var(--prism-border);
-  border-radius: var(--prism-radius-lg);
+  position: relative;
+  min-width: 0;
+  margin-block: 0;
+  color: inherit;
+}
+.prism-root :where(*) + .prism-frame__root { margin-block-start: var(--prism-flow-gap); }
+.prism-root .prism-frame__root[data-variant="card"]:not(:where(.prism-card__body *, .prism-grid__body *, .prism-tab__body *)) {
+  padding: var(--prism-space5);
+  border: 1px solid var(--prism-hairline);
+  border-radius: var(--prism-radius-xl);
   background: var(--prism-surface);
-  color: var(--prism-text);
   box-shadow: var(--prism-shadow-sm);
 }
-.prism-root .prism-frame__header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--prism-space3); padding: var(--prism-space4) var(--prism-space5); border-bottom: 1px solid var(--prism-border-soft); }
-.prism-root .prism-frame__title { margin: 0; font-size: var(--prism-text-base); font-weight: 650; letter-spacing: -.01em; line-height: 1.4; }
-.prism-root .prism-frame__toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--prism-space2); margin-left: auto; }
-.prism-root :is(.prism-frame__ask, .prism-frame__undo) {
-  display: inline-flex; align-items: center; justify-content: center; gap: var(--prism-space2);
-  padding: var(--prism-space1) var(--prism-space2); min-height: 30px;
-  border: 1px solid transparent; border-radius: var(--prism-radius-sm); background: transparent;
-  color: var(--prism-muted); font: 500 var(--prism-text-sm)/1.4 var(--prism-font-sans);
-  cursor: pointer; transition: background var(--prism-duration-fast) var(--prism-ease), color var(--prism-duration-fast) var(--prism-ease);
+.prism-root .prism-frame__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--prism-space2);
+  margin-block-end: var(--prism-space2);
 }
-.prism-root :is(.prism-frame__ask, .prism-frame__undo):hover:not(:disabled) { color: var(--prism-text); background: var(--prism-muted-soft); }
-.prism-root :is(.prism-frame__ask, .prism-frame__undo):disabled { opacity: .45; cursor: not-allowed; }
-.prism-root :is(.prism-frame__ask, .prism-frame__undo) > svg { flex-shrink: 0; }
-.prism-root .prism-frame__body { padding: var(--prism-space5); min-width: 0; }
-.prism-root .prism-frame__footer { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--prism-space3); padding: var(--prism-space3) var(--prism-space5); border-top: 1px solid var(--prism-border-soft); }
-.prism-root :where(.prism-frame__footer) > :where(button) { padding: var(--prism-space2) var(--prism-space4); border: 1px solid transparent; border-radius: var(--prism-radius-sm); background: var(--prism-accent); color: var(--prism-bg); font: 600 var(--prism-text-sm)/1.4 var(--prism-font-sans); cursor: pointer; }
-.prism-root :where(.prism-frame__footer) > :where(button:hover) { filter: brightness(.96); }
-.prism-root :where(.prism-frame__footer) > :where(button:disabled) { opacity: .45; cursor: not-allowed; }
+.prism-root .prism-frame__header[data-utility-only] {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  z-index: 1;
+  margin: 0;
+}
+.prism-root .prism-frame__title {
+  margin: 0;
+  font-family: var(--prism-font-display);
+  font-size: var(--prism-text-lg);
+  font-weight: 650;
+  letter-spacing: -.025em;
+  line-height: 1.3;
+}
+.prism-root .prism-frame__toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--prism-space1);
+  margin-inline-start: auto;
+}
+.prism-root .prism-frame__body { min-width: 0; }
+.prism-root .prism-frame__footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--prism-space2);
+  margin-block-start: var(--prism-space3);
+}
+.prism-root :where(.prism-frame__footer) > :where(button) {
+  padding: .5em 1em;
+  min-height: 35px;
+  border: 0;
+  border-radius: var(--prism-radius-pill);
+  background: var(--prism-accent);
+  color: var(--prism-accent-contrast);
+  font: 600 var(--prism-text-sm)/1.4 var(--prism-font-sans);
+  cursor: pointer;
+}
+.prism-root :where(.prism-frame__footer) > :where(button:hover:not(:disabled)) { box-shadow: 0 0 0 4px var(--prism-accent-glow); }
+.prism-root :where(.prism-frame__footer) > :where(button:disabled) { opacity: .45; cursor: default; }
+
+@media (hover: hover) {
+  .prism-root .prism-frame__root:not(:hover, :focus-within) > .prism-frame__header .prism-icon-btn { opacity: 0; }
+}

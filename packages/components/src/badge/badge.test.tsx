@@ -13,8 +13,8 @@ test('badge renders semantic parts and documented defaults', () => {
   const view = render(<Prism source={source} />);
   const element = root(view.container);
   expect(element.classList.contains('prism-badge__root')).toBe(true);
-  expect(element.dataset.state).toBe('done');
-  expect(element.hasAttribute('data-prism-enter')).toBe(true);
+  expect(element.dataset.state).toBe('ready');
+  expect(element.hasAttribute('data-entering')).toBe(true);
   element.querySelectorAll('[data-prism="badge"]').forEach(part => expect(part.classList.contains('prism-badge__' + part.getAttribute('data-part'))).toBe(true));
   expect(defaultRegistry.docs()).toContain('### badge');
   expect(badgeDef.syntax).toBe('inline');
@@ -28,9 +28,9 @@ test('badge tolerates partial attributes and renders when the inline token becom
   expect(root(view.container)).toBeNull();
   view.rerender(<Prism source={":badge[New]{tone=success}"} done={false} />);
   view.rerender(<Prism source={":badge[New]{tone=success}\n\n"} done={false} />);
-  expect(root(view.container)?.dataset.state).toBe('done');
+  expect(root(view.container)?.dataset.state).toBe('ready');
   view.rerender(<Prism source={":badge[New]{id=demo tone=success dot=true}"} done />);
-  expect(root(view.container).dataset.state).toBe('done');
+  expect(root(view.container).dataset.state).toBe('ready');
 });
 
 test('badge supports empty content, invalid attributes, slots and unstyled mode', () => {
@@ -42,7 +42,7 @@ test('badge supports empty content, invalid attributes, slots and unstyled mode'
   const element = root(view.container);
   expect(element.className).toBe('');
   expect(element.style.color).toBe('red');
-  expect(element.hasAttribute('data-prism-enter')).toBe(false);
+  expect(element.hasAttribute('data-entering')).toBe(false);
   expect(element.querySelector('em')?.textContent).toContain('replaced');
   element.querySelectorAll('[class]').forEach(part => expect(part.className).not.toContain('prism-'));
 });

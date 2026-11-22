@@ -47,7 +47,7 @@ test('markdown table renders semantic parts, rich cells, inferred numeric and ex
   expect(headers[0].getAttribute('aria-sort')).toBe('none');
   view.container.querySelectorAll('[data-prism="table"]').forEach(part => expect(part.classList.contains('prism-table__' + part.getAttribute('data-part'))).toBe(true));
   const root = view.container.querySelector('[data-part="root"][data-prism="table"]')!;
-  expect(root.getAttribute('data-state')).toBe('done'); expect(root.hasAttribute('data-prism-enter')).toBe(true);
+  expect(root.getAttribute('data-state')).toBe('ready'); expect(root.hasAttribute('data-entering')).toBe(true);
   expect(defaultRegistry.docs()).toContain('### table');
 });
 
@@ -85,7 +85,7 @@ test('streaming retains header and arriving rows while sorting is disabled, then
   view.rerender(<Prism source={header + row + '| B | 10 |\n'} done={false} />);
   expect(order(view)).toEqual(['A', 'B']);
   view.rerender(<Prism source={header + row + '| B | 10 |\n'} done />);
-  expect(view.container.querySelector('[data-prism="table"]')?.getAttribute('data-state')).toBe('done');
+  expect(view.container.querySelector('[data-prism="table"]')?.getAttribute('data-state')).toBe('ready');
   expect((view.getByRole('button', { name: 'Amount' }) as HTMLButtonElement).disabled).toBe(false);
   fireEvent.click(view.getByRole('button', { name: 'Amount' })); expect(order(view)).toEqual(['B', 'A']);
 });
@@ -124,7 +124,7 @@ test('unstyled mode, slots and horizontal overflow state are supported', () => {
   function Cell({ children, ...props }: React.HTMLAttributes<HTMLTableCellElement>) { return <td {...props} data-custom="yes">{children}</td>; }
   const view = render(<Prism source={source} unstyled animate={false} slots={{ table: { cell: Cell } }} styles={{ table: { root: { color: 'red' } } }} />);
   const root = view.container.querySelector('[data-prism="table"]') as HTMLElement;
-  expect(root.style.color).toBe('red'); expect(root.hasAttribute('data-prism-enter')).toBe(false); expect(view.container.querySelector('td')?.getAttribute('data-custom')).toBe('yes');
+  expect(root.style.color).toBe('red'); expect(root.hasAttribute('data-entering')).toBe(false); expect(view.container.querySelector('td')?.getAttribute('data-custom')).toBe('yes');
   view.container.querySelectorAll('[data-prism="table"]').forEach(part => expect(part.className).toBe(''));
   const scroll = view.getByRole('region');
   Object.defineProperties(scroll, { clientWidth: { value: 100 }, scrollWidth: { value: 300 }, scrollLeft: { value: 0, writable: true } });

@@ -1,23 +1,66 @@
-.prism-root .prism-tabs__root { margin-block: var(--prism-space5); min-width: 0; }
-.prism-root .prism-tabs__list { position: relative; display: flex; align-items: stretch; gap: var(--prism-space4); height: 44px; overflow-x: auto; border-bottom: 1px solid var(--prism-border-soft); scrollbar-width: thin; }
+.prism-root .prism-tabs__root { min-width: 0; }
+.prism-root :where(*) + .prism-tabs__root { margin-block-start: var(--prism-flow-gap); }
+.prism-root .prism-tabs__list {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: stretch;
+  gap: var(--prism-space2);
+  height: 42px;
+  overflow-x: auto;
+  border-block-end: 1px solid var(--prism-hairline);
+  scrollbar-width: thin;
+}
 .prism-root .prism-tabs__root[data-size="sm"] .prism-tabs__list { height: 36px; }
-.prism-root .prism-tabs__tab { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; gap: var(--prism-space2); padding: 0 var(--prism-space2); border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--prism-muted); font: 500 var(--prism-text-sm)/1.2 var(--prism-font-sans); cursor: pointer; white-space: nowrap; transition: color var(--prism-duration-base) var(--prism-ease), background var(--prism-duration-base) var(--prism-ease); }
-.prism-root .prism-tabs__tab:hover { color: var(--prism-text); background: var(--prism-muted-soft); }
-.prism-root .prism-tabs__tab[aria-selected="true"] { color: var(--prism-accent); border-bottom-color: var(--prism-accent); }
-.prism-root .prism-tabs__tab:focus-visible { outline: 2px solid var(--prism-accent); outline-offset: -3px; border-radius: var(--prism-radius-sm); }
-.prism-root .prism-tabs__list[data-measured] .prism-tabs__tab { border-bottom-color: transparent; }
-.prism-root .prism-tabs__indicator { position: absolute; bottom: 0; left: 0; width: var(--prism-tabs-indicator-width); height: 2px; background: var(--prism-accent); transform: translateX(var(--prism-tabs-indicator-left)); border-radius: var(--prism-radius-sm); pointer-events: none; transition: transform var(--prism-duration-base) var(--prism-ease), width var(--prism-duration-base) var(--prism-ease); }
+.prism-root .prism-tabs__tab {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--prism-space2);
+  padding: 0 var(--prism-space3);
+  border: 0;
+  border-block-end: 2px solid transparent;
+  background: transparent;
+  color: var(--prism-muted);
+  font: 600 var(--prism-text-sm)/1.2 var(--prism-font-sans);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--prism-duration-fast);
+}
+.prism-root .prism-tabs__tab:hover { color: var(--prism-text); }
+.prism-root .prism-tabs__tab[aria-selected="true"] { color: var(--prism-accent); border-block-end-color: var(--prism-accent); }
+.prism-root .prism-tabs__tab:focus-visible { outline-offset: -3px; border-radius: var(--prism-radius-sm); }
+.prism-root .prism-tabs__list[data-measured] .prism-tabs__tab { border-block-end-color: transparent; }
+.prism-root .prism-tabs__indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: var(--prism-tabs-indicator-width);
+  height: 2px;
+  background: var(--prism-accent);
+  transform: translateX(var(--prism-tabs-indicator-left));
+  border-radius: var(--prism-radius-pill);
+  pointer-events: none;
+  transition: transform var(--prism-duration) var(--prism-ease-spring), width var(--prism-duration) var(--prism-ease-spring);
+}
 .prism-root .prism-tabs__root[data-fitted] .prism-tabs__tab { flex: 1; }
-.prism-root .prism-tabs__root[data-variant="pill"] .prism-tabs__list { gap: var(--prism-space1); padding: var(--prism-space1); background: var(--prism-muted-soft); border: 1px solid var(--prism-border-soft); border-radius: var(--prism-radius-md); }
-.prism-root .prism-tabs__root[data-variant="pill"] .prism-tabs__tab { border: 0; border-radius: var(--prism-radius-sm); }
-.prism-root .prism-tabs__root[data-variant="pill"] .prism-tabs__tab[aria-selected="true"] { background: var(--prism-surface); color: var(--prism-text); box-shadow: var(--prism-shadow-sm); }
-.prism-root .prism-tabs__root[data-variant="pill"] .prism-tabs__indicator { visibility: hidden; }
-.prism-root .prism-tabs__badge { padding: 0 var(--prism-space1); border-radius: var(--prism-radius-sm); background: var(--prism-muted-soft); color: var(--prism-muted); font-size: var(--prism-text-xs); font-variant-numeric: tabular-nums; }
-.prism-root .prism-tabs__skeleton { display: inline-block; width: 52px; height: 12px; border-radius: var(--prism-radius-sm); background: var(--prism-muted-soft); }
+.prism-root .prism-tabs__root[data-variant="pill"]:not([data-fitted]) .prism-tabs__list { width: fit-content; max-width: 100%; }
+.prism-root .prism-tabs__root[data-variant="pill"] .prism-tabs__list { gap: 0; padding: 3px; background: var(--prism-fill); border: 0; border-radius: var(--prism-radius-pill); }
+.prism-root .prism-tabs__root[data-variant="pill"] .prism-tabs__tab { border: 0; border-radius: var(--prism-radius-pill); }
+.prism-root .prism-tabs__root[data-variant="pill"] .prism-tabs__list:not([data-measured]) .prism-tabs__tab[aria-selected="true"] { background: var(--prism-accent-soft); }
+.prism-root .prism-tabs__root[data-variant="pill"] .prism-tabs__indicator { inset-block: 3px; height: auto; z-index: -1; background: var(--prism-accent-soft); }
+.prism-root .prism-tabs__skeleton {
+  --prism-skeleton-width: 52px;
+  --prism-skeleton-height: .8em;
+  display: inline-block;
+  width: var(--prism-skeleton-width);
+  height: var(--prism-skeleton-height);
+  border-radius: var(--prism-radius-sm);
+  background: var(--prism-fill);
+}
 .prism-root .prism-tabs__body { padding-top: var(--prism-space4); }
 .prism-root .prism-tab__root[hidden] { display: none; }
 .prism-root .prism-tab__root { min-width: 0; }
-.prism-root .prism-tab__title { margin: 0 0 var(--prism-space3); font-size: var(--prism-text-base); letter-spacing: -.015em; }
+.prism-root .prism-tab__title { margin: 0 0 var(--prism-space2); font-size: var(--prism-text-base); letter-spacing: -.015em; }
 .prism-root .prism-tab__body > :last-child { margin-bottom: 0; }
-.prism-root[data-animate="false"] .prism-tabs__indicator, .prism-root [data-animate="false"] .prism-tabs__indicator { transition: none; }
-@media (prefers-reduced-motion: reduce) { .prism-root .prism-tabs__indicator { transition: none; } }

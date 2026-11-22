@@ -24,8 +24,8 @@ test('card renders semantic parts and documented defaults', () => {
   const view = render(<Prism source={source} />);
   const element = root(view.container);
   expect(element.classList.contains('prism-card__root')).toBe(true);
-  expect(element.dataset.state).toBe('done');
-  expect(element.hasAttribute('data-prism-enter')).toBe(true);
+  expect(element.dataset.state).toBe('ready');
+  expect(element.hasAttribute('data-entering')).toBe(true);
   element.querySelectorAll('[data-prism="card"]').forEach(part => expect(part.classList.contains('prism-card__' + part.getAttribute('data-part'))).toBe(true));
   expect(defaultRegistry.docs()).toContain('### card');
   expect(cardDef.syntax).toBe('container');
@@ -41,7 +41,7 @@ test('card tolerates partial attributes, streams open content, then finishes', (
   expect(root(view.container)?.dataset.state).toBe('streaming');
   expect(view.getByText('Plan')).toBeDefined();
   view.rerender(<Prism source={":::card{id=demo title=\"Plan\" subtitle=\"Details\" href=\"/plan\" action=\"Choose\"}\nBody text\n:::"} done />);
-  expect(root(view.container).dataset.state).toBe('done');
+  expect(root(view.container).dataset.state).toBe('ready');
 });
 
 test('card supports empty content, invalid attributes, slots and unstyled mode', () => {
@@ -54,7 +54,7 @@ test('card supports empty content, invalid attributes, slots and unstyled mode',
   const element = root(view.container);
   expect(element.className).toBe('');
   expect(element.style.color).toBe('red');
-  expect(element.hasAttribute('data-prism-enter')).toBe(false);
+  expect(element.hasAttribute('data-entering')).toBe(false);
   expect(element.querySelector('em')?.textContent).toContain('replaced');
   element.querySelectorAll('[class]').forEach(part => expect(part.className).not.toContain('prism-'));
 });
@@ -70,6 +70,20 @@ test('card ask emits an exact action and native buttons remain keyboard focusabl
   expect(action.tabIndex).toBe(0); act(() => action.focus()); expect(document.activeElement).toBe(action);
   fireEvent.click(action);
   expect(actions[1]).toEqual({ type: 'select', component: 'card', id: 'demo', payload: { title: 'Plan', href: '/plan' }, context: { component: 'card', props: {"id":"demo","title":"Plan","subtitle":"Details","href":"/plan","action":"Choose","variant":"outline","size":"md"}, state: undefined }, message: 'User select in card: {"title":"Plan","href":"/plan"}' });
+  expect(view.getByRole('button', { name: 'Sent' })).toBe(action);
+  expect(root(view.container).dataset.state).toBe('sent');
+});
+
+test('card has a streaming skeleton and shows a receipt only for a delivered action', () => {
+  const view = render(<Prism source={':::card{title="Plan"}\n'} done={false} />);
+  expect(view.container.querySelector('[data-prism-skeleton][data-prism-skeleton-line]')).not.toBeNull();
+  const middleware = [() => {}];
+  const onAction = () => { throw Error('Middleware should block this action'); };
+  view.rerender(<Prism source={source} middleware={middleware} onAction={onAction} />);
+  expect(view.container.querySelector('[data-prism-skeleton]')).toBeNull();
+  fireEvent.click(view.getByRole('button', { name: 'Choose' }));
+  expect(view.getByRole('button', { name: 'Choose' })).toBeTruthy();
+  expect(root(view.container).dataset.state).toBe('ready');
 });
 
 test('card reserves image media and selects with explicitly undefined optional keys', () => {

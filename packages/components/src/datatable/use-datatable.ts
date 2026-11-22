@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useComponentState, useEmit, type PrismContextValue } from '@prism-ui/react';
+import { useComponentState, useSent, type PrismContextValue } from '@prism-ui/react';
 import { s } from '@prism-ui/schema';
 import { filter, prepare } from '../lib/fuzzy';
 import { format } from '../lib/format';
@@ -47,15 +47,30 @@ export function inferType(values: unknown[]): DataTableColumn['type'] {
 function numeric(value: unknown) { return typeof value === 'number' ? value : Number(String(value).replace(/[$€£¥,%\s]/g, '')); }
 function scalar(value: unknown) { return value == null || ['string', 'number', 'boolean'].includes(typeof value) ? value : undefined; }
 function inferCurrency(value: unknown) { return ({ '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY' } as Record<string, string>)[String(value)[0]]; }
+export function numericCell(input: unknown, column: DataTableColumn): number | undefined {
+  const value = scalar(input);
+  const kind = column.format ?? column.type ?? 'text';
+  if (!['number', 'currency', 'compact', 'percent'].includes(kind) || value == null || value === '') return;
+  return numeric(value);
+}
+export function formatCell(input: unknown, column: DataTableColumn, context: PrismContextValue['format'], intermediate?: number) {
+  const value = scalar(input);
+  return format(intermediate ?? numericCell(value, column) ?? value, column.format ?? column.type ?? 'text', {
+    locale: context.locale, currency: column.currency ?? (column.type === 'currency' ? inferCurrency(value) : undefined) ?? context.currencyCode,
+    fallback: value == null ? '' : String(value),
+  });
+}
 export function useDataTable(props: DataTableProps, ctx: PrismContextValue) {
   const rows = Array.isArray(props.rows) ? props.rows : emptyRows, complete = props.complete !== false;
   const columns = useMemo(() => {
     const first = rows.find(row => row && typeof row === 'object' && !Array.isArray(row));
     return (Array.isArray(props.columns) ? props.columns.filter(column => column && typeof column.key === 'string' && column.key) : Object.keys(first ?? {}).map(key => ({ key } as DataTableColumn))).map(column => {
       const type = ['text', 'number', 'currency', 'date'].includes(column.type!) ? column.type : inferType(rows.map(row => scalar(row?.[column.key])));
+      const format = ['text', 'number', 'currency', 'percent', 'compact', 'date', 'datetime'].includes(column.format!) ? column.format : undefined;
+      const numericFormat = ['number', 'currency', 'percent', 'compact'].includes(format ?? type ?? '');
       return { key: column.key, type, label: typeof column.label === 'string' ? column.label : column.key,
-        align: ['left', 'center', 'right'].includes(column.align!) ? column.align : type === 'number' || type === 'currency' ? 'right' : 'left',
-        format: ['text', 'number', 'currency', 'percent', 'compact', 'date', 'datetime'].includes(column.format!) ? column.format : undefined,
+        align: ['left', 'center', 'right'].includes(column.align!) ? column.align : numericFormat ? 'right' : 'left',
+        format,
         currency: typeof column.currency === 'string' ? column.currency : undefined };
     });
   }, [rows, props.columns]);
@@ -64,16 +79,10 @@ export function useDataTable(props: DataTableProps, ctx: PrismContextValue) {
   const [page, setPage] = useComponentState('page', 0);
   const [selection, setSelection] = useComponentState<number[]>('selection', []);
   const [scrollTop, setScrollTop] = useState(0), [focusIndex, setFocusIndex] = useState<number | null>(null);
-  const emit = useEmit(), mode = props.select ?? (props.selectable ? 'multiple' : undefined);
+  const { sent, send, reset } = useSent(), mode = props.select ?? (props.selectable ? 'multiple' : undefined);
   const entries = useMemo(() => rows.flatMap((row, index) => {
     if (!row || typeof row !== 'object' || Array.isArray(row)) return [];
-    const cells = columns.map(column => {
-      const value = scalar(row[column.key]), kind = column.format ?? column.type ?? 'text';
-      return format(['number', 'currency', 'compact', 'percent'].includes(kind) && value != null && value !== '' ? numeric(value) : value, kind, {
-        locale: ctx.format.locale, currency: column.currency ?? (column.type === 'currency' ? inferCurrency(value) : undefined) ?? ctx.format.currencyCode,
-        fallback: value == null ? '' : String(value),
-      });
-    });
+    const cells = columns.map(column => formatCell(row[column.key], column, ctx.format));
     return [{ row, index, cells }];
   }), [rows, columns, ctx.format]);
   const search = useMemo(() => prepare(entries, entry => entry.cells.join(' ')), [entries]);
@@ -104,7 +113,7 @@ export function useDataTable(props: DataTableProps, ctx: PrismContextValue) {
   const pageSelected = !!paged.length && selectedOnPage === paged.length;
   const resetPage = (change: () => void) => { ctx.store.batch(() => { change(); setPage(0); }); setScrollTop(0); };
   return { columns, entries, ordered, visible, selected, selection, mode, sort, query, complete, currentPage, pageCount, paged, pageSize, offset,
-    rowHeight, height, virtual, start, end, focusIndex, setFocusIndex, setScrollTop, pageSelected, selectedOnPage,
+    rowHeight, height, virtual, start, end, focusIndex, setFocusIndex, setScrollTop, pageSelected, selectedOnPage, sent, resetSent: reset,
     count: ordered.length, range: ordered.length ? `${offset + 1}–${limit && !virtual ? Math.min(offset + limit, ordered.length) : ordered.length} of ${ordered.length}` : '0 of 0',
     announcement: `${ordered.length} rows${complete && query ? ` matching ${query}` : ''}. ${complete && sort ? `Sorted by ${columns.find(column => column.key === sort.key)?.label ?? sort.key} ${sort.direction === 'asc' ? 'ascending' : 'descending'}.` : complete ? 'Original order.' : 'Loading rows.'}`,
     changeQuery(value: string) { resetPage(() => setQuery(value)); },
@@ -112,6 +121,6 @@ export function useDataTable(props: DataTableProps, ctx: PrismContextValue) {
     toggleSort(key: string) { if (complete) resetPage(() => setSort(old => old?.key !== key ? { key, direction: 'asc' } : old.direction === 'asc' ? { key, direction: 'desc' } : null)); },
     toggleRow(index: number) { if (!mode) return; setSelection(old => old.includes(index) ? old.filter(value => value !== index) : mode === 'single' ? [index] : [...old, index]); },
     togglePage() { if (mode !== 'multiple') return; const ids = paged.map(entry => entry.index); setSelection(old => pageSelected ? old.filter(index => !ids.includes(index)) : [...new Set([...old, ...ids])]); },
-    submit() { const payload: DataTableSelection = { rows: selected.map(entry => entry.row), indices: selected.map(entry => entry.index) }; emit('select', payload); },
+    submit() { const payload: DataTableSelection = { rows: selected.map(entry => entry.row), indices: selected.map(entry => entry.index) }; send('select', payload); },
   };
 }

@@ -13,8 +13,8 @@ test('grid renders semantic parts and documented defaults', () => {
   const view = render(<Prism source={source} />);
   const element = root(view.container);
   expect(element.classList.contains('prism-grid__root')).toBe(true);
-  expect(element.dataset.state).toBe('done');
-  expect(element.hasAttribute('data-prism-enter')).toBe(true);
+  expect(element.dataset.state).toBe('ready');
+  expect(element.hasAttribute('data-entering')).toBe(true);
   element.querySelectorAll('[data-prism="grid"]').forEach(part => expect(part.classList.contains('prism-grid__' + part.getAttribute('data-part'))).toBe(true));
   expect(defaultRegistry.docs()).toContain('### grid');
   expect(gridDef.syntax).toBe('container');
@@ -30,7 +30,7 @@ test('grid tolerates partial attributes, streams open content, then finishes', (
   view.rerender(<Prism source={":::grid{id=demo cols=3 min=180 gap=lg}\n"} done={false} />);
   expect(root(view.container)?.dataset.state).toBe('streaming');
   view.rerender(<Prism source={":::grid{id=demo cols=3 min=180 gap=lg}\nBody text\n:::"} done />);
-  expect(root(view.container).dataset.state).toBe('done');
+  expect(root(view.container).dataset.state).toBe('ready');
 });
 
 test('grid supports empty content, invalid attributes, slots and unstyled mode', () => {
@@ -42,7 +42,7 @@ test('grid supports empty content, invalid attributes, slots and unstyled mode',
   const element = root(view.container);
   expect(element.className).toBe('');
   expect(element.style.color).toBe('red');
-  expect(element.hasAttribute('data-prism-enter')).toBe(false);
+  expect(element.hasAttribute('data-entering')).toBe(false);
   expect(element.querySelector('em')?.textContent).toContain('replaced');
   element.querySelectorAll('[class]').forEach(part => expect(part.className).not.toContain('prism-'));
 });
