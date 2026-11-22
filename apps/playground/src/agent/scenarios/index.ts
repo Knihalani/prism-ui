@@ -108,7 +108,11 @@ export const scenarios: Scenario[] = [
       }
       return fallback('the recovery', action);
     },
-    onMessage: (text, ctx) => /done|finished|healthy|fixed/i.test(text) ? { text: 'Good recovery. Give the canary ten quiet minutes before closing the incident, then record the cause and the exact change that fixed it. A small preflight check is worth adding so the next release catches this before traffic moves.' } : /error|log|no|yes/i.test(text) ? { text: recovery.unknown.intro + '\n\n' + runbook(ctx.scope, 'unknown') } : undefined,
+    onMessage(text, ctx) {
+      if (/\b(?:not|never|still|unfixed|broken|errors?|fail(?:ed|ing|ure)?|(?:isn|aren|wasn|weren|hasn|haven|didn)['’]t)\b/i.test(text)) return { text: recovery.unknown.intro + '\n\n' + runbook(ctx.scope, 'unknown') };
+      if (/\b(?:done|finished|healthy|fixed)\b/i.test(text)) return { text: 'Good recovery. Give the canary ten quiet minutes before closing the incident, then record the cause and the exact change that fixed it. A small preflight check is worth adding so the next release catches this before traffic moves.' };
+      return /\b(?:log|no|yes)\b/i.test(text) ? { text: recovery.unknown.intro + '\n\n' + runbook(ctx.scope, 'unknown') } : undefined;
+    },
   },
   {
     id: 'landing', title: 'A landing page direction', prompt: 'Mock up a landing page', keywords: ['landing page', 'mock up', 'mockup', 'website design'], components: ['mockup'],

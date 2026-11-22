@@ -153,6 +153,18 @@ test('ambiguous laptop follow-ups still use the active scenario', async () => {
   expect(reply).toContain('protect the memory budget');
 });
 
+test.each(['not fixed; the error is still there', 'it is not healthy', "it isn't fixed", 'the deploy is still failing', 'unfixed'])('deploy does not celebrate unresolved report: %s', async text => {
+  const agent = createScriptedAgent({ pace: fast });
+  await collect(agent.respond({ kind: 'message', text: 'debug my deploy', history: [] }, signal()));
+  const reply = textOf(await collect(agent.respond({ kind: 'message', text, history: [{ role: 'user', text: 'debug my deploy' }] }, signal())));
+  expect(reply).not.toContain('Good recovery');
+  expect(reply).toContain('```bash');
+});
+
+test.each(['done', 'fixed now', 'healthy again'])('deploy acknowledges an affirmative recovery: %s', text => {
+  expect(scenarios[2].onMessage?.(text, ctx)?.text).toContain('Good recovery');
+});
+
 test('pace preserves all source bytes and surrogate pairs; abort interrupts thinking', async () => {
   const source = 'Hello 😀 world.\n\n```ui:pick\n{"id":"x"}\n```\n:::callout{title="Note"}\nStay curious!\n:::\n';
   const parts = [...chunks(source, fast)]; expect(parts.join('')).toBe(source);
