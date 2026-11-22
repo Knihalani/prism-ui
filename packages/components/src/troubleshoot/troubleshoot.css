@@ -53,3 +53,13 @@
 
 .prism-root .prism-troubleshoot__root { container: prism-troubleshoot / inline-size; }
 @container prism-troubleshoot (max-width: 360px) { .prism-root .prism-troubleshoot__question { font-size: var(--prism-troubleshoot-text-lg, var(--prism-text-lg)); } }
+
+.prism-root[data-prism-theme-name="host"]:has(> .prism-troubleshoot__conversation) { font-size: var(--prism-troubleshoot-body-size, inherit); }
+.prism-root .prism-troubleshoot__command pre { padding-block: 0; scrollbar-width: thin; scrollbar-color: transparent transparent; background: transparent; }
+.prism-root .prism-troubleshoot__command pre:is(:hover, :focus-within) { scrollbar-color: var(--prism-troubleshoot-text-subtle, var(--prism-text-subtle)) transparent; }
+
+.prism-root .prism-troubleshoot__command { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.prism-root .prism-troubleshoot__command pre { overflow: visible; }
+.prism-root .prism-troubleshoot__command:is(:hover, :focus-within) { scrollbar-color: var(--prism-troubleshoot-text-subtle, var(--prism-text-subtle)) transparent; }
+.prism-root .prism-troubleshoot__command .prism-codeblock__copy { visibility: hidden; }
+.prism-root .prism-troubleshoot__command > .prism-troubleshoot__ghost { inset-block-start: 0; inset-inline-end: 0; padding: 0 var(--prism-troubleshoot-space-1, var(--prism-space-1)); }

@@ -20,7 +20,7 @@
 .prism-root :is(.prism-runbook__copy, .prism-runbook__stuck) { border: 0; border-radius: var(--prism-runbook-radius-sm, var(--prism-radius-sm)); padding: var(--prism-runbook-space-1, var(--prism-space-1)) var(--prism-runbook-space-2, var(--prism-space-2)); background: transparent; color: var(--prism-runbook-text-muted, var(--prism-text-muted)); font-family: var(--prism-runbook-font-body, var(--prism-font-body)); font-size: var(--prism-runbook-text-sm, var(--prism-text-sm)); font-weight: var(--prism-runbook-weight-medium, var(--prism-weight-medium)); cursor: pointer; }
 .prism-root :is(.prism-runbook__copy, .prism-runbook__stuck):hover { color: var(--prism-accent-text, var(--prism-runbook-accent, var(--prism-accent, var(--prism-accent-text)))); background: color-mix(in srgb, var(--prism-runbook-accent, var(--prism-accent, var(--prism-accent-text))) 8%, transparent); }
 .prism-root .prism-runbook__stuck { opacity: 0; }
-.prism-root .prism-runbook__step:is(:hover, :focus-within, [data-state="current"]) .prism-runbook__stuck { opacity: 1; }
+.prism-root .prism-runbook__step:is(:hover, :focus-within) .prism-runbook__stuck { opacity: 1; }
 .prism-root :is(.prism-runbook__check, .prism-runbook__copy, .prism-runbook__stuck):focus-visible { outline: var(--prism-runbook-size-2px, calc(var(--prism-runbook-space-1, var(--prism-space-1)) * 0.5)) solid var(--prism-runbook-accent, var(--prism-accent, var(--prism-accent-text))); outline-offset: var(--prism-runbook-space-1, var(--prism-space-1)); }
 .prism-root .prism-runbook__skeleton { height: calc(var(--prism-runbook-space-7, var(--prism-space-7)) + var(--prism-runbook-space-3, var(--prism-space-3)) * 2 + var(--prism-runbook-size-2px, calc(var(--prism-runbook-space-1, var(--prism-space-1)) * 0.5))); border-radius: var(--prism-runbook-radius-md, var(--prism-radius-md)); background: color-mix(in srgb, var(--prism-runbook-text-muted, var(--prism-text-muted)) 8%, transparent); }
 .prism-root .prism-runbook__skeleton { background: linear-gradient(100deg, color-mix(in srgb, var(--prism-runbook-text-muted, var(--prism-text-muted)) 8%, transparent) 20%, color-mix(in srgb, var(--prism-runbook-surface, var(--prism-surface)) 70%, transparent) 45%, color-mix(in srgb, var(--prism-runbook-text-muted, var(--prism-text-muted)) 8%, transparent) 70%); background-size: 220% 100%; }
@@ -48,9 +48,18 @@
 .prism-root[data-animate="false"] [data-prism="runbook"], .prism-root [data-animate="false"] [data-prism="runbook"] { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-root [data-prism="runbook"] { animation: none; transition: none; } }
 
-.prism-root .prism-runbook__stepHeader { flex-wrap: wrap; }
+.prism-root .prism-runbook__stepHeader { position: relative; flex-wrap: nowrap; }
 .prism-root .prism-runbook__stepTitle { flex: 1 1 calc(var(--prism-runbook-text-base, var(--prism-text-base)) * 6); }
-.prism-root .prism-runbook__actions { margin-inline-start: 0; }
+.prism-root .prism-runbook__actions { position: absolute; inset-inline-end: 0; inset-block-start: 0; min-height: 0; margin: 0; }
+.prism-root .prism-runbook__stepTitle { padding-inline-end: var(--prism-runbook-help-space, calc(var(--prism-runbook-space-8, var(--prism-space-8)) * 3)); }
+.prism-root .prism-runbook__command { position: relative; margin-block-start: var(--prism-runbook-space-2, var(--prism-space-2)); overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.prism-root .prism-runbook__command:is(:hover, :focus-within) { scrollbar-color: var(--prism-runbook-text-subtle, var(--prism-text-subtle)) transparent; }
+.prism-root .prism-runbook__command > .prism-runbook__copy { position: absolute; inset-block-start: var(--prism-runbook-space-1, var(--prism-space-1)); inset-inline-end: 0; }
+.prism-root .prism-runbook__command .prism-codeblock__copy { visibility: hidden; }
+.prism-root .prism-runbook__command > .prism-code__root { margin: 0; padding: 0; overflow: visible; background: transparent; }
+.prism-root .prism-runbook__command > .prism-codeblock__root { margin: 0; }
+.prism-root .prism-runbook__stepBody :is(.prism-paragraph__root, .prism-list__root, .prism-blockquote__root) { font-size: inherit; }
+.prism-root[data-prism-theme-name="host"]:has(> .prism-runbook__root) { font-size: var(--prism-runbook-body-size, inherit); }
 
 .prism-root .prism-runbook__root { container: prism-runbook / inline-size; }
 @container prism-runbook (max-width: 360px) { .prism-root .prism-runbook__header { flex-wrap: wrap; } .prism-root .prism-runbook__progress { min-width: 0; } }

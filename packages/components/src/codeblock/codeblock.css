@@ -110,3 +110,19 @@
 @media (prefers-reduced-motion: reduce) { .prism-root [data-prism="codeblock"] { animation: none; transition: none; } }
 
 .prism-root .prism-codeblock__root { container: prism-codeblock / inline-size; }
+
+.prism-root[data-prism-theme-name="host"]:has(> .prism-codeblock__root) { font-size: var(--prism-codeblock-body-size, inherit); }
+.prism-codeblock__body { --prism-codeblock-code-size: var(--prism-codeblock-text-sm, var(--prism-text-sm)); padding-block: 0; scrollbar-color: transparent transparent; }
+.prism-codeblock__body:is(:hover, :focus-within) { scrollbar-color: var(--prism-codeblock-text-subtle, var(--prism-text-subtle)) transparent; }
+.prism-codeblock__body pre { font-size: var(--prism-codeblock-code-size); line-height: var(--prism-codeblock-line-height, calc(var(--prism-codeblock-code-size) * 1.65)); }
+.prism-codeblock__line { min-height: var(--prism-codeblock-line-height, calc(var(--prism-codeblock-code-size) * 1.65)); }
+.prism-codeblock__body[data-state="collapsed"] { height: calc(var(--prism-codeblock-visible-lines) * var(--prism-codeblock-line-height, calc(var(--prism-codeblock-code-size) * 1.65))); }
+.prism-codeblock__actions { position: absolute; inset-block-start: 0; inset-inline-end: calc(var(--prism-codeblock-space-8, var(--prism-space-8)) + var(--prism-codeblock-space-4, var(--prism-space-4))); flex-wrap: nowrap; margin: 0; }
+.prism-codeblock__askLabel { display: none; }
+.prism-codeblock__root:is(:hover, :focus-within) .prism-codeblock__label { max-inline-size: calc(100% - var(--prism-codeblock-tools-width, calc(var(--prism-codeblock-space-8, var(--prism-space-8)) * 6))); }
+@container prism-codeblock (max-width: 480px) { .prism-codeblock__body { --prism-codeblock-code-size: var(--prism-codeblock-text-xs, var(--prism-text-xs)); } }
+@media (hover: none) { .prism-codeblock__label { max-inline-size: calc(100% - var(--prism-codeblock-tools-width, calc(var(--prism-codeblock-space-8, var(--prism-space-8)) * 6))); } }
+
+.prism-codeblock__collapseLabel { display: none; }
+.prism-codeblock__collapse svg { inline-size: var(--prism-codeblock-space-4, var(--prism-space-4)); block-size: var(--prism-codeblock-space-4, var(--prism-space-4)); }
+.prism-codeblock__collapse[aria-expanded="true"] svg { transform: rotate(180deg); }

@@ -12,7 +12,7 @@
 .prism-root .prism-summary__pointText { flex: 1; margin: 0; min-width: 0; font-size: var(--prism-summary-text-base, var(--prism-text-base)); line-height: 1.65; }
 .prism-root .prism-summary__citation { display: inline-flex; flex-shrink: 0; padding: 0 var(--prism-summary-space-1, var(--prism-space-1)); border-radius: var(--prism-summary-radius-sm, var(--prism-radius-sm)); background: color-mix(in srgb, var(--prism-summary-text-muted, var(--prism-text-muted)) 8%, transparent); color: var(--prism-summary-text-muted, var(--prism-text-muted)); font-size: var(--prism-summary-text-xs, var(--prism-text-xs)); font-variant-numeric: tabular-nums; transition: background var(--prism-summary-motion-fast, var(--prism-motion-fast)) var(--prism-summary-motion-spring, var(--prism-motion-spring)), color var(--prism-summary-motion-fast, var(--prism-motion-fast)) var(--prism-summary-motion-spring, var(--prism-motion-spring)); }
 .prism-root .prism-summary__pointAsk { position: absolute; align-self: flex-end; flex-shrink: 0; padding: var(--prism-summary-space-1, var(--prism-space-1)) var(--prism-summary-space-2, var(--prism-space-2)); opacity: 0; pointer-events: none; border: 0; border-radius: var(--prism-summary-radius-sm, var(--prism-radius-sm)); background: color-mix(in srgb, var(--prism-summary-text-muted, var(--prism-text-muted)) 8%, transparent); color: var(--prism-summary-text-muted, var(--prism-text-muted)); font: inherit; font-size: var(--prism-summary-text-xs, var(--prism-text-xs)); cursor: pointer; transition: opacity var(--prism-summary-motion-fast, var(--prism-motion-fast)) var(--prism-summary-motion-spring, var(--prism-motion-spring)); }
-.prism-root .prism-summary__point:hover .prism-summary__pointAsk, .prism-root .prism-summary__point:focus-within .prism-summary__pointAsk { position: static; opacity: 1; pointer-events: auto; }
+.prism-root .prism-summary__point:hover .prism-summary__pointAsk, .prism-root .prism-summary__point:focus-within .prism-summary__pointAsk { opacity: 1; pointer-events: auto; }
 .prism-root .prism-summary__source { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--prism-summary-motion-slow, var(--prism-motion-slow)) var(--prism-summary-motion-spring, var(--prism-motion-spring)), opacity var(--prism-summary-motion-fast, var(--prism-motion-fast)) var(--prism-summary-motion-spring, var(--prism-motion-spring)); }
 .prism-root .prism-summary__source[data-expanded] { grid-template-rows: 1fr; opacity: 1; }
 .prism-root .prism-summary__sourceInner { min-height: 0; overflow: hidden; }
@@ -69,3 +69,8 @@
 
 .prism-root .prism-summary__root { container: prism-summary / inline-size; }
 @container prism-summary (max-width: 400px) { .prism-root .prism-summary__footer { flex-wrap: wrap; } .prism-root .prism-summary__actionLabel { flex-basis: 100%; } }
+
+.prism-root[data-prism-theme-name="host"]:has(> .prism-summary__root) { font-size: var(--prism-summary-body-size, inherit); }
+.prism-root :is(.prism-summary__pointText, .prism-summary__actionText) { font-size: inherit; }
+.prism-root .prism-summary__pointRow { padding-inline-end: var(--prism-summary-space-7, var(--prism-space-7)); }
+.prism-root .prism-summary__pointAsk { position: absolute; inset-inline-end: 0; inset-block-start: var(--prism-summary-space-2, var(--prism-space-2)); display: grid; place-items: center; inline-size: var(--prism-summary-space-6, var(--prism-space-6)); block-size: var(--prism-summary-space-6, var(--prism-space-6)); padding: 0; }

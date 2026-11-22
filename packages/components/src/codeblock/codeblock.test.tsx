@@ -5,6 +5,14 @@ import { Prism, createRegistry, type Action } from '@prism-ui/react';
 import { CodeBlock, CodeBlockHighlighterContext, codeBlockDefinition, setHighlighter } from './index';
 import { defineLanguage, getLanguage, registerLanguage } from '../lib/highlight';
 
+test('empty and long command scroll areas are keyboard-focusable', () => {
+  for (const code of ['', 'console.log("long command");'.repeat(30)]) {
+    const view = render(<Prism registry={createRegistry([codeBlockDefinition])} source={'```ui:code\n' + JSON.stringify({ code }) + '\n```'} />);
+    expect(view.container.querySelector('[data-part="body"]')?.getAttribute('tabindex')).toBe('0');
+    view.unmount();
+  }
+});
+
 afterEach(() => { cleanup(); setHighlighter(); });
 const registry = createRegistry([codeBlockDefinition]);
 const fence = (code: string, info = 'ts') => `\`\`\`${info}\n${code}\n\`\`\``;
@@ -12,6 +20,7 @@ const fence = (code: string, info = 'ts') => `\`\`\`${info}\n${code}\n\`\`\``;
 test('static registry render, metadata, empty and escaped unknown languages', () => {
   const view = render(<Prism registry={registry} source={fence('const x = 1;', 'ts {lines title="file.ts"}')} />);
   expect(view.getByRole('region').getAttribute('aria-label')).toBe('file.ts');
+  expect(view.container.querySelector('[data-part="body"]')?.getAttribute('tabindex')).toBe('0');
   expect(view.container.querySelector('.prism-tok-keyword')?.textContent).toBe('const');
   expect(view.container.querySelector('[data-part="gutter"]')?.textContent).toBe('1');
   view.rerender(<Prism registry={registry} source={fence('<script>alert(1)</script>', 'unknown')} />);

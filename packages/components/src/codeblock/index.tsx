@@ -68,8 +68,8 @@ export function useCodeBlock(props: CodeBlockProps, ctx: PrismContextValue) {
   const parts = {
     root: usePart('codeblock', 'root'), header: usePart('codeblock', 'header'), actions: usePart('codeblock', 'actions'), label: usePart('codeblock', 'label'),
     body: usePart('codeblock', 'body', collapsed ? 'collapsed' : 'expanded'), pre: usePart('codeblock', 'pre'), code: usePart('codeblock', 'code'),
-    copy: usePart('codeblock', 'copy', copyState), wrap: usePart('codeblock', 'wrap'), collapse: usePart('codeblock', 'collapse'),
-    line: usePart('codeblock', 'line'), content: usePart('codeblock', 'content'), gutter: usePart('codeblock', 'gutter'), status: usePart('codeblock', 'status'), ask: usePart('codeblock', 'ask'), skeleton: usePart('codeblock', 'skeleton'),
+    copy: usePart('codeblock', 'copy', copyState), wrap: usePart('codeblock', 'wrap'), collapse: usePart('codeblock', 'collapse'), collapseLabel: usePart('codeblock', 'collapseLabel'),
+    line: usePart('codeblock', 'line'), content: usePart('codeblock', 'content'), gutter: usePart('codeblock', 'gutter'), status: usePart('codeblock', 'status'), ask: usePart('codeblock', 'ask'), askLabel: usePart('codeblock', 'askLabel'), skeleton: usePart('codeblock', 'skeleton'),
   };
   const rows = html.replace(/\n$/, '').split('\n').slice(0, collapsed && complete ? threshold : undefined).map((html, index) => {
     const raw = rawLines[index] ?? '', metadata = lang === 'diff' && /^(?:---|\+\+\+|@@)/.test(raw);
@@ -110,7 +110,7 @@ export function CodeBlock({ node, props, complete }: PrismComponentProps<CodeBlo
       <PrismPart as="span" {...parts.label} slotProps={slotProps}>{vm.heading}</PrismPart>
       <PrismPart as="button" {...parts.copy} slotProps={slotProps} type="button" aria-label={strings.copyCode} title={vm.feedback || strings.copyCode} onClick={vm.copy}>{vm.copyState === 'copied' ? strings.copied : strings.copy}</PrismPart>
     </PrismPart>
-    <PrismPart as="div" {...parts.body} slotProps={slotProps} data-tail={!vm.complete && vm.collapsed ? 'true' : undefined} data-streaming={!vm.complete ? '' : undefined} style={vm.bodyStyle} data-wrap={vm.wrap ? 'true' : 'false'}>
+    <PrismPart as="div" {...parts.body} slotProps={slotProps} tabIndex={0} data-tail={!vm.complete && vm.collapsed ? 'true' : undefined} data-streaming={!vm.complete ? '' : undefined} style={vm.bodyStyle} data-wrap={vm.wrap ? 'true' : 'false'}>
       <PrismPart as="pre" {...parts.pre} slotProps={slotProps} ref={vm.pre}><PrismPart as="code" {...parts.code} slotProps={slotProps}>
         {vm.rows.map(row => <PrismPart as="span" key={row.index} {...parts.line} slotProps={{ codeblock: vm, row } satisfies CodeBlockSlotProps} data-state={row.state} data-highlight={row.highlighted ? '' : undefined}>
           <PrismPart as="span" {...parts.gutter} slotProps={{ codeblock: vm, row } satisfies CodeBlockSlotProps} aria-hidden="true">{row.gutter}</PrismPart>
@@ -122,13 +122,13 @@ export function CodeBlock({ node, props, complete }: PrismComponentProps<CodeBlo
     </PrismPart>
     <PrismPart as="div" {...parts.actions} slotProps={slotProps}>
       <PrismPart as="button" {...parts.wrap} slotProps={slotProps} type="button" aria-label={strings.toggleLineWrap} title={strings.toggleLineWrap} aria-pressed={vm.wrap} onClick={vm.toggleWrap}>{strings.wrapLines}</PrismPart>
-      <PrismPart as="button" {...parts.ask} slotProps={slotProps} type="button" aria-label={strings.askAboutThisCode} title={strings.askAboutThisCode} onClick={vm.onAsk}><Icon name="ask" /> {strings.askAboutThisCode}</PrismPart>
-      {vm.collapsible && <PrismPart as="button" {...parts.collapse} slotProps={slotProps} type="button" disabled={!vm.complete} aria-expanded={vm.expanded} onClick={vm.toggleCollapse}>{vm.collapseLabel}</PrismPart>}
+      <PrismPart as="button" {...parts.ask} slotProps={slotProps} type="button" aria-label={strings.askAboutThisCode} title={strings.askAboutThisCode} onClick={vm.onAsk}><Icon name="ask" /><PrismPart as="span" {...parts.askLabel} slotProps={slotProps}>{strings.askAboutThisCode}</PrismPart></PrismPart>
+      {vm.collapsible && <PrismPart as="button" {...parts.collapse} slotProps={slotProps} type="button" disabled={!vm.complete} aria-expanded={vm.expanded} aria-label={vm.collapseLabel} title={vm.collapseLabel} onClick={vm.toggleCollapse}><Icon name="chevron" /><PrismPart as="span" {...parts.collapseLabel} slotProps={slotProps}>{vm.collapseLabel}</PrismPart></PrismPart>}
     </PrismPart>
     <PrismPart as="span" {...parts.status} slotProps={slotProps} role="status" aria-live="polite">{vm.feedback}</PrismPart>
   </PrismPart>;
 }
-export const codeBlockDefinition = defineComponent({ name: 'code', parts: ['actions', 'ask', 'body', 'pre', 'code', 'collapse', 'content', 'copy', 'gutter', 'header', 'label', 'line', 'root', 'status', 'wrap', 'skeleton'], strings: componentStrings.codeblock, schema: codeBlockSchema, component: CodeBlock,
+export const codeBlockDefinition = defineComponent({ name: 'code', parts: ['actions', 'ask', 'askLabel', 'body', 'pre', 'code', 'collapse', 'collapseLabel', 'content', 'copy', 'gutter', 'header', 'label', 'line', 'root', 'status', 'wrap', 'skeleton'], strings: componentStrings.codeblock, schema: codeBlockSchema, component: CodeBlock,
   docs: 'Highlighted fenced code with copy, line numbers, wrapping and collapse.',
   examples: ['\x60\x60\x60ts {lines title="example.ts"}\nconst answer = 42;\n\x60\x60\x60'], syntax: 'leaf' });
 registerComponent(codeBlockDefinition);

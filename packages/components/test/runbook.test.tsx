@@ -36,10 +36,11 @@ test('static runbook renders numbered steps, normal code renderer, progress and 
   expect(view.getByText('Log in now.')).toBeDefined();
 });
 
-test('header actions remain available alongside a richer code renderer copy action', () => {
+test('copy belongs to the focusable command row, while help stays in the step header', () => {
   const view = render(<Prism source={source} registry={registry} components={{ code: ({ node }) => <pre>{node.value}<button type="button">Copy code</button></pre> }} />);
   const copy = view.getByRole('button', { name: /^Copy$/ });
-  expect(copy.closest('[data-part="stepHeader"]')).not.toBeNull();
+  expect(copy.closest('[data-part="stepHeader"]')).toBeNull();
+  expect(copy.closest('[data-part="command"]')?.getAttribute('tabindex')).toBe('0');
   expect(view.getAllByRole('button', { name: 'Stuck here?' })[0].closest('[data-part="stepHeader"]')).not.toBeNull();
   expect(view.getByRole('button', { name: 'Copy code' }).closest('[data-part="stepBody"]')).not.toBeNull();
 });
