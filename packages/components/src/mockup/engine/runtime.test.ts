@@ -34,6 +34,31 @@ function bounds(element: Element, x: number, y: number, width: number, height: n
 }
 
 describe('runtime', () => {
+  test('ceil fractional content height, shrink below viewport height, and retain real overflow', () => {
+    const r = rig();
+    try {
+      const root = r.win.document.documentElement, body = r.win.document.body;
+      Object.defineProperty(root, 'clientHeight', { configurable: true, value: 1000 });
+      Object.defineProperty(root, 'scrollHeight', { configurable: true, value: 1000 });
+      Object.defineProperty(body, 'scrollHeight', { configurable: true, value: 777 });
+      bounds(root, 0, 0, 1000, 777.4);
+      r.flush();
+      expect(r.messages.at(-1)).toMatchObject({ type: 'size', height: 778 });
+      Object.defineProperty(body, 'scrollHeight', { value: 500 });
+      bounds(root, 0, 0, 1000, 500);
+      r.resize(); r.flush();
+      expect(r.messages.at(-1)).toMatchObject({ type: 'size', height: 500 });
+      Object.defineProperty(root, 'scrollHeight', { value: 1200 });
+      r.resize(); r.flush();
+      expect(r.messages.at(-1)).toMatchObject({ type: 'size', height: 1200 });
+      Object.defineProperty(root, 'scrollHeight', { value: 0 });
+      Object.defineProperty(root, 'clientHeight', { value: 0 });
+      Object.defineProperty(body, 'scrollHeight', { value: 0 });
+      bounds(root, 0, 0, 1000, 0);
+      r.resize(); r.flush();
+      expect(r.messages.at(-1)).toMatchObject({ type: 'size', height: 1 });
+    } finally { r.close(); }
+  });
   test('inline bootstrap waits for a body when executed in the document head', () => {
     const r = rig(true, true);
     try {

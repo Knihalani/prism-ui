@@ -27,6 +27,14 @@ test('plugin preserves identity, completion and parses safe attributes without r
   expect(mockupPlugin.transform!({ ...node, lang: 'html' })).toEqual({ ...node, lang: 'html' });
   expect(parseMockupMeta()).toEqual({}); expect(Object.keys(parseMockupMeta('__proto__=bad constructor=no title=ok'))).toEqual(['title']);
 });
+test('popover stays within the content box near its lower right edge', () => {
+  const x = setup({ source: '<h1>Hello</h1>' });
+  x.pointer('pointerdown', 980, 490); x.pointer('pointerup', 980, 490);
+  const popover = x.view.getByRole('dialog');
+  expect(popover.style.width).toBe('320px');
+  expect(parseFloat(popover.style.left) + parseFloat(popover.style.width)).toBeLessThanOrEqual(1280);
+  expect(parseFloat(popover.style.top) + 180).toBeLessThanOrEqual(400);
+});
 test('all four source kinds render, SVG is sanitised, unsafe image URLs are refused', () => {
   const a = setup({ kind: 'html', source: '<h1>Hello</h1>' }); expect(a.renders.at(-1)).toEqual(['<h1>Hello</h1>', true]); a.view.unmount();
   const b = setup({ kind: 'wire', source: 'hero: # Hello / Welcome / [Start]' }); expect(b.renders.at(-1)![0]).toContain('Hello'); b.view.unmount();

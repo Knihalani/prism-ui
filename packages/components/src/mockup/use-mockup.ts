@@ -46,6 +46,13 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   function open(id: string, fresh = false) { const item = feedback.getState().items.find(item => item.id === id); if (!item) return; setEditing({ id, fresh, text: item.comment }); setComment(item.comment); setActive(id); }
   function remove(id: string) { feedback.remove(id); setEditing(null); announce(labels.removed); }
   function close() { setEditing(null); }
+  function popoverPosition(x: number, y: number) {
+    const popupWidth = Math.min(320, containerWidth - 24), popupHeight = 180;
+    const left = Math.max(12 / scale, Math.min(width - (popupWidth + 12) / scale, x / 100 * width));
+    const anchor = y / 100 * contentHeight, bottom = Math.min(contentHeight, ((viewport.current?.scrollTop ?? 0) + (viewport.current?.clientHeight || contentHeight * scale)) / scale);
+    const top = Math.max(12 / scale, Math.min(bottom - (popupHeight + 12) / scale, anchor + 20 / scale));
+    return { left, top, width: popupWidth };
+  }
   function save() { if (editing) feedback.edit(editing.id, { comment }); close(); }
   function cancel() { if (editing?.fresh && !editing.text) feedback.remove(editing.id); setEditing(null); }
   async function target(id: string, rect: HitRect, client?: FeedbackPoint) {
@@ -69,7 +76,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   };
   function onKeyDown(event: KeyboardEvent<HTMLElement>) { if (event.key === 'Escape') { cancel(); setPen(false); setExpanded(false); } if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.stopPropagation(); setEditing(null); event.shiftKey ? feedback.redo() : feedback.undo(); } }
   function canvasKey(event: KeyboardEvent<HTMLDivElement>) { if (event.target !== event.currentTarget || submitted) return; const step = event.shiftKey ? 10 : 2; if (event.key.startsWith('Arrow')) { event.preventDefault(); setReticle(([x, y]) => [clamp(x + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0)), clamp(y + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0))]); } if (event.key === 'Enter') { event.preventDefault(); add({ x: reticle[0], y: reticle[1] }); } }
-  return { props, kind, framed, complete, labels, title, source, svg, root, viewport, iframe, graphic, visible: visible && enabled, width, scale, contentHeight, device, setDevice, zoom, setZoom, expanded, showSource, setShowSource, pen, setPen, color, setColor, active, setActive, editing, comment, setComment, announcement, reticle, focused, setFocused, hover, rubber, pointer, onKeyDown, canvasKey, feedback, state, resolved, submitted, setSubmitted, open, remove, save, cancel, close, imageError, setImageError,
+  return { props, kind, framed, complete, labels, title, source, svg, root, viewport, iframe, graphic, visible: visible && enabled, width, scale, contentHeight, device, setDevice, zoom, setZoom, expanded, showSource, setShowSource, pen, setPen, color, setColor, active, setActive, editing, comment, setComment, announcement, reticle, focused, setFocused, hover, rubber, pointer, onKeyDown, canvasKey, feedback, state, resolved, submitted, setSubmitted, open, remove, save, cancel, close, popoverPosition, imageError, setImageError,
     imageSrc: /^(https:|data:image\/)/i.test((props.src ?? source).trim()) ? (props.src ?? source).trim() : undefined,
     imageLoaded(width: number, height: number) { setNaturalWidth(width || 800); grow(height || 400); },
     async fullscreen() { try { if (document.fullscreenElement) await document.exitFullscreen(); else if (root.current?.requestFullscreen) await root.current.requestFullscreen(); else setExpanded(old => !old); } catch { setExpanded(old => !old); } },

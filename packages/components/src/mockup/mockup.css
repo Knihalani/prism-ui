@@ -1,12 +1,12 @@
 .prism-mockup__member { container-type: inline-size; color: var(--prism-text); font: var(--prism-text-sm)/1.5 var(--prism-font-sans); }
 .prism-mockup__member[data-state="expanded"], .prism-mockup__member:fullscreen { position: fixed; inset: 0; z-index: 1000; padding: var(--prism-space6); overflow: auto; background: var(--prism-bg); }
 .prism-mockup__tools { display: flex; align-items: center; gap: var(--prism-space1); flex-wrap: wrap; }
-.prism-mockup__button, .prism-mockup__primary { border: 1px solid var(--prism-border); border-radius: var(--prism-radius-sm); padding: var(--prism-space1) var(--prism-space3); background: var(--prism-surface); color: var(--prism-muted); font: inherit; cursor: pointer; min-height: var(--prism-space7); }
+.prism-mockup__button, .prism-mockup__primary { display: inline-flex; align-items: center; justify-content: center; gap: var(--prism-space2); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-sm); padding: var(--prism-space1) var(--prism-space2); background: var(--prism-surface); color: var(--prism-muted); font: 500 var(--prism-text-sm)/1.4 var(--prism-font-sans); cursor: pointer; min-height: 30px; min-width: 30px; transition: background var(--prism-duration-fast) var(--prism-ease), color var(--prism-duration-fast) var(--prism-ease); }
 .prism-mockup__button:hover, .prism-mockup__button[aria-pressed="true"] { background: var(--prism-accent-soft); color: var(--prism-accent); }
 .prism-mockup__button:disabled, .prism-mockup__primary:disabled { opacity: .4; cursor: not-allowed; }
-.prism-mockup__primary { background: var(--prism-accent); color: var(--prism-bg); border-color: transparent; font-weight: 600; }
+.prism-mockup__primary { background: var(--prism-accent); color: var(--prism-surface); border-color: transparent; font-weight: 600; padding-inline: var(--prism-space4); box-shadow: var(--prism-shadow-sm); }
 .prism-mockup__layout { display: grid; gap: var(--prism-space4); margin-block: var(--prism-space3); }
-.prism-mockup__viewport { min-width: 0; overflow: auto; border: 1px solid var(--prism-border); border-radius: var(--prism-radius-lg); background-color: var(--prism-bg-soft, var(--prism-surface-soft)); background-image: radial-gradient(var(--prism-border) 1px, transparent 1px); background-size: 16px 16px; }
+.prism-mockup__viewport { min-width: 0; overflow: auto; border: 1px solid var(--prism-border); border-radius: var(--prism-radius-lg); background-color: var(--prism-bg); background-image: radial-gradient(var(--prism-border) .7px, transparent .7px); background-size: 12px 12px; scrollbar-width: thin; scrollbar-color: var(--prism-border) transparent; }
 .prism-mockup__spacer { position: relative; margin-inline: auto; transition: height var(--prism-duration-base) var(--prism-ease); }
 .prism-mockup__stage { position: relative; transform-origin: top left; background: var(--prism-surface); border-radius: var(--prism-radius-md); box-shadow: var(--prism-shadow-md); transition: height var(--prism-duration-base) var(--prism-ease); }
 [data-device="mobile"] .prism-mockup__stage { border-radius: var(--prism-radius-lg); outline: 3px solid var(--prism-border); }
@@ -17,26 +17,39 @@
 .prism-mockup__canvas[data-disabled="true"] { pointer-events: none; }
 .prism-mockup__stroke { pointer-events: none; overflow: visible; }
 .prism-mockup__hint, .prism-mockup__reticle { position: absolute; pointer-events: none; color: var(--prism-accent); }
-.prism-mockup__hint { padding: var(--prism-space1) var(--prism-space2); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-sm); background: var(--prism-surface); color: var(--prism-muted); box-shadow: var(--prism-shadow-sm); transform: translate(12px, 12px); white-space: nowrap; font-size: var(--prism-text-xs); }
+.prism-mockup__hint { z-index: 3; padding: var(--prism-space1) var(--prism-space2); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-sm); background: var(--prism-surface); color: var(--prism-muted); box-shadow: var(--prism-shadow-sm); transform: translate(12px, 12px) scale(var(--mockup-inverse-scale)); transform-origin: top left; white-space: nowrap; font-size: var(--prism-text-xs); }
 .prism-mockup__reticle { transform: translate(-50%, -50%); font-size: var(--prism-text-xl); }
-.prism-mockup__marker { position: absolute; z-index: 2; border: 0; padding: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--prism-accent); color: var(--prism-bg); cursor: pointer; box-shadow: var(--prism-shadow-sm); animation: prism-mockup-in var(--prism-duration-fast) var(--prism-ease); }
-.prism-mockup__marker[data-kind="pin"], .prism-mockup__marker[data-kind="drawing"] { transform: translate(-50%, -50%); }
+.prism-mockup__marker { position: absolute; z-index: 2; border: 2px solid var(--prism-surface); padding: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--prism-accent); color: var(--prism-surface); font: 600 12px/24px var(--prism-font-sans); cursor: pointer; box-shadow: var(--prism-shadow-md); animation: prism-mockup-in var(--prism-duration-fast) var(--prism-ease); }
+.prism-mockup__marker[data-kind="pin"], .prism-mockup__marker[data-kind="drawing"] { transform: translate(-50%, -50%) scale(var(--mockup-inverse-scale)); }
 .prism-mockup__marker[data-kind="region"] { border: 2px dashed var(--prism-accent); border-radius: var(--prism-radius-sm); background: color-mix(in srgb, var(--prism-accent) 10%, transparent); }
-.prism-mockup__marker[data-kind="region"] span { position: absolute; top: -14px; left: -14px; width: 28px; height: 28px; border-radius: 50%; background: var(--prism-accent); }
+.prism-mockup__marker[data-kind="region"] span { position: absolute; top: -14px; left: -14px; width: 28px; height: 28px; border-radius: 50%; background: var(--prism-accent); border: 2px solid var(--prism-surface); box-shadow: var(--prism-shadow-sm); transform: scale(var(--mockup-inverse-scale)); }
 .prism-mockup__marker[data-resolved="true"] { background: var(--prism-success); opacity: .6; }
 .prism-mockup__marker[data-active="true"] { outline: 3px solid var(--prism-accent-soft); outline-offset: 3px; }
-.prism-mockup__popover { position: absolute; z-index: 4; width: min(300px, 80%); padding: var(--prism-space3); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-md); background: var(--prism-surface); box-shadow: var(--prism-shadow-lg); animation: prism-mockup-in var(--prism-duration-fast) var(--prism-ease); }
+.prism-mockup__popover { box-sizing: border-box; position: absolute; z-index: 4; padding: var(--prism-space3); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-md); background: var(--prism-surface); box-shadow: var(--prism-shadow-lg); transform: scale(var(--mockup-inverse-scale)); transform-origin: top left; animation: prism-mockup-in var(--prism-duration-fast) var(--prism-ease); }
+.prism-mockup__popover::before { content: ''; position: absolute; width: 10px; height: 10px; top: -6px; left: 20px; background: var(--prism-surface); border-top: 1px solid var(--prism-border); border-left: 1px solid var(--prism-border); transform: rotate(45deg); }
+.prism-mockup__popover .prism-mockup__input { margin: 0 0 var(--prism-space3); min-height: 96px; resize: none; border-color: var(--prism-border-soft); background: var(--prism-bg); }
+.prism-mockup__popover .prism-mockup__button { margin-left: var(--prism-space2); border-color: transparent; }
 .prism-mockup__input { display: block; box-sizing: border-box; width: 100%; resize: vertical; min-height: 80px; padding: var(--prism-space2); margin-block: var(--prism-space2); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-sm); background: var(--prism-bg); color: var(--prism-text); font: inherit; }
 .prism-mockup__list { min-width: 0; }
-.prism-mockup__item { display: flex; align-items: start; gap: var(--prism-space2); padding: var(--prism-space3); border-bottom: 1px solid var(--prism-border-soft); border-radius: var(--prism-radius-sm); }
+.prism-mockup__item { display: flex; align-items: start; gap: var(--prism-space2); padding: var(--prism-space3) var(--prism-space2); border-bottom: 1px solid var(--prism-border-soft); border-radius: var(--prism-radius-sm); font-size: var(--prism-text-sm); }
+.prism-mockup__item > span { flex-shrink: 0; }
+.prism-mockup__item > span:has(svg) { color: var(--prism-muted); padding-top: 2px; }
+.prism-mockup__item .prism-mockup__button { border-color: transparent; min-width: 26px; min-height: 26px; padding: var(--prism-space1); opacity: .55; }
+.prism-mockup__item:hover .prism-mockup__button, .prism-mockup__item:focus-within .prism-mockup__button { opacity: 1; }
 .prism-mockup__item > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .prism-mockup__item[data-active="true"] { background: var(--prism-accent-soft); }
 .prism-mockup__item[data-resolved="true"] { color: var(--prism-muted); }
 .prism-mockup__badge { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 50%; background: var(--prism-accent-soft); color: var(--prism-accent); font-size: var(--prism-text-xs); }
 .prism-mockup__target { display: block; width: fit-content; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: var(--prism-space1); padding-inline: var(--prism-space2); border-radius: var(--prism-radius-sm); background: var(--prism-surface-soft); color: var(--prism-muted); font-size: var(--prism-text-xs); }
 .prism-mockup__empty { padding: var(--prism-space4); color: var(--prism-muted); }
-.prism-mockup__overall { display: block; color: var(--prism-muted); }
-.prism-mockup__feedbackFooter { display: flex; align-items: center; gap: var(--prism-space2); margin-top: var(--prism-space4); }
+.prism-mockup__overall { display: block; color: var(--prism-muted); font-weight: 500; font-size: var(--prism-text-sm); }
+.prism-mockup__feedbackFooter { display: flex; align-items: center; gap: var(--prism-space2); margin-top: var(--prism-space4); font-size: var(--prism-text-sm); }
+.prism-mockup__tools > [role="group"] { display: flex; gap: 2px; padding: 2px; border-radius: var(--prism-radius-sm); background: var(--prism-bg); margin-right: var(--prism-space2); }
+.prism-mockup__tools > [role="group"] button { border-color: transparent; background: transparent; min-height: 28px; }
+.prism-mockup__tools > [role="group"] button[aria-pressed="true"] { background: var(--prism-surface); color: var(--prism-text); box-shadow: var(--prism-shadow-sm); }
+.prism-mockup__member .prism-mockup__header { min-height: 64px; }
+.prism-mockup__member .prism-mockup__body > .prism-mockup__tools { gap: var(--prism-space1); margin-bottom: var(--prism-space4); }
+.prism-mockup__member .prism-mockup__body > .prism-mockup__tools button:not(:first-child) { border-color: transparent; min-width: 26px; padding: var(--prism-space1); }
 .prism-mockup__feedbackFooter > span { flex: 1; color: var(--prism-muted); }
 .prism-mockup__feedbackFooter > .prism-mockup__primary { margin-left: auto; }
 .prism-mockup__source { padding: var(--prism-space3); background: var(--prism-surface-soft); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-md); }
@@ -54,6 +67,10 @@
 .prism-mockup__columns { display: grid; gap: var(--prism-space4); }
 .prism-mockup__column { min-width: 0; }
 .prism-mockup__column[hidden] { display: none; }
+.prism-mockup__column > div:first-child:has(> strong) { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--prism-space3); }
+.prism-root .prism-mockup__member[data-embedded="true"] > .prism-frame__root { border: 0; margin: 0; box-shadow: none; background: transparent; }
+.prism-root .prism-mockup__member[data-embedded="true"] .prism-mockup__header { min-height: 0; border: 0; padding: 0 0 var(--prism-space3); }
+.prism-root .prism-mockup__member[data-embedded="true"] .prism-mockup__body { padding: 0; }
 .prism-mockup__streamDot { width: 5px; height: 5px; border-radius: 50%; background: var(--prism-accent); animation: prism-mockup-pulse calc(var(--prism-duration-slow) * 3) ease-in-out infinite alternate; }
 @keyframes prism-mockup-pulse { to { opacity: .3; } }
 @container (min-width: 800px) { .prism-mockup__columns[data-compare="true"] { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

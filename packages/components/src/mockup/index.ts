@@ -1,3 +1,7 @@
+import { registerComponent } from '@prism-ui/react';
+import { mockupDefinition } from './mockup';
+
+registerComponent(mockupDefinition);
 export { Mockup, MockupView, mockupDefinition, mockupSchema } from './mockup';
 export { useMockup, mockupLabels } from './use-mockup';
 export type { MockupProps, MockupLabels, MockupDevice, MockupOptions, MockupModel } from './use-mockup';
