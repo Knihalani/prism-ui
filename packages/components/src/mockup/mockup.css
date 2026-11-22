@@ -70,6 +70,7 @@
 .prism-mockup__column { min-width: 0; }
 .prism-mockup__column[hidden] { display: none; }
 .prism-mockup__column > div:first-child:has(> strong) { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--prism-mockup-space-3, var(--prism-space-3)); }
+.prism-mockup__column > div:first-child > .prism-mockup__button[aria-pressed="true"] { background: var(--prism-mockup-surface-raised, var(--prism-surface-raised)); color: var(--prism-mockup-text, var(--prism-text)); border-color: var(--prism-mockup-border-strong, var(--prism-border-strong)); }
 .prism-root .prism-mockup__member[data-embedded="true"] > .prism-frame__root { border: 0; margin: 0; box-shadow: none; background: transparent; }
 .prism-root .prism-mockup__member[data-embedded="true"] .prism-mockup__header { min-height: 0; border: 0; padding: 0 0 var(--prism-mockup-space-3, var(--prism-space-3)); }
 .prism-root .prism-mockup__member[data-embedded="true"] .prism-mockup__body { padding: 0; }
