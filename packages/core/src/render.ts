@@ -10,6 +10,7 @@ export function renderToString(ast: Node, options: StringOptions = {}): string {
     switch (node.type) {
       case 'root': return children();
       case 'text': return escapeHtml(node.value ?? '');
+      case 'reference': case 'imageReference': return escapeHtml(node.value ?? '');
       case 'paragraph': return tag('p');
       case 'heading': return tag(`h${Math.min(6, Math.max(1, node.depth ?? 1))}`);
       case 'emphasis': return tag('em'); case 'strong': return tag('strong'); case 'delete': return tag('del');
@@ -45,7 +46,7 @@ export function mount(el: Element, options: DOMOptions = {}) {
   function create(ast: Node): globalThis.Node {
     const component = ast.type === 'component' && options.components && Object.hasOwn(options.components, ast.name ?? '') && options.components[ast.name ?? ''];
     if (component) return component(ast, document);
-    if (ast.type === 'text') return document.createTextNode(ast.value ?? '');
+    if (ast.type === 'text' || ast.type === 'reference' || ast.type === 'imageReference') return document.createTextNode(ast.value ?? '');
     if (ast.type === 'component') {
       const div = document.createElement('div'); div.dataset.prismComponent = ast.name ?? '';
       ast.children?.forEach(n => div.append(create(n))); return div;

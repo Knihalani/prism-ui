@@ -4,20 +4,27 @@ import { createParser, parse } from './src';
 
 const md = new MarkdownIt();
 const section = '# Report\n\nA **streaming** paragraph with [links](https://example.com) and `code`.\n\n- [x] Fast\n- [ ] Small\n\n|Name|Value|\n|:---|---:|\n|One|42|\n\n```ts meta\nconst x = 42;\n```\n\n:::card{tone="info"}\nLive :badge[New]{tone=success}\n:::\n\n```ui:chart\n{series:[1,2,3], label:"Demo"}\n```\n\n';
-const text = section.repeat(Math.ceil(204800 / section.length));
-const chunks: string[] = []; for (let i = 0; i < text.length; i += 4) chunks.push(text.slice(i, i + 4));
-const engines = [
-  { name: 'prism-ui', once: (s: string) => parse(s), stream: () => { const p = createParser(); for (const c of chunks) { p.push(c); void p.root; } p.end(); } },
-  { name: 'marked', once: (s: string) => marked.lexer(s), stream: () => { let s = ''; for (const c of chunks) { s += c; marked.lexer(s); } } },
-  { name: 'markdown-it', once: (s: string) => md.parse(s, {}), stream: () => { let s = ''; for (const c of chunks) { s += c; md.parse(s, {}); } } },
-];
-console.log(`Input: ${text.length} bytes; ${chunks.length} chunks (4 characters); parser/AST only, no HTML rendering.`);
-console.log('| Engine | One-shot ms | One-shot MB/s | Stream ms | Stream MB/s |');
-console.log('|---|---:|---:|---:|---:|');
-for (const engine of engines) {
-  if (Bun.argv[2] && engine.name !== Bun.argv[2]) continue;
-  for (let i = 0; i < 3; i++) engine.once(text);
-  let start = performance.now(); for (let i = 0; i < 10; i++) engine.once(text); const once = (performance.now() - start) / 10;
-  start = performance.now(); engine.stream(); const stream = performance.now() - start;
-  console.log(`| ${engine.name} | ${once.toFixed(2)} | ${(text.length / once / 1000).toFixed(2)} | ${stream.toFixed(2)} | ${(text.length / stream / 1000).toFixed(3)} |`);
+const cases = {
+  mixed: section.repeat(Math.ceil(204800 / section.length)),
+  paragraph: 'Streaming plain text grows without a newline. '.repeat(Math.ceil(204800 / 45)),
+  json: '```ui:table\n{"rows":[' + '{"x":1,"y":"live"},'.repeat(11378).slice(0, -1) + ']}\n```\n',
+};
+console.log('| Case | Engine | Bytes | One-shot ms | MB/s | Stream ms | Stream MB/s |');
+console.log('|---|---|---:|---:|---:|---:|---:|');
+for (const [name, text] of Object.entries(cases)) {
+  if (Bun.argv[3] && name !== Bun.argv[3]) continue;
+  const chunks: string[] = []; for (let i = 0; i < text.length; i += 4) chunks.push(text.slice(i, i + 4));
+  for (const engine of ['prism-ui', 'marked', 'markdown-it']) {
+    if (Bun.argv[2] && Bun.argv[2] !== 'all' && engine !== Bun.argv[2]) continue;
+    const once = engine === 'prism-ui' ? parse : engine === 'marked' ? (s: string) => marked.lexer(s) : (s: string) => md.parse(s, {});
+    for (let i = 0; i < 3; i++) once(text);
+    let start = performance.now(); for (let i = 0; i < 10; i++) once(text); const ms = (performance.now() - start) / 10;
+    // Batch parsing does not warm prism's distinct streaming state machines.
+    if (engine === 'prism-ui') for (let i = 0; i < 3; i++) { const p = createParser(); for (const chunk of chunks) { p.push(chunk); void p.root; } p.end(); }
+    start = performance.now();
+    if (engine === 'prism-ui') { const p = createParser(); for (const chunk of chunks) { p.push(chunk); void p.root; } p.end(); }
+    else { let input = ''; for (const chunk of chunks) { input += chunk; once(input); } }
+    const stream = performance.now() - start;
+    console.log(`| ${name} | ${engine} | ${text.length} | ${ms.toFixed(2)} | ${(text.length / ms / 1000).toFixed(2)} | ${stream.toFixed(2)} | ${(text.length / stream / 1000).toFixed(6)} |`);
+  }
 }

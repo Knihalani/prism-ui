@@ -21,10 +21,14 @@ export interface Root extends Node { type: 'root'; children: Node[] }
 export interface Update { root: Root }
 export function freeze(node: Node): Node {
   if (Object.isFrozen(node)) return node;
-  if (node.children) { node.children.forEach(freeze); Object.freeze(node.children); }
+  if (node.children) { for (let i = 0; i < node.children.length; i++) freeze(node.children[i]); Object.freeze(node.children); }
   if (node.props) deepFreeze(node.props);
   return Object.freeze(node);
 }
 function deepFreeze(value: unknown): void {
-  if (value && typeof value === 'object') { Object.values(value).forEach(deepFreeze); Object.freeze(value); }
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    if (Array.isArray(value)) { for (let i = 0; i < value.length; i++) deepFreeze(value[i]); }
+    else for (const key in value) if (Object.hasOwn(value, key)) deepFreeze((value as Record<string, unknown>)[key]);
+    Object.freeze(value);
+  }
 }

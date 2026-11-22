@@ -18,6 +18,27 @@ describe('markdown', () => {
     expect(html('![alt](x.png)')).toBe('<p><img src="x.png" alt="alt"></p>');
     expect(html('<a@b.co>')).toContain('href="mailto:a@b.co"');
   });
+  test('closed code and link atoms take precedence over emphasis', () => {
+    const cases = [
+      ['*a `b*c`', '<p>*a <code>b*c</code></p>'],
+      ['*a `b*c', '<p><em>a `b</em>c</p>'],
+      ['*a `b*c` d*', '<p><em>a <code>b*c</code> d</em></p>'],
+      ['**a `b**c` d**', '<p><strong>a <code>b**c</code> d</strong></p>'],
+      ['*a [b*c](/url) d*', '<p><em>a <a href="/url">b*c</a> d</em></p>'],
+      ['*a [b](/u*rl) d*', '<p><em>a <a href="/u*rl">b</a> d</em></p>'],
+      ['*a <https://a.test/b*c> d*', '<p><em>a <a href="https://a.test/b*c">https://a.test/b*c</a> d</em></p>'],
+      ['`a``b`', '<p><code>a``b</code></p>'],
+      ['`unclosed', '<p>`unclosed</p>'],
+      ['', ''],
+    ];
+    for (const [text, expected] of cases) {
+      expect(html(text)).toBe(expected);
+      for (let split = 0; split <= text.length; split++) {
+        const p = createParser(); p.push(text.slice(0, split)); void p.root.children.at(-1); p.push(text.slice(split)); void p.root.children.at(-1);
+        expect(p.end().root).toEqual(parse(text));
+      }
+    }
+  });
   test('blockquote, nested list, tasks, ordered start and rule', () => {
     const root = parse('> quote\n> **yes**\n\n3. first\n   - [x] nested\n   - [ ] next\n4. last\n\n---');
     expect(root.children.map(n => n.type)).toEqual(['blockquote', 'list', 'thematicBreak']);
@@ -33,6 +54,19 @@ describe('markdown', () => {
     const root = parse('| A | B | C |\n| :--- | :---: | ---: |\n| a\\|b | c | d |');
     expect(root.children[0].align).toEqual(['left', 'center', 'right']);
     expect(renderToString(root)).toContain('a|b</td>');
+  });
+  test('setext headings, multiline headings and thematic break disambiguation', () => {
+    expect(html('Title\n===\n\nSubtitle\n---\n\n---')).toBe('<h1>Title</h1><h2>Subtitle</h2><hr>');
+    expect(html('two\nlines\n===')).toBe('<h1>two\nlines</h1>');
+    expect(html('a\n\n---')).toBe('<p>a</p><hr>');
+  });
+  test('full, collapsed, shortcut and image references, forward definitions', () => {
+    expect(html('[Full][ID] [id][] [ID] ![alt][pic]\n\n[id]: <https://example.com> "title"\n[pic]: image.png')).toBe('<p><a href="https://example.com" title="title">Full</a> <a href="https://example.com" title="title">id</a> <a href="https://example.com" title="title">ID</a> <img src="image.png" alt="alt"></p>');
+    expect(html('[ A   B ]\n\n[a b]: /first\n[A B]: /second')).toContain('href="/first"');
+    expect(html('[missing] [x][unknown]')).toBe('<p>[missing] [x][unknown]</p>');
+    expect(html('[first] [inline](/url)\n\n[first]: /ref')).toBe('<p><a href="/ref">first</a> <a href="/url">inline</a></p>');
+    expect(html('[x]\n\n[x]: javascript:alert(1)')).toBe('<p><a href="">x</a></p>');
+    expect(html('[empty]: /url\n')).toBe('');
   });
 });
 describe('directives and relaxed values', () => {
@@ -81,6 +115,57 @@ describe('security', () => {
   });
 });
 describe('streaming', () => {
+  test('lazy open previews resume new bytes and publish new block wrappers', () => {
+    const p = createParser(); p.push('**bo');
+    const first = p.root.children[0]; expect(renderToString(first)).toBe('<p><strong>bo</strong></p>');
+    expect(p.root.children[0]).toBe(first);
+    p.push('ld'); const second = p.root.children[0]; expect(second).not.toBe(first);
+    expect(renderToString(second)).toBe('<p><strong>bold</strong></p>');
+    p.push('** and `x'); expect(renderToString(p.root)).toContain('<code>x</code>');
+    p.push('`'); expect(p.end().root).toEqual(parse('**bold** and `x`'));
+  });
+  test('persistent block arrays preserve finished references without copying the prefix', () => {
+    const p = createParser(); p.push('first\n\n'); const first = p.root.children[0]; const children = p.root.children;
+    p.push('a long '); const tail = p.root.children[1];
+    p.push('paragraph'); expect(p.root.children).not.toBe(children); expect(children).toHaveLength(1); expect(p.root.children[0]).toBe(first);
+    expect(p.root.children[1]).not.toBe(tail); expect(Object.isFrozen(first)).toBe(true);
+    expect(renderToString(p.root)).toContain('a long paragraph');
+  });
+  test('finished children of an open container keep identity', () => {
+    const p = createParser(); p.push(':::card\nfirst\n\n'); const first = p.root.children[0].children![0];
+    p.push('second\n\n'); expect(p.root.children[0].children![0]).toBe(first);
+    p.push(':::\n'); expect(p.root.children[0].children![0]).toBe(first); expect(Object.isFrozen(first)).toBe(true);
+  });
+  test('forward references remain provisional until resolved and then freeze', () => {
+    const p = createParser(); p.push('[label][ref]\n\n'); const unresolved = p.root.children[0];
+    expect(Object.isFrozen(unresolved)).toBe(false);
+    p.push('[ref]: /target\n'); expect(p.root.children[0]).not.toBe(unresolved); expect(Object.isFrozen(p.root.children[0])).toBe(true);
+    expect(renderToString(p.root)).toBe('<p><a href="/target">label</a></p>');
+    const stable = p.root.children[0]; p.push('\nlast'); expect(p.root.children[0]).toBe(stable);
+    const nested = createParser(); nested.push(':::card\n[x]\n\n:::\n\n[x]: /nested\n');
+    expect(renderToString(nested.end().root)).toContain('href="/nested"');
+    const adjacent = createParser(); adjacent.push(':::card\n[x]\n:::\n[x]: /nested\n');
+    expect(adjacent.end().root).toEqual(parse(':::card\n[x]\n:::\n[x]: /nested\n'));
+  });
+  test('container closing syntax inside code is not a container terminator', () => {
+    expect(html(':::card\n```text\n:::\n```\n:::')).toBe('<div data-prism-component="card"><pre><code class="language-text">:::</code></pre></div>');
+  });
+  test('every split preserves new syntax and tolerant JSON', () => {
+    const documents = ['Title\n===\n\n[x][id]\n\n[id]: /url "t"\n', ':::card\n[x]\n\n:::\n[x]: /url\n', '```ui:table\n{rows:[{x:1,label:"a\\u0041"}, {x:2,ok:true},],}\n```', ':badge[A]{obj={s:"}"}} and :badge[B]{n=2}'];
+    for (const doc of documents) for (let split = 0; split <= doc.length; split++) {
+      const p = createParser(); p.push(doc.slice(0, split)); void p.root; p.push(doc.slice(split));
+      expect(p.end().root).toEqual(parse(doc));
+    }
+  });
+  test('random malformed inline text has chunk-independent final tokenization', () => {
+    let seed = 17; const next = () => { seed = (Math.imul(seed, 1103515245) + 12345) >>> 0; return seed; };
+    const alphabet = 'abc *~_`[]():{}!<>\\\n';
+    for (let run = 0; run < 300; run++) {
+      let text = ''; for (let i = 0, n = next() % 160; i < n; i++) text += alphabet[next() % alphabet.length];
+      const p = createParser(); let i = 0; while (i < text.length) { const n = 1 + next() % 9; p.push(text.slice(i, i + n)); void p.root.children.at(-1); i += n; }
+      expect(p.end().root).toEqual(parse(text));
+    }
+  });
   test('newline-complete headings and leaves are immediately stable', () => {
     const p = createParser(); p.push('# Heading\n::leaf\n'); const [heading, leaf] = p.root.children;
     p.push('paragraph'); expect(p.root.children[0]).toBe(heading); expect(p.root.children[1]).toBe(leaf);
@@ -94,7 +179,7 @@ describe('streaming', () => {
   });
   test('seeded property: random documents and random chunk boundaries', () => {
     let seed = 1234567; const random = (n: number) => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed % n; };
-    const pieces = ['# Title\n', 'plain **bold** and :badge[X]{n=2}\n\n', '- one\n  - two\n\n', '```js\nx()\n```\n', '::::tabs\n:::tab\nx\n:::\n::::\n', '|x|y|\n|---|---:|\n|1|2|\n\n', '```ui:chart\n{x:[1,2,]}\n```\n', '> quote\n\n', '\r\n', '***\n', '<script>x</script>\n'];
+    const pieces = ['# Title\n', 'plain **bold** and :badge[X]{n=2}\n\n', '- one\n  - two\n\n', '```js\nx()\n```\n', '::::tabs\n:::tab\nx\n:::\n::::\n', '|x|y|\n|---|---:|\n|1|2|\n\n', '```ui:chart\n{x:[1,2,]}\n```\n', '> quote\n\n', '\r\n', '***\n', '<script>x</script>\n', 'Setext\n===\n\n', '[label][ref]\n\n', '[ref]: /url\n'];
     for (let run = 0; run < 250; run++) {
       let doc = ''; for (let i = 0, n = random(20); i < n; i++) doc += pieces[random(pieces.length)];
       const p = createParser(); let offset = 0;
@@ -104,6 +189,11 @@ describe('streaming', () => {
   });
 });
 describe('DOM', () => {
+  test('unresolved references are text until their definitions arrive', () => {
+    const win = new Window(); const host = win.document.createElement('div'); const view = mount(host as unknown as Element);
+    const p = createParser(); view.update(p.push('[x]\n\n').root); expect(host.textContent).toBe('[x]');
+    view.update(p.push('[x]: /url\n').root); expect(host.querySelector('a')?.getAttribute('href')).toBe('/url'); win.close();
+  });
   test('unchanged blocks are untouched, open tail replaces and components work', () => {
     const win = new Window(); const host = win.document.createElement('main'); host.innerHTML = '<p>old</p>';
     const renderer = mount(host as unknown as Element, { components: { badge: (node, doc) => { const b = doc.createElement('button'); b.textContent = node.children?.[0]?.value ?? ''; return b; } } });
