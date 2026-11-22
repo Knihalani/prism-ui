@@ -70,6 +70,29 @@ test('validation runs on blur and submit, exposes inline errors and focuses the 
   change(party, '2'); expect(view.queryByRole('alert')).toBeNull();
 });
 
+test.each([
+  { step: 1, min: undefined, value: '2.5', error: 'Use steps of 1' },
+  { step: 1, min: undefined, value: '2', error: '' },
+  { step: 0.2, min: 0.1, value: '0.3', error: '' },
+  { step: 0.2, min: 0.1, value: '0.4', error: 'Use steps of 0.2' },
+  { step: 0.1, min: undefined, value: '0.3', error: '' },
+  { step: 1, min: undefined, value: '', error: '' },
+])('numeric step validation: $value with step $step and min $min', ({ step, min, value, error }) => {
+  const actions: Action[] = [];
+  const input = { fields: [{ id: 'amount', label: 'Amount', type: 'number', step, min }] };
+  const view = render(<Prism source={source(input)} registry={registry} locale="en-US" onAction={action => actions.push(action)} />);
+  const control = view.getByRole('spinbutton');
+  change(control, value); act(() => control.blur());
+  expect(view.queryByRole('alert')?.textContent ?? '').toBe(error);
+  fireEvent.click(view.getByRole('button', { name: 'Send' }));
+  expect(actions.length).toBe(error ? 0 : 1);
+  if (error) {
+    expect(document.activeElement).toBe(control);
+    view.rerender(<Prism source={source({ ...input, labels: { stepMismatch: 'Increment: {step}' } })} registry={registry} locale="en-US" />);
+    expect(view.getByRole('alert').textContent).toBe(`Increment: ${step}`);
+  } else expect(actions[0].payload).toEqual({ values: { amount: value === '' ? null : Number(value) } });
+});
+
 test('segmented select arrows wrap, switch uses keyboard click and Enter submits inputs or modified textarea', () => {
   const actions: Action[] = [], view = render(<Prism source={source(props)} registry={registry} onAction={action => actions.push(action)} />);
   const front = view.getByRole('radio', { name: 'Front' }), back = view.getByRole('radio', { name: 'Back' });

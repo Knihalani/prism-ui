@@ -5,7 +5,7 @@ import { ComponentFrame } from '../frame';
 
 export type AskValue = string | number | boolean | null;
 export interface AskField { id?: string; label?: string; type?: 'text' | 'number' | 'select' | 'date' | 'toggle' | 'textarea'; options?: (string | { value: string; label: string })[]; value?: AskValue; required?: boolean; hint?: string; placeholder?: string; min?: number; max?: number; step?: number; unit?: string }
-const defaults = { title: 'Details', send: 'Send', edit: 'Edit', suggested: 'Suggested', required: 'Required', minimum: 'Enter at least {min}', maximum: 'Enter no more than {max}', invalidNumber: 'Enter a number', empty: 'Not provided', yes: 'Yes', no: 'No', loading: 'Loading fields', select: 'Select an option' };
+const defaults = { title: 'Details', send: 'Send', edit: 'Edit', suggested: 'Suggested', required: 'Required', minimum: 'Enter at least {min}', maximum: 'Enter no more than {max}', stepMismatch: 'Use steps of {step}', invalidNumber: 'Enter a number', empty: 'Not provided', yes: 'Yes', no: 'No', loading: 'Loading fields', select: 'Select an option' };
 export type AskLabels = Partial<typeof defaults>;
 export interface AskProps { id?: string; title?: string; submit?: string; fields?: AskField[]; labels?: AskLabels }
 function normalize(field: AskField, value: unknown): AskValue {
@@ -37,6 +37,10 @@ export function useAsk(props: AskProps, ctx: PrismContextValue) {
     else if (typeof value === 'number') {
       if (field.min !== undefined && value < field.min) error = labels.minimum.replace('{min}', format.number(field.min));
       if (field.max !== undefined && value > field.max) error = labels.maximum.replace('{max}', format.number(field.max));
+      if (!error && field.step !== undefined && Number.isFinite(field.step) && field.step > 0) {
+        const increments = (value - (field.min ?? 0)) / field.step;
+        if (Math.abs(increments - Math.round(increments)) > 1e-8) error = labels.stepMismatch.replace('{step}', format.number(field.step));
+      }
     }
     return [field.id!, error];
   })), [fields, current, labels, format]);
