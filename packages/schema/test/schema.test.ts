@@ -71,7 +71,7 @@ test('prompt docs are deterministic and describe syntax, metadata and examples',
   const defs = [{ name: 'card', schema, docs: 'A card.' }, { name: 'tabs', schema, syntax: 'container' as const }, { name: 'leaf', schema, syntax: 'leaf' as const }, { name: 'num', schema, inline: true }, { name: 'custom', schema, examples: ['CUSTOM', 'IGNORED'] }];
   const docs = toPromptDocs(defs);
   expect(toPromptDocs(defs)).toBe(docs);
-  expect(docs).toContain('### card\nA card.\n```ui:card {json}\n```');
+  expect(docs).toContain('### card\nA card.\n```ui:card\n{json}\n```');
   expect(docs).toContain('- `title` (string) — Heading');
   expect(docs).toContain('- `count` (number, default `3`, optional)');
   expect(docs).toContain(':::tabs{attrs}\n…\n:::'); expect(docs).toContain('::leaf{attrs}'); expect(docs).toContain(':num[label]{attrs}');

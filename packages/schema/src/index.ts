@@ -95,7 +95,7 @@ function sample(schema: Schema<any>): any {
 export function toPromptDocs(defs: readonly Definition[]): string {
   return defs.map(def => {
     const syntax = def.syntax ?? (def.inline ? 'inline' : 'fence');
-    const render = (json: string) => syntax === 'fence' ? '```ui:' + def.name + ' ' + json + '\n```' : syntax === 'container' ? ':::' + def.name + json + '\n…\n:::' : (syntax === 'leaf' ? '::' : ':') + def.name + (syntax === 'inline' ? '[label]' : '') + json;
+    const render = (json: string) => syntax === 'fence' ? '```ui:' + def.name + '\n' + json + '\n```' : syntax === 'container' ? ':::' + def.name + json + '\n…\n:::' : (syntax === 'leaf' ? '::' : ':') + def.name + (syntax === 'inline' ? '[label]' : '') + json;
     const props = Object.entries(def.schema.shape ?? {}).filter(([k]) => safe(k)).map(([k, v]) => '- `' + k + '` (' + [v.type, v.defaultValue !== undefined ? 'default `' + JSON.stringify(v.defaultValue) + '`' : '', v.isOptional ? 'optional' : ''].filter(Boolean).join(', ') + ')' + (v.description ? ' — ' + v.description : ''));
     const value = sample(def.schema);
     const example = syntax === 'fence' ? JSON.stringify(value) : '{' + Object.entries(value ?? {}).map(([k, v]) => k + '=' + JSON.stringify(v)).join(' ') + '}';
