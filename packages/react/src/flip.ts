@@ -17,6 +17,12 @@ export function createFlip({ duration, easing, reducedMotion = 'auto', enter = f
   function measure(elements: FlipElements) {
     source = elements;
     first = new Map(entries(elements).map(([key, element]) => [key, { element, rect: element.getBoundingClientRect() }]));
+    // Moving an existing DOM node can restart its CSS @starting-style entry.
+    for (const { element } of first.values()) {
+      if (!element.isConnected) continue;
+      element.setAttribute('data-prism-entered', '');
+      for (const child of Array.from(element.querySelectorAll('*'))) child.setAttribute('data-prism-entered', '');
+    }
     cancel();
   }
   function play(elements: FlipElements | undefined = source) {

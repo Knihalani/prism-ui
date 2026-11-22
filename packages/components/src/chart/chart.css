@@ -48,7 +48,7 @@
 .prism-chart__skeleton { fill: color-mix(in srgb, var(--prism-text-muted) 8%, transparent); animation: prism-chart-shimmer calc(var(--prism-motion-slow) * 3) var(--prism-motion-ease) infinite alternate; }
 .prism-chart__empty { position: absolute; inset: 45% 0 auto; text-align: center; color: var(--prism-text-muted); font-size: var(--prism-text-sm); pointer-events: none; }
 @keyframes prism-chart-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-@starting-style { .prism-root[data-prism-presentation] .prism-chart__bar { transform: scaleY(0); opacity: 0; } }
+@starting-style { .prism-root[data-prism-presentation] .prism-chart__bar:not([data-prism-entered]) { transform: scaleY(0); opacity: 0; } }
 
 @keyframes prism-chart-shimmer { from { opacity: .3; } to { opacity: .8; } }
 [data-animate="false"] .prism-chart__root *, .prism-chart__root[data-animate="false"] * { animation: none; transition: none; }

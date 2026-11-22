@@ -38,3 +38,20 @@ test('FLIP reads theme spring timing and disables explicit animate=false', () =>
   flip.measure([node]); left = 40; flip.play();
   expect(node.animate).toHaveBeenCalledTimes(1);
 });
+
+test('FLIP marks only existing connected content as entered before it moves', () => {
+  const window = new Window(), document = window.document;
+  const item = document.createElement('div'), child = document.createElement('span'), detached = document.createElement('div');
+  item.append(child); document.body.append(item);
+  const flip = createFlip({ reducedMotion: false });
+  flip.measure([]); flip.play();
+  expect(item.hasAttribute('data-prism-entered')).toBe(false);
+  flip.measure([item, detached] as unknown as Element[]);
+  expect(item.hasAttribute('data-prism-entered')).toBe(true);
+  expect(child.hasAttribute('data-prism-entered')).toBe(true);
+  expect(detached.hasAttribute('data-prism-entered')).toBe(false);
+  const added = document.createElement('span'); item.append(added);
+  expect(added.hasAttribute('data-prism-entered')).toBe(false);
+  flip.cancel();
+  expect(item.hasAttribute('data-prism-entered')).toBe(true);
+});
