@@ -142,9 +142,56 @@ test('Stop aborts thinking and regenerate replaces the last reply, not the user 
   fireEvent.click(view.getByRole('button', { name: 'Stop response' })); await done(view);
   expect(replies(view.container)).toHaveLength(1); expect(view.queryByLabelText('Thinking')).toBeNull();
   pace.thinking = () => 0;
-  fireEvent.click(view.getByRole('button', { name: 'Regenerate reply' })); await done(view);
+  fireEvent.click(view.getByRole('button', { name: 'Replay reply' })); await done(view);
   expect(users(view.container)).toHaveLength(1); expect(replies(view.container)).toHaveLength(1);
   expect(view.container.querySelector('[data-prism="pick"]')).not.toBeNull();
+});
+
+test('header replay streams the recorded reply without another model call or additional turns', async () => {
+  let calls = 0;
+  const agent: Agent = { id: 'replay', label: 'Replay probe', async *respond() {
+    calls++; yield { type: 'text', delta: 'A reply worth thinking about.' };
+  } };
+  const pace: Pace = { ...fast }, view = render(<App pace={pace} agentFactory={() => agent} />);
+  expect((view.getByRole('button', { name: 'Replay stream' }) as HTMLButtonElement).disabled).toBe(true);
+  send(view, 'Hello'); await done(view);
+  pace.thinking = () => 10000;
+  fireEvent.click(view.getByRole('button', { name: 'Replay stream' }));
+  expect(view.getByLabelText('Thinking')).toBeDefined();
+  expect((view.getByRole('button', { name: 'Replay stream' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Stop response' })); await done(view);
+  expect(view.getByText('A reply worth thinking about.')).toBeDefined();
+  pace.thinking = () => 0;
+  fireEvent.click(view.getByRole('button', { name: 'Replay stream' })); await done(view);
+  expect(view.getByText('A reply worth thinking about.')).toBeDefined();
+  expect(calls).toBe(1); expect(users(view.container)).toHaveLength(1); expect(replies(view.container)).toHaveLength(1);
+});
+
+test('component navigation groups live numbers, scrolls and focuses the real root, and clears on new chat', async () => {
+  const view = render(<App pace={fast} />);
+  expect(view.queryByRole('navigation', { name: 'In this conversation' })).toBeNull();
+  send(view, 'Budget a 6-person team offsite'); await done(view);
+  const navigation = view.getByRole('navigation', { name: 'In this conversation' });
+  expect(navigation.querySelectorAll('button')).toHaveLength(2);
+  const target = view.container.querySelector<HTMLElement>('[data-prism="estimate"][data-part="root"]')!;
+  const scrolls: unknown[] = [];
+  target.scrollIntoView = options => { scrolls.push(options); };
+  fireEvent.click(view.getByRole('button', { name: /Estimate\s*02/ }));
+  expect(scrolls).toHaveLength(1); expect(document.activeElement === target).toBe(true);
+  fireEvent.click(view.getByRole('checkbox', { name: 'Contingency' }));
+  fireEvent.click(view.getByRole('button', { name: 'Replay stream' })); await done(view);
+  expect((view.getByRole('checkbox', { name: 'Contingency' }) as HTMLInputElement).checked).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: /New conversation/ }));
+  expect(view.queryByRole('navigation', { name: 'In this conversation' })).toBeNull();
+});
+
+test('failed empty replies keep the header replay disabled and expose retry', async () => {
+  const agent: Agent = { id: 'failure', label: 'Failure probe', async *respond() { throw new Error('Unavailable'); } };
+  const view = render(<App pace={fast} agentFactory={() => agent} />);
+  send(view, 'Hello'); await done(view);
+  expect(view.getByRole('alert').textContent).toContain('The response was interrupted.');
+  expect((view.getByRole('button', { name: 'Replay stream' }) as HTMLButtonElement).disabled).toBe(true);
+  expect(view.getByRole('button', { name: 'Replay reply' })).toBeDefined();
 });
 
 test('component action queues after streaming without creating a user turn or clearing a draft', async () => {
@@ -166,7 +213,7 @@ test('new chat is empty and conversation switching preserves component state and
   fireEvent.click(view.getAllByRole('button', { name: /Choose/ })[0]); await done(view);
   type(view, 'Keep this draft');
   const original = view.getByRole('main').getAttribute('data-conversation');
-  fireEvent.click(view.getByRole('button', { name: 'New chat' }));
+  fireEvent.click(view.getByRole('button', { name: /New conversation/ }));
   expect(users(view.container)).toHaveLength(0); expect(replies(view.container)).toHaveLength(0);
   expect(view.getByRole('main').getAttribute('data-conversation')).not.toBe(original);
   fireEvent.click(view.getAllByRole('button', { name: 'Your next laptop' })[0]);

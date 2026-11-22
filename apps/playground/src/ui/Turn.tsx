@@ -2,7 +2,7 @@ import { Children, Component, cloneElement, isValidElement, useState, type Butto
 import { Prism, useComponentState, type Action } from '@prism-ui/react';
 import type { Store } from '@prism-ui/state';
 import { playgroundPlugins } from '../plugins';
-import { Icon } from './Icon';
+import { Icon, PrismGlyph } from './Icon';
 
 export function plainProse(source: string) {
   return source.replace(/```[\s\S]*?(?:```|$)/g, '').replace(/^\s*:{2,}[^\n]*$/gm, '').replace(/:[a-z]+\[([^\]]*)\]\{[^}]*\}/g, '$1').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/[*_#>`]/g, '').replace(/\n{3,}/g, '\n\n').trim();
@@ -20,15 +20,16 @@ const slots = { estimate: { actions: EstimateActions } };
 export function AssistantTurn({ text, streaming, error, store, theme, animate, onAction, regenerate, last, continued }: { text: string; streaming: boolean; error?: string; store: Store; theme: 'light' | 'dark'; animate: boolean; onAction(action: Action): void; regenerate?: () => void; last: boolean; continued?: boolean }) {
   const [copied, setCopied] = useState(false), [copyError, setCopyError] = useState(false);
   return <article className={'assistant-turn' + (last ? ' last-turn' : '')} data-message="assistant" data-state={streaming ? 'streaming' : 'ready'} aria-label="Assistant reply" aria-busy={streaming}>
+    <div className="assistant-byline"><PrismGlyph /><span>Prism</span></div>
     <MessageBoundary>
-      {!text && streaming ? <div className="thinking" aria-label="Thinking"><span>Thinking</span></div> : <div className="reply-content">
+      {!text && streaming ? <div className="thinking-space"><span className="thinking" aria-label="Thinking"><i /><i /><i /></span></div> : <div className="reply-content">
         <Prism source={text} done={!streaming} store={store} plugins={playgroundPlugins} theme={theme} animate={animate} onAction={onAction} slots={slots} />
       </div>}
     </MessageBoundary>
     {error && <p className="turn-error" role="alert">{error}</p>}
-    {!streaming && !continued && <div className="turn-actions" aria-label="Reply actions"><button className="icon-btn" title={copied ? 'Copied' : 'Copy reply'} aria-label={copied ? 'Copied' : 'Copy reply'} onClick={async () => {
+    {!streaming && !continued && <div className="turn-actions" aria-label="Reply actions"><button className="prism-icon-btn" title={copied ? 'Copied' : 'Copy reply'} aria-label={copied ? 'Copied' : 'Copy reply'} onClick={async () => {
       try { await navigator.clipboard.writeText(plainProse(text)); setCopied(true); setCopyError(false); }
       catch { setCopyError(true); }
-    }}><Icon name={copied ? 'check' : 'copy'} /></button>{regenerate && <button className="icon-btn" title="Regenerate reply" aria-label="Regenerate reply" onClick={regenerate}><Icon name="refresh" /></button>}{copyError && <span role="status">Copy unavailable in this browser.</span>}</div>}
+    }}><Icon name={copied ? 'check' : 'copy'} /></button>{regenerate && <button className="replay" title="Replay reply" aria-label="Replay reply" onClick={regenerate}><Icon name="refresh" /><span>Replay reply</span></button>}{copyError && <span role="status">Copy unavailable in this browser.</span>}</div>}
   </article>;
 }

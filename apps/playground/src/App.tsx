@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import { ThemeScope, type Action } from '@prism-ui/react';
+import { IconButton, KbdHint, Switch } from '@prism-ui/components/shared';
 import { makeStore } from './store';
 import { createAgent, loadAgentConfig, saveAgentConfig, type AgentConfig } from './agent/config';
 import { createScriptedAgent, routeMessage } from './agent/scripted';
-import { realistic, type Pace } from './agent/pace';
+import { realistic, streamText, type Pace } from './agent/pace';
 import { scenarios } from './agent/scenarios';
 import type { Agent, AgentInput, Turn } from './agent/types';
 import { describeInteraction } from './agent/interaction';
-import { Icon, type IconName } from './ui/Icon';
+import { Icon, PrismGlyph, type IconName } from './ui/Icon';
 import { AssistantTurn } from './ui/Turn';
 import { Palette } from './ui/Palette';
 import { Settings } from './ui/Settings';
@@ -17,6 +18,8 @@ type Message = { id: string; role: 'user' | 'assistant'; text: string; streaming
 type Conversation = { id: string; title: string; scenario?: string; originScenario?: string; messages: Message[]; store: ReturnType<typeof makeStore>; scripted: Agent; agent?: Agent; revision: number; queue: Request[]; controller?: AbortController; draft: string; scroll: number; following: boolean };
 type AppProps = { pace?: Pace; agentFactory?: (config: AgentConfig) => Agent };
 const descriptions = ['Find the right balance of power and portability.', 'Four days, with room to get a little lost.', 'Get from a red build to a safe recovery.', 'Explore two directions, then make it yours.', 'A thoughtful day together, with a clear budget.', 'Turn interview notes into a useful next step.'];
+const componentNames: Record<string, string> = { estimate: 'Estimate', pick: 'Pick for me', num: 'Live numbers', chart: 'Answer chart', runbook: 'Runbook', troubleshoot: 'Troubleshooter', summary: 'Summary & sources', ask: 'Inline ask', datatable: 'Data table', codeblock: 'Code block', callout: 'Callout', tabs: 'Tabs', card: 'Cards & badges', mockup: 'Mockup canvas', artifact: 'Artifact canvas', table: 'Table', view: 'Custom view' };
+const componentIcons: Record<string, IconName> = { estimate: 'receipt', pick: 'verdict', num: 'sliders', chart: 'chart', runbook: 'checklist', troubleshoot: 'branch', summary: 'research', ask: 'chat', datatable: 'budget', codeblock: 'deploy', callout: 'chat', tabs: 'tabs', card: 'grid', mockup: 'design', artifact: 'design', table: 'budget', view: 'grid' };
 const scenarioIcons: IconName[] = ['laptop', 'trip', 'deploy', 'design', 'budget', 'research'];
 const scenarioTitles = ['Pick a laptop', 'Four days in Kyoto', 'Debug a deploy', 'Mock up a landing page', 'Plan a team offsite', 'Make sense of research'];
 let sequence = 0;
@@ -45,6 +48,8 @@ export function App({ pace = realistic, agentFactory }: AppProps) {
   const theme = themeChoice === 'system' ? darkSystem ? 'dark' : 'light' : themeChoice;
   const scroll = useRef<HTMLDivElement>(null), textarea = useRef<HTMLTextAreaElement>(null), sidebarRef = useRef<HTMLElement>(null), sidebarToggle = useRef<HTMLButtonElement>(null);
   const frame = useRef<number | undefined>(undefined), mounted = useRef(true);
+  const [componentLinks, setComponentLinks] = useState<{ kind: string; label: string }[]>([]);
+  const componentNodes = useRef<HTMLElement[]>([]);
   const focusComposer = useRef(false);
   const notify = useCallback(() => { if (mounted.current) redraw(); }, []);
   const closeOverlay = useCallback(() => setOverlay(undefined), []);
@@ -83,6 +88,18 @@ export function App({ pace = realistic, agentFactory }: AppProps) {
     if (!current.following || !scroll.current) return;
     if (frame.current !== undefined) cancelAnimationFrame(frame.current);
     frame.current = requestAnimationFrame(() => { const element = scroll.current; if (element && currentRef.current.following) element.scrollTop = element.scrollHeight; });
+  });
+  useLayoutEffect(() => {
+    const numberParagraphs = new Set<Element>();
+    const nodes = Array.from(scroll.current?.querySelectorAll<HTMLElement>('.prism-frame__root, [data-prism="num"][data-part="root"]') ?? []).filter(node => {
+      const paragraph = node.dataset.prism === 'num' ? node.closest('.prism-paragraph__root') : null;
+      if (!paragraph) return true;
+      if (numberParagraphs.has(paragraph)) return false;
+      numberParagraphs.add(paragraph); return true;
+    });
+    componentNodes.current = nodes;
+    const links = nodes.map(node => ({ kind: node.dataset.prism ?? '', label: componentNames[node.dataset.prism ?? ''] ?? node.getAttribute('aria-label') ?? 'Component' }));
+    if (JSON.stringify(componentLinks) !== JSON.stringify(links)) setComponentLinks(links);
   });
   function stop(conversation = current) {
     conversation.queue = []; conversation.controller?.abort();
@@ -158,6 +175,23 @@ export function App({ pace = realistic, agentFactory }: AppProps) {
     if (current.controller || !message.input) return;
     void run(current, { text: '' }, message);
   }
+  async function replay(message: Message) {
+    if (current.controller || !message.text) return;
+    const source = message.text, conversation = current, controller = new AbortController();
+    conversation.controller = controller; conversation.following = true; message.text = ''; message.streaming = true; notify();
+    try {
+      for await (const delta of streamText(source, controller.signal, pace)) {
+        if (controller.signal.aborted) break;
+        message.text += delta; notify();
+      }
+    } finally {
+      message.text = source;
+      message.streaming = false;
+      if (conversation.controller === controller) conversation.controller = undefined;
+      notify();
+      const queued = conversation.queue.shift(); if (queued && mounted.current) void run(conversation, queued);
+    }
+  }
   const busy = !!current.controller, empty = !current.messages.length;
   const lastAssistant = [...current.messages].reverse().find(message => message.role === 'assistant');
   const ownChats = [...conversations.current.values()].filter(c => c.messages.length).reverse();
@@ -165,22 +199,25 @@ export function App({ pace = realistic, agentFactory }: AppProps) {
   const live = config.current.provider !== 'scripted' && !!config.current.apiKey?.trim();
   const providerName = config.current.provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
   const composer = <div className="composer-area"><form className="composer" onSubmit={event => { event.preventDefault(); if (!busy) send(current.draft); }}>
-    <textarea ref={textarea} rows={1} aria-label="Message Prism" placeholder="Message Prism" value={current.draft} onChange={event => { current.draft = event.target.value; notify(); }} onKeyDown={event => {
+    <IconButton className="attach" aria-label="Add component" title="Explore components" onClick={() => openOverlay('palette')}><Icon name="plus" /></IconButton>
+    <textarea ref={textarea} rows={1} aria-label="Message Prism" placeholder="Ask a question, try a what-if…" value={current.draft} onChange={event => { current.draft = event.target.value; notify(); }} onKeyDown={event => {
       if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) { event.preventDefault(); if (!busy) send(current.draft); }
     }} />
     <button type={busy ? 'button' : 'submit'} className="send-btn" title={busy ? 'Stop response' : 'Send message'} aria-label={busy ? 'Stop response' : 'Send message'} disabled={!busy && !current.draft.trim()} onClick={busy ? () => stop() : undefined}><Icon name={busy ? 'stop' : 'send'} /></button>
-  </form><button className="model-status" onClick={() => openOverlay('settings')}>{live ? `${providerName} · ${config.current.model || (config.current.provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4o-mini')}` : 'Scripted demo · Connect a model'}</button></div>;
+  </form><div className="composer-note">Made to think with.<span>·</span>Always yours to change.</div></div>;
   return <ThemeScope theme={theme} animate={!reduced} className="chat-app">
     {drawer && mobile && <div className="sidebar-backdrop" onClick={() => setDrawer(false)} aria-hidden="true" />}
     <aside ref={sidebarRef} inert={overlay ? true : undefined} className={'sidebar' + (sidebar ? '' : ' collapsed') + (drawer ? ' drawer-open' : '')} aria-label="Conversations" role={drawer && mobile ? 'dialog' : undefined} aria-modal={drawer && mobile ? true : undefined}>
-      <div className="sidebar-top"><button className="new-chat" onClick={newChat}><Icon name="plus" />New chat</button><button className="icon-btn" aria-label="Close sidebar" title="Close sidebar" onClick={() => { if (mobile) setDrawer(false); else setSidebar(false); }}><Icon name="sidebar" /></button></div>
+      <div className="brand"><PrismGlyph />prism<IconButton className="sidebar-close" aria-label="Close sidebar" title="Close sidebar" onClick={() => { if (mobile) setDrawer(false); else setSidebar(false); }}><Icon name="sidebar" /></IconButton></div><div className="brand-sub">A little clarity.</div>
+      <button className="new-chat prism-pill" data-variant="secondary" onClick={newChat}><Icon name="plus" />New conversation<KbdHint>⌘ K</KbdHint></button>
       <nav className="chat-list" aria-label="Chat history">{ownChats.length > 0 && <div className="list-heading">Today</div>}{ownChats.map(c => <button key={c.id} className={'history-item' + (current.id === c.id ? ' selected' : '')} aria-current={current.id === c.id ? 'page' : undefined} onClick={() => switchTo(c)}>{c.title}</button>)}
         {earlierScenarios.length > 0 && <div className="list-heading earlier">Earlier</div>}{earlierScenarios.map(item => <button key={item.id} className="history-item" onClick={() => openScenario(item.id)}>{item.title}</button>)}
       </nav>
-      <div className="sidebar-bottom"><button className="sidebar-link" onClick={() => openOverlay('palette')}><Icon name="grid" /><span>Components</span><kbd>Ctrl K</kbd></button><div className="sidebar-tools"><button className="sidebar-link" aria-label={'Theme: ' + themeChoice} title={'Theme: ' + themeChoice} onClick={() => { const next = themeChoice === 'system' ? 'light' : themeChoice === 'light' ? 'dark' : 'system'; setThemeChoice(next); try { localStorage.setItem('prism-theme', next); } catch {} }}><Icon name={themeChoice === 'system' ? 'monitor' : themeChoice === 'light' ? 'sun' : 'moon'} /><span>{themeChoice[0].toUpperCase() + themeChoice.slice(1)}</span></button><button className="icon-btn" aria-label="Settings" title="Settings" onClick={() => openOverlay('settings')}><Icon name="settings" /></button></div></div>
+      {componentLinks.length > 0 && <section className="side-group"><h2 className="list-heading">In this conversation</h2><nav className="side-nav" aria-label="In this conversation">{componentLinks.map((item, index) => <button key={index} onClick={() => { current.following = false; setDrawer(false); componentNodes.current[index]?.scrollIntoView?.({ behavior: reduced ? 'instant' : 'smooth', block: 'start' }); componentNodes.current[index]?.focus({ preventScroll: true }); notify(); }}><Icon name={componentIcons[item.kind] ?? 'grid'} /><span>{item.label}</span><span className="number">{String(index + 1).padStart(2, '0')}</span></button>)}</nav></section>}
+      <div className="sidebar-bottom"><div className="theme-row"><Icon name={theme === 'light' ? 'sun' : 'moon'} /><span>{theme === 'light' ? 'Light' : 'Dark'} appearance</span><Switch checked={theme === 'dark'} aria-label="Dark appearance" onClick={() => { const next = theme === 'light' ? 'dark' : 'light'; setThemeChoice(next); try { localStorage.setItem('prism-theme', next); } catch {} }} /></div><button className="model-status" onClick={() => openOverlay('settings')}>{live ? `${providerName} · ${config.current.model || (config.current.provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4o-mini')}` : 'Scripted demo · Connect a model'}</button><button className="component-library" onClick={() => openOverlay('palette')}><Icon name="grid" />Components</button><div className="sidebar-utilities"><button onClick={() => { setThemeChoice('system'); try { localStorage.removeItem('prism-theme'); } catch {} }}>Use system appearance</button><IconButton aria-label="Settings" title="Settings" onClick={() => openOverlay('settings')}><Icon name="sliders" /></IconButton></div><div className="version"><span>REFRACTION</span><span>STUDY 001</span></div></div>
     </aside>
     <main className="chat-main" data-conversation={current.id} inert={overlay || (drawer && mobile) ? true : undefined}>
-      <header className="chat-header"><button ref={sidebarToggle} className={'icon-btn sidebar-toggle' + (sidebar ? ' desktop-hidden' : '')} title="Open sidebar" aria-label="Open sidebar" onClick={() => { if (mobile) setDrawer(true); else setSidebar(true); }}><Icon name="sidebar" /></button><span>{empty ? 'Prism' : current.title}</span></header>
+      <header className="chat-header"><div className="top-title"><IconButton ref={sidebarToggle} className={'sidebar-toggle' + (sidebar ? ' desktop-hidden' : '')} title="Open sidebar" aria-label="Open sidebar" aria-expanded={mobile ? drawer : sidebar} onClick={() => { if (mobile) setDrawer(true); else setSidebar(true); }}><Icon name="sidebar" /></IconButton><span className="desktop-crumb">Your workspace</span><span className="sep desktop-crumb">/</span><strong>{empty ? 'A little clarity' : current.title}</strong></div><button className="replay" disabled={!lastAssistant?.text || busy} onClick={() => { if (lastAssistant) void replay(lastAssistant); }}><Icon name="refresh" /><span>Replay stream</span></button></header>
       {empty ? <div className="landing"><div className="landing-inner"><h1>What are we working on?</h1>{composer}<div className="suggestions" aria-label="Suggestions">{scenarios.map((scenario, index) => <button key={scenario.id} className="suggestion" onClick={() => send(scenario.prompt)}><Icon name={scenarioIcons[index]} /><strong>{scenarioTitles[index]}</strong><span>{descriptions[index]}</span></button>)}</div></div></div> : <>
         <div ref={scroll} className="thread-scroll" onScroll={() => { const element = scroll.current!; current.scroll = element.scrollTop; const following = element.scrollHeight - element.scrollTop - element.clientHeight < 72; if (following !== current.following) { current.following = following; notify(); } }}>
           <div className="thread" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions text" aria-busy={busy}>
