@@ -46,10 +46,11 @@ export function App({ pace = realistic, agentFactory }: AppProps) {
   const frame = useRef<number | undefined>(undefined), mounted = useRef(true);
   const notify = useCallback(() => { if (mounted.current) redraw(); }, []);
   const closeOverlay = useCallback(() => setOverlay(undefined), []);
+  const openOverlay = (value: 'palette' | 'settings') => { setDrawer(false); setOverlay(value); };
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; for (const c of conversations.current.values()) { c.queue = []; c.controller?.abort(); } if (frame.current !== undefined) cancelAnimationFrame(frame.current); }; }, []);
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setOverlay(value => value === 'palette' ? undefined : 'palette'); }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setDrawer(false); setOverlay(value => value === 'palette' ? undefined : 'palette'); }
     };
     document.addEventListener('keydown', listener); return () => document.removeEventListener('keydown', listener);
   }, []);
@@ -161,7 +162,7 @@ export function App({ pace = realistic, agentFactory }: AppProps) {
       if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) { event.preventDefault(); if (!busy) send(current.draft); }
     }} />
     <button type={busy ? 'button' : 'submit'} className="send-btn" title={busy ? 'Stop response' : 'Send message'} aria-label={busy ? 'Stop response' : 'Send message'} disabled={!busy && !current.draft.trim()} onClick={busy ? () => stop() : undefined}><Icon name={busy ? 'stop' : 'send'} /></button>
-  </form><button className="model-status" onClick={() => setOverlay('settings')}>{live ? `${providerName} · ${config.current.model || (config.current.provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4o-mini')}` : 'Scripted demo · Connect a model'}</button></div>;
+  </form><button className="model-status" onClick={() => openOverlay('settings')}>{live ? `${providerName} · ${config.current.model || (config.current.provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4o-mini')}` : 'Scripted demo · Connect a model'}</button></div>;
   return <ThemeScope theme={theme} animate={!reduced} className="chat-app">
     {drawer && mobile && <div className="sidebar-backdrop" onClick={() => setDrawer(false)} aria-hidden="true" />}
     <aside ref={sidebarRef} inert={overlay ? true : undefined} className={'sidebar' + (sidebar ? '' : ' collapsed') + (drawer ? ' drawer-open' : '')} aria-label="Conversations" role={drawer && mobile ? 'dialog' : undefined} aria-modal={drawer && mobile ? true : undefined}>
@@ -169,7 +170,7 @@ export function App({ pace = realistic, agentFactory }: AppProps) {
       <nav className="chat-list" aria-label="Chat history">{ownChats.length > 0 && <div className="list-heading">Today</div>}{ownChats.map(c => <button key={c.id} className={'history-item' + (current.id === c.id ? ' selected' : '')} aria-current={current.id === c.id ? 'page' : undefined} onClick={() => switchTo(c)}>{c.title}</button>)}
         {earlierScenarios.length > 0 && <div className="list-heading earlier">Earlier</div>}{earlierScenarios.map(item => <button key={item.id} className="history-item" onClick={() => openScenario(item.id)}>{item.title}</button>)}
       </nav>
-      <div className="sidebar-bottom"><button className="sidebar-link" onClick={() => setOverlay('palette')}><Icon name="grid" /><span>Components</span><kbd>Ctrl K</kbd></button><div className="sidebar-tools"><button className="sidebar-link" aria-label={'Theme: ' + themeChoice} title={'Theme: ' + themeChoice} onClick={() => { const next = themeChoice === 'system' ? 'light' : themeChoice === 'light' ? 'dark' : 'system'; setThemeChoice(next); try { localStorage.setItem('prism-theme', next); } catch {} }}><Icon name={themeChoice === 'system' ? 'monitor' : themeChoice === 'light' ? 'sun' : 'moon'} /><span>{themeChoice[0].toUpperCase() + themeChoice.slice(1)}</span></button><button className="icon-btn" aria-label="Settings" title="Settings" onClick={() => setOverlay('settings')}><Icon name="settings" /></button></div></div>
+      <div className="sidebar-bottom"><button className="sidebar-link" onClick={() => openOverlay('palette')}><Icon name="grid" /><span>Components</span><kbd>Ctrl K</kbd></button><div className="sidebar-tools"><button className="sidebar-link" aria-label={'Theme: ' + themeChoice} title={'Theme: ' + themeChoice} onClick={() => { const next = themeChoice === 'system' ? 'light' : themeChoice === 'light' ? 'dark' : 'system'; setThemeChoice(next); try { localStorage.setItem('prism-theme', next); } catch {} }}><Icon name={themeChoice === 'system' ? 'monitor' : themeChoice === 'light' ? 'sun' : 'moon'} /><span>{themeChoice[0].toUpperCase() + themeChoice.slice(1)}</span></button><button className="icon-btn" aria-label="Settings" title="Settings" onClick={() => openOverlay('settings')}><Icon name="settings" /></button></div></div>
     </aside>
     <main className="chat-main" data-conversation={current.id} inert={overlay || (drawer && mobile) ? true : undefined}>
       <header className="chat-header"><button ref={sidebarToggle} className={'icon-btn sidebar-toggle' + (sidebar ? ' desktop-hidden' : '')} title="Open sidebar" aria-label="Open sidebar" onClick={() => { if (mobile) setDrawer(true); else setSidebar(true); }}><Icon name="sidebar" /></button><span>{empty ? 'Prism' : current.title}</span></header>

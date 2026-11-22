@@ -21,6 +21,19 @@ function type(view: ReturnType<typeof render>, text: string) {
 }
 function send(view: ReturnType<typeof render>, text: string) { const input = type(view, text); fireEvent.keyDown(input, { key: 'Enter' }); }
 
+test.each(['Settings', 'Components'])('opening %s from the mobile drawer closes the drawer', label => {
+  const previous = window.matchMedia;
+  window.matchMedia = ((query: string) => ({ matches: query.includes('max-width'), media: query, addEventListener() {}, removeEventListener() {} })) as typeof window.matchMedia;
+  try {
+    const view = render(<App pace={fast} />);
+    fireEvent.click(view.getByRole('button', { name: 'Open sidebar' }));
+    expect(view.container.querySelector('.sidebar.drawer-open')).not.toBeNull();
+    fireEvent.click(view.getByRole('button', { name: label === 'Settings' ? 'Settings' : /Components/ }));
+    expect(view.container.querySelector('.sidebar.drawer-open') === null).toBe(true);
+    expect(view.getByRole('dialog')).toBeDefined();
+  } finally { window.matchMedia = previous; }
+});
+
 test('landing has six natural suggestions and clicking one renders a streamed conversation', async () => {
   const view = render(<App pace={fast} />);
   expect(view.getByRole('heading', { name: 'What are we working on?' })).toBeDefined();
