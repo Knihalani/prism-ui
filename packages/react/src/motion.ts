@@ -64,6 +64,7 @@ export function useCollapse<T extends HTMLElement = HTMLDivElement>(open: boolea
     const element = ref.current;
     if (!element) return;
     const from = element.getBoundingClientRect().height;
+    element.inert = !open;
     animation.current?.cancel(); animation.current = null;
     const style = element.ownerDocument.defaultView!.getComputedStyle(element);
     const duration = motionDuration(style.getPropertyValue('--prism-motion-base'), 240);
