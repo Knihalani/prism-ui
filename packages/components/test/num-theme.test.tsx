@@ -9,6 +9,23 @@ import { motionProgress, useNumberTween } from '../src/num/use-tween';
 
 afterEach(cleanup);
 const source = ':num[12]{id=n} and :calc[n*2]';
+test('successive moves during one held drag update the value, readout and dependent calc before release', async () => {
+  const store = createStore(), actions: Action[] = [];
+  const view = render(<Prism source={':num[1200]{id=rent step=50 format=currency label="Monthly rent"} :calc[rent*12]{format=currency}'} store={store} locale="en-US" animate={false} onAction={action => actions.push(action)} />);
+  const slider = view.getByRole('slider');
+  expect(slider.getAttribute('aria-valuenow')).toBe('1200');
+  fireEvent.pointerDown(slider, { button: 0, pointerId: 7, clientX: 100 });
+  for (const [clientX, value, annual] of [[120, 1450, '$17,400.00'], [144, 1750, '$21,000.00']] as const) {
+    fireEvent.pointerMove(slider, { pointerId: 7, clientX });
+    await waitFor(() => expect(store.get('rent')).toBe(value));
+    expect(slider.getAttribute('data-status')).toBe('scrubbing'); expect(slider.getAttribute('aria-valuenow')).toBe(String(value));
+    expect(view.container.querySelector('[data-part="readout-value"]')?.textContent).toContain(value.toLocaleString('en-US', { style: 'currency', currency: 'USD' }));
+    expect(view.container.querySelector('[data-prism="calc"][data-part="value"]')?.textContent).toBe(annual);
+    expect(actions).toHaveLength(0);
+  }
+  fireEvent.pointerUp(slider, { pointerId: 7, clientX: 144 });
+  expect(actions).toHaveLength(1); expect(actions[0].payload).toEqual({ id: 'rent', value: 1750, previous: 1200 });
+});
 test('all declared Num/Calc parts accept slots in ready, edit, scrub, empty and error states', () => {
   const covered = { num: new Set<string>(), calc: new Set<string>() };
   for (const fixture of ['ready', 'hover', 'edit', 'scrub', 'empty', 'error']) {
