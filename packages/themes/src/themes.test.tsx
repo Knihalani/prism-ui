@@ -1,8 +1,9 @@
 import '../../react/test/setup';
 import { expect, test } from 'bun:test';
-import type { ReactNode } from 'react';
+import { createRef, type ElementType, type ReactNode } from 'react';
 import { act, fireEvent, render, within } from '@testing-library/react';
 import { Prism, ThemeScope, host } from '@prism-ui/react';
+import { createStore } from '../../state/src';
 import '@prism-ui/components/estimate';
 import '@prism-ui/components/pick';
 import '@prism-ui/components/mockup';
@@ -169,4 +170,77 @@ test('an outer Instrument scope does not replace parts in a nested host Prism', 
   const view = render(<ThemeScope theme={instrument}><Prism source={source} animate={false} /><ThemeScope theme={host}><Prism source={source} animate={false} /></ThemeScope></ThemeScope>);
   expect(view.container.querySelectorAll('[data-segmented]').length).toBe(1);
   expect(view.container.querySelectorAll('.prism-root')[1].getAttribute('data-prism-theme-name')).toBe('host');
+});
+
+test('Instrument shares its segmented geometry between Estimate and module scores and preserves fader/choose behavior', () => {
+  const actions: { type: string; payload: unknown }[] = [];
+  const pick = '```ui:pick\n' + JSON.stringify({ id: 'modules', criteria: [{ id: 'learning', label: 'Learning' }, { id: 'cost', label: 'Cost' }], options: [{ id: 'concierge', title: 'Concierge', scores: { learning: .9, cost: .5 } }, { id: 'self', title: 'Self-serve', scores: { learning: .6, cost: .9 } }] }) + '\n```';
+  const view = render(<Prism source={source + '\n\n' + pick} theme={instrument} animate={false} onAction={action => actions.push(action)} />);
+  const ui = within(view.container);
+  expect(view.container.querySelectorAll('[data-instrument-chassis]')).toHaveLength(2);
+  expect(view.container.querySelectorAll('.instrument-screw')).toHaveLength(8);
+  expect(view.container.querySelectorAll('[data-instrument-led]')).toHaveLength(2);
+  expect(view.container.querySelectorAll('[data-segmented]')).toHaveLength(3);
+  const geometry = Array.from(view.container.querySelectorAll('[data-segmented]')).map(svg => Array.from(svg.querySelectorAll('g:first-child polygon')).map(p => p.getAttribute('points')));
+  expect(geometry[0]).toEqual(geometry[1]);
+  expect(geometry[0]).toEqual(geometry[2]);
+  expect(view.container.querySelector('[data-instrument-module][data-top]')?.textContent).toContain('Self-serve');
+  fireEvent.input(ui.getByRole('slider', { name: 'Learning weight' }), { target: { value: '3' } });
+  fireEvent.input(ui.getByRole('slider', { name: 'Cost weight' }), { target: { value: '0' } });
+  expect(view.container.querySelector('[data-instrument-module][data-top]')?.textContent).toContain('Concierge');
+  fireEvent.click(ui.getByRole('button', { name: 'Choose Concierge ↗' }));
+  expect(actions.at(-1)).toMatchObject({ type: 'choose', payload: { option: 'concierge', weights: { learning: 3, cost: 0 } } });
+  expect(view.container.querySelector('[data-instrument-module][data-top] [role="status"]')?.textContent).toBe('Chosen');
+});
+
+test('Instrument keeps Estimate Undo, switch, submit and sent behavior in dark mode', () => {
+  const actions: { type: string }[] = [];
+  const view = render(<Prism source={source} theme={instrument} mode="dark" animate={false} onAction={action => actions.push(action)} />);
+  const ui = within(view.container);
+  fireEvent.click(ui.getByRole('button', { name: 'Increase Seats' }));
+  fireEvent.click(ui.getByRole('button', { name: 'Undo' }));
+  expect(ui.getByRole('spinbutton', { name: 'Seats' }).getAttribute('aria-valuenow')).toBe('6');
+  fireEvent.click(ui.getByRole('switch', { name: 'Notes' }));
+  fireEvent.click(ui.getByRole('button', { name: 'Send estimate' }));
+  expect(actions.at(-1)?.type).toBe('use');
+  expect(ui.getByRole('button', { name: 'Sent' }).hasAttribute('disabled')).toBe(true);
+  expect(instrument.dark?.surface).toBe('#2a2b27');
+});
+
+test('Instrument preserves empty and unready Estimate and Pick guards', () => {
+  const view = render(<Prism source={'```ui:estimate\n{"id":"empty-instrument","items":[]}\n```\n\n```ui:pick\n{"id":"empty-modules","criteria":[],"options":[]}\n```\n\n```ui:pick\n{"id":"pending-module","criteria":[{"id":"cost","label":"Cost"}],"options":[{"id":"pending","title":"Awaiting scores"}]}\n```'} theme={instrument} animate={false} onAction={() => {}} />);
+  const ui = within(view.container);
+  expect(ui.getByText('Items will appear here')).toBeTruthy();
+  expect(ui.getByText('Options will appear here')).toBeTruthy();
+  expect(ui.getByRole('button', { name: 'Send estimate' }).hasAttribute('disabled')).toBe(true);
+  expect(ui.getByRole('button', { name: 'Choose Awaiting scores ↗' }).hasAttribute('disabled')).toBe(true);
+  expect(view.container.querySelector('[data-instrument-module]')?.getAttribute('aria-busy')).toBe('true');
+  expect(view.container.querySelector('[data-instrument-module][data-top]')).toBeNull();
+});
+
+test('Instrument chassis and toggle slots forward DOM props, events and refs', () => {
+  const Root = instrument.components!.frame!.slots!.root! as ElementType;
+  const Toggle = instrument.components!.estimate!.slots!.checkbox! as ElementType;
+  const root = createRef<HTMLElement>(), input = createRef<HTMLInputElement>();
+  let keys = 0, changes = 0;
+  const view = render(<Root as="article" data-prism="pick" aria-label="Panel" ref={root} onKeyDown={() => keys++}><Toggle type="checkbox" aria-label="Enabled" ref={input} onChange={() => changes++} /></Root>);
+  expect(root.current?.tagName).toBe('ARTICLE');
+  expect(root.current?.getAttribute('aria-label')).toBe('Panel');
+  expect(input.current === within(view.container).getByRole('switch', { name: 'Enabled' })).toBe(true);
+  fireEvent.keyDown(input.current!, { key: 'ArrowRight' });
+  fireEvent.click(input.current!);
+  expect(keys).toBe(1);
+  expect(changes).toBe(1);
+});
+
+test('Instrument faders use the Pick model fallback for malformed saved weights', () => {
+  const store = createStore(), actions: { type: string; payload: unknown }[] = [];
+  store.set('guards.weights', { learning: 'invalid', cost: 5 });
+  const pick = '```ui:pick\n' + JSON.stringify({ id: 'guards', weights: { learning: 2, cost: 3 }, criteria: [{ id: 'learning', label: 'Learning' }, { id: 'cost', label: 'Cost' }], options: [{ id: 'alpha', title: 'Alpha', scores: { learning: .9, cost: .2 } }, { id: 'beta', title: 'Beta', scores: { learning: .4, cost: .8 } }] }) + '\n```';
+  const view = render(<Prism source={pick} theme={instrument} store={store} animate={false} onAction={action => actions.push(action)} />);
+  const ui = within(view.container);
+  expect((ui.getByRole('slider', { name: 'Learning weight' }) as HTMLInputElement).value).toBe('2');
+  expect((ui.getByRole('slider', { name: 'Cost weight' }) as HTMLInputElement).value).toBe('3');
+  fireEvent.click(ui.getByRole('button', { name: 'Choose Beta ↗' }));
+  expect(actions.at(-1)).toMatchObject({ type: 'choose', payload: { option: 'beta', weights: { learning: 2, cost: 3 } } });
 });
