@@ -9,6 +9,11 @@ reverts only paths equal to or below that namespace, leaving unrelated edits
 and history intact. A mixed-scope batch can be undone separately for each scope.
 Without a scope, travel restores whole snapshots as before.
 
+`move(from, to)` migrates a namespace and rewrites paths and snapshots in both
+history stacks in one no-history batch. Existing destination fields win;
+missing fields are filled from the source, whose empty ancestors are removed.
+Await `ready` first when persistence loads asynchronously.
+
 With persistence, `store.hydrated` reports whether the initial load has finished.
 Await `store.ready` before namespace migrations that must preserve saved fields;
 it resolves after successful or failed asynchronous loads.

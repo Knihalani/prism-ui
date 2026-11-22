@@ -31,6 +31,25 @@ function merge(a: any, b: any): any {
   for (const k of Object.keys(b)) out = write(out, [k], plain(b[k]) ? merge(out?.[k], b[k]) : b[k]);
   return out;
 }
+function fillMissing(source: any, destination: any): any {
+  if (destination === undefined) return source;
+  if (!plain(source) || !plain(destination)) return destination;
+  return Object.fromEntries([...new Set([...Object.keys(source), ...Object.keys(destination)])].map(key => [key, fillMissing(source[key], destination[key])]));
+}
+function moveTree(tree: any, from: string, to: string) {
+  const source = read(tree, from.split('.'));
+  if (source === undefined) return tree;
+  const nested = to.startsWith(from + '.'), destination = read(tree, to.split('.'));
+  tree = write(tree, from.split('.'), undefined, true);
+  const parents = from.split('.');
+  while (parents.length > 1) {
+    parents.pop();
+    const value = read(tree, parents);
+    if (!value || typeof value !== 'object' || Object.keys(value).length) break;
+    tree = write(tree, parents, undefined, true);
+  }
+  return write(tree, to.split('.'), fillMissing(source, nested ? destination : read(tree, to.split('.'))));
+}
 function changedPaths(previous: any, next: any, paths: Set<string>, path = '') {
   if (Object.is(previous, next)) return;
   if ((plain(previous) && plain(next)) || (Array.isArray(previous) && Array.isArray(next))) {
@@ -69,6 +88,24 @@ export function createStore({ persist, namespace = '', initial = {} }: { persist
     redo(scope?: string) { travel(future, past, scope); },
     canUndo(scope?: string) { return past.some(step => scope === undefined || step.paths.some(path => within(path, scope))); },
     canRedo(scope?: string) { return future.some(step => scope === undefined || step.paths.some(path => within(path, scope))); },
+    move(from: string, to: string) {
+      if (from === to || ![...from.split('.'), ...to.split('.')].every(safe)) return;
+      const rename = (path: string) => within(path, from) ? to + path.slice(from.length) : path;
+      if (depth) {
+        before = moveTree(before, from, to);
+        const paths = [...changed].map(rename); changed.clear(); paths.forEach(path => changed.add(path));
+      }
+      store.batch(() => {
+        const previous = state; state = moveTree(state, from, to);
+        let moved = previous !== state;
+        for (const step of [...past, ...future]) {
+          const paths = step.paths.map(rename);
+          moved ||= paths.some((path, index) => path !== step.paths[index]);
+          step.paths = [...new Set(paths)]; step.state = moveTree(step.state, from, to);
+        }
+        if (moved) { changed.add(from); changed.add(to); }
+      }, { history: false });
+    },
     apply(patch: Patch, options: WriteOptions = {}) { if (!plain(patch)) return; store.batch(() => {
       for (const [p, v] of Object.entries(plain(patch.set) ? patch.set! : {})) store.set(p, v);
       for (const [p, v] of Object.entries(plain(patch.merge) ? patch.merge! : {})) change(p, merge(store.get(p), clean(v)));

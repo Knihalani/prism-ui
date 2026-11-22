@@ -10,6 +10,21 @@ afterEach(cleanup);
 const registry = createRegistry([runbookDefinition, stepDefinition]);
 const source = '::::runbook{title="Deploy to Fly" id=deploy}\n:::step{title="Install the CLI" id=install}\nRun:\n```bash\n$ fly install\n```\n:::\n:::step{title="Log in"}\nLog in now.\n:::\n::::\n';
 
+test.each(['undo', 'redo'])('stream finalization rewrites checklist %s history to its final id', travel => {
+  const store = createStore(), partial = source.slice(0, -5);
+  const view = render(<Prism scope="history" source={partial} done={false} registry={registry} store={store} />);
+  fireEvent.click(view.getAllByRole('checkbox')[0]); fireEvent.click(view.getAllByRole('checkbox')[1]);
+  if (travel === 'redo') fireEvent.click(view.getByRole('button', { name: 'Undo' }));
+  view.rerender(<Prism scope="history" source={source} registry={registry} store={store} />);
+  expect(store.get('history:runbook:0')).toBeUndefined();
+  if (travel === 'undo') {
+    fireEvent.click(view.getByRole('button', { name: 'Undo' }));
+    expect(view.getAllByRole('checkbox').map(check => check.getAttribute('aria-checked'))).toEqual(['true', 'false']);
+  }
+  act(() => store.redo('deploy'));
+  expect(view.getAllByRole('checkbox').map(check => check.getAttribute('aria-checked'))).toEqual(['true', 'true']);
+});
+
 test('static runbook renders numbered steps, normal code renderer, progress and complete state', () => {
   const view = render(<Prism source={source} registry={registry} />);
   const checks = view.getAllByRole('checkbox');
