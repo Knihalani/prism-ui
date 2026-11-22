@@ -16,6 +16,7 @@ import { previewOptions, previewSource, previewThemes } from './theme-preview-da
 import './theme-preview.css';
 
 const initial = previewOptions(window.location.search);
+const animate = new URLSearchParams(window.location.search).get('animate') === 'true';
 function Preview() {
   const [mode, setMode] = useState<Mode>(initial.mode);
   const [selected, setSelected] = useState(initial.theme);
@@ -25,6 +26,7 @@ function Preview() {
     const params = new URLSearchParams();
     if (selected !== 'all') params.set('theme', selected);
     params.set('mode', mode);
+    if (animate) params.set('animate', 'true');
     if (width) params.set('width', String(width));
     window.history.replaceState(null, '', `${window.location.pathname}?${params}`);
   }, [selected, mode, width]);
@@ -36,11 +38,11 @@ function Preview() {
         <button type="button" onClick={() => setMode(mode === 'light' ? 'dark' : 'light')}>{mode === 'light' ? 'Dark mode' : 'Light mode'}</button>
       </div>
     </header>
-    <p className="preview-intro">One reply. Independent stores. Five theme surfaces. Objects is a placeholder for the next design step.</p>
+    <p className="preview-intro">One reply. Independent stores. Five theme surfaces.</p>
     <div className="preview-grid" data-single={selected !== 'all' ? '' : undefined} style={width ? { '--preview-width': `${width}px` } as CSSProperties : undefined}>
       {previewThemes.filter(({ theme }) => selected === 'all' || theme.name === selected).map(({ theme, description, caption }) => <section className={`preview-example preview-${theme.name}`} key={theme.name} data-preview-theme={theme.name}>
         <div className="preview-label"><h2>{theme.name}</h2><small>{description}</small></div>
-        <div className="preview-stage"><Prism theme={theme} mode={mode} source={previewSource} animate={false} locale="en-US" onAction={action => setLastAction(`${theme.name}: ${action.type}`)} /></div>
+        <div className="preview-stage"><Prism theme={theme} mode={mode} source={previewSource} animate={animate} locale="en-US" onAction={action => setLastAction(`${theme.name}: ${action.type}`)} /></div>
         <p className="preview-caption">{caption}</p>
       </section>)}
     </div>

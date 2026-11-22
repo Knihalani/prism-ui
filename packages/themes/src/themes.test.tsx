@@ -1,5 +1,6 @@
 import '../../react/test/setup';
 import { expect, test } from 'bun:test';
+import type { ReactNode } from 'react';
 import { act, fireEvent, render, within } from '@testing-library/react';
 import { Prism, ThemeScope, host } from '@prism-ui/react';
 import '@prism-ui/components/estimate';
@@ -17,7 +18,66 @@ test('Print and Objects expose named themes and dark tokens', () => {
     expect(theme.dark?.bg).toBeTruthy();
     expect(theme.dark?.text).toBeTruthy();
   }
-  expect('components' in objects).toBe(false);
+  expect('components' in objects).toBe(true);
+});
+
+test('Objects receipt preserves increase, Undo, switch and sent state without feeding when animation is disabled', () => {
+  const actions: { type: string }[] = [];
+  const view = render(<Prism source={source} theme={objects} animate={false} onAction={action => actions.push(action)} />);
+  const ui = within(view.container);
+  expect(view.container.querySelector('[data-objects-receipt]')).not.toBeNull();
+  expect(ui.getByText('RESEARCH SUPPLY CO.')).toBeTruthy();
+  expect(view.container.querySelector('[data-printing]')).toBeNull();
+  fireEvent.click(ui.getByRole('button', { name: 'Increase Seats' }));
+  expect(ui.getByRole('spinbutton', { name: 'Seats' }).getAttribute('aria-valuenow')).toBe('7');
+  fireEvent.click(ui.getByRole('button', { name: 'Undo' }));
+  expect(ui.getByRole('spinbutton', { name: 'Seats' }).getAttribute('aria-valuenow')).toBe('6');
+  fireEvent.click(ui.getByRole('switch', { name: 'Notes' }));
+  fireEvent.click(ui.getByRole('button', { name: 'Print & send estimate ↗' }));
+  expect(actions.at(-1)?.type).toBe('use');
+  expect(view.container.querySelector('[data-objects-receipt]')?.getAttribute('data-state')).toBe('sent');
+  expect(ui.getByRole('button', { name: 'Sent · estimate ✓' }).hasAttribute('disabled')).toBe(true);
+  expect(view.container.querySelector('[data-printing]')).toBeNull();
+  expect(ui.getByRole('status').textContent).toBe('DELIVERED / READY FOR REVIEW');
+});
+
+test('Objects sticky sliders update the stamped leader and choose action', () => {
+  const actions: { type: string; payload: unknown }[] = [];
+  const pick = '```ui:pick\n' + JSON.stringify({ id: 'stationery', criteria: [{ id: 'learning', label: 'Learning' }, { id: 'cost', label: 'Cost' }], options: [{ id: 'concierge', title: 'Concierge', scores: { learning: .9, cost: .5 } }, { id: 'self', title: 'Self-serve', scores: { learning: .6, cost: .9 } }] }) + '\n```';
+  const view = render(<Prism source={pick} theme={objects} animate={false} onAction={action => actions.push(action)} />);
+  const ui = within(view.container);
+  expect(view.container.querySelectorAll('[data-objects-sticky]')).toHaveLength(2);
+  expect(view.container.querySelector('[data-objects-stamp]')?.getAttribute('aria-hidden')).toBe('true');
+  expect(view.container.querySelector('[data-objects-card]')?.textContent).toContain('Self-serve');
+  fireEvent.input(ui.getByRole('slider', { name: 'Learning weight' }), { target: { value: '3' } });
+  fireEvent.input(ui.getByRole('slider', { name: 'Cost weight' }), { target: { value: '0' } });
+  expect(view.container.querySelector('[data-objects-card]')?.textContent).toContain('Concierge');
+  fireEvent.click(ui.getByRole('button', { name: 'Choose Concierge ↗' }));
+  expect(actions.at(-1)).toMatchObject({ type: 'choose', payload: { option: 'concierge' } });
+});
+
+test('Objects feed is triggered only by sending, and finishes without replaying on a sent receipt mount', () => {
+  const view = render(<Prism source={source} theme={objects} onAction={() => {}} />);
+  expect(view.container.querySelector('[data-printing]')).toBeNull();
+  fireEvent.click(within(view.container).getByRole('button', { name: 'Print & send estimate ↗' }));
+  const receipt = view.container.querySelector('[data-objects-receipt]')!;
+  expect(receipt.hasAttribute('data-printing')).toBe(true);
+  fireEvent.animationEnd(receipt);
+  expect(receipt.hasAttribute('data-printing')).toBe(false);
+  const Plain = ({ children }: { children?: ReactNode }) => <section>{children}</section>;
+  view.rerender(<Prism source={source} theme={objects} slots={{ estimate: { root: Plain } }} onAction={() => {}} />);
+  view.rerender(<Prism source={source} theme={objects} onAction={() => {}} />);
+  expect(view.container.querySelector('[data-objects-receipt]')?.getAttribute('data-state')).toBe('sent');
+  expect(view.container.querySelector('[data-printing]')).toBeNull();
+});
+
+test('Objects handles empty and unready receipt and cards', () => {
+  const view = render(<Prism source={'```ui:estimate\n{"id":"empty-object","items":[]}\n```\n\n```ui:pick\n{"id":"waiting-object","criteria":[],"options":[{"id":"one","title":"Waiting"}]}\n```'} theme={objects} animate={false} onAction={() => {}} />);
+  const ui = within(view.container);
+  expect(ui.getByText('Items will appear here')).toBeTruthy();
+  expect(ui.getByRole('button', { name: 'Print & send estimate ↗' }).hasAttribute('disabled')).toBe(true);
+  expect(ui.getByRole('button', { name: 'Choose Waiting ↗' }).hasAttribute('disabled')).toBe(true);
+  expect(view.container.querySelector('[data-objects-stamp]')).toBeNull();
 });
 
 test('Print feedback field preserves its label, edits and submit action', () => {

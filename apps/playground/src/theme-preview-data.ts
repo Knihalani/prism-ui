@@ -6,7 +6,7 @@ export const previewThemes = [
   { theme: refraction, description: 'The original material', caption: 'Opt-in paper, serif display type and soft edges.' },
   { theme: instrument, description: 'Structure, not just skin', caption: 'Estimate has structural slots and a segmented display. Remaining coverage comes next.' },
   { theme: print, description: 'Swiss / financial paper', caption: 'Strict rules, tabular totals and weighted decisions. Structural Print slots, not a color reskin.' },
-  { theme: objects, description: 'Placeholder · tactile objects', caption: 'Token placeholder only. The receipt and sticky-note redesign comes in a later step.' },
+  { theme: objects, description: 'Tactile stationery', caption: 'A receipt, sticky notes and ruled cards. Small paper objects on a warm desk.' },
 ];
 
 export function previewOptions(search: string) {
