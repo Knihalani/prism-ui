@@ -73,6 +73,11 @@ export const componentStrings = {
     "nbsp": "\u00a0"
   },
   "summary": {
+    "title": "Summary",
+    "actionItem": "Action item ",
+    "sent": "Sent",
+    "sendMessage": "Please send these {count} action items: {items}.",
+    "askPointMessage": "Tell me more about this point: {text}",
     "of": " of ",
     "complete": " complete",
     "sendActionItems": "Send action items",
