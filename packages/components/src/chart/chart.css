@@ -1,56 +1,71 @@
-.prism-chart__root {
-  --prism-chart-1: var(--prism-accent, #525252); --prism-chart-2: var(--prism-info); --prism-chart-3: var(--prism-positive); --prism-chart-4: var(--prism-warning);
-  --prism-chart-5: var(--prism-danger); --prism-chart-6: color-mix(in srgb, var(--prism-accent, #525252) 55%, var(--prism-danger));
-  --prism-chart-7: color-mix(in srgb, var(--prism-positive) 55%, var(--prism-info)); --prism-chart-8: color-mix(in srgb, var(--prism-warning) 55%, var(--prism-danger));
-  margin-block: var(--prism-space-5); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-lg); background: var(--prism-surface); color: var(--prism-text); box-shadow: var(--prism-elevation-1); overflow: hidden;
-}
-@scope ([data-prism-theme="dark"]) to ([data-prism-theme]) { :scope .prism-chart__root { --prism-chart-6: color-mix(in srgb, var(--prism-accent, #525252) 65%, var(--prism-danger)); --prism-chart-7: color-mix(in srgb, var(--prism-positive) 65%, var(--prism-info)); } }
-@media (prefers-color-scheme: dark) { @scope ([data-prism-theme="auto"]) to ([data-prism-theme]) { :scope .prism-chart__root { --prism-chart-6: color-mix(in srgb, var(--prism-accent, #525252) 65%, var(--prism-danger)); --prism-chart-7: color-mix(in srgb, var(--prism-positive) 65%, var(--prism-info)); } } }
-.prism-chart__header { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--prism-space-3); padding: var(--prism-space-5) var(--prism-space-5) var(--prism-space-2); }
-.prism-chart__title { margin: 0; font-family: var(--prism-font-body); font-size: var(--prism-text-base); line-height: 1.45; font-weight: var(--prism-weight-semibold); letter-spacing: -.02em; text-wrap: balance; }
-.prism-chart__root[data-mode="answer"] .prism-chart__title { font-size: var(--prism-text-lg); }
-.prism-chart__subtitle { color: var(--prism-text-muted); font-size: var(--prism-text-xs); margin-top: var(--prism-space-1); }
-.prism-chart__actions { display: flex; gap: var(--prism-space-1); }
-:is(.prism-chart__ask, .prism-chart__undo, .prism-chart__legend-item, .prism-chart__pivot) { min-height: 30px; padding: var(--prism-space-1) var(--prism-space-2); border: 1px solid transparent; border-radius: var(--prism-radius-sm); color: var(--prism-text-muted); background: transparent; font-family: var(--prism-font-body); font-size: var(--prism-text-xs); line-height: 1.4; font-weight: var(--prism-weight-medium); cursor: pointer; transition: background var(--prism-motion-fast) var(--prism-motion-ease), opacity var(--prism-motion-fast) var(--prism-motion-ease); }
-.prism-chart__root button:hover:not(:disabled) { background: color-mix(in srgb, var(--prism-text-muted) 8%, transparent); color: var(--prism-text); }
-.prism-chart__root :focus-visible { outline: 2px solid var(--prism-accent, #525252); outline-offset: -2px; }
+.prism-chart__root { container: prism-chart / inline-size; color: var(--prism-chart-text, var(--prism-text)); font-family: var(--prism-chart-font-body, var(--prism-font-body)); min-inline-size: 0; }
+.prism-chart__header { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--prism-chart-space-3, var(--prism-space-3)); padding: var(--prism-chart-space-5, var(--prism-space-5)) var(--prism-chart-space-5, var(--prism-space-5)) var(--prism-chart-space-2, var(--prism-space-2)); }
+.prism-chart__title { margin: 0; font-family: var(--prism-chart-font-body, var(--prism-font-body)); font-size: var(--prism-chart-text-base, var(--prism-text-base)); line-height: 1.45; font-weight: var(--prism-chart-weight-semibold, var(--prism-weight-semibold)); letter-spacing: -.02em; text-wrap: balance; }
+.prism-chart__root[data-mode="answer"] .prism-chart__title { font-size: var(--prism-chart-text-lg, var(--prism-text-lg)); }
+.prism-chart__subtitle { color: var(--prism-chart-text-muted, var(--prism-text-muted)); font-size: var(--prism-chart-text-xs, var(--prism-text-xs)); margin-top: var(--prism-chart-space-1, var(--prism-space-1)); }
+.prism-chart__actions { display: flex; gap: var(--prism-chart-space-1, var(--prism-space-1)); }
+:is(.prism-chart__ask, .prism-chart__undo, .prism-chart__legend-item, .prism-chart__pivot) { min-height: 30px; padding: var(--prism-chart-space-1, var(--prism-space-1)) var(--prism-chart-space-2, var(--prism-space-2)); border: 1px solid transparent; border-radius: var(--prism-chart-radius-sm, var(--prism-radius-sm)); color: var(--prism-chart-text-muted, var(--prism-text-muted)); background: transparent; font-family: var(--prism-chart-font-body, var(--prism-font-body)); font-size: var(--prism-chart-text-xs, var(--prism-text-xs)); line-height: 1.4; font-weight: var(--prism-chart-weight-medium, var(--prism-weight-medium)); cursor: pointer; transition: background var(--prism-chart-motion-fast, var(--prism-motion-fast)) var(--prism-chart-motion-ease, var(--prism-motion-ease)), opacity var(--prism-chart-motion-fast, var(--prism-motion-fast)) var(--prism-chart-motion-ease, var(--prism-motion-ease)); }
+.prism-chart__root button:hover:not(:disabled) { background: color-mix(in srgb, var(--prism-chart-text-muted, var(--prism-text-muted)) 8%, transparent); color: var(--prism-chart-text, var(--prism-text)); }
+.prism-chart__root :focus-visible { outline: 2px solid var(--prism-chart-accent, var(--prism-accent, var(--prism-chart-text, var(--prism-text)))); outline-offset: -2px; }
 .prism-chart__root :disabled { opacity: .4; cursor: not-allowed; }
-.prism-chart__pivots { display: flex; flex-wrap: wrap; gap: var(--prism-space-2); padding: var(--prism-space-2) var(--prism-space-5); }
-.prism-chart__pivot { border-color: var(--prism-border); border-radius: var(--prism-radius-lg); }
-.prism-chart__pivot[aria-pressed="true"] { color: var(--prism-accent-text, var(--prism-accent, #525252)); border-color: var(--prism-accent, #525252); background: color-mix(in srgb, var(--prism-accent, #525252) 8%, transparent); }
+.prism-chart__pivots { display: flex; flex-wrap: wrap; gap: var(--prism-chart-space-2, var(--prism-space-2)); padding: var(--prism-chart-space-2, var(--prism-space-2)) var(--prism-chart-space-5, var(--prism-space-5)); }
+.prism-chart__pivot { border-color: var(--prism-chart-border, var(--prism-border)); border-radius: var(--prism-chart-radius-lg, var(--prism-radius-lg)); }
+.prism-chart__pivot[aria-pressed="true"] { color: var(--prism-chart-accent-text, var(--prism-accent-text, var(--prism-chart-accent, var(--prism-accent, var(--prism-chart-text, var(--prism-text)))))); border-color: var(--prism-chart-accent, var(--prism-accent, var(--prism-chart-text, var(--prism-text)))); background: color-mix(in srgb, var(--prism-chart-accent, var(--prism-accent, var(--prism-chart-text, var(--prism-text)))) 8%, transparent); }
 .prism-chart__svg { display: block; overflow: visible; touch-action: pan-y; }
-.prism-chart__grid { stroke: color-mix(in srgb, var(--prism-border) 50%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.prism-chart__tick { fill: var(--prism-text-muted); font-family: var(--prism-font-body); font-size: var(--prism-text-xs); font-weight: var(--prism-weight-regular); font-variant-numeric: tabular-nums; transition: x var(--prism-motion-base) var(--prism-motion-ease); }
-.prism-chart__line { stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; animation: prism-chart-draw var(--prism-motion-slow) var(--prism-motion-ease) both; }
-.prism-chart__line, .prism-chart__area, .prism-chart__bar, .prism-chart__slice { transition: opacity var(--prism-motion-base) var(--prism-motion-ease); }
-.prism-chart__plot { animation: prism-chart-fade var(--prism-motion-base) var(--prism-motion-ease) both; }
-.prism-chart__point { cursor: pointer; stroke: var(--prism-surface); stroke-width: 1.5; transition: cx var(--prism-motion-base) var(--prism-motion-ease); }
-.prism-chart__bar { transform-box: fill-box; transform-origin: center bottom; animation: prism-chart-grow var(--prism-motion-slow) var(--prism-motion-ease) both; cursor: pointer; }
-.prism-chart__slice { stroke: var(--prism-surface); stroke-width: 2; cursor: pointer; }
+.prism-chart__grid { stroke: color-mix(in srgb, var(--prism-chart-border, var(--prism-border)) 50%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.prism-chart__tick { fill: var(--prism-chart-text-muted, var(--prism-text-muted)); font-family: var(--prism-chart-font-body, var(--prism-font-body)); font-size: var(--prism-chart-text-xs, var(--prism-text-xs)); font-weight: var(--prism-chart-weight-regular, var(--prism-weight-regular)); font-variant-numeric: tabular-nums; transition: x var(--prism-chart-motion-base, var(--prism-motion-base)) var(--prism-chart-motion-ease, var(--prism-motion-ease)); }
+.prism-chart__line { stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; animation: prism-chart-draw var(--prism-chart-motion-slow, var(--prism-motion-slow)) var(--prism-chart-motion-ease, var(--prism-motion-ease)) both; }
+.prism-chart__line, .prism-chart__area, .prism-chart__bar, .prism-chart__slice { transition: opacity var(--prism-chart-motion-base, var(--prism-motion-base)) var(--prism-chart-motion-ease, var(--prism-motion-ease)); }
+.prism-chart__plot { animation: prism-chart-fade var(--prism-chart-motion-base, var(--prism-motion-base)) var(--prism-chart-motion-ease, var(--prism-motion-ease)) both; }
+.prism-chart__point { cursor: pointer; stroke: var(--prism-chart-surface, var(--prism-surface)); stroke-width: 1.5; transition: cx var(--prism-chart-motion-base, var(--prism-motion-base)) var(--prism-chart-motion-ease, var(--prism-motion-ease)); }
+.prism-chart__bar { transform-box: fill-box; transform-origin: center bottom; animation: prism-chart-grow var(--prism-chart-motion-slow, var(--prism-motion-slow)) var(--prism-chart-motion-ease, var(--prism-motion-ease)) both; cursor: pointer; }
+.prism-chart__slice { stroke: var(--prism-chart-surface, var(--prism-surface)); stroke-width: 2; cursor: pointer; }
 .prism-chart__slice:hover, .prism-chart__bar:hover { opacity: .8; }
-.prism-chart__leader { fill: none; stroke: var(--prism-border); stroke-width: 1; }
-.prism-chart__total { fill: var(--prism-text); font-family: var(--prism-font-body); font-size: var(--prism-text-xl); font-weight: var(--prism-weight-semibold); font-variant-numeric: tabular-nums; }
-.prism-chart__total-caption { fill: var(--prism-text-muted); font-family: var(--prism-font-body); font-size: var(--prism-text-xs); font-weight: var(--prism-weight-regular); }
-.prism-chart__slice-value { fill: var(--prism-text-muted); opacity: .8; font-variant-numeric: tabular-nums; }
-.prism-chart__marker, .prism-chart__crosshair { stroke: var(--prism-accent, #525252); stroke-width: 1; stroke-dasharray: 3 4; opacity: .6; }
-.prism-chart__pill { fill: color-mix(in srgb, var(--prism-accent, #525252) 8%, transparent); stroke: var(--prism-border); }
-.prism-chart__annotation-label { fill: var(--prism-accent, #525252); font-family: var(--prism-font-body); font-size: var(--prism-text-xs); font-weight: var(--prism-weight-medium); }
-.prism-chart__highlight { stroke: var(--prism-surface); stroke-width: 2; filter: drop-shadow(0 0 3px var(--prism-border)); }
-.prism-chart__tooltip { position: absolute; z-index: 2; min-width: 140px; max-width: 240px; padding: var(--prism-space-3); background: var(--prism-surface-raised); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-md); box-shadow: var(--prism-elevation-2); pointer-events: none; font-size: var(--prism-text-xs); }
-.prism-chart__tooltip-title { font-weight: var(--prism-weight-semibold); margin-bottom: var(--prism-space-2); }
-.prism-chart__tooltip-annotation { color: var(--prism-accent-text, var(--prism-accent, #525252)); margin-bottom: var(--prism-space-2); }
-.prism-chart__tooltip-row { display: flex; justify-content: space-between; gap: var(--prism-space-4); color: var(--prism-text-muted); font-variant-numeric: tabular-nums; }
-.prism-chart__tooltip-row[data-state="active"] { color: var(--prism-text); }
-.prism-chart__legend { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--prism-space-2); padding: var(--prism-space-2) var(--prism-space-4) var(--prism-space-4); }
-.prism-chart__legend-item { display: inline-flex; align-items: center; gap: var(--prism-space-2); }
+.prism-chart__leader { fill: none; stroke: var(--prism-chart-border, var(--prism-border)); stroke-width: 1; }
+.prism-chart__total { fill: var(--prism-chart-text, var(--prism-text)); font-family: var(--prism-chart-font-body, var(--prism-font-body)); font-size: var(--prism-chart-text-xl, var(--prism-text-xl)); font-weight: var(--prism-chart-weight-semibold, var(--prism-weight-semibold)); font-variant-numeric: tabular-nums; }
+.prism-chart__total-caption { fill: var(--prism-chart-text-muted, var(--prism-text-muted)); font-family: var(--prism-chart-font-body, var(--prism-font-body)); font-size: var(--prism-chart-text-xs, var(--prism-text-xs)); font-weight: var(--prism-chart-weight-regular, var(--prism-weight-regular)); }
+.prism-chart__slice-value { fill: var(--prism-chart-text-muted, var(--prism-text-muted)); opacity: .8; font-variant-numeric: tabular-nums; }
+.prism-chart__marker, .prism-chart__crosshair { stroke: var(--prism-chart-accent, var(--prism-accent, var(--prism-chart-text, var(--prism-text)))); stroke-width: 1; stroke-dasharray: 3 4; opacity: .6; }
+.prism-chart__pill { fill: color-mix(in srgb, var(--prism-chart-accent, var(--prism-accent, var(--prism-chart-text, var(--prism-text)))) 8%, transparent); stroke: var(--prism-chart-border, var(--prism-border)); }
+.prism-chart__annotation-label { fill: var(--prism-chart-accent, var(--prism-accent, var(--prism-chart-text, var(--prism-text)))); font-family: var(--prism-chart-font-body, var(--prism-font-body)); font-size: var(--prism-chart-text-xs, var(--prism-text-xs)); font-weight: var(--prism-chart-weight-medium, var(--prism-weight-medium)); }
+.prism-chart__highlight { stroke: var(--prism-chart-surface, var(--prism-surface)); stroke-width: 2; filter: drop-shadow(0 0 3px var(--prism-chart-border, var(--prism-border))); }
+.prism-chart__tooltip { position: absolute; z-index: 2; min-width: 140px; max-width: 240px; padding: var(--prism-chart-space-3, var(--prism-space-3)); background: var(--prism-chart-surface-raised, var(--prism-surface-raised)); border: 1px solid var(--prism-chart-border, var(--prism-border)); border-radius: var(--prism-chart-radius-md, var(--prism-radius-md)); box-shadow: var(--prism-chart-elevation-2, var(--prism-elevation-2)); pointer-events: none; font-size: var(--prism-chart-text-xs, var(--prism-text-xs)); }
+.prism-chart__tooltip-title { font-weight: var(--prism-chart-weight-semibold, var(--prism-weight-semibold)); margin-bottom: var(--prism-chart-space-2, var(--prism-space-2)); }
+.prism-chart__tooltip-annotation { color: var(--prism-chart-accent-text, var(--prism-accent-text, var(--prism-chart-accent, var(--prism-accent, var(--prism-chart-text, var(--prism-text)))))); margin-bottom: var(--prism-chart-space-2, var(--prism-space-2)); }
+.prism-chart__tooltip-row { display: flex; justify-content: space-between; gap: var(--prism-chart-space-4, var(--prism-space-4)); color: var(--prism-chart-text-muted, var(--prism-text-muted)); font-variant-numeric: tabular-nums; }
+.prism-chart__tooltip-row[data-state="active"] { color: var(--prism-chart-text, var(--prism-text)); }
+.prism-chart__legend { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--prism-chart-space-2, var(--prism-space-2)); padding: var(--prism-chart-space-2, var(--prism-space-2)) var(--prism-chart-space-4, var(--prism-space-4)) var(--prism-chart-space-4, var(--prism-space-4)); }
+.prism-chart__legend-item { display: inline-flex; align-items: center; gap: var(--prism-chart-space-2, var(--prism-space-2)); }
 .prism-chart__legend-item[aria-pressed="false"] { opacity: .4; text-decoration: line-through; }
-.prism-chart__swatch { display: inline-block; width: 8px; height: 8px; border-radius: var(--prism-radius-sm); }
+.prism-chart__swatch { display: inline-block; width: 8px; height: 8px; border-radius: var(--prism-chart-radius-sm, var(--prism-radius-sm)); }
 .prism-chart__summary, .prism-chart__status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.prism-chart__skeleton { fill: color-mix(in srgb, var(--prism-text-muted) 8%, transparent); animation: prism-chart-shimmer calc(var(--prism-motion-slow) * 3) var(--prism-motion-ease) infinite alternate; }
-.prism-chart__empty { position: absolute; inset: 45% 0 auto; text-align: center; color: var(--prism-text-muted); font-size: var(--prism-text-sm); pointer-events: none; }
+.prism-chart__skeleton { fill: color-mix(in srgb, var(--prism-chart-text-muted, var(--prism-text-muted)) 8%, transparent); animation: prism-chart-shimmer calc(var(--prism-chart-motion-slow, var(--prism-motion-slow)) * 3) var(--prism-chart-motion-ease, var(--prism-motion-ease)) infinite alternate; }
+.prism-chart__empty { position: absolute; inset: 45% 0 auto; text-align: center; color: var(--prism-chart-text-muted, var(--prism-text-muted)); font-size: var(--prism-chart-text-sm, var(--prism-text-sm)); pointer-events: none; }
 @keyframes prism-chart-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes prism-chart-grow { from { transform: scaleY(.02); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
 @keyframes prism-chart-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes prism-chart-shimmer { from { opacity: .3; } to { opacity: .8; } }
 [data-animate="false"] .prism-chart__root *, .prism-chart__root[data-animate="false"] * { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-chart__root * { animation: none; transition: none; } }
+
+.prism-chart__header { padding: 0 0 var(--prism-chart-space-2, var(--prism-space-2)); }
+.prism-chart__heading { min-inline-size: 0; overflow-wrap: anywhere; }
+.prism-chart__actions { flex: none; }
+.prism-chart__root[data-mode="answer"] .prism-chart__title { font-family: var(--prism-chart-font-display, var(--prism-font-display)); font-weight: var(--prism-chart-weight-medium, var(--prism-weight-medium)); }
+.prism-chart__pivots { padding: var(--prism-chart-space-2, var(--prism-space-2)) 0; gap: var(--prism-chart-space-1, var(--prism-space-1)); }
+.prism-chart__pivot { max-inline-size: 100%; overflow-wrap: anywhere; border: 0; border-radius: var(--prism-chart-radius-pill, var(--prism-radius-pill)); }
+.prism-chart__viewport { position: relative; min-inline-size: 0; }
+.prism-chart__svg { inline-size: 100%; max-inline-size: 100%; }
+.prism-chart__icon { display: inline-flex; inline-size: 1em; block-size: 1em; }
+.prism-chart__icon svg { inline-size: 100%; block-size: 100%; }
+.prism-chart__tooltip { box-sizing: border-box; inline-size: min(16em, 100%); min-inline-size: 0; max-inline-size: 100%; max-block-size: 100%; overflow: hidden; inset-block-start: var(--prism-chart-space-2, var(--prism-space-2)); left: clamp(0px, var(--prism-chart-tooltip-x), max(0px, calc(100% - 16em))); padding: var(--prism-chart-space-2, var(--prism-space-2)); overflow-wrap: anywhere; }
+.prism-chart__tooltip-row { gap: var(--prism-chart-space-2, var(--prism-space-2)); }
+.prism-chart__tooltip-value { color: var(--prism-chart-text, var(--prism-text)); }
+.prism-chart__legend { justify-content: flex-start; padding: var(--prism-chart-space-1, var(--prism-space-1)) 0; gap: var(--prism-chart-space-1, var(--prism-space-1)); }
+.prism-chart__legend-item { min-inline-size: 0; max-inline-size: 100%; }
+.prism-chart__legend-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prism-chart__swatch { flex: none; }
+.prism-chart__error { position: absolute; inset: 45% 0 auto; text-align: center; color: var(--prism-chart-danger, var(--prism-danger)); font-size: var(--prism-chart-text-sm, var(--prism-text-sm)); }
+@container prism-chart (max-width: 320px) { .prism-chart__legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; } .prism-chart__legend-item { padding-inline: var(--prism-chart-space-1, var(--prism-space-1)); min-block-size: 26px; } .prism-chart__pivot { padding-block: var(--prism-chart-space-1, var(--prism-space-1)); } .prism-chart__tick { font-size: var(--prism-chart-text-xs, var(--prism-text-xs)); } }
+@media (hover: hover) { .prism-chart__root:not(:hover, :focus-within) .prism-chart__actions { opacity: 0; } }
+@media (hover: none) { .prism-chart__actions { opacity: 1; } }

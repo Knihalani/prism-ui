@@ -165,13 +165,14 @@ test('one ResizeObserver updates viewBox and disconnects on unmount', () => {
   } finally { globalThis.ResizeObserver = previous; }
 });
 
-test('tooltip flips away from upcoming points on the right half of the chart', () => {
+test('tooltip exposes its point anchor for container-clamped CSS placement', () => {
   const view = render(<Prism registry={registry} source={source(base)} />);
   const svg = view.getByRole('img');
   fireEvent.keyDown(svg, { key: 'Home' });
-  expect(view.getByRole('tooltip').style.transform).toBe('translateX(12px)');
+  const first = parseFloat(view.getByRole('tooltip').style.getPropertyValue('--prism-chart-tooltip-x'));
+  expect(first).toBeGreaterThan(0);
   fireEvent.keyDown(svg, { key: 'End' });
-  expect(view.getByRole('tooltip').style.transform).toBe('translateX(calc(-100% - 12px))');
+  expect(parseFloat(view.getByRole('tooltip').style.getPropertyValue('--prism-chart-tooltip-x'))).toBeGreaterThan(first);
 });
 
 test('pie center names the total series and labels include formatted values', () => {

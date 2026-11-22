@@ -1,115 +1,80 @@
-import { componentStrings } from '../strings';
-import { createElement, memo, useEffect, useId, useMemo, useRef, useState, type ElementType, type HTMLAttributes, type KeyboardEvent, type PointerEvent } from 'react';
-import { useStrings, Icon, PrismPart, defineComponent, registerComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
-import { nearestX, pointX, pointY } from '../lib/chart';
-import { useFrame } from '../frame';
-import { chartSchema, seriesColor, useChart, type ChartModel, type ChartProps } from './use-chart';
-import { streamProps } from './stream-props';
+import { memo, useMemo, type CSSProperties, type ElementType, type HTMLAttributes } from 'react';
+import { Icon, PrismPart, defineComponent, registerComponent, usePart, usePrism, type PrismComponentProps } from '@prism-ui/react';
+import { pointX, pointY } from '../lib/chart';
+import { interpolate } from '../interpolate';
+import { chartSchema, chartStrings, seriesColor, useChart, type ChartModel, type ChartProps, type ChartSeries, type ChartPoint } from './use-chart';
 
 export { chartSchema, useChart } from './use-chart';
-export type { ChartProps, ChartSeries, ChartType, ChartPivot, ChartAnnotation, ChartModel, ChartSelectPayload, ChartPivotPayload } from './use-chart';
-interface ElementProps extends HTMLAttributes<HTMLElement> { as?: ElementType; [key: string]: any }
-function Element({ as = 'div', ...props }: ElementProps) { return createElement(as, props); }
-function Part({ part, state, style, ...props }: ElementProps & { part: string; state?: string }) {
-  const attrs = usePart('chart', part, state), View = useSlot('chart', part, Element);
-  return <View {...attrs} {...props} style={{ ...style, ...attrs.style }} />;
+export type { ChartProps, ChartSeries, ChartPoint, ChartType, ChartPivot, ChartAnnotation, ChartModel, ChartSelectPayload, ChartPivotPayload } from './use-chart';
+export const chartParts = ['actions','annotation','annotation-label','area','ask','bar','crosshair','empty','error','grid','header','heading','highlight','leader','legend','legend-item','legend-label','line','marker','pill','pivot','pivots','plot','point','root','skeleton','slice','slice-value','status','subtitle','summary','svg','swatch','tick','title','tooltip','tooltip-annotation','tooltip-row','tooltip-title','tooltip-label','tooltip-value','total','total-caption','undo','viewport','clip','clip-rect','defs','gradient','gradient-stop','axis-row','pie-plot','pie-label','layer','point-title','svg-title','description','icon','data-table','caption','table-head','table-body','table-row','column-heading','row-heading','cell'] as const;
+export type ChartPart = typeof chartParts[number];
+export type ChartSlotProps = { [Part in ChartPart]: { chart: ChartModel; series?: ChartSeries; point?: ChartPoint } }
+  & { [Part in 'layer' | 'line' | 'area' | 'legend-item' | 'legend-label' | 'swatch' | 'gradient' | 'gradient-stop']: { chart: ChartModel; series: ChartSeries } }
+  & { [Part in 'point' | 'bar' | 'slice' | 'pie-label' | 'leader' | 'slice-value' | 'point-title' | 'highlight' | 'crosshair' | 'tooltip-row' | 'tooltip-label' | 'tooltip-value' | 'cell']: { chart: ChartModel; series: ChartSeries; point: ChartPoint } };
+interface PartProps extends HTMLAttributes<HTMLElement> { part: ChartPart; chart: ChartModel; series?: ChartSeries; point?: ChartPoint; as?: ElementType; state?: string; [key: string]: any }
+function Part({ part, chart, series, point, state, style, ...props }: PartProps) {
+  const attrs = usePart('chart', part, state);
+  return <PrismPart {...attrs} {...props} slotProps={{ chart, series, point }} style={{ ...style, ...attrs.style }} />;
 }
-const Plot = memo(function Plot({ geometry: g, id, pivot }: { geometry: ChartModel['geometry']; id: string; pivot: number }) {
-  return <Part part="plot" as="g" key={pivot}>
-    <defs>{g.layers.map((layer, index) => <linearGradient key={layer.key} id={`${id}-${index}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={layer.color} stopOpacity=".32" /><stop offset="100%" stopColor={layer.color} stopOpacity=".03" /></linearGradient>)}</defs>
+const Plot = memo(function Plot({ chart, geometry: g }: { chart: ChartModel; geometry: ChartModel['geometry'] }) {
+  return <Part part="plot" as="g" chart={chart} key={chart.pivot}>
+    <Part part="defs" as="defs" chart={chart}><Part part="clip" as="clipPath" chart={chart} id={chart.id + '-clip'}><Part part="clip-rect" as="rect" chart={chart} x={g.left} y={g.top} width={g.right - g.left} height={g.bottom - g.top} /></Part>{g.layers.map((layer, index) => <Part part="gradient" as="linearGradient" chart={chart} series={chart.shown[index]} key={layer.key} id={chart.id + '-' + index} x1="0" y1="0" x2="0" y2="1"><Part part="gradient-stop" as="stop" chart={chart} series={chart.shown[index]} offset="0%" stopColor={layer.color} stopOpacity=".26" /><Part part="gradient-stop" as="stop" chart={chart} series={chart.shown[index]} offset="100%" stopColor={layer.color} stopOpacity=".02" /></Part>)}</Part>
     {g.type !== 'pie' && <>
-      {g.ticks.map(tick => <g key={tick.value}><Part part="grid" as="line" x1={g.left} x2={g.right} y1={tick.y} y2={tick.y} /><Part part="tick" as="text" x={g.left - 12} y={tick.y + 4} textAnchor="end">{tick.label}</Part></g>)}
-      {g.labels.map(label => <Part key={label.index} part="tick" as="text" x={g.xs[label.index]} y={g.bottom + 24} textAnchor="middle">{label.text}</Part>)}
+      {g.ticks.map(tick => <Part part="axis-row" as="g" chart={chart} key={tick.value}><Part part="grid" as="line" chart={chart} x1={g.left} x2={g.right} y1={tick.y} y2={tick.y} /><Part part="tick" as="text" chart={chart} x={g.left - 10} y={tick.y + 4} textAnchor="end">{tick.label}</Part></Part>)}
+      {g.labels.map(label => <Part key={label.index} part="tick" as="text" chart={chart} x={g.xs[label.index]} y={g.bottom + 24} textAnchor="middle">{label.text}</Part>)}
     </>}
-    {g.type === 'pie' ? <g transform={`translate(${g.cx},${g.cy})`}>
-      {g.slices.map(slice => <Part key={slice.index} part="slice" as="path" d={slice.d} fill={slice.color} data-index={slice.index} data-series={0}><title>{slice.text}: {slice.value}</title></Part>)}
-      {g.pieLabels.placed.map(label => <g key={label.index} pointerEvents="none"><Part part="leader" as="path" d={`M${label.leader[0].join(',')}L${label.leader[1].join(',')}L${label.x},${label.y + 8}`} /><Part part="tick" as="text" x={label.x} y={label.y + 12} textAnchor={label.anchor}>{label.text}<Part part="slice-value" as="tspan">{` · ${label.formatted}`}</Part></Part></g>)}
-    </g> : g.layers.map((layer, s) => <g key={layer.key}>
-      {g.type === 'bar' ? layer.bars.map((d, index) => <Part key={index} part="bar" as="path" d={d} fill={layer.color} data-index={index} data-series={s} />) : <>
-        {g.type === 'area' && <Part part="area" as="path" d={layer.d} fill={`url(#${id}-${s})`} />}
-        <Part part="line" as="path" d={layer.line} stroke={layer.color} fill="none" pathLength="1" />
-        {layer.points.map((point, index) => point && <Part key={index} part="point" as="circle" cx={pointX(point)} cy={pointY(point)} r="3" fill={layer.color} data-index={index} data-series={s} />)}
+    {g.type === 'pie' ? <Part part="pie-plot" as="g" chart={chart} transform={'translate(' + g.cx + ',' + g.cy + ')'}>
+      {g.slices.filter(slice => slice.value > 0).map(slice => <Part key={slice.index} part="slice" as="path" chart={chart} series={chart.shown[0]} point={chart.point(slice.index)} d={slice.d} fill={slice.color} data-index={slice.index} data-series={0}><Part part="point-title" as="title" chart={chart} series={chart.shown[0]} point={chart.point(slice.index)}>{interpolate(chart.strings.pointLabel, { category: slice.text, value: chart.valueFormat(slice.value) })}</Part></Part>)}
+      {g.pieLabels.placed.map(label => <Part part="pie-label" as="g" chart={chart} series={chart.shown[0]} point={chart.point(label.index)} key={label.index} pointerEvents="none"><Part part="leader" as="path" chart={chart} series={chart.shown[0]} point={chart.point(label.index)} d={'M' + label.leader[0].join(',') + 'L' + label.leader[1].join(',') + 'L' + label.x + ',' + (label.y + 8)} /><Part part="tick" as="text" chart={chart} series={chart.shown[0]} point={chart.point(label.index)} x={label.x} y={label.y + 12} textAnchor={label.anchor}>{label.text}<Part part="slice-value" as="tspan" chart={chart} series={chart.shown[0]} point={chart.point(label.index)}>{interpolate(chart.strings.sliceValue, { value: label.formatted })}</Part></Part></Part>)}
+    </Part> : g.layers.map((layer, s) => <Part part="layer" as="g" chart={chart} series={chart.shown[s]} key={layer.key} clipPath={'url(#' + chart.id + '-clip)'}>
+      {g.type === 'bar' ? layer.bars.map((d, index) => <Part key={index} part="bar" as="path" chart={chart} series={chart.shown[s]} point={chart.point(index, chart.shown[s])} d={d} fill={layer.color} data-index={index} data-series={s} />) : <>
+        {g.type === 'area' && <Part part="area" as="path" chart={chart} series={chart.shown[s]} d={layer.d} fill={'url(#' + chart.id + '-' + s + ')'} />}
+        <Part part="line" as="path" chart={chart} series={chart.shown[s]} d={layer.line} stroke={layer.color} fill="none" pathLength="1" />
+        {layer.points.map((point, index) => point && <Part key={index} part="point" as="circle" chart={chart} series={chart.shown[s]} point={chart.point(index, chart.shown[s])} cx={pointX(point)} cy={pointY(point)} r="3" fill={layer.color} data-index={index} data-series={s} />)}
       </>}
-    </g>)}
-    {g.type !== 'pie' && g.annotations.map((annotation, index) => <Part key={index} part="annotation" as="g" pointerEvents="none">
-      <Part part="marker" as="line" x1={g.xs[annotation.index]} x2={g.xs[annotation.index]} y1={annotation.y + annotation.h} y2={g.bottom} />
-      <Part part="pill" as="rect" x={annotation.x} y={annotation.y} width={annotation.w} height={annotation.h} rx="6" />
-      <Part part="annotation-label" as="text" x={annotation.x + 8} y={annotation.y + 15}>{annotation.label}</Part>
+    </Part>)}
+    {g.type !== 'pie' && g.annotations.map((annotation, index) => <Part key={index} part="annotation" as="g" chart={chart} point={chart.point(annotation.index)} pointerEvents="none">
+      <Part part="marker" as="line" chart={chart} x1={g.xs[annotation.index]} x2={g.xs[annotation.index]} y1={annotation.y + annotation.h} y2={g.bottom} />
+      <Part part="pill" as="rect" chart={chart} x={annotation.x} y={annotation.y} width={annotation.w} height={annotation.h} rx="4" />
+      <Part part="annotation-label" as="text" chart={chart} x={annotation.x + 8} y={annotation.y + 15}>{annotation.label}</Part>
     </Part>)}
   </Part>;
-});
-function ActiveMark({ vm }: { vm: ChartModel }) {
-  const g = vm.geometry, active = vm.active;
-  if (!active || active.index < 0 || !vm.shown.length) return null;
-  const layer = g.layers[active.series];
-  if (vm.type === 'pie') { const slice = g.slices[active.index]; return slice ? <Part part="highlight" as="path" d={slice.d} transform={`translate(${g.cx},${g.cy})`} fill="none" stroke={slice.color} strokeWidth="5" pointerEvents="none" /> : null; }
+}, (a, b) => a.geometry === b.geometry && a.chart.id === b.chart.id && a.chart.pivot === b.chart.pivot && JSON.stringify(a.chart.strings) === JSON.stringify(b.chart.strings));
+function ActiveMark({ chart }: { chart: ChartModel }) {
+  const g = chart.geometry, active = chart.active;
+  if (!active || active.index < 0 || !chart.shown.length) return null;
+  const layer = g.layers[active.series], model = { chart, series: chart.shown[active.series], point: chart.point(active.index, chart.shown[active.series]) };
+  if (chart.type === 'pie') { const slice = g.slices[active.index]; return slice ? <Part part="highlight" as="path" {...model} d={slice.d} transform={'translate(' + g.cx + ',' + g.cy + ')'} fill="none" stroke={slice.color} strokeWidth="5" pointerEvents="none" /> : null; }
   const point = layer?.points[active.index];
-  return <g pointerEvents="none"><Part part="crosshair" as="line" x1={g.xs[active.index]} x2={g.xs[active.index]} y1={g.top} y2={g.bottom} />
-    {vm.type === 'bar' ? <Part part="highlight" as="path" d={layer?.bars[active.index]} fill={layer?.color} /> : point && <Part part="highlight" as="circle" cx={pointX(point)} cy={pointY(point)} r="5" fill={layer.color} />}
-  </g>;
-}
-export function Chart({ props: inputProps, complete }: PrismComponentProps<ChartProps>) {
-  const themeStrings = useStrings('chart', componentStrings.chart);
-  const props = useMemo(() => streamProps(inputProps), [inputProps]);
-  const ctx = usePrism(), container = useRef<HTMLDivElement>(null), [width, setWidth] = useState(640), [duration, setDuration] = useState(180);
-  const id = `prism-chart-${useId().replace(/[^a-zA-Z0-9-]/g, '')}`;
-  useEffect(() => {
-    const element = container.current; if (!element || typeof ResizeObserver === 'undefined') return;
-    const token = getComputedStyle(element).getPropertyValue('--prism-motion-base').trim();
-    const milliseconds = parseFloat(token) * (token.endsWith('ms') ? 1 : 1000);
-    if (Number.isFinite(milliseconds)) setDuration(milliseconds);
-    const observer = new ResizeObserver(entries => { const next = entries[0]?.contentRect.width; if (next && next > 0) setWidth(Math.max(280, Math.round(next))); });
-    observer.observe(element); return () => observer.disconnect();
-  }, []);
-  const modelProps = useMemo(() => ({ ...props, complete }), [props, complete]);
-  const vm = useChart(modelProps, ctx, width, duration), g = vm.geometry;
-  const frame = useFrame({ component: 'chart', title: props.title, undo: true });
-  const onKeyDown = (event: KeyboardEvent<SVGSVGElement>) => {
-    if (!vm.data.length || !vm.shown.length) return;
-    let index = vm.activeIndex, series = vm.activeSeries;
-    if (event.key === 'Home') index = 0;
-    else if (event.key === 'End') index = vm.data.length - 1;
-    else if (event.key === 'ArrowRight' || vm.type === 'pie' && event.key === 'ArrowDown') index = (index + 1) % vm.data.length;
-    else if (event.key === 'ArrowLeft' || vm.type === 'pie' && event.key === 'ArrowUp') index = (index - 1 + vm.data.length) % vm.data.length;
-    else if (event.key === 'ArrowDown') series = (series + 1) % vm.shown.length;
-    else if (event.key === 'ArrowUp') series = (series - 1 + vm.shown.length) % vm.shown.length;
-    else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); vm.selectPoint(index, series); return; }
-    else return;
-    event.preventDefault(); vm.activate({ index, series });
-  };
-  const pointer = (event: PointerEvent<SVGSVGElement> | React.MouseEvent<SVGSVGElement>) => {
-    if (!vm.data.length) return null;
-    const target = (event.target as globalThis.Element).closest?.('[data-index]');
-    if (target) return { index: Number(target.getAttribute('data-index')), series: Number(target.getAttribute('data-series') ?? 0) };
-    if (vm.type === 'pie') return null;
-    const rect = event.currentTarget.getBoundingClientRect(), x = (event.clientX - rect.left) * g.width / (rect.width || g.width);
-    if (x < g.left || x > g.right) return null;
-    return { index: nearestX(g.xs, x), series: vm.activeSeries };
-  };
-  const active = vm.active && vm.active.index >= 0 ? vm.active : null;
-  const tooltipX = active && vm.type !== 'pie' ? g.xs[active.index] / width * 100 : 55;
-  return <Part part="root" state={complete ? 'done' : 'streaming'} role="figure" aria-labelledby={`${id}-title`} onKeyDown={frame.rootProps.onKeyDown} data-animate={ctx.animate ? undefined : 'false'} data-mode={vm.answer ? 'answer' : 'chart'}>
-    <Part part="header"><div><Part part="title" as="h3" id={`${id}-title`}>{props.insight ?? props.title ?? 'Chart'}</Part>{props.insight && props.title && <Part part="subtitle">{props.title}</Part>}{props.subtitle && <Part part="subtitle">{props.subtitle}</Part>}</div>
-      <Part part="actions"><Part part="ask" as="button" type="button" aria-label={themeStrings.askAboutThisChart} onClick={frame.onAsk}><Icon name="ask" /></Part><Part part="undo" as="button" type="button" aria-label={themeStrings.undoChartChange} disabled={!frame.canUndo} onClick={frame.onUndo}><Icon name="undo" /></Part></Part>
-    </Part>
-    {!!props.pivots?.length && <Part part="pivots" role="group" aria-label={themeStrings.chartViews}>{props.pivots.map((pivot, index) => <Part key={index} part="pivot" as="button" type="button" aria-pressed={vm.pivot === index} onClick={() => vm.choosePivot(index)}>{pivot.label}</Part>)}</Part>}
-    <PrismPart as="div" ref={container} {...usePart('chart', 'viewport')} style={{ position: 'relative', height: g.height, ...ctx.styles.chart?.viewport }}>
-      <PrismPart as="svg" {...usePart('chart', 'svg')} width="100%" height={g.height} viewBox={`0 0 ${width} ${g.height}`} data-y-domain={g.hasValues ? g.domain.join(',') : undefined} data-y-display-domain={g.hasValues ? g.displayDomain.join(',') : undefined} role="img" aria-label={`${props.title ?? 'Chart'}. Use arrow keys to explore; Enter selects a point.`} tabIndex={0} onKeyDown={onKeyDown} onFocus={() => { if (!vm.active && vm.data.length) vm.activate({ index: vm.activeIndex, series: 0 }); }} onPointerMove={event => { const next = pointer(event); if (next && (next.index !== vm.active?.index || next.series !== vm.active?.series)) vm.activate(next); }} onPointerLeave={() => { if (document.activeElement !== container.current?.querySelector('svg')) vm.activate(null); }} onClick={event => { const next = pointer(event); if (next) { vm.activate(next); vm.selectPoint(next.index, next.series); } }}>
-        <title>{props.title ?? props.insight ?? 'Chart'}</title><desc>{props.subtitle ?? props.yLabel ?? 'Interactive chart. A data table follows for screen readers.'}</desc>
-        {g.hasValues && <><Plot geometry={g} id={id} pivot={vm.pivot} /><ActiveMark vm={vm} /></>}
-        {vm.type === 'pie' && <><Part part="total" as="text" x={g.cx} y={g.cy - 2} textAnchor="middle">{vm.valueFormat(g.total)}</Part><Part part="total-caption" as="text" x={g.cx} y={g.cy + 18} textAnchor="middle">{vm.shown[0]?.label ?? 'Total'}</Part></>}
-        {props.yLabel && vm.type !== 'pie' && <Part part="tick" as="text" x={g.left} y={14}>{props.yLabel}</Part>}
-        {!g.hasValues && <><Part part="skeleton" as="rect" x={g.left} y={g.top} width={g.right - g.left} height={g.bottom - g.top} rx="8" />{[0, .5, 1].map(position => <Part key={position} part="grid" as="line" x1={g.left} x2={g.right} y1={g.top + (g.bottom - g.top) * position} y2={g.top + (g.bottom - g.top) * position} />)}</>}
-      </PrismPart>
-      {active && <Part part="tooltip" role="tooltip" style={{ left: `${tooltipX}%`, top: 42, transform: tooltipX > 50 ? 'translateX(calc(-100% - 12px))' : 'translateX(12px)' }}><Part part="tooltip-title">{String(vm.data[active.index][vm.x] ?? active.index + 1)}</Part>{vm.type === 'pie' && props.annotations?.filter(annotation => String(annotation.x) === String(vm.data[active.index][vm.x])).map((annotation, index) => <Part key={index} part="tooltip-annotation">{annotation.label}</Part>)}{vm.shown.map((series, index) => <Part key={series.key} part="tooltip-row" state={index === active.series ? 'active' : undefined}><span>{series.label}</span><strong>{vm.valueFormat(vm.data[active.index][series.key])}</strong></Part>)}</Part>}
-      {!g.hasValues && <Part part="empty">{complete ? themeStrings.noChartData : themeStrings.loadingChart}</Part>}
-    </PrismPart>
-    {props.legend !== false && <Part part="legend" aria-label={themeStrings.series}>{vm.series.map((series, index) => <Part key={series.key} part="legend-item" as="button" type="button" aria-pressed={vm.shown.some(item => item.key === series.key)} aria-label={`Toggle ${series.label}`} onClick={() => vm.toggleSeries(series.key)} onKeyDown={(event: KeyboardEvent) => { if (event.key === 'Enter') { event.preventDefault(); vm.toggleSeries(series.key); } }}><Part part="swatch" as="span" style={{ background: seriesColor(series, index) }} />{series.label}</Part>)}</Part>}
-    <Part part="summary"><table><caption>{props.title ?? 'Chart'} {themeStrings.data}</caption><thead><tr><th scope="col">{vm.x}</th>{vm.series.map(series => <th key={series.key} scope="col">{series.label}</th>)}</tr></thead><tbody>{vm.data.map((row, index) => <tr key={index}><th scope="row">{String(row[vm.x] ?? index + 1)}</th>{vm.series.map(series => <td key={series.key}>{vm.valueFormat(row[series.key])}</td>)}</tr>)}</tbody></table></Part>
-    <Part part="status" role="status" aria-live="polite">{vm.announcement}</Part>
+  return <Part part="layer" as="g" {...model} pointerEvents="none" clipPath={'url(#' + chart.id + '-clip)'}>{chart.interaction && <Part part="crosshair" as="line" {...model} x1={g.xs[active.index]} x2={g.xs[active.index]} y1={g.top} y2={g.bottom} />}
+    {chart.type === 'bar' ? <Part part="highlight" as="path" {...model} d={layer?.bars[active.index]} fill={layer?.color} /> : point && <Part part="highlight" as="circle" {...model} cx={pointX(point)} cy={pointY(point)} r="5" fill={layer.color} />}
   </Part>;
 }
-export const chartDefinition = defineComponent({ name: 'chart', parts: ["actions","annotation","annotation-label","area","ask","bar","crosshair","empty","grid","header","highlight","leader","legend","legend-item","line","marker","pill","pivot","pivots","plot","point","root","skeleton","slice","slice-value","status","subtitle","summary","svg","swatch","tick","title","tooltip","tooltip-annotation","tooltip-row","tooltip-title","total","total-caption","undo","viewport"], strings: componentStrings.chart, schema: chartSchema, component: Chart, syntax: 'fence',
+function ChartIcon({ chart, name }: { chart: ChartModel; name: 'ask' | 'undo' }) { return <Part part="icon" as="span" chart={chart}><Icon name={name} /></Part>; }
+export function Chart({ props: rawProps, complete }: PrismComponentProps<ChartProps>) {
+  const input = useMemo(() => ({ ...rawProps, complete }), [rawProps, complete]), chart = useChart(input, usePrism()), { geometry: g, props, frame, strings, id } = chart, active = chart.tooltip, viewport = usePart('chart', 'viewport');
+  return <Part part="root" chart={chart} {...chart.presentation} state={frame.rootProps['data-state']} role="figure" aria-labelledby={id + '-title'} onKeyDown={frame.rootProps.onKeyDown} data-animate={chart.animate ? undefined : 'false'} data-mode={chart.answer ? 'answer' : 'chart'} data-prism-flash={chart.flashing ? '' : undefined}>
+    <Part part="header" chart={chart}><Part part="heading" chart={chart}><Part part="title" as="h3" chart={chart} id={id + '-title'}>{chart.heading}</Part>{props.insight && props.title && <Part part="subtitle" chart={chart}>{props.title}</Part>}{props.subtitle && <Part part="subtitle" chart={chart}>{props.subtitle}</Part>}</Part>
+      <Part part="actions" chart={chart}><Part part="ask" as="button" chart={chart} type="button" aria-label={strings.askAboutThisChart} onClick={chart.onAsk}><ChartIcon name="ask" chart={chart} /></Part><Part part="undo" as="button" chart={chart} type="button" aria-label={strings.undoChartChange} disabled={!frame.canUndo} onClick={frame.onUndo}><ChartIcon name="undo" chart={chart} /></Part></Part>
+    </Part>
+    {!!props.pivots?.length && <Part part="pivots" chart={chart} role="group" aria-label={strings.chartViews}>{props.pivots.map((pivot, index) => <Part key={index} part="pivot" as="button" chart={chart} type="button" aria-pressed={chart.pivot === index} onClick={() => chart.choosePivot(index)}>{pivot.label}</Part>)}</Part>}
+    <PrismPart as="div" ref={chart.container} {...viewport} slotProps={{ chart }} style={{ height: g.height, ...viewport.style }}>
+      <PrismPart as="svg" {...usePart('chart', 'svg')} slotProps={{ chart }} width="100%" height={g.height} viewBox={'0 0 ' + chart.width + ' ' + g.height} data-y-domain={g.hasValues ? g.domain.join(',') : undefined} data-y-display-domain={g.hasValues ? g.displayDomain.join(',') : undefined} role="img" aria-label={interpolate(strings.instructions, { title: chart.title })} tabIndex={0} onKeyDown={chart.onKeyDown} onFocus={chart.onFocus} onPointerMove={chart.onPointerMove} onPointerLeave={chart.onPointerLeave} onClick={chart.onClick}>
+        <Part part="svg-title" as="title" chart={chart}>{chart.title}</Part><Part part="description" as="desc" chart={chart}>{props.subtitle ?? props.yLabel ?? strings.description}</Part>
+        {g.hasValues && <><Plot geometry={g} chart={chart} /><ActiveMark chart={chart} /></>}
+        {chart.type === 'pie' && <><Part part="total" as="text" chart={chart} x={g.cx} y={g.cy - 2} textAnchor="middle">{chart.valueFormat(g.total)}</Part><Part part="total-caption" as="text" chart={chart} x={g.cx} y={g.cy + 18} textAnchor="middle">{chart.shown[0]?.label ?? strings.total}</Part></>}
+        {props.yLabel && chart.type !== 'pie' && <Part part="tick" as="text" chart={chart} x={g.left} y={14}>{props.yLabel}</Part>}
+        {!g.hasValues && <><Part part="skeleton" as="rect" chart={chart} data-prism-skeleton="" x={g.left} y={g.top} width={g.right - g.left} height={g.bottom - g.top} rx="4" />{[0, .5, 1].map(position => <Part key={position} part="grid" as="line" chart={chart} x1={g.left} x2={g.right} y1={g.top + (g.bottom - g.top) * position} y2={g.top + (g.bottom - g.top) * position} />)}</>}
+      </PrismPart>
+      {active && <Part part="tooltip" chart={chart} role="tooltip" aria-label={interpolate(strings.tooltipLabel, { category: chart.point(active.index).x as string })} style={{ '--prism-chart-tooltip-x': chart.tooltipX + 'px' } as CSSProperties}><Part part="tooltip-title" chart={chart}>{String(chart.data[active.index][chart.x] ?? active.index + 1)}</Part>{chart.type === 'pie' && props.annotations?.filter(annotation => String(annotation.x) === String(chart.data[active.index][chart.x])).map((annotation, index) => <Part key={index} part="tooltip-annotation" chart={chart}>{annotation.label}</Part>)}{chart.shown.map((series, index) => <Part key={series.key} part="tooltip-row" chart={chart} series={series} point={chart.point(active.index, series)} state={index === active.series ? 'active' : undefined}><Part part="tooltip-label" as="span" chart={chart} series={series} point={chart.point(active.index, series)}>{series.label}</Part><Part part="tooltip-value" as="strong" chart={chart} series={series} point={chart.point(active.index, series)}>{chart.valueFormat(chart.data[active.index][series.key])}</Part></Part>)}</Part>}
+      {!g.hasValues && <Part part={chart.invalid ? 'error' : 'empty'} chart={chart} role={chart.invalid ? 'alert' : undefined}>{chart.invalid ? strings.invalidData : complete ? strings.noChartData : strings.loadingChart}</Part>}
+    </PrismPart>
+    {props.legend !== false && <Part part="legend" chart={chart} role="group" aria-label={strings.series}>{chart.series.map((series, index) => <Part key={series.key} part="legend-item" as="button" chart={chart} series={series} type="button" aria-pressed={chart.shown.some(item => item.key === series.key)} aria-label={interpolate(strings.toggleSeries, { series: series.label! })} onClick={() => chart.toggleSeries(series.key)} onKeyDown={(event: React.KeyboardEvent) => { if (event.key === 'Enter') { event.preventDefault(); chart.toggleSeries(series.key); } }}><Part part="swatch" as="span" chart={chart} series={series} style={{ background: seriesColor(series, index) }} /><Part part="legend-label" as="span" chart={chart} series={series}>{series.label}</Part></Part>)}</Part>}
+    <Part part="summary" chart={chart}><Part part="data-table" as="table" chart={chart}><Part part="caption" as="caption" chart={chart}>{interpolate(strings.dataCaption, { title: chart.title, data: strings.data })}</Part><Part part="table-head" as="thead" chart={chart}><Part part="table-row" as="tr" chart={chart}><Part part="column-heading" as="th" chart={chart} scope="col">{chart.x}</Part>{chart.series.map(series => <Part part="column-heading" as="th" chart={chart} series={series} key={series.key} scope="col">{series.label}</Part>)}</Part></Part><Part part="table-body" as="tbody" chart={chart}>{chart.data.map((row, index) => <Part part="table-row" as="tr" chart={chart} point={chart.point(index)} key={index}><Part part="row-heading" as="th" chart={chart} point={chart.point(index)} scope="row">{String(row[chart.x] ?? index + 1)}</Part>{chart.series.map(series => <Part part="cell" as="td" chart={chart} series={series} point={chart.point(index, series)} key={series.key}>{chart.valueFormat(row[series.key])}</Part>)}</Part>)}</Part></Part></Part>
+    <Part part="status" chart={chart} role="status" aria-live="polite">{chart.announcement}</Part>
+  </Part>;
+}
+export const chartDefinition = defineComponent({ name: 'chart', parts: [...chartParts], strings: chartStrings, schema: chartSchema, component: Chart, syntax: 'fence',
   docs: 'Responsive SVG; insight/annotations/pivots enable Answer mode. Point click/Enter emits select {x: category, series: key, value: number|null}. View chips emit pivot {pivot: zero-based index, label}. Pie: first visible series, rows as slices. Legend keeps one visible. Views support undo.',
   examples: ['```ui:chart\n{"type":"line","title":"Revenue","x":"month","series":[{"key":"revenue","label":"Revenue"}],"data":[{"month":"Jan","revenue":120}],"insight":"Revenue is growing","annotations":[{"x":"Jan","label":"Launch"}],"pivots":[{"label":"Bars","type":"bar"}]}\n```'] });
 registerComponent(chartDefinition);
