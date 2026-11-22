@@ -106,7 +106,7 @@
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
-.prism-artifact__fix { background: var(--prism-accent, #525252); color: var(--prism-surface); padding-inline: var(--prism-space-3); }
+.prism-artifact__fix { background: var(--prism-accent, #525252); color: var(--prism-on-accent); padding-inline: var(--prism-space-3); }
 .prism-artifact__source { background: var(--prism-artifact-inset); }
 .prism-artifact__code {
   margin: 0;
