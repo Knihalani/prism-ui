@@ -11,20 +11,38 @@ const source = '```ui:feedback-test\n{"id":"target"}\n```';
 const View = () => <button>Actual input</button>;
 function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); }
 
-test('opening, editing, submitting and closing inline feedback preserve unrelated undo and redo', () => {
+test('opening and closing inline feedback preserve unrelated undo and redo', () => {
   const store = createStore();
   store.set('budget', 1); store.set('budget', 2); store.undo();
   const view = render(<Prism store={store} renderers={{ 'feedback-test': View }} feedback source={source} />);
   fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
   expect(store.canUndo('target')).toBe(false);
   expect(store.canRedo()).toBe(true);
-  change(view.getByRole('textbox', { name: 'Overall feedback' }), 'Keep this layout');
-  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
   fireEvent.click(view.getByRole('button', { name: 'Close feedback' }));
   expect(store.canUndo('target')).toBe(false);
   expect(store.canRedo()).toBe(true);
   act(() => store.redo());
   expect(store.get('budget')).toBe(2);
+});
+
+test('user feedback saves clear stale store redo so it cannot erase the draft or submission', () => {
+  const store = createStore();
+  store.set('budget', 1); store.set('budget', 2); store.undo();
+  const view = render(<Prism store={store} renderers={{ 'feedback-test': View }} feedback source={source} />);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  expect(store.canRedo()).toBe(true);
+  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+  change(view.getByPlaceholderText('Add a comment…'), 'A saved annotation');
+  fireEvent.click(view.getByRole('button', { name: 'Save' }));
+  change(view.getByRole('textbox', { name: 'Overall feedback' }), 'A saved overall comment');
+  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  expect(store.canRedo()).toBe(false);
+  expect(store.canUndo('target')).toBe(true);
+  const saved = store.get('target.inlineFeedback');
+  act(() => store.redo());
+  expect(store.get('budget')).toBe(1);
+  expect(store.get('target.inlineFeedback')).toEqual(saved);
+  expect(store.get('target.inlineFeedback')).toMatchObject({ submitted: true, feedback: { overall: 'A saved overall comment', items: [{ comment: 'A saved annotation' }] } });
 });
 
 for (const replacement of ['id', 'store'] as const) for (const saved of [false, true]) {

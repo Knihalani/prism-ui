@@ -21,7 +21,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const complete = component?.node.complete !== false, kind = props.kind ?? 'html', framed = kind === 'html' || kind === 'wire';
   const labels = useMockupStrings(props), title = labels.title, source = props.source ?? '';
   const prefix = options.inline ? 'inlineFeedback.' : '';
-  const storage = options.inline ? { history: false } : undefined;
+  const storage = options.inline ? { initialHistory: false } : undefined;
   const [localDevice, writeDevice] = useComponentState<MockupDevice>(prefix + 'device', props.device ?? 'desktop', storage), [localZoom, writeZoom] = useComponentState(prefix + 'zoom', 1, storage), [draft] = useComponentState<FeedbackState | undefined>(prefix + 'feedback', undefined, storage), [submitted, setSubmitted] = useComponentState(prefix + 'submitted', false, storage);
   const device = options.controls?.device ?? localDevice, setDevice = options.controls?.setDevice ?? writeDevice, zoom = options.controls?.zoom ?? localZoom, setZoom = options.controls?.setZoom ?? writeZoom;
   const [feedback] = useState(() => createFeedback({ ...draft, mockup: title, variant: props.variant, device }));
@@ -36,7 +36,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const pending = useRef<{ id: string; rollback(): void } | null>(null);
   const completeRef = useRef(complete); completeRef.current = complete;
   const grow = (height: number) => setContentHeight(old => completeRef.current ? Math.max(1, height) : Math.max(old, height, 400));
-  useEffect(() => { const persist = () => ctx.store.set(`${component!.id}.${prefix}feedback`, feedback.toJSON(), { history: false }); persist(); return feedback.subscribe(persist); }, [feedback, ctx.store, component?.id, prefix]);
+  useEffect(() => { const persist = (history = false) => ctx.store.set(`${component!.id}.${prefix}feedback`, feedback.toJSON(), { history }); persist(); return feedback.subscribe(() => persist(options.inline === true)); }, [feedback, ctx.store, component?.id, prefix, options.inline]);
   useEffect(() => { feedback.setContext({ mockup: title, variant: props.variant, device }); }, [feedback, title, props.variant, device]);
   useEffect(() => { if (visible || !root.current || typeof IntersectionObserver === 'undefined') return; const observer = new IntersectionObserver(entries => { if (entries.some(e => e.isIntersecting)) { setVisible(true); observer.disconnect(); } }, { rootMargin: '200px' }); observer.observe(root.current); return () => observer.disconnect(); }, [visible]);
   useEffect(() => { if (!viewport.current || typeof ResizeObserver === 'undefined') return; const observer = new ResizeObserver(entries => setContainerWidth(entries[0].contentRect.width || 1280)); observer.observe(viewport.current); return () => observer.disconnect(); }, []);
