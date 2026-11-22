@@ -12,7 +12,7 @@ export function App(props: AppProps) {
   const [selection, setSelection] = useState(() => parseLocation(window.location.search, availableThemes.map(theme => theme.name)));
   const c = usePlaygroundController(props, selection.mode, selection.shell);
   const selected = availableThemes.find(theme => theme.name === selection.theme) ?? availableThemes[0];
-  useEffect(() => { history.replaceState(null, '', location.pathname + '?' + serialiseLocation({ ...selection, mode: c.mode }, location.search) + location.hash); }, [selection.shell, selection.theme, c.mode]);
+  useEffect(() => { history.replaceState(null, '', location.pathname + '?' + serialiseLocation({ ...selection, mode: c.themeChoice === 'system' ? undefined : c.themeChoice }, location.search) + location.hash); }, [selection.shell, selection.theme, c.themeChoice]);
   useEffect(() => {
     const restore = () => { const next = parseLocation(location.search, availableThemes.map(theme => theme.name)); setSelection(next); c.setThemeChoice(next.mode ?? readModePreference()); c.setDrawer(false); };
     window.addEventListener('popstate', restore); return () => window.removeEventListener('popstate', restore);
