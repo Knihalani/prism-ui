@@ -77,7 +77,7 @@ test('static cards rank in order, explain the top pick and expose docs', () => {
   expect(view.getByText('Top pick')).toBeDefined();
   expect(view.container.querySelector('[data-part="value"]')?.textContent).toBe('100%');
   expect(view.container.querySelectorAll('[data-part="pip"][data-state="on"]').length).toBe(2);
-  expect(view.getByText('Low cost').querySelector('svg')).not.toBeNull(); expect(view.getByText('– Basic features')).toBeDefined(); expect(view.getByText('Value')).toBeDefined();
+  expect(view.getByText('Low cost').querySelector('svg')).not.toBeNull(); expect(view.getByText('Basic features').querySelector('svg')).not.toBeNull(); expect(view.getByText('Value')).toBeDefined();
   expect(view.container.querySelector('[data-part="live"]')?.textContent).toBe('Top pick: Budget');
   expect(view.getByRole('group', { name: 'Which plan?' })).toBeDefined();
   const docs = createRegistry([pick]).docs(); expect(docs).toContain('```ui:pick'); expect(docs).toContain('"scores"');
