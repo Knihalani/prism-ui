@@ -1,8 +1,8 @@
 import { componentStrings } from '../strings';
-import { Children, createContext, isValidElement, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { Children, createContext, isValidElement, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ComponentType } from 'react';
 import type { Node } from '@prism-ui/core';
 import { s } from '@prism-ui/schema';
-import { useStrings, Icon, PrismPart, StreamSkeleton, ComponentContext, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
+import { useStrings, Icon, PrismPart, StreamSkeleton, ComponentContext, PrismContext, defaultRenderers, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
 
 export interface RunbookLabels { title?: string; of?: string; progress?: string; stuck?: string; copy?: string; copied?: string; copyError?: string; loading?: string; stuckMessage?: string }
@@ -75,19 +75,29 @@ export function useStep(props: StepProps, ctx: PrismContextValue, node: Node) {
     },
   };
 }
+const StepCommandContext = createContext<{ step: StepModel; View: ComponentType<any> } | null>(null);
+function StepCommand(input: PrismComponentProps) {
+  const { step: vm, View } = useContext(StepCommandContext)!;
+  const command = usePart('runbook', 'command'), copy = usePart('runbook', 'copy');
+  return <PrismPart as="div" {...command} slotProps={{ step: vm } satisfies StepSlotProps} tabIndex={0}><View {...input} /><PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="button" {...copy} type="button" onClick={() => vm.copy(input.node.value ?? '')} aria-live="polite">{vm.copyState === 'copied' ? vm.labels.copied : vm.copyState === 'error' ? vm.labels.copyError : vm.labels.copy}</PrismPart></PrismPart>;
+}
 export function Step({ props, node, children, complete }: PrismComponentProps<StepProps>) {
   const themeStrings = useStrings('runbook', componentStrings.runbook);
-  const vm = useStep(props, usePrism(), node);
-  const root = usePart('runbook', 'step', vm.state), header = usePart('runbook', 'stepHeader'), badge = usePart('runbook', 'check', vm.state), title = usePart('runbook', 'stepTitle', props.title ? undefined : 'loading'), body = usePart('runbook', 'stepBody', vm.state), actions = usePart('runbook', 'actions'), copy = usePart('runbook', 'copy'), stuck = usePart('runbook', 'stuck');
-  const placeholder = usePart('runbook', 'stepPlaceholder'), command = usePart('runbook', 'command');
+  const context = usePrism(), inherited = useContext(StepCommandContext);
+  const vm = useStep(props, context, node);
+  const definition = context.registry.get('code'), renderer = context.components.code ?? definition?.component ?? defaultRenderers.code;
+  const View = renderer === StepCommand ? inherited!.View : renderer;
+  const scoped = useMemo(() => context.components.code || !definition?.component
+    ? { ...context, components: { ...context.components, code: StepCommand } }
+    : { ...context, registry: { ...context.registry, get(name: string) { const def = context.registry.get(name); return name === 'code' && def ? { ...def, component: StepCommand } : def; } } }, [context, definition]);
+  const root = usePart('runbook', 'step', vm.state), header = usePart('runbook', 'stepHeader'), badge = usePart('runbook', 'check', vm.state), title = usePart('runbook', 'stepTitle', props.title ? undefined : 'loading'), body = usePart('runbook', 'stepBody', vm.state), actions = usePart('runbook', 'actions'), stuck = usePart('runbook', 'stuck');
+  const placeholder = usePart('runbook', 'stepPlaceholder');
   return <PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="div" {...root} data-complete={complete} data-numbered={vm.index >= 0}><PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="div" {...header}>
     {vm.index >= 0 && <PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="button" {...badge} type="button" role="checkbox" aria-checked={vm.done} aria-disabled={vm.disabled} disabled={vm.disabled} aria-label={props.title ?? vm.number} onClick={vm.toggle} onKeyDown={vm.onKeyDown} data-streaming={!complete}>{vm.done ? <Icon name="check" /> : vm.number}</PrismPart>}
     <PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="h4" {...title}>{vm.title ?? <PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="span" {...placeholder} aria-hidden="true">{themeStrings.nbsp}</PrismPart>}</PrismPart>
   <PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="div" {...actions}>
     {vm.index >= 0 && <PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="button" {...stuck} type="button" disabled={vm.disabled} aria-disabled={vm.disabled} onClick={vm.stuck}>{vm.labels.stuck}</PrismPart>}
-  </PrismPart></PrismPart><PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="div" {...body}>{Children.map(children, child => isValidElement<{ node: Node }>(child) && child.props.node?.type === 'code'
-    ? <PrismPart as="div" {...command} slotProps={{ step: vm } satisfies StepSlotProps} tabIndex={0}>{child}<PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="button" {...copy} type="button" onClick={() => vm.copy(child.props.node.value ?? '')} aria-live="polite">{vm.copyState === 'copied' ? vm.labels.copied : vm.copyState === 'error' ? vm.labels.copyError : vm.labels.copy}</PrismPart></PrismPart>
-    : child)}</PrismPart></PrismPart>;
+  </PrismPart></PrismPart><PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="div" {...body}><StepCommandContext.Provider value={{ step: vm, View }}><PrismContext.Provider value={scoped}>{children}</PrismContext.Provider></StepCommandContext.Provider></PrismPart></PrismPart>;
 }
 const labelsSchema = s.object({
   title: s.string().optional().describe('Default runbook title').example('Runbook'),

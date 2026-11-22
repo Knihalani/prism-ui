@@ -21,6 +21,13 @@ test('each command row copies only its own fence', async () => {
   } finally { if (previous) Object.defineProperty(navigator, 'clipboard', previous); else Reflect.deleteProperty(navigator, 'clipboard'); }
 });
 const registry = createRegistry([runbookDefinition, stepDefinition]);
+test('nested blockquote and list fences retain command-row Copy', () => {
+  const source = '::::runbook\n:::step{title="Nested commands"}\n> ```sh\n> echo quoted\n> ```\n\n- Commands:\n\n  ```sh\n  echo listed\n  ```\n:::\n::::';
+  const view = render(<Prism source={source} registry={registry} />);
+  expect(view.container.querySelectorAll('pre').length).toBe(2);
+  expect(view.getAllByRole('button', { name: 'Copy' }).length).toBe(2);
+  for (const copy of view.getAllByRole('button', { name: 'Copy' })) expect(copy.closest('[data-part="command"]')?.querySelectorAll('pre').length).toBe(1);
+});
 const source = '::::runbook{title="Deploy to Fly" id=deploy}\n:::step{title="Install the CLI" id=install}\nRun:\n```bash\n$ fly install\n```\n:::\n:::step{title="Log in"}\nLog in now.\n:::\n::::\n';
 
 test('streaming skeletons do not initialize anonymous state or mount nested controls', () => {
