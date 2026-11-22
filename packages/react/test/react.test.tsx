@@ -65,7 +65,7 @@ test('fresh equal inline configuration preserves frozen renders and changed cont
 
 test('default markdown renderers provide semantic elements, safety and part attributes', () => {
   const source = '# Title\n\nText **strong** *em* ~~gone~~ `code`  \nnext [ext](https://example.com) ![Alt](https://example.com/a.png)\n\n- [x] Done\n\n> Quote\n\n```js\nx < y\n```\n\n| A | B |\n| :--- | ---: |\n| 1 | 2 |\n\n---\n';
-  const { container } = render(<Prism source={source} />);
+  const { container } = render(<Prism registry={createRegistry()} source={source} />);
   for (const tag of ['h1', 'p', 'strong', 'em', 'del', 'code', 'br', 'ul', 'li', 'blockquote', 'pre', 'table', 'thead', 'tbody', 'hr']) expect(container.querySelector(tag)).not.toBeNull();
   expect(container.querySelector('input')?.checked).toBe(true); expect(container.querySelector('input')?.readOnly).toBe(true);
   expect(container.querySelector('a')?.getAttribute('rel')).toBe('noopener noreferrer'); expect(container.querySelector('a')?.target).toBe('_blank');

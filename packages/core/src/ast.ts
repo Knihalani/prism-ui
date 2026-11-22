@@ -7,6 +7,7 @@ export interface Node {
   name?: string;
   props?: Record<string, Value>;
   complete?: boolean;
+  idComplete?: boolean;
   depth?: number;
   ordered?: boolean;
   start?: number;

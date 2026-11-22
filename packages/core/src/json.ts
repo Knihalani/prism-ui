@@ -6,6 +6,7 @@ const forbidden = (s: string) => s === '__proto__' || s === 'constructor' || s =
 /** Resumable, non-executing JSON/relaxed-JSON reader. Open values are live views. */
 export class JsonScanner {
   value: Value | undefined;
+  idComplete = false;
   private stack: Frame[] = [];
   private token = '';
   private mode: 'idle' | 'string' | 'word' = 'idle';
@@ -21,12 +22,17 @@ export class JsonScanner {
       this.target = { frame };
       if (frame?.array) this.target.index = (frame.value as Value[]).length;
       else if (frame) this.target.key = frame.key;
+      if (frame?.value === this.value && this.target.key === 'id') this.idComplete = false;
       if (frame) frame.phase = 'comma';
     }
     const { frame, index, key } = this.target;
     if (!frame) this.value = value;
     else if (frame.array) (frame.value as Value[])[index!] = value;
     else if (key && !forbidden(key)) (frame.value as Record<string, Value>)[key] = value;
+  }
+
+  private finishScalar() {
+    if (this.target.frame?.value === this.value && this.target.key === 'id') this.idComplete = true;
   }
 
   private scalar() {
@@ -52,7 +58,7 @@ export class JsonScanner {
         } else if (c === '\\') this.escape = true;
         else if (c === this.quote) {
           if (this.key) { const frame = this.stack[this.stack.length - 1]; frame.key = this.token; frame.phase = 'colon'; }
-          else this.attach(this.token, false);
+          else { this.attach(this.token, false); this.finishScalar(); }
           this.mode = 'idle'; this.token = '';
         } else this.token += c;
         continue;
@@ -60,12 +66,12 @@ export class JsonScanner {
       if (this.mode === 'word') {
         if (code > 32 && c !== ',' && c !== ']' && c !== '}' && !(this.key && c === ':')) { this.token += c; continue; }
         if (this.key) { const frame = this.stack[this.stack.length - 1]; frame.key = this.token; frame.phase = 'colon'; }
-        else this.attach(this.scalar(), false);
+        else { this.attach(this.scalar(), false); this.finishScalar(); }
         this.mode = 'idle'; this.token = ''; i--; continue;
       }
       if (code <= 32) continue;
       const frame = this.stack[this.stack.length - 1];
-      if (c === '}' || c === ']') { this.stack.pop(); continue; }
+      if (c === '}' || c === ']') { this.stack.pop(); if (!this.stack.length) this.idComplete = true; continue; }
       if (c === ',') { if (frame) frame.phase = frame.array ? 'value' : 'key'; continue; }
       if (c === ':') { if (frame) frame.phase = 'value'; continue; }
       this.key = !!frame && !frame.array && (frame.phase === 'key' || frame.phase === 'colon');
@@ -85,5 +91,5 @@ export class JsonScanner {
     else if (!this.key && this.mode === 'word' && this.token.length < 64) this.attach(this.scalar(), false);
   }
 
-  end() { if (this.mode === 'word' && !this.key) this.attach(this.scalar(), false); return this.value; }
+  end() { if (this.mode === 'word' && !this.key) { this.attach(this.scalar(), false); this.finishScalar(); } return this.value; }
 }

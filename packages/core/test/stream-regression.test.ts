@@ -7,6 +7,17 @@ function checkKeys(node: Node) {
   expect(new Set(children.map(child => child.key)).size).toBe(children.length);
   children.forEach(checkKeys);
 }
+test('data identity closure tracks root scalars, not nested ids or open strings', () => {
+  const parser = createParser();
+  parser.push('```ui:editor\n{"nested":{"id":"closed"},"id":"rev');
+  expect(parser.root.children[0].idComplete).toBe(false);
+  parser.push('iew\\"');
+  expect(parser.root.children[0].idComplete).toBe(false);
+  parser.push('draft","tail":[');
+  expect(parser.root.children[0].idComplete).toBe(true);
+  parser.push('1,2]}\n```');
+  expect(parser.end().root).toEqual(parse('```ui:editor\n{"nested":{"id":"closed"},"id":"review\\"draft","tail":[1,2]}\n```'));
+});
 for (let size = 1; size <= 7; size++) {
   test(`mixed document streamed in ${size}-character chunks matches parse and has unique preview keys`, () => {
     const plugins: Plugin[] = [{ name: 'identity', transform: node => node }];

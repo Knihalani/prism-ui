@@ -1,9 +1,10 @@
 import { Children, createContext, useContext, useLayoutEffect, useMemo, useRef, useState, type HTMLAttributes, type ReactNode, type ThHTMLAttributes } from 'react';
 import type { Node } from '@prism-ui/core';
 import { PrismContext, useComponentState, usePart, usePrism, useSlot, type MarkdownProps, type PrismComponentProps } from '@prism-ui/react';
+import { format as formatValue, type FormatKind } from '../lib/format';
 
-export interface TableColumn { key: string; label?: string; title?: string; align?: 'left' | 'right' | 'center' }
-export interface TableProps { id?: string; label?: string; title?: string; columns?: (TableColumn | string)[]; rows?: unknown[]; [key: string]: unknown }
+export interface TableColumn { key: string; label?: string; title?: string; align?: 'left' | 'right' | 'center'; type?: FormatKind }
+export interface TableProps { id?: string; label?: string; title?: string; columns?: (TableColumn | string)[]; rows?: unknown[]; pageSize?: number; [key: string]: unknown }
 export type TableSort = { column: number; dir: 'asc' | 'desc' } | null;
 function text(node: Node): string { return node.value ?? (node.children ?? []).map(text).join(''); }
 function numeric(value: string): number | undefined {
@@ -21,20 +22,21 @@ function compare(left: string, right: string, locale?: string): number {
   return left.localeCompare(right, locale, { numeric: true, sensitivity: 'base' });
 }
 function valueText(value: unknown): string { return value == null ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value); }
-function fallbackRows(props: TableProps, key: string): Node[] {
+function fallbackRows(props: TableProps, key: string, locale: string | undefined, currency: string): Node[] {
   const rows = Array.isArray(props.rows) ? props.rows : [];
   const columns: TableColumn[] = (Array.isArray(props.columns) ? props.columns : []).flatMap(column => typeof column === 'string' ? [{ key: column, label: column }] : column && typeof column.key === 'string' ? [column] : []);
   if (!columns.length && rows[0] && typeof rows[0] === 'object') columns.push(...Object.keys(rows[0]).map(key => ({ key, label: key })));
-  const cell = (value: unknown, cellKey: string, header: boolean): Node => ({ type: header ? 'tableHeader' : 'tableCell', key: cellKey, children: [{ type: 'text', key: cellKey + '.0', value: valueText(value) }] });
+  const cell = (value: unknown, cellKey: string, header: boolean, kind?: FormatKind): Node => ({ type: header ? 'tableHeader' : 'tableCell', key: cellKey, value: header ? undefined : valueText(value), children: [{ type: 'text', key: cellKey + '.0', value: !header && kind ? formatValue(value, kind, { locale, currency, fallback: valueText(value) }) : valueText(value) }] });
   return [
     { type: 'tableRow', key: key + '.header', children: columns.map((column, index) => cell(column.label ?? column.title ?? column.key, key + '.header.' + index, true)) },
-    ...rows.map((row, index): Node => ({ type: 'tableRow', key: key + '.row.' + index, children: columns.map((column, col) => cell(row && typeof row === 'object' ? (row as Record<string, unknown>)[column.key] : undefined, key + '.row.' + index + '.' + col, false)) })),
+    ...rows.map((row, index): Node => ({ type: 'tableRow', key: key + '.row.' + index, children: columns.map((column, col) => cell(row && typeof row === 'object' ? (row as Record<string, unknown>)[column.key] : undefined, key + '.row.' + index + '.' + col, false, column.type)) })),
   ];
 }
 
 export function useTable(props: TableProps, ctx: Pick<PrismComponentProps, 'node' | 'children' | 'complete'>) {
   const { animate, format } = usePrism(), [stored, setSort] = useComponentState<TableSort>('sort', null);
-  const markdown = ctx.node.type === 'table', rows = markdown ? ctx.node.children ?? [] : fallbackRows(props, ctx.node.key);
+  const markdown = ctx.node.type === 'table', rows = markdown ? ctx.node.children ?? [] : fallbackRows(props, ctx.node.key, format.locale, format.currencyCode);
+  const [page, setPage] = useState(0);
   const headers = rows[0]?.children ?? [], data = rows.slice(1);
   const streaming = ctx.node.complete === false || !ctx.complete || markdown && ctx.node.complete === undefined && !Object.isFrozen(ctx.node);
   const state = streaming ? 'streaming' : 'done';
@@ -50,8 +52,12 @@ export function useTable(props: TableProps, ctx: Pick<PrismComponentProps, 'node
     const first = text(data[a].children?.[sort.column] ?? { type: 'text', key: '' }), second = text(data[b].children?.[sort.column] ?? { type: 'text', key: '' });
     return compare(first, second, format.locale) * (sort.dir === 'asc' ? 1 : -1) || a - b;
   });
-  const onSort = (column: number) => { if (!streaming) setSort(sort?.column !== column ? { column, dir: 'asc' } : sort.dir === 'asc' ? { column, dir: 'desc' } : null); };
-  const parts = { root: usePart('table', 'root', state), scroll: usePart('table', 'scroll', state), table: usePart('table', 'table', state), head: usePart('table', 'head', state), body: usePart('table', 'body', state) };
+  const paginated = !markdown && typeof props.pageSize === 'number' && Number.isFinite(props.pageSize) && props.pageSize > 0;
+  const pageSize = paginated ? Math.max(1, Math.floor(props.pageSize!)) : data.length || 1;
+  const pages = Math.max(1, Math.ceil(data.length / pageSize)), currentPage = Math.min(page, pages - 1);
+  const visibleOrder = order.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+  const onSort = (column: number) => { if (!streaming) { setPage(0); setSort(sort?.column !== column ? { column, dir: 'asc' } : sort.dir === 'asc' ? { column, dir: 'desc' } : null); } };
+  const parts = { root: usePart('table', 'root', state), scroll: usePart('table', 'scroll', state), table: usePart('table', 'table', state), head: usePart('table', 'head', state), body: usePart('table', 'body', state), pagination: usePart('table', 'pagination', state), pageButton: usePart('table', 'pageButton', state) };
   const scrollRef = useRef<HTMLDivElement>(null), [edges, setEdges] = useState({ start: false, end: false });
   const measure = () => {
     const element = scrollRef.current;
@@ -65,7 +71,7 @@ export function useTable(props: TableProps, ctx: Pick<PrismComponentProps, 'node
     window.addEventListener('resize', measure);
     return () => { observer?.disconnect(); window.removeEventListener('resize', measure); };
   }, [ctx.node, props.columns, props.rows]);
-  return { parts, rows, headers, order, sort, align, onSort, streaming, state, markdown, scrollRef, measure,
+  return { parts, rows, headers, order: visibleOrder, sort, align, onSort, streaming, state, markdown, scrollRef, measure, paginated, page: currentPage, pages, setPage,
     rendered: Children.toArray(ctx.children),
     rootProps: { ...parts.root, 'data-prism-enter': animate ? '' : undefined, 'data-overflow-start': edges.start ? '' : undefined, 'data-overflow-end': edges.end ? '' : undefined },
     scrollProps: { ...parts.scroll, role: 'region', 'aria-label': props.label ?? props.title ?? 'Table', tabIndex: 0, onScroll: measure } };
@@ -100,13 +106,14 @@ export function MarkdownTable({ props, ...ctx }: PrismComponentProps<TableProps>
   const renderRow = (index: number): ReactNode => {
     const node = model.rows[index];
     if (model.markdown) return model.rendered[index];
-    return <TableRowView key={node.key} node={node}>{node.children?.map(cell => <TableCellView key={cell.key} node={cell}>{text(cell)}</TableCellView>)}</TableRowView>;
+    return <TableRowView key={node.key} node={node}>{node.children?.map(cell => <TableCellView key={cell.key} node={cell}>{cell.children?.map(text).join('')}</TableCellView>)}</TableRowView>;
   };
   return <TableContext.Provider value={model}><PrismContext.Provider value={scoped}><div {...model.rootProps}>
     <div {...model.scrollProps} ref={model.scrollRef}><table {...model.parts.table}>
       <HeadSlot {...model.parts.head}>{model.rows.length > 0 && renderRow(0)}</HeadSlot>
       <BodySlot {...model.parts.body}>{model.order.map(index => renderRow(index + 1))}</BodySlot>
     </table></div>
+    {model.paginated && <nav {...model.parts.pagination} aria-label="Table pagination"><button {...model.parts.pageButton} type="button" disabled={model.streaming || model.page === 0} onClick={() => model.setPage(model.page - 1)}>Previous page</button><span aria-live="polite">Page {model.page + 1} of {model.pages}</span><button {...model.parts.pageButton} type="button" disabled={model.streaming || model.page + 1 >= model.pages} onClick={() => model.setPage(model.page + 1)}>Next page</button></nav>}
   </div></PrismContext.Provider></TableContext.Provider>;
 }
 export function TableDispatcher(input: PrismComponentProps<TableProps>) {

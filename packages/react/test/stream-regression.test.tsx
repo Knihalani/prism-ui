@@ -1,21 +1,21 @@
 import './setup';
 import { afterEach, expect, spyOn, test } from 'bun:test';
 import { act, cleanup, render } from '@testing-library/react';
-import { Prism } from '../src';
+import { Prism, createRegistry } from '../src';
 import { mixedStream } from '../../core/test/stream-fixture';
 
 afterEach(cleanup);
 test('only top-level markdown blocks receive stable enter markers when motion is enabled', () => {
-  const view = render(<Prism source={mixedStream + '\n---\n'} done={false} />);
+  const registry = createRegistry(), view = render(<Prism registry={registry} source={mixedStream + '\n---\n'} done={false} />);
   const root = view.container.firstElementChild!;
   Array.from(root.children).filter(child => child.getAttribute('data-prism') !== 'unknown').forEach(child => {
     expect(child.hasAttribute('data-prism-enter')).toBe(true);
     expect(child.querySelector('[data-prism-enter]')).toBeNull();
   });
   const heading = root.firstElementChild;
-  view.rerender(<Prism source={mixedStream + '\n---\n\nTail'} done={false} />);
+  view.rerender(<Prism registry={registry} source={mixedStream + '\n---\n\nTail'} done={false} />);
   expect(root.firstElementChild).toBe(heading);
-  view.rerender(<Prism source={mixedStream} animate={false} />);
+  view.rerender(<Prism registry={registry} source={mixedStream} animate={false} />);
   expect(root.querySelector('[data-prism-enter]')).toBeNull();
 });
 for (let size = 1; size <= 7; size++) {

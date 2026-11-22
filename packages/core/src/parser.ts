@@ -24,7 +24,7 @@ export function blocks(lines: string[], path = '', offset = 0, resolve?: (node: 
       while (i < lines.length && !close.test(lines[i])) i++;
       const complete = i < lines.length; const value = lines.slice(start, i).join('\n'); if (complete) i++;
       const info = f[2].trim(); const space = info.search(/\s/); const lang = space < 0 ? info : info.slice(0, space); const meta = space < 0 ? '' : info.slice(space).trim();
-      if (lang.startsWith('ui:')) { const scanner = new JsonScanner(); scanner.push(value); const props = scanner.end(); node = { type: 'component', key, name: lang.slice(3), props: props && typeof props === 'object' && !Array.isArray(props) ? props : {}, children: [], complete }; }
+      if (lang.startsWith('ui:')) { const scanner = new JsonScanner(); scanner.push(value); const props = scanner.end(); node = { type: 'component', key, name: lang.slice(3), props: props && typeof props === 'object' && !Array.isArray(props) ? props : {}, children: [], complete, idComplete: scanner.idComplete }; }
       else node = { type: 'code', key, lang, meta, value, complete };
     } else if (d) {
       const start = ++i; let complete = d[1].length === 2;
@@ -37,7 +37,7 @@ export function blocks(lines: string[], path = '', offset = 0, resolve?: (node: 
         }
         complete = i < lines.length;
       }
-      node = { type: 'component', key, name: d[2], props: attributes(d[3] ?? ''), children: d[1].length === 2 ? [] : blocks(lines.slice(start, i), key, 0, resolve, extensions), complete };
+      node = { type: 'component', key, name: d[2], props: attributes(d[3] ?? ''), children: d[1].length === 2 ? [] : blocks(lines.slice(start, i), key, 0, resolve, extensions), complete, idComplete: true };
       if (d[1].length > 2 && complete) i++;
     } else if (/^ {0,3}#{1,6}(?:\s|$)/.test(line)) {
       const m = /^ {0,3}(#{1,6})(?:\s+(.*)|$)/.exec(line)!; node = { type: 'heading', depth: m[1].length, key, children: inline((m[2] ?? '').replace(/\s+#+\s*$/, ''), key, resolve, extensions) }; i++;

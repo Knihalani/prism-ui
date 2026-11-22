@@ -87,7 +87,7 @@ function MockupGroupView({ members, options }: { members: Member[]; options?: Mo
       <div {...columns} data-compare={vm.compare || undefined} role={vm.compare ? 'tabpanel' : undefined} id={vm.compare ? `${id}-panel-compare` : undefined} aria-labelledby={vm.compare ? `${id}-tab-compare` : undefined}>
         {members.map((member, index) => { const label = variant(member, index), visible = vm.compare || vm.active.key === member.key; return <div key={member.key} {...column} hidden={!visible} role={!vm.compare ? 'tabpanel' : undefined} id={`${id}-panel-${member.key}`} aria-labelledby={!vm.compare ? `${id}-tab-${member.key}` : undefined}>
           {vm.compare && <div><strong>{label}</strong>{!vm.submitted && <button {...button} aria-pressed={vm.preferred === label} onClick={() => vm.setPreferred(vm.preferred === label ? undefined : label)}>{vm.preferred === label && <Icon name="check" />}{vm.labels.prefer} {label}</button>}</div>}
-          <ComponentContext.Provider value={member.context}><GroupMember member={member} label={label} visible={visible} submitted={vm.submitted} register={vm.register} refresh={vm.refresh} controls={controls} options={options} /></ComponentContext.Provider>
+          <ComponentContext.Provider value={member.context}><GroupMember key={member.id} member={member} label={label} visible={visible} submitted={vm.submitted} register={vm.register} refresh={vm.refresh} controls={controls} options={options} /></ComponentContext.Provider>
         </div>; })}
       </div>
       {!vm.submitted && <label>{vm.labels.overall}<textarea {...input} value={vm.overall} onChange={event => vm.setOverall(event.target.value)} /></label>}

@@ -9,6 +9,27 @@ function fixture() {
 }
 
 describe('feedback state and history', () => {
+  test('streamed context does not enter or rewind through reviewer undo and redo history', () => {
+    const { model } = fixture();
+    model.setContext({ mockup: 'Part' });
+    expect(model.canUndo).toBe(false);
+    model.setOverall('Reviewer edit');
+    model.setContext({ mockup: 'Complete title', variant: 'B', device: 'mobile' });
+    model.undo();
+    expect(model.getState()).toMatchObject({ mockup: 'Complete title', variant: 'B', device: 'mobile', overall: '' });
+    model.setContext({ mockup: 'New title', variant: undefined });
+    expect(model.canRedo).toBe(true);
+    model.redo();
+    expect(model.getState().mockup).toBe('New title');
+    expect(model.getState().variant).toBeUndefined();
+    expect(model.getState().overall).toBe('Reviewer edit');
+    const cancel = model.checkpoint();
+    model.addPin({ x: 5, y: 5 });
+    model.setContext({ mockup: 'Latest title' });
+    cancel();
+    expect(model.getState().mockup).toBe('Latest title');
+    expect(model.getState().items).toEqual([]);
+  });
   test('rolling back creation and async target metadata restores an empty undo/redo history', () => {
     for (const kind of ['pin', 'region'] as const) {
       const { model } = fixture(), initial = model.toJSON(), rollback = model.checkpoint();
@@ -74,7 +95,7 @@ describe('feedback state and history', () => {
     model.clear(); expect(model.canSubmit).toBe(false);
     model.undo(); expect(model.canSubmit).toBe(true);
     model.setContext({ mockup: 'Pricing', device: 'mobile' });
-    model.undo(); expect(model.getState().mockup).toBeUndefined();
+    model.undo(); expect(model.getState().mockup).toBe('Pricing'); expect(model.getState().device).toBe('mobile');
     model.redo(); expect(model.getState().device).toBe('mobile');
     model.setContext({ device: undefined }); expect(model.getState().device).toBeUndefined();
   });

@@ -39,6 +39,8 @@ Growing `source` pushes only its appended suffix while `done={false}`. Completed
 
 ## Registry and renderers
 
+Private editor models can set `requiresFinalId: true` on their definition. The renderer waits for a final identity, hydration, and any migration before mounting that component. Closed top-level JSON ids and directive/fence headers can establish identity before the body finishes; anonymous JSON models wait until the object closes. Their mounted model therefore keeps its undo history, pending operations, and subscriptions throughout the remaining stream. Mockup opts into this policy. Other components continue rendering under provisional ids as before. Parser plugins can set `node.idComplete = true` when their identity-bearing header is sealed.
+
 `createRegistry(defs?)` gives `register(def)`, `get(name)`, `list()` and `docs()`. `registerComponent(def)` adds to the module-level `defaultRegistry`; use isolated registries for separate catalogs. `defineComponent(def)` preserves schema inference. Definitions include `name`, optional `schema`, `component`, `fallback`, `docs`, `examples`, `inline`, `syntax` and `message`.
 
 Resolution is `components[name or type]` → registry definition → built-in markdown → unknown directive (a div with `data-prism="unknown" data-name="…"` and its children). Registry schemas still coerce props for directive overrides. Fallbacks render only when both incomplete and partial. Components receive `{ node, props, children, id, complete, partial, issues }`; `id` is `props.id ?? node.key`.
@@ -83,6 +85,10 @@ Middleware runs in order. Not calling next swallows the action; passing a replac
 - Nested `{"$ref":"rent"}` values in directive props resolve before schema coercion and subscribe only their directive to the referenced paths.
 
 Create or persist stores with `@prism-ui/state` (`createStore`, `memoryAdapter`, `localStorageAdapter`). Supply `store` to share across Prism instances. For an owned store, supply `persist` and `namespace`.
+
+Component state IDs (including the `props.id` passed to a component) use an opaque, flat provisional key containing message scope, component name, node key and ownership generation. Scope strings are escaped and node-path dots become colons, so nested components own independent store namespaces. Reopening a completed component or changing its final ID starts fresh ownership: a named component never migrates an earlier anonymous component's state. Ordinary same-ID prop updates retain existing edits. Each Prism instance generates its own scope with `useId`; supply a stable, unique `scope` prop when restoring anonymous state across remounts. Completed, frozen parser nodes use the explicit ID when present; anonymous components keep their scoped key. The parser does not expose individual ID-field closure, and inline/leaf completion flags can precede attribute finalization, so freezing is also required.
+
+Components wait for `store.ready` before initializing any state, even if their stream is already complete. Once hydrated, controls stay mounted on their owned provisional ID until preparation completes. Migration runs after child state effects in one batch with `{ history: false }`, then switches to the final ID without remounting the controls. Preparation completes once, regardless of whether a provisional parent path remains present. Unsafe prototype-path IDs keep the safe scoped key instead. Existing persisted final-ID fields win conflicts; missing fields are filled from provisional state. Explicit IDs intentionally share state across Prism instances.
 
 Completed `ui:state` fences render nothing and apply a single patch in a layout effect:
 

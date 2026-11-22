@@ -21,6 +21,10 @@
 .prism-root .prism-table__root::after { right: 0; background: linear-gradient(to left, var(--prism-surface), transparent); }
 .prism-root .prism-table__root[data-overflow-start]::before, .prism-root .prism-table__root[data-overflow-end]::after { opacity: 1; }
 .prism-root .prism-table__body[data-state="streaming"] .prism-table__row:last-child { animation: prism-table-row-enter var(--prism-duration-slow) var(--prism-ease) both; }
+.prism-root .prism-table__pagination { display: flex; justify-content: flex-end; align-items: center; gap: var(--prism-space3); padding: var(--prism-space3); color: var(--prism-muted); font-size: var(--prism-text-sm); }
+.prism-root .prism-table__pageButton { border: 1px solid var(--prism-border); border-radius: var(--prism-radius-sm); padding: var(--prism-space2) var(--prism-space3); background: var(--prism-surface); color: var(--prism-text); font: inherit; cursor: pointer; }
+.prism-root .prism-table__pageButton:disabled { opacity: .45; cursor: default; }
+.prism-root .prism-table__pageButton:focus-visible { outline: 2px solid var(--prism-accent); outline-offset: 2px; }
 @keyframes prism-table-row-enter { from { opacity: .35; } to { opacity: 1; } }
 .prism-root[data-animate="false"] .prism-table__body[data-state="streaming"] .prism-table__row:last-child, .prism-root [data-animate="false"] .prism-table__body[data-state="streaming"] .prism-table__row:last-child { animation: none; }
 @media (prefers-reduced-motion: reduce) { .prism-root .prism-table__row { animation: none !important; } }

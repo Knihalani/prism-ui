@@ -73,6 +73,7 @@ export function createStore({ persist, namespace = '', initial = {} }: { persist
       for (const p of Array.isArray(patch.delete) ? patch.delete : []) if (typeof p === 'string') change(p, undefined, true);
     }, options); },
     snapshot() { return copy(state); },
+    get hydrated() { return !loading; },
     ready: Promise.resolve(),
   };
   function travel(from: any[], to: any[]) {

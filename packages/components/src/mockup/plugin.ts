@@ -16,6 +16,6 @@ export const mockupPlugin: Plugin = {
   name: 'mockup',
   transform(node) {
     if (node.type !== 'code' || !/^mockup:(html|svg|wire|image)$/.test(node.lang ?? '')) return node;
-    return { type: 'component', key: node.key, name: 'mockup', props: { ...parseMockupMeta(node.meta), kind: node.lang!.slice(7), source: node.value ?? '' }, children: [], complete: node.complete };
+    return { type: 'component', key: node.key, name: 'mockup', props: { ...parseMockupMeta(node.meta), kind: node.lang!.slice(7), source: node.value ?? '' }, children: [], complete: node.complete, idComplete: node.complete === true || !!node.value };
   },
 };
