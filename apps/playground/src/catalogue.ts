@@ -1,5 +1,6 @@
 import { defaultRegistry } from '@prism-ui/react';
 import { examples } from './fixtures';
+import { viewFixtures } from '@prism-ui/components/view';
 
 export const groups = ['Basics', 'Decide', 'Do', 'Create'] as const;
 export type Demo = { id: string; label: string; group: typeof groups[number]; prompt: string; source: string; components: string[]; keywords: string[] };
@@ -40,6 +41,7 @@ const artifactSources = {
   markdown: '# A good first week\n\nA small plan for the Fieldnotes pilot.\n\n- [ ] Invite five teams\n- [ ] Send the first digest\n- [ ] Make one improvement\n\n> Make something useful, then make it better.',
 };
 for (const [kind, source] of Object.entries(artifactSources)) base.push(demo('artifact-' + kind, 'Artifact · ' + (kind === 'markdown' ? 'Markdown' : kind.toUpperCase()), 'Create', 'Build me a ' + kind + ' artifact', 'Here’s a working ' + kind + ' artifact you can explore right in the conversation. Switch to **Code** to see how it’s made.\n\n' + fence('artifact:' + kind, 'id=__SCOPE__-artifact-' + kind + ' title="Fieldnotes · ' + kind + '" height=300', source), ['artifact'], ['artifact ' + kind, kind + ' artifact', ...(kind === 'html' ? ['artifact'] : kind === 'react' ? ['react'] : [])]));
+base.push(demo('view', 'Freeform view', 'Create', 'Build me a pricing calculator', 'Here’s a quick calculator for the plans. Switch billing, pick a plan and adjust seats — the totals update as you go.\n\n' + data('view', { ...viewFixtures.pricing, id: '__SCOPE__-view' }), ['view'], ['view', 'freeform', 'calculator', 'pricing', 'custom', 'widget']));
 const covered = new Set(base.flatMap(item => item.components));
 for (const fixture of examples()) if (!covered.has(fixture.id)) base.push(demo(fixture.id, fixture.title, 'Basics', 'Show me ' + fixture.title, 'Here’s ' + fixture.title + ' in action.\n\n' + fixture.source, [fixture.id]));
 export const demos = base;

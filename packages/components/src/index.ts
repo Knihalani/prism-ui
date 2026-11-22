@@ -21,3 +21,4 @@ export type { DataTableProps, DataTableColumn, DataTableRow, DataTableSelection 
 export { Chart, useChart, chartDefinition, chartSchema } from './chart';
 export type { ChartProps, ChartSeries, ChartType, ChartPivot, ChartAnnotation, ChartModel, ChartSelectPayload, ChartPivotPayload } from './chart';
 export * from './artifact';
+export * from './view';
