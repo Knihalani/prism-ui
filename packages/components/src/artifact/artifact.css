@@ -23,9 +23,10 @@
 .prism-artifact__skeleton-line:first-child { height: 38px; width: 65%; margin-bottom: 25px; }
 .prism-artifact__skeleton-line:last-child { width: 45%; margin-top: 35px; }
 .prism-artifact__empty::after { content: ''; position: absolute; inset: 0; background: var(--prism-spectrum); opacity: .18; mask-image: linear-gradient(90deg, transparent, #000, transparent); mask-size: 30% 100%; mask-repeat: no-repeat; }
-.prism-artifact__error { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 16px; padding: 45px 25px; font-size: 15px; line-height: 1.8; }
+.prism-artifact__preview[data-error] { overflow: visible; background: none; box-shadow: none; }
+.prism-artifact__error { position: static; display: flex; flex-direction: column; align-items: flex-start; gap: 16px; padding: 24px 0; background: none; font-size: 15px; line-height: 1.8; }
 .prism-artifact__error strong { font-size: 15px; font-weight: 550; }
-.prism-artifact__error-message { max-width: 100%; max-height: 40%; overflow: auto; color: var(--prism-ink-2); white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.75 var(--prism-font-mono); }
+.prism-artifact__error-message { max-width: 100%; max-height: 144px; overflow: auto; padding: 8px 12px; border-radius: 8px; background: var(--prism-fill); color: var(--prism-ink-2); white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.75 var(--prism-font-mono); }
 .prism-artifact__source { overflow: hidden; border-radius: 8px; background: var(--prism-paper); box-shadow: var(--prism-shadow-float); }
 .prism-artifact__code { min-height: 310px; max-height: 70vh; margin: 0; padding: 18px; overflow: auto; color: var(--prism-text); font: 12px/1.75 var(--prism-font-mono); tab-size: 2; }
 .prism-artifact__diff-line { display: block; min-width: fit-content; padding-inline: 8px; border-inline-start: 2px solid transparent; }

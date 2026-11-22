@@ -98,7 +98,7 @@ export function Artifact({ props, complete }: PrismComponentProps<ArtifactProps>
   return <div {...shell} {...presentation} style={{ ...shell.style, '--artifact-version': `" · v${model.version?.number ?? 1}"` } as CSSProperties} data-artifact-shell="" data-variant={selected.variant} data-size={selected.size}>
     <ComponentFrame component="artifact" title={title} state={!model.enabled ? 'disabled' : model.error ? 'error' : model.rendered ? 'ready' : 'pending'}
       undo toolbar={<ControlsSlot {...controls} model={model} />}>
-      <div {...preview} hidden={model.mode !== 'preview'} style={{ ...preview.style, minHeight: model.height }} aria-busy={model.updating || (model.enabled && !model.rendered && !model.error)}>
+      <div {...preview} data-error={!!model.error || undefined} hidden={model.mode !== 'preview'} style={{ ...preview.style, minHeight: model.height }} aria-busy={model.updating || (model.enabled && !model.rendered && !model.error)}>
         <div {...viewport} ref={model.ref} style={{ height: model.height, ...viewport.style }} hidden={!!model.error || !model.enabled} />
         {model.error ? <ErrorSlot {...error} model={model} /> : (!model.rendered || !model.enabled) && <EmptySlot {...empty} model={model} />}
       </div>
