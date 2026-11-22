@@ -137,6 +137,22 @@ test('actions route to old owning scenario, follow-up ids remain owned, mid-turn
   expect(await collect(agent.respond({ kind: 'action', action: action('code', 'copy', {}), history }, signal()))).toEqual([]);
 });
 
+test.each(['Budget a 6-person team offsite', 'budget a team offsite', 'gallery:estimate'])('explicit route %s takes precedence over laptop budget advice', async text => {
+  const agent = createScriptedAgent({ pace: fast });
+  const opening = textOf(await collect(agent.respond({ kind: 'message', text: 'pick a laptop', history: [] }, signal())));
+  const history = [{ role: 'assistant' as const, text: opening }];
+  const reply = textOf(await collect(agent.respond({ kind: 'message', text, history }, signal())));
+  expect(reply).toContain('```ui:estimate');
+  expect(reply).not.toContain('protect the memory budget');
+});
+
+test('ambiguous laptop follow-ups still use the active scenario', async () => {
+  const agent = createScriptedAgent({ pace: fast });
+  await collect(agent.respond({ kind: 'message', text: 'pick a laptop', history: [] }, signal()));
+  const reply = textOf(await collect(agent.respond({ kind: 'message', text: 'What about more memory?', history: [{ role: 'user', text: 'pick a laptop' }] }, signal())));
+  expect(reply).toContain('protect the memory budget');
+});
+
 test('pace preserves all source bytes and surrogate pairs; abort interrupts thinking', async () => {
   const source = 'Hello 😀 world.\n\n```ui:pick\n{"id":"x"}\n```\n:::callout{title="Note"}\nStay curious!\n:::\n';
   const parts = [...chunks(source, fast)]; expect(parts.join('')).toBe(source);

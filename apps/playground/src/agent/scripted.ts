@@ -39,10 +39,12 @@ export function createScriptedAgent({ pace = realistic }: { pace?: Pace } = {}):
           owners.set(scope, { scenario: owner.scenario, scope });
         } else reply = { text: 'I’ve noted that update. What would you like to change next?' };
       } else {
-        reply = active?.scenario.onMessage?.(input.text, { scope, ownerScope: active.scope, history: input.history });
+        const route = routeMessage(input.text);
+        const switching = route.kind === 'scenario' && route.scenario.id !== active?.scenario.id;
+        const gallery = route.kind === 'gallery' && (input.text.trim().startsWith('gallery:') || input.text.trim() === route.demo.id);
+        if (!switching && !gallery) reply = active?.scenario.onMessage?.(input.text, { scope, ownerScope: active.scope, history: input.history });
         if (reply && active) owners.set(scope, { scenario: active.scenario, scope });
         if (!reply) {
-          const route = routeMessage(input.text);
           if (route.kind === 'scenario') {
             active = { scenario: route.scenario, scope }; owners.set(scope, active);
             title = route.scenario.title; reply = { text: route.scenario.opening(scope) };
