@@ -9,12 +9,21 @@ export interface ThemeTokens {
   space1: string; space2: string; space3: string; space4: string; space5: string; space6: string; space7: string; space8: string;
   fontSans: string; fontMono: string; textXs: string; textSm: string; textBase: string; textLg: string; textXl: string;
   shadowSm: string; shadowMd: string; shadowLg: string; durationFast: string; durationBase: string; durationSlow: string; ease: string;
+  paper: string; ink: string; ink2: string; ink3: string; fill: string; fillStrong: string; hairline: string;
+  spectrum: string; spectrumGlow: string; accentContrast: string; accentGlow: string; focus: string;
+  radiusCode: string; radiusXl: string; radiusPill: string; shadowFloat: string;
+  fontDisplay: string; fontFeatures: string; letterSpacing: string; textDisplay: string; textTotal: string;
+  duration: string; durationEntry: string; durationSweep: string; durationReceipt: string; durationCheck: string; durationOdometer: string;
+  easeSpring: string; flowGap: string; measure: string; measureWide: string;
 }
 export type ThemeStyle = CSSProperties & { [key: `--prism-${string}`]: string | number };
 export type Theme = 'light' | 'dark' | 'auto' | ThemeStyle;
 export type Density = 'compact' | 'comfortable' | 'spacious';
 export function createTheme(tokens: Partial<ThemeTokens>, base: Partial<ThemeTokens> | ThemeStyle = {}): ThemeStyle {
-  return Object.fromEntries(Object.entries({ ...base, ...tokens }).map(([key, value]) => [key.startsWith('--') ? key : '--prism-' + key.replace(/[A-Z]/g, c => '-' + c.toLowerCase()), value]));
+  return Object.fromEntries(Object.entries({ ...base, ...tokens }).map(([key, value]) => [
+    key.startsWith('--') ? key : '--prism-' + key.replace(/[A-Z]|(?<=ink)[23]$/g, c => '-' + c.toLowerCase()),
+    value,
+  ]));
 }
 export function useMotion(animate = true): boolean {
   const [reduced, setReduced] = useState(() => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
