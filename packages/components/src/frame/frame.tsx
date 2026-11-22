@@ -56,7 +56,7 @@ export function ComponentFrame({ toolbar, actions, as = 'section', variant = 'in
   const Root = useFrameSlot(options.component, 'root'), Header = useFrameSlot(options.component, 'header'), Title = useFrameSlot(options.component, 'title');
   const Toolbar = useFrameSlot(options.component, 'toolbar'), Body = useFrameSlot(options.component, 'body'), Footer = useFrameSlot(options.component, 'footer');
   const Undo = useFrameSlot(options.component, 'undo'), Ask = useFrameSlot(options.component, 'ask');
-  const strings = useStrings('frame', frameStrings);
+  const strings = { ...useStrings('frame', frameStrings), ...useStrings(options.component) };
   const modelProps = { model: frame, frame, ...slotProps };
   const iconClass = !frame.unstyled && 'prism-icon-btn';
   return <Root {...modelProps} {...frame.rootProps} as={as} data-variant={variant} className={cx(parts.root.className, className) || undefined} style={{ ...parts.root.style, ...style }}>
