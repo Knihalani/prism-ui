@@ -104,6 +104,36 @@ test('JavaScript preview downloads a runnable HTML document and Code downloads i
   } finally { create.mockRestore(); click.mockRestore(); }
 });
 
+test('standalone HTML embeds the nearest resolved Prism tokens and active color scheme at download time', async () => {
+  const create = spyOn(URL, 'createObjectURL').mockReturnValue('blob:artifact-theme-test');
+  const click = spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  try {
+    const view = render(<Prism source={snippet} plugins={plugins} registry={registry} />);
+    const viewport = view.container.querySelector<HTMLElement>('[data-part=viewport]')!;
+    const scope = viewport.closest<HTMLElement>('.prism-root')!;
+    scope.style.setProperty('--local-accent', '#93b0ff');
+    viewport.style.colorScheme = 'dark';
+    viewport.style.setProperty('--prism-accent', 'var(--local-accent)');
+    viewport.style.setProperty('--prism-border', '#343d4b');
+    viewport.style.setProperty('--prism-bg', '#14181f');
+    viewport.style.setProperty('--prism-surface', '#1c222c');
+    viewport.style.setProperty('--unrelated', 'not-exported');
+    fireEvent.click(view.getByRole('button', { name: 'Download' }));
+    viewport.style.colorScheme = 'light';
+    scope.style.setProperty('--local-accent', '#3159c9');
+    fireEvent.click(view.getByRole('button', { name: 'Download' }));
+    const [dark, light] = await Promise.all(create.mock.calls.map(([blob]) => (blob as Blob).text()));
+    expect(dark).toContain('"--prism-accent":"#93b0ff"');
+    expect(dark).toContain('"--prism-border":"#343d4b"');
+    expect(dark).toContain('"--prism-bg":"#14181f"');
+    expect(dark).toContain('"--prism-surface":"#1c222c"');
+    expect(dark).toContain('"dark":true');
+    expect(dark).not.toContain('not-exported');
+    expect(light).toContain('"--prism-accent":"#3159c9"');
+    expect(light).toContain('"dark":false');
+  } finally { create.mockRestore(); click.mockRestore(); }
+});
+
 test('frame messages are scoped by channel, opaque origin, and explicit store permissions', async () => {
   const store = createStore(), actions: Action[] = [];
   const restore = observeFrames();

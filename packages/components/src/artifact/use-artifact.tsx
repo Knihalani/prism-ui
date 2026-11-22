@@ -6,7 +6,7 @@ import { mountArtifactFrame } from './frame';
 import { markdownTaskPath, renderArtifactMarkdown } from './markdown';
 import { historyFor, sourceDiff, type ArtifactProps } from './model';
 import { allowedPath, importMap, type ArtifactOptions } from './policy';
-import { artifactDocument, markup, type Render } from './runtime';
+import { artifactDocument, markup, type Render, type ThemeSnapshot } from './runtime';
 
 const Options = createContext<ArtifactOptions>({});
 export function ArtifactProvider({ options, children }: { options: ArtifactOptions; children: ReactNode }) {
@@ -24,6 +24,18 @@ function present(kind: ArtifactProps['kind'], source: string): Pick<Render, 'sou
 }
 const heights = { sm: 160, md: 252, lg: 384 };
 const maxAutoHeight = 4096;
+
+function readTheme(element: HTMLElement): ThemeSnapshot {
+  const win = element.ownerDocument.defaultView;
+  const tokens: Record<string, string> = {};
+  if (!win) return { tokens, dark: false };
+  const computed = win.getComputedStyle(element);
+  for (const property of Array.from(computed)) if (property.startsWith('--prism-')) tokens[property] = computed.getPropertyValue(property).trim();
+  const scheme = computed.colorScheme;
+  const dark = scheme === 'dark' ||
+    ((!scheme || scheme === 'normal' || scheme.includes('dark')) && !!win.matchMedia?.('(prefers-color-scheme: dark)').matches);
+  return { tokens, dark };
+}
 
 export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, complete = true) {
   const options = useContext(Options), emit = useEmit();
@@ -86,12 +98,8 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
 
   const updateTheme = useCallback(() => {
     if (!container || !sessionRef.current) return;
-    const computed = container.ownerDocument.defaultView!.getComputedStyle(container);
-    const tokens: Record<string, string> = {};
-    for (const property of Array.from(computed)) if (property.startsWith('--prism-')) tokens[property] = computed.getPropertyValue(property).trim();
-    const scheme = computed.colorScheme;
-    sessionRef.current.theme(tokens, scheme === 'dark' ||
-      (scheme.includes('dark') && !!container.ownerDocument.defaultView?.matchMedia?.('(prefers-color-scheme: dark)').matches));
+    const { tokens, dark } = readTheme(container);
+    sessionRef.current.theme(tokens, dark);
   }, [container]);
 
   useEffect(() => {
@@ -167,12 +175,14 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   async function download(standalone = false) {
     try {
       const filename = (selected.title ?? 'artifact').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'artifact';
-      const base = document.baseURI;
-      const contents = standalone ? artifactDocument('artifact-download', importMap(imports, base),
-        { kind, ...(kind === 'react' ? { source: await compileArtifact(source, options.compilerUrl) } : present(kind, source)),
-          complete: true, revision: 1 }) : source;
+      const doc = container?.ownerDocument ?? document;
+      const contents = standalone ? artifactDocument('artifact-download', importMap(imports, doc.baseURI), {
+        theme: readTheme(container ?? doc.documentElement),
+        render: { kind, ...(kind === 'react' ? { source: await compileArtifact(source, options.compilerUrl) } : present(kind, source)),
+          complete: true, revision: 1 },
+      }) : source;
       const url = URL.createObjectURL(new Blob([contents], { type: standalone ? 'text/html' : 'text/plain' }));
-      const link = document.createElement('a');
+      const link = doc.createElement('a');
       link.href = url; link.download = filename + '.' + (standalone ? 'html' : suffix[kind]); link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch { setNotice('Download unavailable'); }

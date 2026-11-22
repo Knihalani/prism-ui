@@ -38,7 +38,7 @@ Use `artifact:html`, `artifact:svg`, `artifact:js`, or `artifact:markdown` for t
 - `window.prism.send(type, payload)` emits a structured action through Prism's middleware. **Fix this** emits `fix` with `{ error, source, kind, version }`. `window.prism.theme` exposes the CSS variable names also applied to the frame root. `window.prism.resize()` requests a measurement; automatic height also follows content changes.
 - Markdown task lists use native checkboxes. Toggling saves the choice in the artifact's shared store state with undo and emits `toggle` with `{ task, checked }`. Give the artifact an explicit ID to keep its choices across replies.
 - Reusing an `id` with the same Prism store publishes a version; history lives in memory for that store. While a new version streams, the previous preview stays visible and the toolbar says **Updating…**. React versions replace the component inside the existing frame; use store-backed state for values that must outlive a module replacement. Reload resets frame-local state.
-- **Download** in preview saves runnable HTML, including compiled React and the configured import map. External modules must still be available to the browser. The standalone bridge uses local state and has no host action handler. **Download source** in Code or Changes saves the original source.
+- **Download** in preview saves runnable HTML with the active Prism theme, compiled React, and the configured import map. External modules must still be available to the browser. The standalone bridge uses local state and has no host action handler. **Download source** in Code or Changes saves the original source.
 
 ## Customizing
 

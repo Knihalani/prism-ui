@@ -2,9 +2,11 @@ import { buildSrcdoc } from '../mockup/engine/frame';
 import type { ArtifactKind } from './policy';
 
 export type Render = { kind: ArtifactKind; source: string; complete: boolean; revision: number; tasks?: Record<string, boolean> };
+export type ThemeSnapshot = { tokens: Record<string, string>; dark: boolean };
+type Standalone = { render: Render; theme: ThemeSnapshot };
 export type HostMessage =
   | { type: 'value'; path: string; value: unknown }
-  | { type: 'theme'; tokens: Record<string, string>; dark: boolean }
+  | ({ type: 'theme' } & ThemeSnapshot)
   | { type: 'size-mode'; maxHeight: number | undefined }
   | { type: 'task-values'; revision: number; values: Record<string, boolean> }
   | { type: 'render'; render: Render; values: Record<string, unknown> };
@@ -19,12 +21,22 @@ export type FrameMessage =
   | { type: 'task-toggle'; revision: number; task: string; checked: boolean }
   | { type: 'exitFullscreen' };
 
-function installArtifact(id: string, initial?: Render) {
+function installArtifact(id: string, exported?: Standalone) {
   const standalone = parent === window;
   const values: Record<string, unknown> = Object.create(null);
   const subscriptions = new Map<string, Set<(value: unknown) => void>>();
   const grants = new Set<string>();
   const theme: Record<string, string> = Object.create(null);
+  const applyTheme = ({ tokens, dark }: ThemeSnapshot) => {
+    for (const key of Object.keys(theme)) if (!Object.hasOwn(tokens, key)) delete theme[key];
+    Object.assign(theme, tokens);
+    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+  };
+  const initial = standalone ? exported?.render : undefined;
+  if (standalone && exported) {
+    applyTheme(exported.theme);
+    for (const [key, value] of Object.entries(theme)) document.documentElement.style.setProperty(key, value);
+  }
   let revision = 0, resizeFrame = 0, lastHeight = 0;
   let maxHeight: number | undefined;
   let taskValues: Record<string, boolean> | undefined;
@@ -173,11 +185,8 @@ function installArtifact(id: string, initial?: Render) {
     const data = event.data as HostMessage & { ns?: string; id?: string };
     if (event.source !== parent || !data || data.ns !== 'prism-artifact' || data.id !== id) return;
     if (data.type === 'value') adopt(data.path, data.value);
-    else if (data.type === 'theme') {
-      for (const key of Object.keys(theme)) if (!Object.hasOwn(data.tokens, key)) delete theme[key];
-      Object.assign(theme, data.tokens);
-      document.documentElement.style.colorScheme = data.dark ? 'dark' : 'light';
-    } else if (data.type === 'size-mode') {
+    else if (data.type === 'theme') applyTheme(data);
+    else if (data.type === 'size-mode') {
       maxHeight = data.maxHeight;
       resize();
     } else if (data.type === 'task-values') {
@@ -190,7 +199,7 @@ function installArtifact(id: string, initial?: Render) {
   window.addEventListener('DOMContentLoaded', () => {
     new ResizeObserver(resize).observe(document.body);
     send({ type: 'ready' });
-    if (standalone && initial) {
+    if (initial) {
       if (initial.kind !== 'js' && initial.kind !== 'react') window.postMessage({
         ns: 'prism-mockup', v: 1, id, type: 'render', html: initial.source, done: true,
       }, '*');
@@ -203,12 +212,12 @@ function installArtifact(id: string, initial?: Render) {
 export const markup = (kind: ArtifactKind) => kind !== 'react' && kind !== 'js';
 const json = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c');
 
-export function artifactDocument(id: string, imports: Record<string, string>, initial?: Render) {
+export function artifactDocument(id: string, imports: Record<string, string>, exported?: Standalone) {
   const nonce = id.replace(/[^\w-]/g, '');
   const scriptSources = [...new Set(Object.values(imports).map(value => value.split('?')[0]))].join(' ');
   const csp = `default-src 'none'; script-src 'nonce-${nonce}' blob: ${scriptSources}; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'`;
   const head = `<style>html{background:var(--prism-surface,#fff);color:var(--prism-text,#242832);font-family:var(--prism-font-sans,system-ui,sans-serif)}html[data-prism-artifact-fit]{overflow-y:hidden}button,input,select,textarea{font:inherit}</style><script nonce="${nonce}" type="importmap">${json({ imports })}</script>`;
   const srcdoc = buildSrcdoc({ id, csp, head, runtimeOptions: { interactive: true } }).replace('<script>', `<script nonce="${nonce}">`);
-  const runtime = `(${installArtifact.toString()})(${json(id)}${initial ? ',' + json(initial) : ''})`.replace(/<\/script/gi, '<\\/script');
+  const runtime = `(${installArtifact.toString()})(${json(id)}${exported ? ',' + json(exported) : ''})`.replace(/<\/script/gi, '<\\/script');
   return srcdoc.replace('</head>', () => `<script nonce="${nonce}">${runtime}</script></head>`);
 }
