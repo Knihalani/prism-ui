@@ -93,7 +93,10 @@ function TableCellView({ node, children }: MarkdownProps) {
 }
 export function MarkdownTable({ props, ...ctx }: PrismComponentProps<TableProps>) {
   const model = useTable(props, ctx), prism = usePrism(), HeadSlot = useSlot('table', 'head', Head), BodySlot = useSlot('table', 'body', Body);
-  const scoped = useMemo(() => ({ ...prism, components: { ...prism.components, tableRow: TableRowView, tableHeader: TableCellView, tableCell: TableCellView } }), [prism]);
+  const scoped = useMemo(() => ({ ...prism, components: {
+    ...Object.fromEntries(Object.entries({ tableRow: TableRowView, tableHeader: TableCellView, tableCell: TableCellView }).filter(([name]) => !prism.components[name] && !prism.registry.get(name))),
+    ...prism.components,
+  } }), [prism]);
   const renderRow = (index: number): ReactNode => {
     const node = model.rows[index];
     if (model.markdown) return model.rendered[index];

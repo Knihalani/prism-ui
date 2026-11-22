@@ -6,6 +6,33 @@ import { createStore } from '@prism-ui/state';
 import { tableDef } from './index';
 
 afterEach(cleanup);
+
+test('markdown table preserves component and registry node overrides while sorting rows', () => {
+  function Row({ children }: { children?: React.ReactNode }) { return <tr data-override="row">{children}</tr>; }
+  function Header({ children }: { children?: React.ReactNode }) { return <th data-override="header">{children}</th>; }
+  function Cell({ children }: { children?: React.ReactNode }) { return <td data-override="cell">{children}</td>; }
+  function Ignored({ children }: { children?: React.ReactNode }) { return <td data-ignored="yes">{children}</td>; }
+  const components = { tableRow: Row, tableHeader: Header, tableCell: Cell };
+  const view = render(<Prism source="" />);
+  for (const mode of ['components', 'registry', 'precedence'] as const) {
+    const store = createStore();
+    const registry = createRegistry([tableDef, ...Object.entries(components).map(([name, component]) => ({ name, component: mode === 'precedence' ? Ignored : component }))]);
+    view.rerender(<Prism source={source} store={store} registry={mode === 'components' ? createRegistry([tableDef]) : registry} components={mode === 'registry' ? {} : components} />);
+    expect(view.container.querySelectorAll('tr[data-override="row"]').length).toBe(4);
+    expect(view.container.querySelectorAll('th[data-override="header"]').length).toBe(4);
+    expect(view.container.querySelectorAll('td[data-override="cell"]').length).toBe(12);
+    expect(view.container.querySelector('[data-ignored]')).toBeNull();
+    const firstRow = view.container.querySelector('tbody tr');
+    expect(order(view)).toEqual(['Team 10', 'Team 2', 'Team 1']);
+    act(() => store.set('0.sort', { column: 1, dir: 'asc' }));
+    expect(order(view)).toEqual(['Team 2', 'Team 1', 'Team 10']);
+    expect(view.container.querySelector('tbody tr:last-child')).toBe(firstRow);
+    act(() => store.set('0.sort', { column: 1, dir: 'desc' }));
+    expect(order(view)).toEqual(['Team 10', 'Team 1', 'Team 2']);
+    act(() => store.set('0.sort', null));
+    expect(order(view)).toEqual(['Team 10', 'Team 2', 'Team 1']);
+  }
+});
 const source = '| Plan | Price | Change | Date |\n| --- | --- | :---: | --- |\n| **Team 10** | $1,200 | 5% | 2025-02-01 |\n| Team 2 | $20 | 10% | 2024-12-01 |\n| Team 1 | $100 | 2% | 2025-01-01 |';
 function order(view: ReturnType<typeof render>, column = 0) { return Array.from(view.container.querySelectorAll('tbody tr')).map(row => row.children[column].textContent); }
 
