@@ -44,7 +44,7 @@ function Segments({ value }: { value: string }) {
 }
 export const SegmentedTotal = forwardRef<HTMLDivElement, SlotProps & { estimate: EstimateModel }>(function SegmentedTotal({ as, model, frame, overflow, estimate, children, ...props }, ref) {
   const strings = useStrings('estimate');
-  const text = String(Number(estimate.displayedTotal.toFixed(2)));
+  const text = String(Number(estimate.displayedTotal.toFixed(estimate.fractionDigits)));
   const label = usePart('estimate', 'total-label'), value = usePart('estimate', 'total-value'), live = usePart('estimate', 'live');
   return <div {...props} ref={ref}>
     <div className="instrument-readout-label"><PrismPart as="span" {...label}>{estimate.totalLabel}</PrismPart><span>{strings.displayLabel}</span></div>

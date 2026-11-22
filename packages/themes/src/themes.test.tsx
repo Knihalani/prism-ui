@@ -277,6 +277,27 @@ for (const theme of [print, objects, instrument]) {
   });
 }
 
+for (const theme of [print, objects, instrument]) {
+  for (const [currency, price, digits] of [['KWD', 1.234, '1.234'], ['USD', 1.234, '1.23'], ['JPY', 1.6, '2']] as const) {
+    test(`${theme.name} Estimate total respects ${currency} currency precision`, () => {
+      const source = '```ui:estimate\n' + JSON.stringify({ currency, items: [{ id: 'one', label: 'One', price }] }) + '\n```';
+      const view = render(<Prism source={source} theme={theme} locale="en-US" animate={false} onAction={() => {}} />);
+      const value = view.container.querySelector('[data-prism="estimate"][data-part="total-value"]')!;
+      const money = new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(price);
+      expect(view.container.querySelector('[data-prism="estimate"][data-part="live"]')?.textContent).toBe(money);
+      if (theme === instrument) {
+        const groups = value.querySelectorAll('svg > g');
+        expect(groups).toHaveLength(digits.length);
+        for (let i = 0; i < digits.length; i++) {
+          if (digits[i] === '.') expect(groups[i].querySelector('circle')).not.toBeNull();
+          else expect(groups[i].querySelectorAll('polygon[opacity="0.96"]')).toHaveLength(({ '1': 2, '2': 5, '3': 5, '4': 4 } as Record<string, number>)[digits[i]]);
+        }
+      } else if (theme === objects) expect(value.textContent).toBe(money);
+      else expect(value.textContent).toContain(digits);
+    });
+  }
+}
+
 const workflowSource = [
   ':badge[Pilot]{tone="accent"}',
   ':::callout{title="Keep it small"}\nOne useful conversation.\n:::',

@@ -51,7 +51,7 @@ const Total = forwardRef<HTMLDivElement, SlotProps & { estimate: EstimateModel }
   const format = useFormat(), context = useContext(ComponentContext)!;
   const label = usePart('estimate', 'total-label'), value = usePart('estimate', 'total-value'), live = usePart('estimate', 'live');
   const currency = estimate.totalText.replace(/[\p{N}\p{P}\p{Z}\p{Cf}]/gu, '');
-  return <div {...props} ref={ref} data-print-total=""><PrismPart as="span" {...label}>{estimate.totalLabel} / {currencyCode(context.props.currency, format.currencyCode)}</PrismPart><PrismPart as="span" {...value} aria-hidden="true"><sup>{currency}</sup><span>{format.number(estimate.displayedTotal, { maximumFractionDigits: 2 })}</span></PrismPart><PrismPart as="span" {...live} aria-live="polite">{estimate.finalTotalText}</PrismPart></div>;
+  return <div {...props} ref={ref} data-print-total=""><PrismPart as="span" {...label}>{estimate.totalLabel} / {currencyCode(context.props.currency, format.currencyCode)}</PrismPart><PrismPart as="span" {...value} aria-hidden="true"><sup>{currency}</sup><span>{format.number(estimate.displayedTotal, { maximumFractionDigits: estimate.fractionDigits })}</span></PrismPart><PrismPart as="span" {...live} aria-live="polite">{estimate.finalTotalText}</PrismPart></div>;
 });
 
 const Criteria = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<typeof usePick> }>(function Criteria({ as, model, frame, overflow, pick, children, ...props }, ref) {
