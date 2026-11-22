@@ -122,10 +122,10 @@ const TableContext = createContext<TableModel | null>(null);
 const Element = forwardRef<any, { as?: ElementType; [key: string]: any }>(function Element({ as = 'div', ...props }, ref) { return createElement(as, { ...props, ref }); });
 const Part = forwardRef<any, { part: TablePart; as?: ElementType; row?: TableRow; column?: TableColumn; [key: string]: any }>(function Part({ part, row, column, as = 'div', ...props }, ref) {
   const table = useContext(TableContext)!, attrs = usePart('table', part, table.state), View = useSlot('table', part, Element);
-  return <View as={as} {...attrs} {...props} ref={ref} {...(View === Element ? {} : { table, row, column })} />;
+  return <View as={as} {...attrs} {...props} {...(part === 'row' ? { 'data-prism-enter': table.rootProps['data-entering'] } : {})} ref={ref} {...(View === Element ? {} : { table, row, column })} />;
 });
 function TableRowView({ node, children }: MarkdownProps) {
-  return <Part part="row" as="tr" row={node} data-prism-enter="">{children}</Part>;
+  return <Part part="row" as="tr" row={node}>{children}</Part>;
 }
 function TableCellView({ node, children }: MarkdownProps) {
   const table = useContext(TableContext)!, context = table.cells.get(node.key), index = context?.index ?? 0, column = context?.column, row = context?.row, header = node.type === 'tableHeader', alignment = table.align[index];

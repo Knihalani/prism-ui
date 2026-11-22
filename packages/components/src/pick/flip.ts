@@ -4,12 +4,12 @@ import { createFlip, useReducedMotion } from '@prism-ui/react';
 export function useFlip(enabled: boolean) {
   const ref = useRef<HTMLDivElement>(null), flip = useRef<ReturnType<typeof createFlip> | null>(null), pending = useRef(false);
   const reduced = useReducedMotion();
-  const elements = () => ref.current?.querySelectorAll<HTMLElement>('[data-option]') ?? [];
+  const elements = () => Array.from(ref.current?.querySelectorAll<HTMLElement>('[data-option]') ?? []);
   const measure = useCallback(() => {
     if (!enabled || reduced || !ref.current) { flip.current?.cancel(); return; }
     const style = getComputedStyle(ref.current);
-    const token = style.getPropertyValue('--prism-pick-motion-base').trim() || style.getPropertyValue('--prism-motion-spring-duration').trim() || '0ms';
-    const next = createFlip({ duration: parseFloat(token) * (token.endsWith('ms') ? 1 : 1000) || 0, easing: style.getPropertyValue('--prism-pick-motion-spring').trim() || undefined });
+    const token = style.getPropertyValue('--prism-pick-motion-base').trim() || style.getPropertyValue('--prism-motion-spring-duration').trim() || style.getPropertyValue('--prism-motion-base').trim() || '0ms';
+    const next = createFlip({ duration: parseFloat(token) * (token.endsWith('ms') ? 1 : 1000) || 0, easing: style.getPropertyValue('--prism-pick-motion-spring').trim() || style.getPropertyValue('--prism-motion-spring').trim() || undefined });
     next.measure(elements());
     flip.current?.cancel();
     flip.current = next;

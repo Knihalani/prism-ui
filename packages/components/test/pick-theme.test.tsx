@@ -162,15 +162,17 @@ test('Pick reorder reads motion tokens, cancels animations and respects disabled
   let cancelled = 0;
   HTMLElement.prototype.getBoundingClientRect = function () { return this.dataset.option ? new DOMRect(0, Array.from(this.parentElement!.children).indexOf(this) * 40, 100, 40) : originalRect.call(this); };
   HTMLElement.prototype.animate = function (_frames, options) { calls.push(options as KeyframeAnimationOptions); return { cancel() { cancelled++; } } as Animation; };
+  let measureOrder: () => void;
   function Fixture({ reversed, enabled = true }: { reversed: boolean; enabled?: boolean }) {
-    const ref = useFlip(enabled);
+    const { ref, measure } = useFlip(enabled);
+    measureOrder = measure;
     return <div ref={ref} style={{ '--prism-motion-base': '.1s', '--prism-motion-spring': 'linear' } as CSSProperties}>{(reversed ? ['b', 'a'] : ['a', 'b']).map(id => <div key={id} data-option={id} />)}</div>;
   }
   try {
     let reduced = false;
     globalThis.matchMedia = query => ({ matches: reduced, media: query, onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; } });
     const view = render(<Fixture reversed={false} />);
-    view.rerender(<Fixture reversed />);
+    measureOrder!(); view.rerender(<Fixture reversed />);
     expect(calls).toHaveLength(2); expect(calls[0]).toEqual({ duration: 100, easing: 'linear' });
     view.rerender(<Fixture reversed={false} enabled={false} />);
     expect(cancelled).toBe(2); expect(calls).toHaveLength(2);
