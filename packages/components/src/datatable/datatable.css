@@ -90,7 +90,7 @@
 .prism-datatable__scroll :focus-visible { outline-offset: -2px; }
 .prism-datatable__empty { padding: var(--prism-space6) 0; color: var(--prism-muted); font-size: var(--prism-text-sm); text-align: center; }
 .prism-datatable__clear { margin-inline-start: var(--prism-space2); border: 0; background: none; color: var(--prism-accent); font: inherit; text-decoration: underline; cursor: pointer; }
-.prism-datatable__skeleton { width: 75%; max-width: 9ch; height: 9px; }
+.prism-datatable__skeleton { --prism-skeleton-width: 75%; --prism-skeleton-height: 9px; max-width: 9ch; }
 .prism-datatable__status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (hover: hover) {
   .prism-datatable__root:not(:hover, :focus-within) > .prism-datatable__toolbar > :is(.prism-datatable__ask, .prism-datatable__undo) { opacity: 0; }

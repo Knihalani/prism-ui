@@ -50,7 +50,15 @@
 .prism-root .prism-tabs__root[data-variant="pill"] .prism-tabs__tab { border: 0; border-radius: var(--prism-radius-pill); }
 .prism-root .prism-tabs__root[data-variant="pill"] .prism-tabs__list:not([data-measured]) .prism-tabs__tab[aria-selected="true"] { background: var(--prism-accent-soft); }
 .prism-root .prism-tabs__root[data-variant="pill"] .prism-tabs__indicator { inset-block: 3px; height: auto; z-index: -1; background: var(--prism-accent-soft); }
-.prism-root .prism-tabs__skeleton { display: inline-block; width: 52px; height: .8em; }
+.prism-root .prism-tabs__skeleton {
+  --prism-skeleton-width: 52px;
+  --prism-skeleton-height: .8em;
+  display: inline-block;
+  width: var(--prism-skeleton-width);
+  height: var(--prism-skeleton-height);
+  border-radius: var(--prism-radius-sm);
+  background: var(--prism-fill);
+}
 .prism-root .prism-tabs__body { padding-top: var(--prism-space4); }
 .prism-root .prism-tab__root[hidden] { display: none; }
 .prism-root .prism-tab__root { min-width: 0; }

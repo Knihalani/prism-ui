@@ -50,7 +50,13 @@
   grid-area: actions;
   margin-block-start: var(--prism-card-gap, var(--prism-space3));
 }
-.prism-root .prism-card__skeleton { height: .85em; width: 70%; margin-block: .3em; }
+.prism-root .prism-card__skeleton {
+  --prism-skeleton-height: .85em;
+  --prism-skeleton-width: 70%;
+  height: var(--prism-skeleton-height);
+  width: var(--prism-skeleton-width);
+  margin-block: .3em;
+}
 @media (hover: hover) {
   .prism-root .prism-card__root:not(:hover, :focus-within) > .prism-card__header .prism-card__ask { opacity: 0; }
 }

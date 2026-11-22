@@ -9,6 +9,12 @@
   -webkit-font-smoothing: antialiased;
 }
 .prism-root :focus-visible { outline: 2px solid var(--prism-accent); outline-offset: 3px; }
+.prism-root :is(.prism-card__body, .prism-callout__body):has(> [data-prism-skeleton]) {
+  display: grid;
+  min-block-size: 1lh;
+  align-content: center;
+}
+.prism-root :is(.prism-card__body, .prism-callout__body) > [data-prism-skeleton] { margin-block: 0; }
 .prism-root :where(.prism-heading__root, .prism-paragraph__root, .prism-list__root, .prism-blockquote__root, .prism-thematicBreak__root, .prism-image__root, .prism-code__root, .prism-table__root) { margin-block: 0; }
 .prism-root :where(.prism-heading__root, .prism-paragraph__root, .prism-list__root, .prism-blockquote__root, .prism-thematicBreak__root, .prism-image__root, .prism-code__root, .prism-table__root) + :where(.prism-heading__root, .prism-paragraph__root, .prism-list__root, .prism-blockquote__root, .prism-thematicBreak__root, .prism-image__root, .prism-code__root, .prism-table__root),
 .prism-root :where(div, section, aside, article) + :where(.prism-heading__root, .prism-paragraph__root, .prism-list__root, .prism-blockquote__root, .prism-thematicBreak__root, .prism-image__root, .prism-code__root, .prism-table__root) { margin-block-start: var(--prism-flow-gap); }

@@ -1,5 +1,5 @@
 import { createElement, useCallback, useContext, useSyncExternalStore, type CSSProperties, type ElementType, type HTMLAttributes, type KeyboardEvent, type ReactNode } from 'react';
-import { ComponentContext, cx, useEmit, usePart, usePrism, useSlot } from '@prism-ui/react';
+import { ComponentContext, cx, useEmit, usePart, usePresentation, usePrism, useSlot } from '@prism-ui/react';
 
 export interface FrameOptions {
   component: string; title?: string; label?: string; state?: string; ask?: boolean; undo?: boolean;
@@ -17,6 +17,7 @@ function useFramePart(component: string, part: FramePart, state?: string) {
 }
 export function useFrame({ component, title, label, state, ask = true, undo = false }: FrameOptions) {
   const { store, animate, unstyled } = usePrism(), emit = useEmit();
+  const presentation = usePresentation();
   const { id } = useContext(ComponentContext)!;
   const subscribe = useCallback((fn: () => void) => store.subscribe('*', fn), [store]);
   const snapshot = useCallback(() => (store.canUndo(id) ? 1 : 0) | (store.canRedo(id) ? 2 : 0), [store, id]);
@@ -38,7 +39,10 @@ export function useFrame({ component, title, label, state, ask = true, undo = fa
     ask: useFramePart(component, 'ask'), undo: useFramePart(component, 'undo'),
   };
   return { parts, ask, undo, animate, unstyled, canUndo: !!(history & 1), canRedo: !!(history & 2), onAsk, onUndo, onRedo,
-    rootProps: { ...parts.root, role: 'group', 'aria-label': label ?? title ?? component, tabIndex: -1, 'data-prism-enter': animate ? '' : undefined, onKeyDown } };
+    rootProps: { ...parts.root, ...presentation, 'data-state': state ?? presentation['data-state'],
+      'data-presentation-state': state === undefined ? undefined : presentation['data-state'],
+      role: 'group', 'aria-label': label ?? title ?? component, tabIndex: -1,
+      'data-prism-enter': presentation['data-entering'], onKeyDown } };
 }
 function Element({ as = 'div', ...props }: FrameSlotProps) { return createElement(as, props); }
 function useFrameSlot(component: string, part: FramePart) { return useSlot(component, part, useSlot('frame', part, Element)); }

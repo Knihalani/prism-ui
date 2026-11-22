@@ -25,7 +25,13 @@
 .prism-root .prism-callout__title { margin: 0; font: 650 1em/1.35 var(--prism-font-display); letter-spacing: -.016em; }
 .prism-root .prism-callout__body:not(:empty) { margin-top: var(--prism-space2); }
 .prism-root .prism-callout__ask { position: absolute; inset-block-start: var(--prism-space2); inset-inline-end: var(--prism-space2); }
-.prism-root .prism-callout__skeleton { width: 69%; height: 1em; margin-block: .3em; }
+.prism-root .prism-callout__skeleton {
+  --prism-skeleton-width: 69%;
+  --prism-skeleton-height: 1em;
+  width: var(--prism-skeleton-width);
+  height: var(--prism-skeleton-height);
+  margin-block: .3em;
+}
 @media (hover: hover) {
   .prism-root .prism-callout__root:not(:hover, :focus-within) > .prism-callout__header .prism-callout__ask { opacity: 0; }
 }
