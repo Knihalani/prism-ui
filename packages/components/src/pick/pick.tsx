@@ -128,11 +128,10 @@ function PickItem({ option, pick }: { option: PickOption; pick: PickModel }) {
     <PrismPart as="h4" {...parts.header} slotProps={model} aria-label={row.title}>
       <PrismPart as={collapsible ? 'button' : 'span'} {...summary} slotProps={model} {...(collapsible ? { type: 'button' as const } : {})} aria-expanded={collapsible ? row.expanded : undefined} aria-controls={collapsible ? detailsId : undefined} onClick={collapsible ? row.onToggle : undefined} onFocus={collapsible ? (event: FocusEvent<HTMLElement>) => { if (event.currentTarget.matches(':focus-visible')) row.onExpand(); } : undefined}>
         <PrismPart as="span" {...parts.rank} slotProps={model}>{row.rankLabel}</PrismPart>
-        <PrismPart as="span" {...parts.title} slotProps={model}>{row.title}</PrismPart>
+        <PrismPart as="span" {...parts.title} slotProps={model}>{row.title}{row.tag && <PrismPart as="span" {...parts.tag} slotProps={model}>{row.tag}</PrismPart>}</PrismPart>
         <PrismPart as="span" {...parts.match} slotProps={model} aria-label={row.matchDescription} data-prism-skeleton={!row.ready ? '' : undefined}>{row.ready ? (pick.compact ? row.matchText : row.matchDescription) : pick.strings.loadingLabel}{collapsible && <PickIcon name="chevron" pick={pick} option={option} />}</PrismPart>
+        {row.top && <PrismPart as="span" {...parts.top} slotProps={model}>{row.topLabel}</PrismPart>}
       </PrismPart>
-      {row.top && <PrismPart as="span" {...parts.top} slotProps={model}>{row.topLabel}</PrismPart>}
-      {row.tag && <PrismPart as="span" {...parts.tag} slotProps={model}>{row.tag}</PrismPart>}
     </PrismPart>
     <PrismPart as="div" {...details} slotProps={model} id={detailsId} hidden={!row.expanded}>
     {row.subtitle && <PrismPart as="p" {...parts.subtitle} slotProps={model}>{row.subtitle}</PrismPart>}
