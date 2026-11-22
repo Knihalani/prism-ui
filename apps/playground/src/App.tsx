@@ -1,6 +1,7 @@
 import { Component, Profiler, useCallback, useEffect, useRef, useState, useSyncExternalStore, type ErrorInfo, type ReactNode } from 'react';
 import { Prism, ThemeScope, defaultRegistry, toPromptDocs, type Action, type Density } from '@prism-ui/react';
-import { createStore, type Store } from '@prism-ui/state';
+import type { Store } from '@prism-ui/state';
+import { makeStore } from './store';
 import { examples, kitchenSink } from './fixtures';
 import { metrics, resetMetrics } from './metrics';
 import { parsePatch } from './patch';
@@ -11,7 +12,6 @@ const promptDocs = toPromptDocs(defaultRegistry);
 type Tab = 'actions' | 'state' | 'prompt';
 type Status = 'ready' | 'streaming' | 'paused' | 'stopped' | 'complete';
 type Log = { number: number; time: string; action: Action; json: string };
-const makeStore = () => createStore({ initial: { rent: 1200 } });
 
 function Mark() {
   return <svg width="32" height="36" viewBox="0 0 32 36" fill="none" aria-hidden="true"><path d="m16 2 14 25-14 7L2 27 16 2Z" fill="currentColor" opacity=".13"/><path d="m16 2 14 25-14 7L2 27 16 2Zm0 0v32M2 27l14-9 14 9" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>;
@@ -45,7 +45,7 @@ function StatePanel({ store, reset, notify }: { store: Store; reset: () => void;
   const [patch, setPatch] = useState('{\n  "set": { "rent": 1800 }\n}');
   const [error, setError] = useState('');
   const apply = () => { try { store.apply(parsePatch(patch)); setError(''); notify('State patch applied.'); } catch (error) { setError(error instanceof Error ? error.message : String(error)); } };
-  return <><div className="drawer-section-title"><h3>Shared store</h3><button className="text-button" onClick={reset}>Reset</button></div><p className="hint">Live values shared by every component. Interact with the preview to watch them change.</p><pre className="json snapshot" aria-label="Live store snapshot">{JSON.stringify(snapshot, null, 2)}</pre>
+  return <><div className="drawer-section-title"><h3>Shared store</h3><button className="text-button" onClick={() => { makeStore(true); reset(); }}>Reset state</button></div><p className="hint">Live values shared by every component, saved locally across reloads.</p><pre className="json snapshot" aria-label="Live store snapshot">{JSON.stringify(snapshot, null, 2)}</pre>
     <div className="drawer-section-title"><h3>Simulate an agent patch</h3><span className="tiny-tag">ui:state</span></div><p className="hint">Same set / merge / delete semantics as a finalized <code>ui:state</code> block.</p>
     <label className="sr-only" htmlFor="state-patch">State patch JSON</label><textarea id="state-patch" className="patch-editor" value={patch} spellCheck={false} onChange={event => setPatch(event.target.value)} aria-invalid={!!error}/>
     {error && <p className="error-text" role="alert">{error}</p>}<button className="chrome-button primary full" onClick={apply}>Apply patch <Icon name="arrow"/></button></>;
