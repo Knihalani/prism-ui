@@ -1,9 +1,10 @@
 import '../../react/test/setup';
 import { expect, test } from 'bun:test';
-import { fireEvent, render, within } from '@testing-library/react';
+import { act, fireEvent, render, within } from '@testing-library/react';
 import { Prism, ThemeScope, host } from '@prism-ui/react';
 import '@prism-ui/components/estimate';
 import '@prism-ui/components/pick';
+import '@prism-ui/components/mockup';
 import { instrument, objects, print, refraction } from './index';
 import { print as printSubpath } from '@prism-ui/themes/print';
 import { objects as objectsSubpath } from '@prism-ui/themes/objects';
@@ -17,6 +18,25 @@ test('Print and Objects expose named themes and dark tokens', () => {
     expect(theme.dark?.text).toBeTruthy();
   }
   expect('components' in objects).toBe(false);
+});
+
+test('Print feedback field preserves its label, edits and submit action', () => {
+  const actions: { type: string }[] = [];
+  const source = '```ui:mockup\n' + JSON.stringify({ id: 'figure', kind: 'svg', source: '<svg viewBox="0 0 100 100"><rect width="100" height="100"/></svg>' }) + '\n```';
+  const view = render(<Prism source={source} theme={print} animate={false} onAction={action => actions.push(action)} />);
+  const field = within(view.container).getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement;
+  const submit = within(view.container).getByRole('button', { name: 'Submit feedback' });
+  expect(field.getAttribute('rows')).toBe('1');
+  expect(field.hasAttribute('model')).toBe(false);
+  expect(submit.hasAttribute('disabled')).toBe(true);
+  act(() => field.focus());
+  fireEvent.change(field, { target: { value: 'Keep the invitation short.\nUse more space around the title.' } });
+  fireEvent.keyUp(field, { key: 'Unidentified' });
+  expect(field.value).toContain('Use more space');
+  expect(submit.hasAttribute('disabled')).toBe(false);
+  fireEvent.click(submit);
+  expect(actions).toHaveLength(1);
+  expect(within(view.container).getByRole('button', { name: 'Edit feedback' })).toBeTruthy();
 });
 
 test('Print restructures Estimate without losing quantity, switch, Undo or submit behavior', () => {

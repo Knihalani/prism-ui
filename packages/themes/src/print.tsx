@@ -1,8 +1,9 @@
-import { Children, createContext, createElement, forwardRef, useContext, type ElementType, type InputHTMLAttributes, type ReactElement, type ReactNode } from 'react';
+import { Children, createContext, createElement, forwardRef, useContext, useImperativeHandle, useLayoutEffect, useRef, type ElementType, type InputHTMLAttributes, type ReactElement, type ReactNode } from 'react';
 import { ComponentContext, PrismPart, defineTheme, useFormat, usePart, usePrism, useStoreValue, useStrings } from '@prism-ui/react';
 import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { usePick } from '@prism-ui/components/pick';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
+import type { MockupSlotProps } from '@prism-ui/components/mockup';
 
 type SlotProps = FrameSlotProps<unknown>;
 type EstimateRow = EstimateModel['rows'][number];
@@ -46,6 +47,26 @@ const EstimateLabel = forwardRef<HTMLDivElement, SlotProps>(function EstimateLab
 });
 const Switch = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { as?: ElementType }>(function Switch({ as, ...props }, ref) {
   return <input {...props} ref={ref} role="switch" />;
+});
+const FeedbackInput = forwardRef<HTMLTextAreaElement, MockupSlotProps<'textarea'>>(function FeedbackInput({ as, model, vm, item, children, ...props }, ref) {
+  const input = useRef<HTMLTextAreaElement>(null);
+  useImperativeHandle(ref, () => input.current!, []);
+  useLayoutEffect(() => {
+    const element = input.current;
+    if (!element) return;
+    const resize = () => {
+      element.style.height = 'auto';
+      const style = getComputedStyle(element);
+      element.style.height = `${Math.ceil(element.scrollHeight + parseFloat(style.borderTopWidth || '0') + parseFloat(style.borderBottomWidth || '0'))}px`;
+    };
+    resize();
+    if (typeof ResizeObserver === 'undefined') return;
+    let width = element.clientWidth;
+    const observer = new ResizeObserver(() => { if (element.clientWidth !== width) { width = element.clientWidth; resize(); } });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [props.value]);
+  return <textarea {...props} ref={input} rows={props.rows ?? 1}>{children}</textarea>;
 });
 const Total = forwardRef<HTMLDivElement, SlotProps & { estimate: EstimateModel }>(function Total({ as, model, frame, overflow, estimate, children, ...props }, ref) {
   const format = useFormat(), context = useContext(ComponentContext)!;
@@ -105,7 +126,7 @@ export const print = defineTheme({
     frame: { slots: { header: Header, undo: Tool, ask: Tool, overflowTrigger: Tool }, strings: { undoLabel: 'Undo', askLabel: 'Ask', moreLabel: 'Tools' } },
     estimate: { slots: { root: EstimateRoot, body: EstimateBody, item: EstimateItem, label: EstimateLabel, checkbox: Switch, total: Total }, strings: { title: 'Week-one estimate', sectionIndex: '01 / EST', submit: 'Send estimate ↗', sentLabel: 'Estimate sent ✓', totalLabel: 'Total', footnote: '{notes} · {currency}' } },
     pick: { slots: { criteria: Criteria, item: Option, list: Options }, strings: { question: 'What matters to you?', sectionIndex: '02 / PICK', optionIndex: '{n} / APPROACH', scoreSuffix: '/100', ratingSuffix: '/10', chooseTemplate: 'Choose {title} ↗' } },
-    mockup: { strings: { sectionIndex: '03 / DESIGN' } },
+    mockup: { slots: { input: FeedbackInput }, strings: { sectionIndex: '03 / DESIGN' } },
     view: { strings: { sectionIndex: '04 / SETUP' } },
   },
   css: `
@@ -193,7 +214,15 @@ export const print = defineTheme({
     :scope [data-print-option]:is(:hover,:focus-within) .print-option-select { opacity:1; }
     :scope .print-chosen { font:10px var(--prism-font-mono); color:var(--prism-accent-text); }
     :scope .print-option-notes { padding-left:14px; font-size:11px; }
-    :scope .prism-mockup__viewport { border-radius:0; }
+    :scope .prism-mockup__viewport { border-top:4px solid var(--prism-text); border-radius:0; }
+    :scope .prism-mockup__empty { margin:0; padding:10px 0 14px; color:var(--prism-text-muted); font:10px/1.6 var(--prism-font-mono); }
+    :scope .prism-mockup__overall { font:10px/1.5 var(--prism-font-mono); text-transform:uppercase; }
+    :scope .prism-mockup__overall > .prism-mockup__input { min-height:40px; margin:4px 0 0; padding:8px 0; border:0; border-bottom:1px solid var(--prism-text); border-radius:0; box-shadow:none; background:none; resize:none; font:14px/1.5 var(--prism-font-body); text-transform:none; }
+    :scope .prism-mockup__overall > .prism-mockup__input:focus { outline:0; border-color:var(--prism-focus); }
+    :scope .prism-mockup__feedbackFooter { gap:8px; margin-top:10px; font:10px/1.5 var(--prism-font-mono); text-transform:uppercase; }
+    :scope .prism-mockup__count { font:inherit; }
+    :scope .prism-mockup__feedbackFooter > .prism-mockup__primary { padding:0; min-height:30px; border:0; border-radius:0; box-shadow:none; background:none; color:var(--prism-accent-text); font:700 11px/1.5 var(--prism-font-body); }
+    :scope .prism-mockup__feedbackFooter > .prism-mockup__primary:disabled { background:none; color:var(--prism-text); opacity:.5; }
     :scope .prism-mockup__member .prism-mockup__header { flex-direction:row; align-items:center; }
     :scope .prism-mockup__member .prism-mockup__header > .prism-mockup__title { flex:1; text-align:left; }
     :scope .prism-mockup__tools .prism-mockup__button { font:10px var(--prism-font-mono); text-transform:uppercase; }
@@ -222,7 +251,7 @@ export const print = defineTheme({
     :scope .prism-view__button[data-variant="primary"] { border:0; border-radius:0; background:var(--prism-accent); box-shadow:none; color:var(--prism-on-accent); font-weight:700; }
     @container (max-width:600px) {
       :scope .prism-pick__body { display:block; }
-      :scope .prism-pick__criteria { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; padding:18px 0 0; border:0; }
+      :scope .prism-pick__criteria { display:block; padding:18px 0 0; border:0; }
       :scope .print-option-columns { display:block; }
       :scope [data-print-option], :scope [data-print-option]:last-child { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 12px; padding:18px 0; border-right:0; border-top:1px solid var(--prism-border); }
       :scope [data-print-option][data-print-winner] { border-top:5px solid var(--prism-accent); padding-top:14px; }
