@@ -68,10 +68,24 @@ test('backtracking and reporting use only the replayed prefix after a target cha
   const terminal = { ...updated, steps: { ...updated.steps, a: { ...updated.steps.a, no: '$fixed' } } };
   const actions: Action[] = [];
   view.rerender(<Prism source={fence(terminal)} registry={registry} store={store} onAction={action => actions.push(action)} />);
-  expect(view.getByText('Fixed after 1 steps')).toBeDefined();
+  expect(view.getByText('Fixed after 1 step')).toBeDefined();
   fireEvent.click(view.getByRole('button', { name: 'Send report' }));
   expect(store.get('wifi.path')).toEqual([{ step: 'a', answer: 'no' }]);
   expect(actions[0].payload).toEqual({ resolved: true, path: [{ step: 'a', answer: 'no' }] });
+});
+
+test.each([
+  { locale: 'en-US', count: 1, label: 'One {count}', expected: 'One 1' },
+  { locale: 'en-US', count: 2, label: 'Other {count}', expected: 'Other 2' },
+  { locale: 'fr-FR', count: 0, label: 'One {count}', expected: 'One 0' },
+  { locale: 'en-US', count: 0, label: 'Other {count}', expected: 'Other 0' },
+])('resolved labels use locale plural rules: $locale / $count', ({ locale, count, expected }) => {
+  const path = count === 0 ? [] : count === 1 ? [{ step: 'a', answer: 'yes' }] : [{ step: 'a', answer: 'no' }, { step: 'b', answer: 'yes' }];
+  const store = createStore({ initial: { wifi: { path } } });
+  const view = render(<Prism source={fence({ ...props, start: count ? 'a' : '$fixed', labels: { fixedOne: 'One {count}', fixedOther: 'Other {count}' } })} locale={locale} store={store} registry={registry} />);
+  expect(view.getByText(expected)).toBeDefined();
+  view.rerender(<Prism source={fence({ ...props, start: count ? 'a' : '$fixed', labels: { fixed: 'Legacy {count}' } })} locale={locale} store={store} registry={registry} />);
+  expect(view.getByText(`Legacy ${count}`)).toBeDefined();
 });
 
 test('unknown and missing targets end unresolved; yes defaults to fixed', () => {
@@ -80,7 +94,7 @@ test('unknown and missing targets end unresolved; yes defaults to fixed', () => 
   fireEvent.click(view.getByRole('button', { name: 'No' }));
   expect(view.getByText('Not fixed yet')).toBeDefined(); fireEvent.click(view.getByRole('button', { name: 'Send report' }));
   expect(actions).toEqual([{ type: 'troubleshoot', component: 'troubleshoot', id: 'dead', payload: { resolved: false, path: [{ step: 'a', answer: 'no' }] }, context: { component: 'troubleshoot', props: input, state: { path: [{ step: 'a', answer: 'no' }], sent: false } }, message: 'Troubleshooting "Troubleshoot": not fixed after 1 steps (No).' }]);
-  fireEvent.click(view.getByRole('button', { name: 'Start over' })); fireEvent.click(view.getByRole('button', { name: 'Yes' })); expect(view.getByText('Fixed after 1 steps')).toBeDefined();
+  fireEvent.click(view.getByRole('button', { name: 'Start over' })); fireEvent.click(view.getByRole('button', { name: 'Yes' })); expect(view.getByText('Fixed after 1 step')).toBeDefined();
   view.rerender(<Prism source={fence({ start: 'a', steps: { a: { text: 'No target.' } } })} registry={registry} />);
   fireEvent.click(view.getByRole('button', { name: 'No' })); expect(view.getByText('Not fixed yet')).toBeDefined();
 });
@@ -93,7 +107,7 @@ test('keyboard answers and backtracking, clickable history truncation and undo',
   fireEvent.click(view.getByRole('button', { name: 'Restart the adapter. No' })); expect(view.getByText('Step 1')).toBeDefined();
   fireEvent.keyDown(view.getByRole('group'), { key: 'z', ctrlKey: true }); expect(view.getByText('Step 2')).toBeDefined();
   fireEvent.keyDown(view.getByRole('button', { name: 'Yes' }), { key: 'Backspace' }); expect(view.getByText('Step 1')).toBeDefined();
-  fireEvent.keyDown(view.getByRole('button', { name: 'Yes' }), { key: 'y' }); expect(view.getByText('Fixed after 1 steps')).toBeDefined();
+  fireEvent.keyDown(view.getByRole('button', { name: 'Yes' }), { key: 'y' }); expect(view.getByText('Fixed after 1 step')).toBeDefined();
 });
 
 test('streaming skeleton stays safe until text and branch targets arrive', () => {
@@ -135,7 +149,7 @@ test('unstyled mode, labels, slots, prompt docs and malformed steps', () => {
   const view = render(<Prism source={fence({ ...props, labels: { yes: 'Oui', step: 'Étape' } })} registry={registry} unstyled slots={{ troubleshoot: { step: input => <article {...input} data-custom="card" />, actions: input => <footer {...input} />, title: ({ children }) => <h2>{children}</h2> } }} />);
   expect(view.container.querySelector('[class*="prism-troubleshoot"]')).toBeNull();
   expect(view.container.querySelector('[data-custom="card"]')).not.toBeNull(); expect(view.getByText('Étape 1')).toBeDefined();
-  fireEvent.click(view.getByRole('button', { name: 'Oui' })); expect(view.getByText('Fixed after 1 steps')).toBeDefined();
+  fireEvent.click(view.getByRole('button', { name: 'Oui' })); expect(view.getByText('Fixed after 1 step')).toBeDefined();
   expect(registry.docs()).toContain('```ui:troubleshoot'); expect(registry.docs()).toContain('"title":"Wi-Fi drops"'); expect(registry.docs()).toContain('Record of step id');
   view.rerender(<Prism source={fence({ start: 'a', steps: { a: null, b: { text: 2 }, c: [] } })} registry={registry} />);
   expect(view.getByText('Not fixed yet')).toBeDefined();

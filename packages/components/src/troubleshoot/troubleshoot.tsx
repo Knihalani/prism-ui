@@ -6,7 +6,7 @@ import { ComponentFrame } from '../frame';
 
 export interface TroubleshootStep { title?: string; text: string; command?: string; yes?: string; no?: string; hint?: string }
 export interface TroubleshootAnswer { step: string; answer: 'yes' | 'no' }
-const defaults = { title: 'Troubleshoot', step: 'Step', question: 'Did this fix it?', yes: 'Yes', no: 'No', fixed: 'Fixed after {count} steps', notFixed: 'Not fixed yet', report: 'Send report', restart: 'Start over', sent: 'Report sent', copy: 'Copy', copied: 'Copied', copyError: 'Could not copy', loading: 'Loading step', history: 'Previous steps' };
+const defaults = { title: 'Troubleshoot', step: 'Step', question: 'Did this fix it?', yes: 'Yes', no: 'No', fixed: 'Fixed after {count} steps', fixedOne: 'Fixed after {count} step', fixedOther: 'Fixed after {count} steps', notFixed: 'Not fixed yet', report: 'Send report', restart: 'Start over', sent: 'Report sent', copy: 'Copy', copied: 'Copied', copyError: 'Could not copy', loading: 'Loading step', history: 'Previous steps' };
 export type TroubleshootLabels = Partial<typeof defaults>;
 export interface TroubleshootProps { id?: string; title?: string; start?: string; steps?: unknown; labels?: TroubleshootLabels }
 function validateSteps(raw: unknown): Record<string, TroubleshootStep> {
@@ -38,6 +38,8 @@ export function useTroubleshoot(props: TroubleshootProps, ctx: PrismContextValue
     return { current, step, resolved, ended, path };
   }, [props.start, storedPath, steps, component?.node.complete]);
   const { path } = derived;
+  const pluralRules = useMemo(() => new Intl.PluralRules(format.locale), [format.locale]);
+  const resultLabel = pluralRules.select(path.length) === 'one' ? props.labels?.fixedOne ?? props.labels?.fixed ?? labels.fixedOne : props.labels?.fixedOther ?? props.labels?.fixed ?? labels.fixedOther;
   const streamedKeys = props.steps && typeof props.steps === 'object' && !Array.isArray(props.steps) ? Object.keys(props.steps) : [];
   const readyTarget = (value: string | undefined) => value === '$fixed' || value === '$escalate' || !!(value && steps[value]?.text.trim() && streamedKeys.indexOf(value) < streamedKeys.length - 1);
   const ready = !!derived.step?.text.trim() && (component?.node.complete !== false || (readyTarget(target(derived.step, 'yes')) && readyTarget(target(derived.step, 'no'))));
@@ -52,7 +54,7 @@ export function useTroubleshoot(props: TroubleshootProps, ctx: PrismContextValue
     loading: !derived.step?.text.trim() || (component?.node.complete === false && !ready),
     state: sent ? 'sent' : derived.ended ? derived.resolved ? 'resolved' : 'dead-end' : 'active',
     position: `${labels.step} ${format.number(path.length + 1)}`,
-    result: derived.resolved ? labels.fixed.replace('{count}', format.number(path.length)) : labels.notFixed,
+    result: derived.resolved ? resultLabel.replace('{count}', format.number(path.length)) : labels.notFixed,
     answer, back, restart() { edit([]); },
     report() { if (!derived.ended || sent) return; edit(path); emit('troubleshoot', { resolved: derived.resolved, path }, reportMessage(props.title, derived.resolved, path, format.number(path.length))); setSent(true); },
     onKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -92,7 +94,7 @@ export function Troubleshooter({ props }: PrismComponentProps<TroubleshootProps>
     </Card>}
   </ComponentFrame></div>;
 }
-const labelsSchema = s.object(Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, s.string().optional().describe(`Override the ${key} label${key === 'fixed' ? '; {count} is the formatted step count' : ''}`).example(value)]))).optional().describe('Translated interface labels').example(defaults);
+const labelsSchema = s.object(Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, s.string().optional().describe(`Override the ${key} label${key.startsWith('fixed') ? '; {count} is the formatted step count' : ''}`).example(value)]))).optional().describe('Translated interface labels').example(defaults);
 export const troubleshootDefinition = defineComponent({ name: 'troubleshoot', schema: s.object({
   id: s.string().optional().describe('Persistent component state identifier').example('wifi'),
   title: s.string().optional().describe('Troubleshooting title').example('Wi-Fi drops'),
