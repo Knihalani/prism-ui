@@ -31,3 +31,15 @@ test('native text undo wins over feedback history for focused fields and dirty d
   expect(fireEvent.keyDown(view.getByRole('application'), { key: 'z', ctrlKey: true })).toBe(false);
   expect(store.get('target.feedback.overall')).toBe('Saved');
 });
+
+test('tabbing through Submit commits an overall comment without submitting it', () => {
+  const { view, store, actions } = setup(), overall = view.getByRole('textbox', { name: 'Overall feedback' }), submit = view.getByRole('button', { name: 'Submit feedback' });
+  change(overall, 'Saved when leaving the field');
+  fireEvent.blur(overall, { relatedTarget: submit });
+  act(() => submit.focus());
+  act(() => view.getByRole('button', { name: 'Target' }).focus());
+  expect(store.get('target.feedback.overall')).toBe('Saved when leaving the field');
+  expect(actions).toEqual([]);
+  act(() => store.undo('target'));
+  expect(store.get('target.feedback.overall')).toBe('Newer saved');
+});
