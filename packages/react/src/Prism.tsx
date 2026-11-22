@@ -7,6 +7,7 @@ import { defaultRenderers } from './markdown';
 import { ThemeScope, useMotion, type Theme, type Density } from './theme';
 import { createFormat } from './format';
 import { usePrismStream, type PrismStream } from './stream';
+import { useComponentId } from './identity';
 
 const empty = {};
 function equal(a: any, b: any, depth: number): boolean {
@@ -55,7 +56,9 @@ function Directive({ node }: { node: Node }) {
   const context = usePrism(), name = node.type === 'component' ? node.name! : node.type;
   const def = context.registry.get(name), raw = useBindings(node, context.store);
   const result = def?.schema?.coerce(raw) ?? { value: raw, issues: [], partial: false };
-  const props = result.value ?? {}, id = String(props.id ?? raw.id ?? node.key), complete = node.complete !== false;
+  const coerced = result.value ?? {}, complete = node.complete !== false;
+  const id = useComponentId(node, coerced.id ?? raw.id, context.store);
+  const props = coerced.id === undefined ? coerced : { ...coerced, id };
   const View = !complete && result.partial && def?.fallback ? def.fallback : context.components[name] ?? def?.component;
   const children = renderChildren(node);
   const value = useMemo(() => ({ name, id, props, node, def }), [name, id, props, node, def]);

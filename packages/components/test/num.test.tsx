@@ -8,7 +8,7 @@ import { num, calc } from '../src/num';
 afterEach(cleanup);
 
 test('num and calc tolerate streaming and invalid currency overrides', () => {
-  const store = createStore(), view = render(<Prism source="" done={false} store={store} animate={false} locale="en-US" currency="GBP" />);
+  const store = createStore({ initial: { n: 12 } }), view = render(<Prism source="" done={false} store={store} animate={false} locale="en-US" currency="GBP" />);
   for (const [currency, code] of [['', 'GBP'], ['U', 'GBP'], ['US', 'GBP'], ['U1D', 'GBP'], ['USDD', 'GBP'], ['USD', 'USD'], ['EUR', 'EUR'], ['eur', 'EUR'], [' eUr ', 'EUR'], ['  ', 'GBP'], [' u ', 'GBP']]) {
     const source = `:num[12]{id=n format=currency currency="${currency}"} :calc[n*2]{format=currency currency="${currency}"}`;
     view.rerender(<Prism source={source} done={false} store={store} animate={false} locale="en-US" currency="GBP" />);
@@ -51,9 +51,11 @@ test('streaming truncated input stays stable and initializes once available', ()
   view.rerender(<Prism source=":num[]{id=rent}" done={false} store={store} animate={false} />);
   expect(view.getByRole('slider').getAttribute('data-state')).toBe('loading'); expect(store.get('rent')).toBeUndefined();
   view.rerender(<Prism source=":num[12]{id=rent} :calc[rent*" done={false} store={store} animate={false} />);
-  expect(view.getByRole('slider').textContent).toBe('12'); expect(store.get('rent')).toBe(12);
+  expect(view.getByRole('slider').textContent).toBe('12'); expect(store.get('0.0')).toBe(12); expect(store.get('rent')).toBeUndefined();
   view.rerender(<Prism source=":num[12]{id=rent} :calc[rent*12] " done={false} store={store} animate={false} />);
-  expect(view.getByText('144')).toBeDefined();
+  expect(store.get('rent')).toBeUndefined();
+  view.rerender(<Prism source=":num[12]{id=rent} :calc[rent*12] " store={store} animate={false} />);
+  expect(view.getByText('144')).toBeDefined(); expect(store.snapshot()).toEqual({ rent: 12 });
 });
 
 test('keyboard clamps and snaps with shift, pages and bounds', () => {

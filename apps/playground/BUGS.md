@@ -1,5 +1,10 @@
 # Browser verification notes
 
+Both issues below are resolved by the follow-up React identity/table changes on `playground`. The original observations are retained as reproduction context.
+
+- **#1:** provisional component IDs now resolve to `node.key` in the shared React identity layer (including `props.id` passed to components). Once a node is completed and frozen, provisional state is migrated in one no-history batch and empty key ancestors are removed. Existing persisted final-ID fields win conflicts; missing fields are filled from provisional state. The parser does not expose individual ID-field closure; inline/leaf completion flags can precede attribute closure, so freezing is also required.
+- **#2:** the table fallback now formats typed columns using the current locale/currency and supports `pageSize`, applying pagination after sorting raw values.
+
 ## Existing streaming bug: provisional component state namespaces
 
 Reproduce: finish the kitchen sink, open State, Reset the shared store, then replay at 4 characters every 8 ms. Before replay, the snapshot contains only `rent`, `launch-plan`, `launch-budget`, `milestones`, and `launch-review`. After replay, it also contains numeric block keys (`7`, `9`, `10`) and truncated IDs. One observed replay added `laun`, `launch-budge`, `mil`, `launch-`, and `launch-revi`; exact prefixes depend on frame/chunk timing. These contain leftover estimate totals, table sort state, or summary completion state.

@@ -84,6 +84,8 @@ Middleware runs in order. Not calling next swallows the action; passing a replac
 
 Create or persist stores with `@prism-ui/state` (`createStore`, `memoryAdapter`, `localStorageAdapter`). Supply `store` to share across Prism instances. For an owned store, supply `persist` and `namespace`.
 
+Component state IDs (including the `props.id` passed to a component) stay at `node.key` while the node is provisional. Completed, frozen parser nodes use the explicit ID when present. The parser does not expose individual ID-field closure; inline/leaf completion flags can precede attribute finalization, so freezing is also required. Finalization migrates provisional state and removes empty key ancestors in one batch with `{ history: false }`. Existing persisted final-ID fields win conflicts; missing fields are filled from provisional state. Components without an ID keep their key namespace.
+
 Completed `ui:state` fences render nothing and apply a single patch in a layout effect:
 
 ````md
