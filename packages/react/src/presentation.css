@@ -8,8 +8,7 @@
 .prism-root[data-prism-presentation] :is(.prism-list__root, .prism-listItem__root, .prism-blockquote__root) > :not(:is(.prism-paragraph__root, .prism-heading__root, .prism-list__root, .prism-listItem__root, .prism-blockquote__root, .prism-code__root):last-child) {
   --prism-stream-tail: none;
 }
-/* An open fence can preview as a paragraph containing just inline code. */
-.prism-root[data-prism-presentation] :where(.prism-paragraph__root:not(:empty, :has(> .prism-inlineCode__root:only-child)), .prism-heading__root, .prism-code__root > code):not(:has(.prism-stream-caret))::after {
+.prism-root[data-prism-presentation] :where(.prism-paragraph__root:not(:empty), .prism-heading__root, .prism-code__root > code):not(:has(.prism-stream-caret))::after {
   content: var(--prism-stream-tail, none);
 }
 .prism-root[data-prism-presentation][data-state="streaming"]:empty {

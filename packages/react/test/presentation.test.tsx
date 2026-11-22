@@ -29,6 +29,32 @@ test('the reply root follows the input stream without remounting completed prose
   expect(root.hasAttribute('data-prism-presentation')).toBe(false);
 });
 
+test('an open fence header leaves the existing prose in place until a directive is recognized', () => {
+  const registry = createRegistry([
+    { name: 'code', component: () => <pre>Code view</pre> },
+    { name: 'preview', component: () => <p>Component view</p> },
+  ]);
+  const lead = 'Lead with context.\n\n';
+  const view = render(<Prism registry={registry} source={lead} done={false} />);
+  const prose = view.getByText('Lead with context.');
+  for (let length = 1; length < fence.length; length++) {
+    view.rerender(<Prism registry={registry} source={lead + fence.slice(0, length)} done={false} />);
+    expect(view.getByText('Lead with context.')).toBe(prose);
+    expect(view.container.firstElementChild?.children).toHaveLength(1);
+  }
+  view.rerender(<Prism registry={registry} source={lead + fence} done={false} />);
+  expect(view.getByText('Component view')).toBeDefined();
+});
+
+test('custom code previews and complete blank code blocks remain renderable', () => {
+  const opener = fence.slice(0, 3);
+  const components = { code: () => <pre>Custom code preview</pre> };
+  const view = render(<Prism source={opener} done={false} components={components} />);
+  expect(view.getByText('Custom code preview')).toBeDefined();
+  view.rerender(<Prism source={opener + closeFence} />);
+  expect(view.container.querySelector('pre > code')).not.toBeNull();
+});
+
 test('an opt-in skeleton survives appended input and waits for final identity and hydration', async () => {
   let hydrate!: (value: object) => void;
   const store = createStore({ persist: { load: () => new Promise(resolve => { hydrate = resolve; }), save() {} } });

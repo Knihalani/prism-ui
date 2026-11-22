@@ -77,7 +77,11 @@ const NodeView = memo(function NodeView({ node }: { node: Node }) {
   const context = usePrism();
   if (node.type === 'component') return node.name === 'state' ? <StatePatch node={node} /> : <Directive node={node} />;
   const override = context.components[node.type] ?? (node.type === 'thematicBreak' ? context.components.hr : undefined);
-  if (!override && context.registry.get(node.type)) return <Directive node={node} />;
+  const def = override ? undefined : context.registry.get(node.type);
+  // Keep a provisional, empty fence out of the prose flow until it has content.
+  if (node.type === 'code' && node.value === '' && node.complete === false && !Object.isFrozen(node)
+    && !override && !def?.skeleton && !def?.fallback) return null;
+  if (def) return <Directive node={node} />;
   const View = override ?? defaultRenderers[node.type as keyof typeof defaultRenderers];
   return View ? <View node={node}>{renderChildren(node)}</View> : <>{renderChildren(node) ?? node.value}</>;
 }, (previous, next) => previous.node === next.node);

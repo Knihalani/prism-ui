@@ -78,7 +78,7 @@ Middleware runs in order. Not calling next swallows the action; passing a replac
 
 ## Streaming and presentation
 
-Prism marks the reply root with `data-state="streaming"` while input is open and `data-state="ready"` at completion. The default Markdown caret is decorative and follows the last rendered prose block without changing its measure. It stays off empty paragraphs and standalone inline-code previews while a code fence opens. With a custom Markdown renderer, use `<StreamCaret />` at the text tail when that view is streaming.
+Prism marks the reply root with `data-state="streaming"` while input is open and `data-state="ready"` at completion. The default Markdown caret is decorative and follows the last rendered prose block without changing its measure. Empty open code fences wait for content or completion before rendering. A code renderer override, registered skeleton, or registered fallback can show a placeholder. With a custom Markdown renderer, use `<StreamCaret />` at the text tail when that view is streaming.
 
 - `useSettled()` becomes true when the directive is final and its store identity is ready. A directive can be settled while the rest of the reply is streaming.
 - `usePresentation()` gives the existing component root `data-state="streaming|ready|sent"` and a CSS entrance marker `data-entering`. Spread it onto the root or let a shared frame forward it. Where a root already uses `data-state` for other semantics, expose the presentation state on an adjacent element or use a separate attribute in that view.
