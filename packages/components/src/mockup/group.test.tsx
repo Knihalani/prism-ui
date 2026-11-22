@@ -57,12 +57,14 @@ test('two streamed blocks form one switcher; tabs switch and compare shows both 
 test('compare has one shared toolbar, propagates controls, and saves pending drafts on submit', () => {
   const x = setup(a + b + '</h1>\n```', true);
   fireEvent.click(x.view.getByRole('tab', { name: 'Compare' }));
+  fireEvent.click(x.view.getByRole('button', { name: 'More tools' }));
   expect(x.view.getAllByRole('button', { name: 'Draw' })).toHaveLength(1);
   expect(x.view.getAllByRole('button', { name: 'Mobile' })).toHaveLength(1);
   fireEvent.click(x.view.getByRole('button', { name: 'Mobile' }));
   expect(Array.from(x.view.container.querySelectorAll('iframe')).map(frame => frame.style.width)).toEqual(['390px', '390px']);
   fireEvent.click(x.view.getByRole('button', { name: 'Zoom in' }));
   expect(Array.from(x.view.container.querySelectorAll('.prism-mockup__stage')).map(stage => (stage as HTMLElement).style.transform)).toEqual(['scale(1.25)', 'scale(1.25)']);
+  if (x.view.getByRole('button', { name: 'More tools' }).getAttribute('aria-expanded') === 'false') fireEvent.click(x.view.getByRole('button', { name: 'More tools' }));
   fireEvent.click(x.view.getByRole('button', { name: 'Draw' }));
   expect(x.view.getByRole('button', { name: 'Draw' }).getAttribute('aria-pressed')).toBe('true');
   fireEvent.click(x.view.getByRole('button', { name: 'Prefer this B' }));

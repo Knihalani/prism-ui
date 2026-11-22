@@ -5,11 +5,11 @@ import { cleanup, render } from '@testing-library/react';
 import { readFileSync, readdirSync } from 'node:fs';
 import ts from 'typescript';
 import { Prism, defaultRegistry, type Slots } from '@prism-ui/react';
-import { mockupPlugin } from '../src';
+import { mockupPlugin, artifactPlugin } from '../src';
 import '../src';
 
 const names: Record<string, string> = { code: 'codeblock', dataTable: 'datatable', step: 'runbook' };
-const plugins = [mockupPlugin];
+const plugins = [mockupPlugin, artifactPlugin];
 const fixtures = defaultRegistry.list().filter(def => def.examples?.length);
 const sources = [...new Set(fixtures.flatMap(def => def.examples ?? []))];
 
@@ -33,7 +33,7 @@ test('registry fixtures declare every rendered part and rendered declared parts 
       components++;
       for (const part of parts) {
         const Marker = ({ as, children, ...props }: any) => {
-          const { row, model, estimate, ...attributes } = props;
+          const { row, model, estimate, frame, overflow, primitive, item, column, ...attributes } = props;
           return createElement(as ?? tags.get(`${component}.${part}`)!, { ...attributes, 'data-slot-marker': `${component}.${part}` }, children);
         };
         const slots: Slots = { [component]: { [part]: Marker } };

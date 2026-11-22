@@ -117,7 +117,7 @@ test('Escape and empty outside-cancel restore history, including a prior redo, a
   }
 });
 test('drawings hit test their bounding-box centre, follow layout and still submit their path', async () => {
-  const x = setup(); fireEvent.click(x.view.getByRole('button', { name: 'Draw' }));
+  const x = setup(); fireEvent.click(x.view.getByRole('button', { name: 'More tools' })); fireEvent.click(x.view.getByRole('button', { name: 'Draw' }));
   await act(async () => { x.pointer('pointerdown', 400, 50); x.pointer('pointerup', 600, 100); });
   expect(x.hits).toEqual([{ x: 50, y: 15 }]);
   const draft = x.store.get('review.feedback') as any;

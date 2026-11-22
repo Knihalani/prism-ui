@@ -1,3 +1,4 @@
+import { artifactStrings } from './strings';
 const defaultCompiler = 'https://esm.sh/sucrase@3.35.0/es2022/sucrase.bundle.mjs';
 const MAX_SOURCE = 1_000_000;
 type Request = { id: number; source: string };
@@ -42,7 +43,7 @@ const workers = new Map<string, { worker: Worker; pending: Map<number, Pending> 
 let sequence = 0;
 
 export async function compileArtifact(source: string, compilerUrl = defaultCompiler): Promise<string> {
-  if (source.length > MAX_SOURCE) throw new Error('Artifact source exceeds 1 MB.');
+  if (source.length > MAX_SOURCE) throw new Error(artifactStrings.sourceTooLarge);
   const url = new URL(compilerUrl, document.baseURI).href;
   let entry = workers.get(url);
   if (!entry) {
@@ -56,11 +57,11 @@ export async function compileArtifact(source: string, compilerUrl = defaultCompi
       if (!task) return;
       pending.delete(data.id);
       if (data.code !== undefined) task.resolve(data.code);
-      else task.reject(new Error(data.error ?? 'Unable to compile artifact.'));
+      else task.reject(new Error(data.error ?? artifactStrings.compileFailed));
     };
     worker.onerror = () => {
       workers.delete(url); worker.terminate();
-      for (const task of pending.values()) task.reject(new Error('Unable to start the artifact compiler.'));
+      for (const task of pending.values()) task.reject(new Error(artifactStrings.compilerFailed));
       pending.clear();
     };
     workers.set(url, entry = { worker, pending });
@@ -69,7 +70,7 @@ export async function compileArtifact(source: string, compilerUrl = defaultCompi
   const id = ++sequence;
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      pending.delete(id); reject(new Error('Artifact compilation timed out.'));
+      pending.delete(id); reject(new Error(artifactStrings.compileTimeout));
     }, 20_000);
     pending.set(id, { resolve: code => { clearTimeout(timer); resolve(code); }, reject: error => { clearTimeout(timer); reject(error); } });
     worker.postMessage({ id, source } satisfies Request);
