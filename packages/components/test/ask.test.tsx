@@ -146,7 +146,7 @@ test('Undo of submission clears its receipt even when default answers are unchan
   fireEvent.click(view.getByRole('button', { name: 'Undo' }));
   expect(store.get('undo.submitted')).toBe(false);
   expect(view.queryByRole('button', { name: 'Sent' })).toBeNull();
-  expect((view.getByRole('textbox', { name: 'Name' }) as HTMLInputElement).value).toBe('Ada');
+  expect((view.getByRole('textbox', { name: /Name/ }) as HTMLInputElement).value).toBe('Ada');
   fireEvent.click(view.getByRole('button', { name: 'Send' }));
   expect(actions).toHaveLength(2);
 });
