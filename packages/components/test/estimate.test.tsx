@@ -8,6 +8,28 @@ import '../src/num';
 
 afterEach(cleanup);
 
+test('numeric and dotted item ids preserve named rows through edits and undo', () => {
+  const view = setup({ items: [{ id: '0', label: 'Zero', price: 10, qty: 2 }, { id: 'seats', label: 'Seats', price: 20, qty: 3 }, { id: 'support.0.hours', label: 'Support', price: 5, qty: 1, optional: true }] });
+  const initial = { '0': { qty: 2, enabled: true }, seats: { qty: 3, enabled: true }, support: { '0': { hours: { qty: 1, enabled: true } } } };
+  expect(view.store.get('quote.items')).toEqual(initial);
+  expect(Array.isArray(view.store.get('quote.items'))).toBe(false);
+  expect(Array.isArray(view.store.get('quote.items.support'))).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: 'Increase Seats' }));
+  expect(view.store.get('quote.items.0.qty')).toBe(2); expect(view.store.get('quote.total')).toBe(105);
+  fireEvent.click(view.getByRole('button', { name: 'Increase Zero' }));
+  expect(view.store.get('quote.items.seats.qty')).toBe(4); expect(view.store.get('quote.total')).toBe(115);
+  act(() => view.store.undo()); act(() => view.store.undo());
+  expect(view.store.snapshot().quote.items).toEqual(initial); expect(view.store.get('quote.total')).toBe(85);
+  fireEvent.click(view.getByRole('checkbox', { name: 'Support' }));
+  expect(view.store.get('quote.total')).toBe(80);
+  act(() => view.store.set('quote.items.support.0.hours.qty', 4));
+  expect((view.getByRole('spinbutton', { name: 'Support' }) as HTMLInputElement).value).toBe('4');
+  fireEvent.click(view.getByRole('checkbox', { name: 'Support' }));
+  expect(view.store.get('quote.total')).toBe(100);
+  fireEvent.click(view.getByRole('button', { name: 'Use this estimate' }));
+  expect(view.actions.at(-1)?.payload).toEqual({ items: [{ id: '0', label: 'Zero', qty: 2, price: 10, amount: 20 }, { id: 'seats', label: 'Seats', qty: 3, price: 20, amount: 60 }, { id: 'support.0.hours', label: 'Support', qty: 4, price: 5, amount: 20 }], total: 100 });
+});
+
 test('dotted item ids share nested quantity and enabled paths with controls and undo', () => {
   const view = setup({ items: [{ id: 'support.hours', label: 'Support hours', price: 10, qty: 2, optional: true }] }, ':num[2]{id=quote.items.support.hours.qty} :calc[quote.total]');
   const input = view.getByRole('spinbutton', { name: 'Support hours' }) as HTMLInputElement;

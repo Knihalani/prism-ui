@@ -7,6 +7,27 @@ import { pick } from '../src/pick';
 
 afterEach(cleanup);
 
+test('numeric and dotted criterion ids preserve named weights through updates and undo', () => {
+  const criteria = [{ id: '0', label: 'Cost' }, { id: 'quality', label: 'Quality' }, { id: 'speed.0.value', label: 'Speed' }];
+  const view = setup({ criteria, weights: { '0': 1, quality: 2, 'speed.0.value': 3 }, options: [{ id: 'basic', title: 'Basic', scores: { '0': 1, quality: 1, 'speed.0.value': 1 } }] });
+  const initial = { '0': 1, quality: 2, speed: { '0': { value: 3 } } };
+  expect(view.store.get('plans.weights')).toEqual(initial);
+  expect(Array.isArray(view.store.get('plans.weights'))).toBe(false);
+  expect(Array.isArray(view.store.get('plans.weights.speed'))).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: 'Quality, weight 2 of 3' }));
+  expect(view.store.get('plans.weights.quality')).toBe(3);
+  expect(view.store.get('plans.weights.0')).toBe(1);
+  fireEvent.click(view.getByRole('button', { name: 'Cost, weight 1 of 3' }));
+  expect(view.store.get('plans.weights.quality')).toBe(3);
+  expect(view.store.get('plans.weights.speed.0.value')).toBe(3);
+  act(() => view.store.undo()); act(() => view.store.undo());
+  expect(view.store.snapshot().plans.weights).toEqual(initial);
+  act(() => view.store.set('plans.weights.speed.0.value', 2));
+  expect(view.getByRole('button', { name: 'Speed, weight 2 of 3' })).toBeDefined();
+  fireEvent.click(view.getByRole('button', { name: 'Choose' }));
+  expect(view.actions.at(-1)?.payload).toEqual({ option: 'basic', weights: { '0': 1, quality: 2, 'speed.0.value': 2 } });
+});
+
 test('dotted criterion ids use consistent nested store paths and literal action keys', () => {
   const view = setup({ criteria: [{ id: 'cost.monthly', label: 'Cost' }, { id: 'quality', label: 'Quality' }], weights: { 'cost.monthly': 1, quality: 2 }, options: [{ id: 'budget', title: 'Budget', scores: { 'cost.monthly': 1, quality: 0 } }, { id: 'premium', title: 'Premium', scores: { 'cost.monthly': 0, quality: 0.9 } }] });
   const chip = view.getByRole('button', { name: 'Cost, weight 1 of 3' });

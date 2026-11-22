@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEve
 import { s, type Infer } from '@prism-ui/schema';
 import { defineComponent, registerComponent, useEmit, useFormat, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
+import { setRecordPath } from '../store-record';
 
 const itemSchema = s.object({ id: s.string(), label: s.string(), description: s.string().optional(), price: s.number({ min: 0 }).optional(), qty: s.number().default(1), min: s.number().default(0), max: s.number().optional(), step: s.number({ min: 0 }).default(1), unit: s.string().optional(), optional: s.boolean().default(false), enabled: s.boolean().default(true) });
 export const estimateSchema = s.object({ id: s.string().optional(), title: s.string().default('Estimate'), currency: s.string().optional(), items: s.array(itemSchema).default([]), taxRate: s.number({ min: 0 }).default(0), discount: s.number({ min: 0, max: 1 }).default(0), submit: s.string().default('Use this estimate'), subtotalLabel: s.string().default('Subtotal'), discountLabel: s.string().default('Discount'), taxLabel: s.string().default('Tax'), totalLabel: s.string().default('Total'), emptyLabel: s.string().default('Items will appear here'), decreaseLabel: s.string().default('Decrease'), increaseLabel: s.string().default('Increase'), itemCountLabel: s.string().default('items') });
@@ -45,14 +46,14 @@ export function useEstimate(props: EstimateProps, ctx: PrismComponentProps<Estim
     store.batch(() => {
       for (const row of totals.rows) {
         if (!row.ready || !ctx.complete) continue;
-        if (store.get(`${id}.items.${row.id}.qty`) === undefined) store.set(`${id}.items.${row.id}.qty`, row.qty);
-        if (store.get(`${id}.items.${row.id}.enabled`) === undefined) store.set(`${id}.items.${row.id}.enabled`, row.enabled);
+        if (store.get(`${id}.items.${row.id}.qty`) === undefined) setRecordPath(store, `${id}.items`, `${row.id}.qty`, row.qty);
+        if (store.get(`${id}.items.${row.id}.enabled`) === undefined) setRecordPath(store, `${id}.items`, `${row.id}.enabled`, row.enabled);
       }
       writeTotals();
     });
   }, [store, id, totals, storedSubtotal, storedTotal, ctx.complete]);
   const update = (item: Item, key: 'qty' | 'enabled', value: number | boolean) => store.batch(() => {
-    store.set(`${id}.items.${item.id}.${key}`, key === 'qty' ? quantity(item, value as number) : value); writeTotals();
+    setRecordPath(store, `${id}.items`, `${item.id}.${key}`, key === 'qty' ? quantity(item, value as number) : value); writeTotals();
   });
   const rows = totals.rows.map(row => {
     const setQuantity = (text: string) => { const n = text.trim() ? Number(text) : NaN; if (Number.isFinite(n)) update(row, 'qty', n); };

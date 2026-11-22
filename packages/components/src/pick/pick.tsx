@@ -2,6 +2,7 @@ import { useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from '
 import { s, type Infer } from '@prism-ui/schema';
 import { defineComponent, registerComponent, useEmit, useFormat, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
+import { setRecordPath } from '../store-record';
 import { useFlip } from './flip';
 
 export const pickSchema = s.object({ id: s.string().optional(), question: s.string().default('Find your best fit'), criteria: s.array(s.object({ id: s.string(), label: s.string() })).default([]), weights: s.any().optional(), options: s.array(s.object({ id: s.string(), title: s.string(), subtitle: s.string().optional(), scores: s.any().optional(), pros: s.array(s.string()).default([]), cons: s.array(s.string()).default([]), tag: s.string().optional() })).default([]), choose: s.string().default('Choose'), emptyLabel: s.string().default('Options will appear here'), bestLabel: s.string().default("Best for you because it's strong on"), andLabel: s.string().default('and'), weightLabel: s.string().default('weight'), ofLabel: s.string().default('of'), topLabel: s.string().default('Top pick'), matchLabel: s.string().default('match'), chosenLabel: s.string().default('Chosen') });
@@ -20,12 +21,12 @@ export function usePick(props: PickProps, ctx: PrismComponentProps<PickProps>) {
   useLayoutEffect(() => {
     if (!ctx.complete) return;
     store.batch(() => {
-      for (const key of Object.keys(weights)) if (readWeight(key) === undefined) store.set(`${id}.weights.${key}`, weights[key]);
+      for (const key of Object.keys(weights)) if (readWeight(key) === undefined) setRecordPath(store, `${id}.weights`, key, weights[key]);
     });
   }, [store, id, weights, ctx.complete]);
   const [focused, setFocused] = useState<string>(), chips = useRef(new Map<string, HTMLButtonElement>());
   const criteria = props.criteria.filter(c => c.id), active = criteria.some(c => c.id === focused) ? focused : criteria[0]?.id;
-  const setWeight = (criterion: string, value: number) => store.set(`${id}.weights.${criterion}`, clamp(value, 1));
+  const setWeight = (criterion: string, value: number) => setRecordPath(store, `${id}.weights`, criterion, clamp(value, 1));
   const cycle = (criterion: string) => { const current = weightsFor(props, readWeight); setWeight(criterion, (current[criterion] + 1) % 4); };
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const criterion = criteria[index];
