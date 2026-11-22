@@ -68,3 +68,19 @@ test('empty custom data is usable and renderer failures cannot take down adjacen
     expect(view.getByText('empty data')).toBeDefined();
   } finally { errors.mockRestore(); }
 });
+
+test.each(['name', 'id', 'store'] as const)('a failed renderer recovers when its directive %s changes', kind => {
+  function Recover({ data }: RendererProps<{ fail: boolean }>) {
+    if (data.fail) throw Error('bad initial data');
+    return <output>Recovered content</output>;
+  }
+  const renderers = { recover: Recover, replacement: Recover }, store = createStore();
+  const errors = spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    const view = render(<Prism store={store} renderers={renderers} source={fence('recover', { id: 'before', fail: true })} />);
+    expect(view.getByRole('alert')).toBeDefined();
+    view.rerender(<Prism store={kind === 'store' ? createStore() : store} renderers={renderers} source={fence(kind === 'name' ? 'replacement' : 'recover', { id: kind === 'id' ? 'after' : 'before', fail: false })} />);
+    expect(view.queryByRole('alert')).toBeNull();
+    expect(view.getByRole('status').textContent).toBe('Recovered content');
+  } finally { errors.mockRestore(); }
+});
