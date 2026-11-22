@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { Node } from '@prism-ui/core';
 import { s, type Infer } from '@prism-ui/schema';
-import { PrismPart, defineComponent, registerComponent, useEmit, useFormat, useFormula, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
+import { useStrings, PrismPart, defineComponent, registerComponent, useEmit, useFormat, useFormula, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
 
 const formatting = { format: s.enum(['number', 'currency', 'percent', 'compact']).default('number'), decimals: s.number({ min: 0, max: 20 }).optional(), currency: s.string().optional(), label: s.string().optional() };
 export const numSchema = s.object({ ...formatting, id: s.string().optional(), value: s.number().optional(), min: s.number().optional(), max: s.number().optional(), step: s.number({ min: 0 }).default(1) });
@@ -23,6 +23,7 @@ function useNumberFormat(props: Pick<NumProps, 'format' | 'currency' | 'decimals
 }
 
 export function useNum(props: NumProps, ctx: PrismComponentProps<NumProps>) {
+  props = { ...props, ...useStrings('num') };
   const { store } = usePrism(), emit = useEmit(), id = props.id ?? ctx.id;
   const current = useStoreValue<unknown>(id), text = rawText(ctx.node).trim();
   const initial = props.value ?? (text ? Number(text) : NaN), ready = Number.isFinite(initial) || typeof current === 'number';
@@ -81,6 +82,7 @@ export function Num(ctx: PrismComponentProps<NumProps>) {
 }
 
 export function useCalc(props: CalcProps, ctx: PrismComponentProps<CalcProps>) {
+  props = { ...props, ...useStrings('calc') };
   const { animate } = usePrism(), expr = props.expr ?? rawText(ctx.node), result = useFormula(expr), format = useNumberFormat(props);
   const [display, setDisplay] = useState(result), shown = useRef(result);
   useEffect(() => {

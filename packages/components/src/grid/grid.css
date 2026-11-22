@@ -3,8 +3,8 @@
 .prism-root .prism-grid__root[data-size="sm"] { --prism-grid-gap: var(--prism-space-3); }
 .prism-root .prism-grid__root[data-size="lg"] { --prism-grid-gap: calc(var(--prism-space-8) + var(--prism-space-2)); }
 .prism-root .prism-grid__header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-block-end: 28px; }
-.prism-root .prism-grid__title { margin: 0; font-family: var(--prism-font-body); font-size: 15px; line-height: 1.65; font-weight: var(--prism-weight-semibold); }
-.prism-root .prism-grid__meta { flex: none; max-inline-size: min(40%, 135px); color: var(--prism-text-muted); font-size: 12px; }
+.prism-root .prism-grid__title { margin: 0; font-family: var(--prism-font-body); font-size: var(--prism-text-base); line-height: 1.65; font-weight: var(--prism-weight-semibold); }
+.prism-root .prism-grid__meta { flex: none; max-inline-size: min(40%, 135px); color: var(--prism-text-muted); font-size: var(--prism-text-xs); }
 .prism-root .prism-grid__body {
   display: grid;
   gap: var(--prism-grid-gap);
@@ -25,7 +25,7 @@
 }
 @container prism-grid (max-width: 360px) {
   .prism-root .prism-grid__header { align-items: flex-start; }
-  .prism-root .prism-grid__meta { flex: 0 1 auto; font-size: 11px; }
+  .prism-root .prism-grid__meta { flex: 0 1 auto; font-size: var(--prism-text-xs); }
   .prism-root .prism-grid__body { row-gap: var(--prism-space-6); }
   .prism-root .prism-grid__body > .prism-card__root:first-child { border-block-start: 1px solid var(--prism-border); }
   .prism-root .prism-grid__body > .prism-card__root + .prism-card__root::before {

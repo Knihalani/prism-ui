@@ -118,7 +118,7 @@ export function MarkdownTable({ props, ...ctx }: PrismComponentProps<TableProps>
       <HeadSlot {...model.parts.head}>{model.rows.length > 0 && renderRow(0)}</HeadSlot>
       <BodySlot {...model.parts.body}>{model.order.map(index => renderRow(index + 1))}</BodySlot>
     </PrismPart></PrismPart>
-    {model.paginated && <PrismPart as="nav" {...model.parts.pagination} aria-label={themeStrings.tablePagination}><PrismPart as="button" {...model.parts.pageButton} type="button" disabled={model.streaming || model.page === 0} onClick={() => model.setPage(model.page - 1)}>{themeStrings.previousPage}</PrismPart><span aria-live="polite">{themeStrings.page}{model.page + 1} {themeStrings.of}{model.pages}</span><PrismPart as="button" {...model.parts.pageButton} type="button" disabled={model.streaming || model.page + 1 >= model.pages} onClick={() => model.setPage(model.page + 1)}>{themeStrings.nextPage}</PrismPart></PrismPart>}
+    {model.paginated && <PrismPart as="nav" {...model.parts.pagination} aria-label={themeStrings.tablePagination}><PrismPart as="button" {...model.parts.pageButton} type="button" disabled={model.streaming || model.page === 0} onClick={() => model.setPage(model.page - 1)}>{themeStrings.previousPage}</PrismPart><span aria-live="polite">{themeStrings.pageStatus.replace('{page}', String(model.page + 1)).replace('{pages}', String(model.pages))}</span><PrismPart as="button" {...model.parts.pageButton} type="button" disabled={model.streaming || model.page + 1 >= model.pages} onClick={() => model.setPage(model.page + 1)}>{themeStrings.nextPage}</PrismPart></PrismPart>}
   </PrismPart></PrismContext.Provider></TableContext.Provider>;
 }
 export function TableDispatcher(input: PrismComponentProps<TableProps>) {

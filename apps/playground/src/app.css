@@ -45,25 +45,25 @@ button, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .landing-inner { width: min(100%, 720px); margin: auto; padding-bottom: 20px; }
 .landing h1 { margin: 0 0 30px; font-size: clamp(25px, 3vw, 32px); line-height: 1.3; font-weight: 450; letter-spacing: -.045em; text-align: center; }
 .composer-area { width: 100%; }
-.composer { display: flex; align-items: flex-end; gap: 12px; padding: 15px 14px 15px 20px; background: var(--prism-fill, var(--app-fill)); border: 1px solid transparent; border-radius: var(--prism-radius-lg, 20px); box-shadow: var(--app-shadow); transition: border-color var(--prism-motion-base, 160ms); }
+.composer { display: flex; align-items: flex-end; gap: 12px; padding: 15px 14px 15px 20px; background: var(--prism-surface, var(--app-fill)); border: 1px solid transparent; border-radius: var(--prism-radius-lg, 20px); box-shadow: var(--app-shadow); transition: border-color var(--prism-motion-base, 160ms); }
 .composer:focus-within { border-color: var(--prism-border, var(--app-line)); }
 .composer textarea { flex: 1; min-width: 0; min-height: 26px; max-height: 192px; overflow-y: auto; resize: none; border: 0; outline: 0 !important; color: var(--app-text); background: transparent; font-size: 15px; line-height: 24px; padding: 3px 0; border-radius: 0; scrollbar-width: thin; }
 .composer textarea::placeholder { color: var(--app-muted); opacity: .85; }
 .send-btn { flex: 0 0 auto; width: 32px; height: 32px; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--prism-accent, var(--app-accent)); color: var(--app-bg) !important; transition: transform var(--prism-motion-base, 160ms) var(--prism-motion-spring, cubic-bezier(.2,.8,.2,1)); }
 .send-btn:hover:not(:disabled) { transform: scale(1.06); }
-.send-btn:disabled { background: var(--prism-fill-strong, var(--app-line)); color: var(--prism-text-muted, var(--app-muted)) !important; }
+.send-btn:disabled { background: var(--prism-border-strong, var(--app-line)); color: var(--prism-text-muted, var(--app-muted)) !important; }
 .model-status { display: block; width: fit-content; max-width: 100%; margin: 10px auto 0; padding: 0 4px; background: transparent; border: 0; color: var(--app-muted) !important; font-size: 11px; line-height: 20px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
 .model-status:hover { color: var(--app-text) !important; }
 .suggestions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; margin-top: 31px; }
-.suggestion { position: relative; display: grid; grid-template-columns: 20px 1fr; gap: 3px 10px; text-align: left; padding: 14px; border: 1px solid transparent; border-radius: var(--prism-radius-lg, 12px); background: var(--prism-fill, var(--app-fill)); transition: transform var(--prism-motion-base, 180ms) var(--prism-motion-spring, cubic-bezier(.2,.8,.2,1)), background var(--prism-motion-base, 180ms); }
+.suggestion { position: relative; display: grid; grid-template-columns: 20px 1fr; gap: 3px 10px; text-align: left; padding: 14px; border: 1px solid transparent; border-radius: var(--prism-radius-lg, 12px); background: var(--prism-surface, var(--app-fill)); transition: transform var(--prism-motion-base, 180ms) var(--prism-motion-spring, cubic-bezier(.2,.8,.2,1)), background var(--prism-motion-base, 180ms); }
 .suggestion > svg { margin-top: 4px; color: var(--app-muted); }
 .suggestion strong { font-size: 13px; font-weight: 500; letter-spacing: -.01em; }
 .suggestion span { grid-column: 2; font-size: 11px; color: var(--app-muted); line-height: 1.6; }
-.suggestion:hover { background: var(--prism-fill-strong, var(--app-line)); transform: translateY(-1px); }
+.suggestion:hover { background: var(--prism-border-strong, var(--app-line)); transform: translateY(-1px); }
 .thread-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--app-line) transparent; overflow-anchor: auto; }
 .thread { max-width: 784px; padding: 22px 32px 42px; margin: 0 auto; }
 .user-turn { display: flex; justify-content: flex-end; margin: 0 0 28px; animation: turn-in 260ms var(--prism-motion-spring, ease-out) both; }
-.user-turn > div { max-width: 85%; padding: 10px 17px; border: 0; border-radius: var(--prism-radius-lg, 15px); background: var(--prism-fill, var(--app-fill)); font-size: 15px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.user-turn > div { max-width: 85%; padding: 10px 17px; border: 0; border-radius: var(--prism-radius-lg, 15px); background: var(--prism-surface, var(--app-fill)); font-size: 15px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 .assistant-turn { margin: 0 0 var(--prism-flow-gap, 30px); position: relative; animation: turn-in 260ms var(--prism-motion-spring, ease-out) both; }
 .assistant-turn:has(+ .assistant-turn) { margin-bottom: 1.35em; }
 .reply-content { min-height: 26px; overflow-wrap: anywhere; }

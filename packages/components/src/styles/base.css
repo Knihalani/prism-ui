@@ -26,8 +26,8 @@
 .prism-root[data-prism-presentation] :where(.prism-paragraph__root, .prism-heading__root, .prism-code__root > code)::after,
 .prism-root[data-prism-presentation][data-state="streaming"]:empty::after,
 .prism-root[data-prism-presentation] .prism-stream-caret {
-  background: var(--prism-styles-highlight, var(--prism-accent, #525252));
-  box-shadow: var(--prism-styles-highlight-shadow, none);
+  background: var(--prism-prose-highlight, var(--prism-accent, #525252));
+  box-shadow: var(--prism-prose-highlight-shadow, none);
 }
 .prism-root :is(.prism-card__body, .prism-callout__body):has(> [data-prism-skeleton]) {
   display: grid;
@@ -49,7 +49,7 @@
 .prism-root .prism-heading__root + :where(.prism-paragraph__root, .prism-list__root) { margin-block-start: var(--prism-space-2); }
 .prism-root h1.prism-heading__root { font-size: var(--prism-text-3xl); }
 .prism-root h2.prism-heading__root { font-size: var(--prism-text-2xl); }
-.prism-root h3.prism-heading__root { font-size: 28px; }
+.prism-root h3.prism-heading__root { font-size: var(--prism-text-2xl); }
 .prism-root :is(h4, h5, h6).prism-heading__root {
   font-family: var(--prism-font-body); font-size: var(--prism-text-base); line-height: 1.4; font-weight: var(--prism-weight-semibold);
 }
@@ -68,7 +68,7 @@
   color: var(--prism-text-muted);
 }
 .prism-root .prism-link__root {
-  color: var(--prism-accent, #525252);
+  color: var(--prism-accent-text, var(--prism-accent, #525252));
   text-decoration-color: color-mix(in oklab, currentColor 42%, transparent);
   text-decoration-thickness: 1px;
   text-underline-offset: .2em;
@@ -112,7 +112,7 @@
 .prism-root .prism-skeleton {
   background: linear-gradient(100deg, color-mix(in srgb, var(--prism-text) 3.5%, transparent), color-mix(in srgb, var(--prism-text) 6%, transparent), color-mix(in srgb, var(--prism-text) 3.5%, transparent));
   background-size: 200% 100%;
-  animation: prism-shimmer var(--prism-motion-slow) ease-in-out infinite;
+  animation: prism-shimmer var(--prism-motion-slow) var(--prism-motion-ease) infinite;
   border-radius: var(--prism-radius-sm);
 }
 .prism-root[data-animate="false"] :is([data-prism-enter], .prism-enter, .prism-skeleton),

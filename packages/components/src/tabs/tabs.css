@@ -1,6 +1,6 @@
 .prism-root .prism-tabs__root { min-width: 0; }
 .prism-root :where(*) + .prism-tabs__root { margin-block-start: var(--prism-space-5); }
-.prism-root .prism-tabs__title { margin: 0; font-family: var(--prism-font-body); font-size: 15px; line-height: 1.65; font-weight: var(--prism-weight-semibold); }
+.prism-root .prism-tabs__title { margin: 0; font-family: var(--prism-font-body); font-size: var(--prism-text-base); line-height: 1.65; font-weight: var(--prism-weight-semibold); }
 .prism-root .prism-tabs__list {
   position: relative;
   isolation: isolate;
@@ -24,7 +24,7 @@
   border-block-end: 2px solid transparent;
   background: transparent;
   color: var(--prism-text-subtle);
-  font-family: var(--prism-font-body); font-size: 14px; line-height: 1.2; font-weight: var(--prism-weight-regular);
+  font-family: var(--prism-font-body); font-size: var(--prism-text-sm); line-height: 1.2; font-weight: var(--prism-weight-regular);
   cursor: pointer;
   white-space: nowrap;
   transition: color var(--prism-motion-fast);
@@ -74,14 +74,14 @@
 @keyframes prism-tab-in { from { opacity: 0; } }
 .prism-root .prism-tab__title { margin: 0 0 var(--prism-space-2); font-size: var(--prism-text-base); letter-spacing: -.015em; }
 .prism-root .prism-tab__root[role="tabpanel"] .prism-tab__body > h3.prism-heading__root {
-  font-size: 28px;
+  font-size: var(--prism-text-2xl);
   line-height: 1.65;
 }
 .prism-root .prism-tab__root[role="tabpanel"] .prism-tab__body > h3.prism-heading__root + .prism-paragraph__root {
   margin-block-start: 16px;
 }
 .prism-root .prism-tab__root[role="tabpanel"] .prism-tab__body > :is(.prism-paragraph__root, .prism-list__root) {
-  font-size: 16px;
+  font-size: var(--prism-text-base);
   line-height: 1.85;
 }
 .prism-root .prism-tab__body > .prism-paragraph__root + .prism-list__root { margin-block-start: 16px; }

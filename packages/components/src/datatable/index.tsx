@@ -183,7 +183,7 @@ export function DataTable({ props: inputProps, complete, node }: PrismComponentP
       {vm.mode && <Part part="submission">
         <Part part="submit" className={styled('prism-pill')} as="button" type="button" disabled={!vm.selected.length} aria-describedby={props.actionHint ? hintId : undefined} data-feedback="" data-sent={sent ? '' : undefined} onClick={vm.submit}>
           <span aria-hidden={sent || undefined} hidden={ctx.unstyled && sent}>{props.actionLabel || `Use ${vm.selected.length} selected`}</span>
-          <span aria-hidden={!sent || undefined} hidden={ctx.unstyled && !sent}>{ctx.unstyled ? <FrameIcon name="check" /> : <CheckMark />} {themeStrings.sent}{sentCount}</span>
+          <span aria-hidden={!sent || undefined} hidden={ctx.unstyled && !sent}>{ctx.unstyled ? <FrameIcon name="check" /> : <CheckMark />} {themeStrings.sent.replace('{count}', String(sentCount))}</span>
         </Part>
         {props.actionHint && <Part part="action-hint" as="span" id={hintId}>{props.actionHint}</Part>}
       </Part>}

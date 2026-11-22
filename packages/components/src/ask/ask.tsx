@@ -28,7 +28,7 @@ export function useAsk(props: AskProps, ctx: PrismContextValue) {
   const component = useContext(ComponentContext), format = useFormat(), emit = useEmit();
   const fields = useMemo(() => { const seen = new Set<string>(); return (props.fields ?? []).filter(field => !field.id || (!seen.has(field.id) && !!seen.add(field.id))); }, [props.fields]);
   const [values, setValues] = useComponentState<Record<string, AskValue>>('values', {}), [touched, setTouched] = useComponentState<Record<string, boolean>>('touched', {}), [submitted, setSubmitted] = useComponentState('submitted', false);
-  const labels = useMemo(() => ({ ...defaults, ...props.labels }), [props.labels]);
+  const strings = useStrings('ask'), labels = { ...defaults, ...props.labels, ...strings };
   const current = useMemo<Record<string, AskValue>>(() => Object.fromEntries(fields.filter(field => field.id).map(field => [field.id!, normalize(field, Object.hasOwn(values, field.id!) ? values[field.id!] : field.value)])), [fields, values]);
   const controls = useRef(new Map<string, HTMLElement>());
   const complete = component?.node.complete !== false;
@@ -55,7 +55,7 @@ export function useAsk(props: AskProps, ctx: PrismContextValue) {
     ctx.store.batch(() => { setValues(current); setSubmitted(true); });
     emit('submit', { values: current }, sentence(props.title ?? labels.title, fields, current, (field, value) => formatted(field, value, format, labels)));
   }
-  return { fields, values: current, touched, submitted, labels, errors, controls, complete, title: props.title ?? labels.title, submitLabel: props.submit ?? labels.send,
+  return { fields, values: current, touched, submitted, labels, errors, controls, complete, title: labels.title, submitLabel: strings.submit ?? labels.send,
     canSubmit: complete && fields.length > 0 && fields.every(field => field.id && field.label && field.type),
     suggested(field: AskField) { return field.value !== undefined && field.value !== null && !Object.hasOwn(values, field.id ?? ''); },
     loading(index: number) { return !complete && (index === fields.length - 1 || !fields[index]?.type || !fields[index]?.id); },
@@ -127,7 +127,7 @@ const fieldSchema = s.object({
   unit: s.string().optional().describe('Visible suffix for the input and summary').example('guests'),
 });
 const labelsSchema = s.object(Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, s.string().optional().describe(`Override ${key} text; keep any {min} or {max} placeholder`).example(value)]))).optional().describe('Translated interface labels and validation messages').example(defaults);
-export const askDefinition = defineComponent({ name: 'ask', parts: ["actions","ask","body","control","edit","empty","error","field","fields","footer","form","header","hint","inputWrap","label","option","required","root","segment","segments","skeleton","submit","suggested","summary","summaryLabel","summaryRow","summaryValue","switch","thumb","title","toolbar","undo","unit"], strings: componentStrings.ask, schema: s.object({
+export const askDefinition = defineComponent({ name: 'ask', parts: ["actions","ask","body","control","edit","empty","error","field","fields","footer","form","header","hint","inputWrap","label","option","required","root","segment","segments","skeleton","submit","suggested","summary","summaryLabel","summaryRow","summaryValue","switch","thumb","title","toolbar","undo","unit"], strings: { ...defaults, ...componentStrings.ask }, schema: s.object({
   id: s.string().optional().describe('Persistent component state identifier').example('reservation'),
   title: s.string().optional().describe('Form title').example('Book a table'),
   submit: s.string().optional().describe('Primary submit label').example('Book table'),

@@ -17,7 +17,7 @@
   background: var(--prism-text);
   color: var(--prism-on-accent);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--prism-on-accent) 12%, transparent);
-  font-family: var(--prism-font-body); font-size: 15px; line-height: 1.2; font-weight: var(--prism-weight-medium);
+  font-family: var(--prism-font-body); font-size: var(--prism-text-base); line-height: 1.2; font-weight: var(--prism-weight-medium);
   letter-spacing: inherit;
   cursor: pointer;
   transition: transform var(--prism-motion-fast) var(--prism-motion-ease), background var(--prism-motion-base);
@@ -97,8 +97,8 @@ button.prism-chip { min-block-size: 30px; padding-inline: 10px; cursor: pointer;
 }
 .prism-icon-btn:disabled, .prism-stepper > button:disabled, .prism-switch:disabled, button.prism-chip:disabled { opacity: .45; cursor: default; }
 .prism-stepper { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
-.prism-stepper > button { inline-size: 24px; block-size: 24px; font-size: 16px; }
-.prism-stepper > :is(output, input) { min-inline-size: 22px; text-align: center; font-size: 13px; font-weight: var(--prism-weight-semibold); }
+.prism-stepper > button { inline-size: 24px; block-size: 24px; font-size: var(--prism-text-base); }
+.prism-stepper > :is(output, input) { min-inline-size: 22px; text-align: center; font-size: var(--prism-text-sm); font-weight: var(--prism-weight-semibold); }
 
 .prism-switch {
   appearance: none;
@@ -195,7 +195,7 @@ input.prism-inline-value:focus { background: color-mix(in srgb, var(--prism-acce
   border-radius: 4px;
   background: color-mix(in srgb, var(--prism-text) 3.5%, transparent);
   color: var(--prism-text-muted);
-  font-family: var(--prism-font-mono); font-size: 10px; line-height: 1.2; font-weight: var(--prism-weight-regular);
+  font-family: var(--prism-font-mono); font-size: var(--prism-text-xs); line-height: 1.2; font-weight: var(--prism-weight-regular);
 }
 
 .prism-odometer { display: inline-flex; align-items: baseline; font-variant-numeric: lining-nums tabular-nums; }
@@ -230,7 +230,7 @@ input.prism-inline-value:focus { background: color-mix(in srgb, var(--prism-acce
     position: absolute;
     inset: 0;
     background: var(--prism-shared-highlight, var(--prism-accent, #525252));
-    mix-blend-mode: var(--prism-mockup-light-blend, normal);
+    mix-blend-mode: var(--prism-shared-light-blend, normal);
     pointer-events: none;
     opacity: 0;
     mask: linear-gradient(90deg, transparent, #000 48%, transparent) -50% 0 / 35% 100% no-repeat;

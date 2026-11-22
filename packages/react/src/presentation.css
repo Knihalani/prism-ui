@@ -52,8 +52,8 @@
   transform: translateX(-100%);
 }
 .prism-root[data-prism-presentation] [data-prism-flash] {
-  background-color: var(--prism-accent-soft, color-mix(in oklab, var(--prism-accent, currentColor) 14%, transparent));
-  box-shadow: 0 0 .75rem var(--prism-accent-glow, color-mix(in oklab, var(--prism-accent, currentColor) 18%, transparent));
+  background-color: var(--prism-stream-flash-bg, color-mix(in oklab, var(--prism-accent, currentColor) 14%, transparent));
+  box-shadow: 0 0 .75rem var(--prism-stream-flash-shadow, color-mix(in oklab, var(--prism-accent, currentColor) 18%, transparent));
 }
 
 @media (prefers-reduced-motion: no-preference) {

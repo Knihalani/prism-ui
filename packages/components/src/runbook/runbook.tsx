@@ -21,7 +21,7 @@ export function useRunbook(props: RunbookProps, ctx: PrismContextValue) {
   const labels = { ...defaults, ...props.labels, ...useStrings('runbook') };
   const count = useMemo(() => steps.filter(step => done[stepKey(step)]).length, [steps, done]);
   const current = useMemo(() => steps.findIndex(step => !done[stepKey(step)]), [steps, done]);
-  return useMemo(() => ({ steps, done, current, count, labels, title: props.title ?? labels.title, animate: ctx.animate,
+  return useMemo(() => ({ steps, done, current, count, labels, title: labels.title, animate: ctx.animate,
     complete: steps.length > 0 && count === steps.length,
     progress: `${format.number(count)} ${labels.of} ${format.number(steps.length)}`,
     toggle(key: string) { if (steps.some(step => stepKey(step) === key && step.complete === false)) return; setDone(old => ({ ...old, [key]: !old[key] })); },
@@ -92,7 +92,7 @@ const labelsSchema = s.object({
   copyError: s.string().optional().describe('Copy failure label').example('Could not copy'),
   loading: s.string().optional().describe('Empty streaming label').example('Loading steps'),
 }).optional().describe('Translated interface labels').example(defaults);
-export const runbookDefinition = defineComponent({ name: 'runbook', parts: ["actions","ask","body","check","copy","empty","fill","footer","header","progress","root","skeleton","status","step","stepBody","stepHeader","stepTitle","stuck","title","toolbar","track","undo"], strings: componentStrings.runbook, schema: s.object({ id: s.string().optional().describe('Persistent state identifier').example('deploy'), title: s.string().optional().describe('Runbook title').example('Deploy to Fly'), labels: labelsSchema }), component: Runbook,
+export const runbookDefinition = defineComponent({ name: 'runbook', parts: ["actions","ask","body","check","copy","empty","fill","footer","header","progress","root","skeleton","status","step","stepBody","stepHeader","stepTitle","stuck","title","toolbar","track","undo"], strings: { ...defaults, ...componentStrings.runbook }, schema: s.object({ id: s.string().optional().describe('Persistent state identifier').example('deploy'), title: s.string().optional().describe('Runbook title').example('Deploy to Fly'), labels: labelsSchema }), component: Runbook,
   docs: 'A checklist of steps with progress, command copying and contextual help. Use a four-colon outer fence around three-colon steps.', syntax: 'container', examples: ['::::runbook{title="Deploy to Fly" id=deploy}\n:::step{title="Install the CLI"}\nRun:\n```bash\ncurl -L https://fly.io/install.sh | sh\n```\n:::\n:::step{title="Log in"}\nRun fly auth login.\n:::\n::::'],
   message(action) { if (action.type !== 'stuck') return `Tell me more about this runbook…`; const payload = action.payload as { index: number; title: string }; return `I'm stuck on step ${new Intl.NumberFormat().format(payload.index + 1)} of "${action.context.props.title ?? 'Runbook'}": ${payload.title}.`; },
 });

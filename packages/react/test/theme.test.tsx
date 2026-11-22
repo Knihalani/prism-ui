@@ -1,6 +1,7 @@
 import './setup';
 import { expect, test } from 'bun:test';
-import { createElement } from 'react';
+import { act, createElement } from 'react';
+import { hydrateRoot } from 'react-dom/client';
 import { render } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { Prism, ThemeScope, Icon, createTheme, defineComponent, defineTheme, createRegistry, fromCssVars, host, shadcn, usePart, useSlot, useStrings } from '../src';
@@ -60,4 +61,25 @@ test('icons resolve centrally and invalid theme names or cycles fail explicitly'
   expect(() => defineTheme({ name: 'bad"]{}' })).toThrow('Theme names');
   const cyclic: any = { name: 'cyclic' }; cyclic.extends = cyclic;
   expect(() => renderToString(<ThemeScope theme={cyclic} />)).toThrow('Circular');
+});
+
+test('scopes inside a custom view resolve their own parts, strings and icons while explicit props still win', () => {
+  const inner = defineTheme({ name: 'test-inner-parts', components: { sample: { slots: { body: marker('inside') }, strings: { title: 'Inner' }, styles: { body: { color: 'blue' } } } } });
+  function Wrapped() { return <ThemeScope theme={inner}><Sample /></ThemeScope>; }
+  const wrapped = createRegistry([defineComponent({ name: 'sample', component: Wrapped, strings: { title: 'Default' } })]);
+  const view = render(<Prism registry={wrapped} source={source} theme={defineTheme({ name: 'test-outer-parts', components: { sample: { slots: { body: marker('outside') }, strings: { title: 'Outer' } } } })} styles={{ sample: { body: { padding: 7 } } }} />);
+  const part = view.container.querySelector('[data-part="body"]') as HTMLElement;
+  expect(part.dataset.marker).toBe('inside'); expect(part.textContent).toBe('Inner'); expect(part.style.color).toBe('blue'); expect(part.style.padding).toBe('7px');
+});
+
+test('hydration consolidates repeated declarative server styles into one stylesheet in the head', async () => {
+  const theme = defineTheme({ name: 'test-hydration', tokens: { accent: 'tomato' } });
+  const content = <><ThemeScope theme={theme}>One</ThemeScope><ThemeScope theme={theme}>Two</ThemeScope></>;
+  const container = document.createElement('div'); container.innerHTML = renderToString(content); document.body.append(container);
+  expect(container.querySelectorAll('[data-prism-theme-css="test-hydration"]').length).toBe(2);
+  let root: ReturnType<typeof hydrateRoot>;
+  await act(async () => { root = hydrateRoot(container, content); });
+  expect(document.querySelectorAll('style[data-prism-theme-css="test-hydration"]').length).toBe(1);
+  expect(document.head.querySelector('[data-prism-theme-css="test-hydration"]')?.textContent).toContain('--prism-accent:tomato');
+  await act(async () => root!.unmount()); container.remove();
 });

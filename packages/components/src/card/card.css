@@ -25,13 +25,13 @@
 .prism-root .prism-card__header { position: relative; padding-inline-end: 34px; }
 .prism-root .prism-card__header:has(> .prism-badge__root) { padding-inline-end: 0; }
 .prism-root .prism-card__header > .prism-badge__root { max-inline-size: calc(100% - 34px); margin-block-end: 14px; }
-.prism-root .prism-card__title { margin: 0; font-family: var(--prism-font-body); font-size: 16px; line-height: 1.65; font-weight: var(--prism-weight-semibold); }
+.prism-root .prism-card__title { margin: 0; font-family: var(--prism-font-body); font-size: var(--prism-text-base); line-height: 1.65; font-weight: var(--prism-weight-semibold); }
 .prism-root .prism-card__link { display: inline-flex; align-items: baseline; gap: .3em; color: inherit; text-decoration: none; }
-.prism-root .prism-card__link:hover { color: var(--prism-accent, #525252); }
+.prism-root .prism-card__link:hover { color: var(--prism-accent-text, var(--prism-accent, #525252)); }
 .prism-root .prism-card__link::after { content: "↗"; flex-shrink: 0; color: var(--prism-text-muted); font-size: .8em; }
 .prism-root .prism-card__subtitle { margin: var(--prism-space-1) 0 0; color: var(--prism-text-muted); font-size: var(--prism-text-sm); }
 .prism-root .prism-card__body { flex: 1; min-width: 0; color: var(--prism-text-muted); }
-.prism-root .prism-card__body > .prism-paragraph__root { font-size: 16px; line-height: 1.85; }
+.prism-root .prism-card__body > .prism-paragraph__root { font-size: var(--prism-text-base); line-height: 1.85; }
 .prism-root .prism-card__body:empty { display: none; }
 .prism-root .prism-card__ask { position: absolute; inset-block-start: -4px; inset-inline-end: 0; }
 .prism-root .prism-card__root:has(> .prism-card__header[data-utility-only]) {
@@ -68,7 +68,7 @@
   background: transparent;
   color: var(--prism-text-muted);
   box-shadow: none;
-  font-family: var(--prism-font-body); font-size: 13px; line-height: 1.4; font-weight: var(--prism-weight-regular);
+  font-family: var(--prism-font-body); font-size: var(--prism-text-sm); line-height: 1.4; font-weight: var(--prism-weight-regular);
 }
 .prism-root .prism-card__action[data-variant="quiet"]:hover { color: var(--prism-text); text-decoration: underline; text-underline-offset: 4px; transform: none; }
 @media (hover: hover) {

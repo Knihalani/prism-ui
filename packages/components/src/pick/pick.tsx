@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { s, type Infer } from '@prism-ui/schema';
-import { Icon, PrismPart, defineComponent, registerComponent, useEmit, useFormat, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
+import { useStrings, Icon, PrismPart, defineComponent, registerComponent, useEmit, useFormat, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
 import { setRecordPath } from '../store-record';
 import { useFlip } from './flip';
@@ -14,6 +14,7 @@ function weightsFor(props: PickProps, readWeight: (id: string) => unknown): Weig
   return Object.fromEntries(props.criteria.filter(c => c.id).map(c => [c.id, clamp(readWeight(c.id), clamp(props.weights?.[c.id], 1))]));
 }
 export function usePick(props: PickProps, ctx: PrismComponentProps<PickProps>) {
+  props = { ...props, ...useStrings('pick') };
   const { store, animate } = usePrism(), format = useFormat(), emit = useEmit(), id = props.id ?? ctx.id;
   const saved = useStoreValue(`${id}.weights`), chosen = useStoreValue<string | undefined>(`${id}.chosen`);
   const readWeight = (criterion: string): unknown => store.get(`${id}.weights.${criterion}`);

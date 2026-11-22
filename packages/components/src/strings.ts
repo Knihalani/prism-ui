@@ -67,7 +67,7 @@ export const componentStrings = {
     "noRowsSelected": "No rows selected",
     "previousPage": "Previous page",
     "nextPage": "Next page",
-    "sent": "Sent ·"
+    "sent": "Sent · {count}"
   },
   "runbook": {
     "nbsp": "\u00a0"
@@ -86,8 +86,7 @@ export const componentStrings = {
   "table": {
     "tablePagination": "Table pagination",
     "previousPage": "Previous page",
-    "page": "Page",
-    "of": "of",
+    "pageStatus": "Page {page} of {pages}",
     "nextPage": "Next page"
   },
   "tabs": {

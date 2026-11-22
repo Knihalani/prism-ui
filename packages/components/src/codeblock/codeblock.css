@@ -23,7 +23,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--prism-text-muted);
-  font-family: var(--prism-font-mono); font-size: 12px; line-height: 1.4; font-weight: var(--prism-weight-regular);
+  font-family: var(--prism-font-mono); font-size: var(--prism-text-xs); line-height: 1.4; font-weight: var(--prism-weight-regular);
 }
 .prism-codeblock__actions { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px; margin-block-start: 12px; }
 .prism-codeblock__wrap, .prism-codeblock__collapse, .prism-codeblock__ask, .prism-codeblock__copy {
@@ -38,7 +38,7 @@
   font-family: var(--prism-font-body); font-size: var(--prism-text-sm); line-height: 1.4; font-weight: var(--prism-weight-regular);
   cursor: pointer;
 }
-.prism-codeblock__copy { flex: none; min-inline-size: 40px; min-height: 23px; justify-content: center; font-size: 12px; }
+.prism-codeblock__copy { flex: none; min-inline-size: 40px; min-height: 23px; justify-content: center; font-size: var(--prism-text-xs); }
 .prism-codeblock__ask svg { inline-size: 14px; block-size: 14px; }
 .prism-codeblock__actions button:hover:not(:disabled), .prism-codeblock__wrap[aria-pressed="true"] {
   color: var(--prism-text);
@@ -90,6 +90,6 @@
 }
 @media (max-width: 480px) {
   .prism-codeblock__header, .prism-codeblock__line { padding-inline: 15px; }
-  .prism-codeblock__body pre { font-size: 12px; }
+  .prism-codeblock__body pre { font-size: var(--prism-text-xs); }
   .prism-codeblock__root[data-lines] .prism-codeblock__gutter { flex-basis: 28px; }
 }
