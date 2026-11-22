@@ -22,7 +22,7 @@ export function AssistantTurn({ text, streaming, error, store, theme, animate, o
   return <article className={'assistant-turn' + (last ? ' last-turn' : '')} data-message="assistant" data-state={streaming ? 'streaming' : 'ready'} aria-label="Assistant reply" aria-busy={streaming}>
     <MessageBoundary>
       {!text && streaming ? <div className="thinking" aria-label="Thinking"><span>Thinking</span></div> : <div className="reply-content">
-        <Prism source={text} done={!streaming} store={store} plugins={playgroundPlugins} theme={theme} animate={animate} onAction={onAction} slots={slots} />
+        <Prism source={text} done={!streaming} store={store} plugins={playgroundPlugins} mode={theme} animate={animate} onAction={onAction} slots={slots} />
       </div>}
     </MessageBoundary>
     {error && <p className="turn-error" role="alert">{error}</p>}

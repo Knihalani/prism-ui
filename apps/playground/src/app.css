@@ -67,7 +67,7 @@ button, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .assistant-turn { margin: 0 0 var(--prism-flow-gap, 30px); position: relative; animation: turn-in 260ms var(--prism-motion-spring, ease-out) both; }
 .assistant-turn:has(+ .assistant-turn) { margin-bottom: 1.35em; }
 .reply-content { min-height: 26px; overflow-wrap: anywhere; }
-.reply-content > .prism-root { padding: 0; background: transparent; font: 15px/1.7 var(--prism-font-display, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif); color: var(--app-text); }
+.reply-content > .prism-root { padding: 0; background: transparent; font: inherit; font-family: var(--prism-font-body, inherit); color: var(--prism-text, inherit); }
 .reply-content > .prism-root > :first-child { margin-top: 0; }
 .reply-content > .prism-root > :last-child { margin-bottom: 0; }
 .reply-content .prism-root [data-prism="frame"][data-part="root"] { max-width: 100%; }
