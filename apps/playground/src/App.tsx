@@ -4,13 +4,14 @@ import { usePlaygroundController, readModePreference, type AppProps } from './us
 import { parseLocation, serialiseLocation } from './url-state';
 import { availableThemes } from './themes';
 import { themeFontCss } from './theme-fonts';
+import { artifactFontStyle } from './artifact-fonts';
 import { ChatShell, EditorShell, WorkspaceShell, ShellSwitcher } from './shells';
 import { Palette } from './ui/Palette';
 import { Settings } from './ui/Settings';
 import './shells.css';
 
 function ShellFrame({ 'data-prism-theme-name': theme, ...props }: HTMLAttributes<HTMLDivElement> & { 'data-prism-theme-name'?: string }) {
-  return <div {...props} data-theme={theme}><style>{themeFontCss}</style>{props.children}</div>;
+  return <div {...props} data-theme={theme} style={{ ...props.style, ...artifactFontStyle }}><style>{themeFontCss}</style>{props.children}</div>;
 }
 
 export function App(props: AppProps) {

@@ -12,6 +12,7 @@ import { createLlmAgent } from '../src/agent/llm';
 import { createAgent, loadAgentConfig } from '../src/agent/config';
 import { playgroundPlugins } from '../src/plugins';
 import type { AgentEvent } from '../src/agent/types';
+import { agentSource } from '../src/adaptive-source';
 
 afterEach(() => { cleanup(); localStorage.removeItem('prism-agent'); });
 const signal = () => new AbortController().signal;
@@ -205,6 +206,31 @@ test.each(['openai', 'anthropic'] as const)('%s parses fragmented SSE and sends 
   expect(request!.signal).toBeDefined();
   if (provider === 'openai') { expect(headers.Authorization).toBe('Bearer test-only'); expect(url).toContain('/chat/completions'); expect(payload.messages[0].role).toBe('system'); }
   else { expect(headers['x-api-key']).toBe('test-only'); expect(headers['anthropic-version']).toBe('2023-06-01'); expect(headers['anthropic-dangerous-direct-browser-access']).toBe('true'); expect(payload.system).toContain('pick'); expect(url).toContain('/messages'); }
+});
+
+test.each(['openai', 'anthropic'] as const)('%s never forwards legacy embedded fonts in messages or interaction history', async provider => {
+  const font = 'data:font/woff2;base64,' + 'A'.repeat(200_000);
+  const legacy = '<style>@font-face{src:url("' + font + '")}</style>';
+  const image = 'data:image/png;base64,aGVsbG8=';
+  let request: RequestInit | undefined;
+  const agent = createLlmAgent({ provider, apiKey: 'test-only', fetch: (async (_url, init) => {
+    request = init;
+    return new Response('data: [DONE]\n\n');
+  }) as typeof globalThis.fetch });
+  const history = [{ role: 'assistant' as const, text: legacy + agentSource }, { role: 'user' as const, text: '[UI interaction] ' + legacy }];
+  for (const input of [
+    { kind: 'message' as const, text: 'Use this: ' + legacy, history },
+    { kind: 'action' as const, action: action('artifact', 'feedback', { source: legacy, image }), history },
+    { kind: 'message' as const, text: '', history: [] },
+  ]) {
+    await collect(agent.respond(input, signal()));
+    const messages = JSON.parse(request!.body as string).messages.filter((turn: { role: string }) => turn.role !== 'system');
+    expect(JSON.stringify(messages).length).toBeLessThan(16_000);
+    expect(JSON.stringify(messages)).not.toContain(font);
+    expect(JSON.stringify(messages)).not.toContain('data:font/');
+    if (input.kind === 'action') expect(messages.at(-1).content).toContain(image);
+    if (input.history.length) expect(messages[0].content).toContain('[embedded font omitted]');
+  }
 });
 
 test('LLM empty response, provider failure and malformed SSE surface errors', async () => {
