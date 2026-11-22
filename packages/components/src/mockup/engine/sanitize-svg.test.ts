@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { Window } from 'happy-dom';
 import { sanitizeSvg } from './sanitize-svg';
 
 test('preserves safe SVG and supports empty/partial streams without DOM', () => {
@@ -56,4 +57,20 @@ test('blocks animation mutating href, events or style', () => {
   }
   const safe = '<animate attributeName="opacity" from="0" to="1"/>';
   expect(sanitizeSvg(safe)).toBe(safe);
+});
+
+test('style text cannot escape into markup when inserted as HTML', () => {
+  const doc = new Window().document;
+  for (const src of [
+    '<svg><style><img src=x onerror=alert(1)></style></svg>',
+    '<svg><style><img src=x onerror=alert(1)></style><script>alert(1)</script></svg>',
+    '<svg><style>path{fill:red}<IMG SRC=x ONERROR=alert(1)></style></svg>',
+  ]) {
+    const sanitized = sanitizeSvg(src);
+    expect(sanitized.match(/<style>([\s\S]*?)<\/style>/)![1]).not.toContain('<');
+    doc.body.innerHTML = sanitized;
+    expect(doc.querySelector('img, script, [onerror]')).toBeNull();
+    expect(doc.querySelector('style')).not.toBeNull();
+  }
+  expect(sanitizeSvg('<svg><style>path{width:ex<pression(alert(1))}</style></svg>')).toBe('<svg></svg>');
 });

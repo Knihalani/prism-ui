@@ -86,7 +86,7 @@ export function sanitizeSvg(src: string, opts: SanitizeSvgOptions = {}): string 
       const rest = src.slice(position);
       const close = /<\/style\s*>/i.exec(rest);
       if (!close) break;
-      const content = rest.slice(0, close.index);
+      const content = rest.slice(0, close.index).replace(/</g, '');
       if (safeCss(content)) output += opening + content + close[0];
       position += close.index + close[0].length;
     } else output += opening;
