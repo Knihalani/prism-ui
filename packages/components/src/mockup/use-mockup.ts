@@ -17,7 +17,8 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const complete = component?.node.complete !== false, kind = props.kind ?? 'html', framed = kind === 'html' || kind === 'wire';
   const labels = { ...mockupLabels, ...props.labels, ...useStrings('mockup') }, title = props.title ?? labels.title, source = props.source ?? '';
   const prefix = options.inline ? 'inlineFeedback.' : '';
-  const [localDevice, writeDevice] = useComponentState<MockupDevice>(prefix + 'device', props.device ?? 'desktop'), [localZoom, writeZoom] = useComponentState(prefix + 'zoom', 1), [draft] = useComponentState<FeedbackState | undefined>(prefix + 'feedback', undefined), [submitted, setSubmitted] = useComponentState(prefix + 'submitted', false);
+  const storage = options.inline ? { history: false } : undefined;
+  const [localDevice, writeDevice] = useComponentState<MockupDevice>(prefix + 'device', props.device ?? 'desktop', storage), [localZoom, writeZoom] = useComponentState(prefix + 'zoom', 1, storage), [draft] = useComponentState<FeedbackState | undefined>(prefix + 'feedback', undefined, storage), [submitted, setSubmitted] = useComponentState(prefix + 'submitted', false, storage);
   const device = options.controls?.device ?? localDevice, setDevice = options.controls?.setDevice ?? writeDevice, zoom = options.controls?.zoom ?? localZoom, setZoom = options.controls?.setZoom ?? writeZoom;
   const [feedback] = useState(() => createFeedback({ ...draft, mockup: title, variant: props.variant, device }));
   const state = useSyncExternalStore(feedback.subscribe, feedback.getState, feedback.getState);

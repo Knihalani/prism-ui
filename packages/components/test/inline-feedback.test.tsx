@@ -2,6 +2,7 @@ import '../../react/test/setup';
 import { afterEach, expect, test } from 'bun:test';
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { Prism, defineRenderer, type Action } from '@prism-ui/react';
+import { createStore } from '@prism-ui/state';
 import '../src/feedback';
 import '../src/num';
 
@@ -9,6 +10,22 @@ afterEach(cleanup);
 const source = '```ui:feedback-test\n{"id":"target"}\n```';
 const View = () => <button>Actual input</button>;
 function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); }
+
+test('opening, editing, submitting and closing inline feedback preserve unrelated undo and redo', () => {
+  const store = createStore();
+  store.set('budget', 1); store.set('budget', 2); store.undo();
+  const view = render(<Prism store={store} renderers={{ 'feedback-test': View }} feedback source={source} />);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  expect(store.canUndo('target')).toBe(false);
+  expect(store.canRedo()).toBe(true);
+  change(view.getByRole('textbox', { name: 'Overall feedback' }), 'Keep this layout');
+  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  fireEvent.click(view.getByRole('button', { name: 'Close feedback' }));
+  expect(store.canUndo('target')).toBe(false);
+  expect(store.canRedo()).toBe(true);
+  act(() => store.redo());
+  expect(store.get('budget')).toBe(2);
+});
 
 test('feedback preserves valid phrasing content for inline built-ins, including the open editor', () => {
   const view = render(<Prism feedback source="Budget :num[3]{id=quantity} per seat." />);
