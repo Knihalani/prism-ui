@@ -121,6 +121,7 @@ export function Prism({ scope: providedScope, source = '', done = true, stream, 
     next(0, action);
   }, []);
   const format = useMemo(() => createFormat(locale, currency), [locale, currency]);
+  const customization = useMemo(() => ({ slots, classNames, styles }), [slots, classNames, styles]);
   const current = useRef<{ parser: ReturnType<typeof createParser>; text: string; ended: boolean; plugins?: Plugin[] } | null>(null);
   if (!current.current || current.current.plugins !== plugins || !source.startsWith(current.current.text) || (current.current.ended && (source !== current.current.text || !done))) current.current = { parser: createParser({ plugins }), text: '', ended: false, plugins };
   const state = current.current;
@@ -128,7 +129,7 @@ export function Prism({ scope: providedScope, source = '', done = true, stream, 
   state.text = source;
   if (done && !state.ended) { state.parser.end(); state.ended = true; }
   const streamed = usePrismStream(stream, { plugins }), root = stream ? streamed.root : state.parser.root;
-  const context = useMemo(() => ({ registry, components, store, emit, theme: theme ?? resolvedTheme, resolvedTheme, unstyled, ...overrides, format, animate: motion, applied, scope }), [registry, components, store, emit, theme, resolvedTheme, unstyled, overrides, format, motion, applied, scope]);
+  const context = useMemo(() => ({ registry, components, store, emit, theme: theme ?? resolvedTheme, resolvedTheme, unstyled, ...overrides, customization, format, animate: motion, applied, scope }), [registry, components, store, emit, theme, resolvedTheme, unstyled, overrides, customization, format, motion, applied, scope]);
   const streaming = stream ? !streamed.done : !done;
   return <PrismContext.Provider value={context}><ThemeScope theme={theme} mode={mode} density={density} animate={motion}
     className={cx('prism-root', className)} style={style} data-state={streaming ? 'streaming' : 'ready'}

@@ -16,7 +16,11 @@ export interface ComponentDef<S extends Schema<any> = Schema<any>> {
   docs?: string; examples?: string[]; inline?: boolean; syntax?: Definition['syntax'];
   message?(action: Action): string;
 }
-export function defineComponent<S extends Schema<any>>(def: ComponentDef<S>): ComponentDef<S> { return def; }
+export function defineComponent<S extends Schema<any>>(def: ComponentDef<S>): ComponentDef<S> {
+  const defaults = def.schema?.coerce({}).value;
+  const strings = defaults && typeof defaults === 'object' ? Object.fromEntries(Object.entries(defaults).filter(([, value]) => typeof value === 'string')) as Record<string, string> : {};
+  return { ...def, parts: def.parts ?? [], strings: { ...strings, ...def.strings } };
+}
 export function createRegistry(defs: ComponentDef[] = []) {
   const map = new Map(defs.map(def => [def.name, def]));
   return {

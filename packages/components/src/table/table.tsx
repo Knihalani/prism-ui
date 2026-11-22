@@ -1,6 +1,7 @@
+import { componentStrings } from '../strings';
 import { Children, createContext, useContext, useLayoutEffect, useMemo, useRef, useState, type HTMLAttributes, type ReactNode, type ThHTMLAttributes } from 'react';
 import type { Node } from '@prism-ui/core';
-import { PrismContext, useComponentState, usePart, usePresentation, usePrism, useSlot, type MarkdownProps, type PrismComponentProps } from '@prism-ui/react';
+import { useStrings, Icon, PrismPart, PrismContext, useComponentState, usePart, usePresentation, usePrism, useSlot, type MarkdownProps, type PrismComponentProps } from '@prism-ui/react';
 import { dateValue, format as formatValue, type FormatKind } from '../lib/format';
 
 export interface TableColumn { key: string; label?: string; title?: string; align?: 'left' | 'right' | 'center'; type?: FormatKind }
@@ -80,11 +81,11 @@ export function useTable(props: TableProps, ctx: Pick<PrismComponentProps, 'node
     scrollProps: { ...parts.scroll, role: 'region', 'aria-label': props.label ?? props.title ?? 'Table', tabIndex: 0, onScroll: measure } };
 }
 const TableContext = createContext<ReturnType<typeof useTable> | null>(null);
-function Row(props: HTMLAttributes<HTMLTableRowElement>) { return <tr {...props} />; }
-function Header(props: ThHTMLAttributes<HTMLTableCellElement>) { return <th {...props} />; }
-function Cell(props: HTMLAttributes<HTMLTableCellElement>) { return <td {...props} />; }
-function Head(props: HTMLAttributes<HTMLTableSectionElement>) { return <thead {...props} />; }
-function Body(props: HTMLAttributes<HTMLTableSectionElement>) { return <tbody {...props} />; }
+function Row(props: HTMLAttributes<HTMLTableRowElement>) { return <PrismPart as="tr" {...props} />; }
+function Header(props: ThHTMLAttributes<HTMLTableCellElement>) { return <PrismPart as="th" {...props} />; }
+function Cell(props: HTMLAttributes<HTMLTableCellElement>) { return <PrismPart as="td" {...props} />; }
+function Head(props: HTMLAttributes<HTMLTableSectionElement>) { return <PrismPart as="thead" {...props} />; }
+function Body(props: HTMLAttributes<HTMLTableSectionElement>) { return <PrismPart as="tbody" {...props} />; }
 function TableRowView({ children }: MarkdownProps) {
   const model = useContext(TableContext)!, part = usePart('table', 'row', model.state), RowSlot = useSlot('table', 'row', Row);
   return <RowSlot {...part}>{children}</RowSlot>;
@@ -97,10 +98,11 @@ function TableCellView({ node, children }: MarkdownProps) {
   if (!header) return <CellSlot {...part} style={style} data-align={alignment}>{children}</CellSlot>;
   const dir = model.sort?.column === index ? model.sort.dir : undefined;
   return <HeaderSlot {...part} style={style} data-align={alignment} scope="col" aria-sort={dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : 'none'}>
-    <button {...button} type="button" disabled={model.streaming} onClick={() => model.onSort(index)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); if (!event.repeat) model.onSort(index); } }}>{children}<svg {...icon} aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor"><path d={dir === 'asc' ? 'm3 7 3-3 3 3' : dir === 'desc' ? 'm3 5 3 3 3-3' : 'm3 4 3-2 3 2M3 8l3 2 3-2'} /></svg></button>
+    <PrismPart as="button" {...button} type="button" disabled={model.streaming} onClick={() => model.onSort(index)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); if (!event.repeat) model.onSort(index); } }}>{children}<PrismPart as="span" {...icon} data-direction={dir}><Icon name="sort" width="12" height="12" /></PrismPart></PrismPart>
   </HeaderSlot>;
 }
 export function MarkdownTable({ props, ...ctx }: PrismComponentProps<TableProps>) {
+  const themeStrings = useStrings('table', componentStrings.table);
   const model = useTable(props, ctx), prism = usePrism(), HeadSlot = useSlot('table', 'head', Head), BodySlot = useSlot('table', 'body', Body);
   const scoped = useMemo(() => ({ ...prism, components: {
     ...Object.fromEntries(Object.entries({ tableRow: TableRowView, tableHeader: TableCellView, tableCell: TableCellView }).filter(([name]) => !prism.components[name] && !prism.registry.get(name))),
@@ -111,13 +113,13 @@ export function MarkdownTable({ props, ...ctx }: PrismComponentProps<TableProps>
     if (model.markdown) return model.rendered[index];
     return <TableRowView key={node.key} node={node}>{node.children?.map(cell => <TableCellView key={cell.key} node={cell}>{cell.children?.map(text).join('')}</TableCellView>)}</TableRowView>;
   };
-  return <TableContext.Provider value={model}><PrismContext.Provider value={scoped}><div {...model.rootProps}>
-    <div {...model.scrollProps} ref={model.scrollRef}><table {...model.parts.table}>
+  return <TableContext.Provider value={model}><PrismContext.Provider value={scoped}><PrismPart as="div" {...model.rootProps}>
+    <PrismPart as="div" {...model.scrollProps} ref={model.scrollRef}><PrismPart as="table" {...model.parts.table}>
       <HeadSlot {...model.parts.head}>{model.rows.length > 0 && renderRow(0)}</HeadSlot>
       <BodySlot {...model.parts.body}>{model.order.map(index => renderRow(index + 1))}</BodySlot>
-    </table></div>
-    {model.paginated && <nav {...model.parts.pagination} aria-label="Table pagination"><button {...model.parts.pageButton} type="button" disabled={model.streaming || model.page === 0} onClick={() => model.setPage(model.page - 1)}>Previous page</button><span aria-live="polite">Page {model.page + 1} of {model.pages}</span><button {...model.parts.pageButton} type="button" disabled={model.streaming || model.page + 1 >= model.pages} onClick={() => model.setPage(model.page + 1)}>Next page</button></nav>}
-  </div></PrismContext.Provider></TableContext.Provider>;
+    </PrismPart></PrismPart>
+    {model.paginated && <PrismPart as="nav" {...model.parts.pagination} aria-label={themeStrings.tablePagination}><PrismPart as="button" {...model.parts.pageButton} type="button" disabled={model.streaming || model.page === 0} onClick={() => model.setPage(model.page - 1)}>{themeStrings.previousPage}</PrismPart><span aria-live="polite">{themeStrings.page}{model.page + 1} {themeStrings.of}{model.pages}</span><PrismPart as="button" {...model.parts.pageButton} type="button" disabled={model.streaming || model.page + 1 >= model.pages} onClick={() => model.setPage(model.page + 1)}>{themeStrings.nextPage}</PrismPart></PrismPart>}
+  </PrismPart></PrismContext.Provider></TableContext.Provider>;
 }
 export function TableDispatcher(input: PrismComponentProps<TableProps>) {
   const { registry } = usePrism(), Delegate = input.node.type === 'table' ? undefined : registry.get('dataTable')?.component;

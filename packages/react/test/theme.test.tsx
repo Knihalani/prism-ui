@@ -27,7 +27,7 @@ test('nested scopes inherit themes and modes, independent subtrees can select a 
   const one = defineTheme({ name: 'test-one', components: { sample: { strings: { title: 'One' } } } });
   const two = defineTheme({ name: 'test-two', components: { sample: { strings: { title: 'Two' } } } });
   const view = render(<ThemeScope theme={one} mode="dark"><Prism registry={registry} source={source} /><ThemeScope theme={two} mode="light"><Prism registry={registry} source={source} /></ThemeScope></ThemeScope>);
-  const roots = [...view.container.querySelectorAll('.prism-root')];
+  const roots = Array.from(view.container.querySelectorAll('.prism-root'));
   expect(roots.map(node => node.textContent)).toEqual(['One', 'Two']);
   expect(roots.map(node => node.getAttribute('data-prism-theme'))).toEqual(['dark', 'light']);
   expect(roots.map(node => node.getAttribute('data-prism-theme-name'))).toEqual(['test-one', 'test-two']);

@@ -1,3 +1,4 @@
+import { componentStrings } from '../strings';
 import { defineComponent, registerComponent } from '@prism-ui/react';
 import { s } from '@prism-ui/schema';
 import { Summary } from './summary';
@@ -5,7 +6,7 @@ import { Summary } from './summary';
 export { Summary, useSummary } from './summary';
 export type { SummaryProps, SummaryPoint, SummarySource, SummaryAction } from './summary';
 export const summaryDef = defineComponent({
-  name: 'summary', component: Summary, syntax: 'fence',
+  name: 'summary', parts: ["action","actionLabel","actionList","actionMeta","actionText","actions","actionsTitle","ask","avatar","body","checkbox","citation","due","empty","footer","header","owner","point","pointAsk","pointButton","pointRow","pointText","points","progress","quote","root","send","skeleton","source","sourceInner","sourceLink","sourceMeta","sourceTitle","title","toolbar","undo"], strings: componentStrings.summary, component: Summary, syntax: 'fence',
   schema: s.object({
     id: s.string().optional().describe('Stable identifier for checklist state'),
     title: s.string().optional().describe('Summary title'),

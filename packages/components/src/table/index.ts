@@ -1,3 +1,4 @@
+import { componentStrings } from '../strings';
 import { defineComponent, registerComponent } from '@prism-ui/react';
 import { s } from '@prism-ui/schema';
 import { TableDispatcher } from './table';
@@ -5,7 +6,7 @@ import { TableDispatcher } from './table';
 export { MarkdownTable, TableDispatcher, useTable } from './table';
 export type { TableProps, TableColumn, TableSort } from './table';
 export const tableDef = defineComponent({
-  name: 'table', component: TableDispatcher, syntax: 'fence',
+  name: 'table', parts: ["body","cell","head","header","pageButton","pagination","root","row","scroll","sort","sortIcon","table"], strings: componentStrings.table, component: TableDispatcher, syntax: 'fence',
   schema: s.any().describe('Optional id, label, title, columns (key/label/align) and rows; additional dataTable props are preserved'),
   docs: 'GFM pipe tables have sortable columns and a scrollable sticky header. A ui:table fence accepts columns (key/label/type), rows and optional pageSize. The fallback formats typed cells using the current locale/currency and paginates after sorting; it delegates unchanged to dataTable when registered.',
   examples: ['| Plan | Price |\n| --- | ---: |\n| Pro | $20 |', '```ui:table\n{"columns":[{"key":"plan","label":"Plan"}],"rows":[{"plan":"Pro"}]}\n```'],

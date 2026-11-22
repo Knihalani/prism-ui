@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { s, type Infer } from '@prism-ui/schema';
-import { defineComponent, registerComponent, useEmit, useFormat, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
+import { Icon, PrismPart, defineComponent, registerComponent, useEmit, useFormat, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
 import { setRecordPath } from '../store-record';
 import { useFlip } from './flip';
@@ -62,23 +62,23 @@ type Row = ReturnType<typeof usePick>['rows'][number];
 function PickItem({ row }: { row: Row }) {
   const parts = { item: usePart('pick', 'item', !row.ready ? 'loading' : row.chosen ? 'chosen' : row.top ? 'top' : 'ready'), header: usePart('pick', 'card-header'), rank: usePart('pick', 'rank'), match: usePart('pick', 'match'), top: usePart('pick', 'top'), value: usePart('pick', 'value'), title: usePart('pick', 'title'), subtitle: usePart('pick', 'subtitle'), tag: usePart('pick', 'tag'), reason: usePart('pick', 'reason'), bars: usePart('pick', 'bars'), criterion: usePart('pick', 'criterion'), criterionLabel: usePart('pick', 'criterion-label'), bar: usePart('pick', 'bar'), pros: usePart('pick', 'pros'), cons: usePart('pick', 'cons'), pro: usePart('pick', 'pro'), con: usePart('pick', 'con'), actions: usePart('pick', 'actions'), choose: usePart('pick', 'choose'), check: usePart('pick', 'check') };
   const Actions = useSlot('pick', 'actions', 'div' as any);
-  return <article {...parts.item} data-option={row.id} data-top={row.top || undefined} aria-busy={!row.ready}>
-    <div {...parts.header}><span {...parts.rank}>#{row.rankText}</span><span {...parts.match}>{row.ready ? `${row.matchText} ${row.matchLabel}` : '—'}</span>{row.top && <span {...parts.top}>{row.topLabel}</span>}{row.tag && <span {...parts.tag}>{row.tag}</span>}{row.chosen && <span {...parts.check}>✓ {row.chosenLabel}</span>}</div>
-    <h4 {...parts.title}>{row.title}</h4>{row.subtitle && <p {...parts.subtitle}>{row.subtitle}</p>}
-    {row.reason && <p {...parts.reason}>{row.reason}</p>}
-    <div {...parts.bars}>{row.bars.map(bar => <div key={bar.id} {...parts.criterion} data-state={bar.weight ? 'active' : 'off'}><span {...parts.criterionLabel}>{bar.label}</span><meter {...parts.bar} min={0} max={1} value={bar.score} aria-label={bar.label}>{bar.text}</meter><span {...parts.value}>{bar.text}</span></div>)}</div>
-    {!!row.pros.length && <ul {...parts.pros}>{row.pros.map((pro, index) => <li key={index} {...parts.pro}>✓ {pro}</li>)}</ul>}
-    {!!row.cons.length && <ul {...parts.cons}>{row.cons.map((con, index) => <li key={index} {...parts.con}>– {con}</li>)}</ul>}
-    <Actions {...parts.actions}><button {...parts.choose} type="button" disabled={!row.ready} onClick={row.onChoose}>{row.chooseLabel}</button></Actions>
-  </article>;
+  return <PrismPart as="article" {...parts.item} data-option={row.id} data-top={row.top || undefined} aria-busy={!row.ready}>
+    <PrismPart as="div" {...parts.header}><PrismPart as="span" {...parts.rank}>#{row.rankText}</PrismPart><PrismPart as="span" {...parts.match}>{row.ready ? `${row.matchText} ${row.matchLabel}` : '—'}</PrismPart>{row.top && <PrismPart as="span" {...parts.top}>{row.topLabel}</PrismPart>}{row.tag && <PrismPart as="span" {...parts.tag}>{row.tag}</PrismPart>}{row.chosen && <PrismPart as="span" {...parts.check}><Icon name="check" /> {row.chosenLabel}</PrismPart>}</PrismPart>
+    <PrismPart as="h4" {...parts.title}>{row.title}</PrismPart>{row.subtitle && <PrismPart as="p" {...parts.subtitle}>{row.subtitle}</PrismPart>}
+    {row.reason && <PrismPart as="p" {...parts.reason}>{row.reason}</PrismPart>}
+    <PrismPart as="div" {...parts.bars}>{row.bars.map(bar => <PrismPart as="div" key={bar.id} {...parts.criterion} data-state={bar.weight ? 'active' : 'off'}><PrismPart as="span" {...parts.criterionLabel}>{bar.label}</PrismPart><PrismPart as="meter" {...parts.bar} min={0} max={1} value={bar.score} aria-label={bar.label}>{bar.text}</PrismPart><PrismPart as="span" {...parts.value}>{bar.text}</PrismPart></PrismPart>)}</PrismPart>
+    {!!row.pros.length && <PrismPart as="ul" {...parts.pros}>{row.pros.map((pro, index) => <PrismPart as="li" key={index} {...parts.pro}><Icon name="check" /> {pro}</PrismPart>)}</PrismPart>}
+    {!!row.cons.length && <PrismPart as="ul" {...parts.cons}>{row.cons.map((con, index) => <PrismPart as="li" key={index} {...parts.con}>– {con}</PrismPart>)}</PrismPart>}
+    <Actions {...parts.actions}><PrismPart as="button" {...parts.choose} type="button" disabled={!row.ready} onClick={row.onChoose}>{row.chooseLabel}</PrismPart></Actions>
+  </PrismPart>;
 }
 export function Pick(ctx: PrismComponentProps<PickProps>) {
   const pick = usePick(ctx.props, ctx), { parts } = pick, Item = useSlot('pick', 'item', PickItem), Empty = useSlot('pick', 'empty', 'div' as any);
   return <ComponentFrame component="pick" title={pick.question} ask undo>
-    <div {...parts.criteria}>{pick.chips.map(chip => <button key={chip.id} {...parts.chip} {...chip.props}>{chip.label}<span {...parts.pips} aria-hidden="true">{chip.pips.map((on, index) => <span key={index} {...parts.pip} data-state={on ? 'on' : 'off'} />)}</span></button>)}</div>
-    <div {...parts.live} aria-live="polite">{pick.announcement}</div>
-    <div {...parts.list} ref={pick.listRef}>{pick.rows.length ? pick.rows.map(row => <Item key={row.id} row={row} />) : <Empty {...parts.empty}>{pick.emptyLabel}</Empty>}</div>
+    <PrismPart as="div" {...parts.criteria}>{pick.chips.map(chip => <PrismPart as="button" key={chip.id} {...parts.chip} {...chip.props}>{chip.label}<PrismPart as="span" {...parts.pips} aria-hidden="true">{chip.pips.map((on, index) => <PrismPart as="span" key={index} {...parts.pip} data-state={on ? 'on' : 'off'} />)}</PrismPart></PrismPart>)}</PrismPart>
+    <PrismPart as="div" {...parts.live} aria-live="polite">{pick.announcement}</PrismPart>
+    <PrismPart as="div" {...parts.list} ref={pick.listRef}>{pick.rows.length ? pick.rows.map(row => <Item key={row.id} row={row} />) : <Empty {...parts.empty}>{pick.emptyLabel}</Empty>}</PrismPart>
   </ComponentFrame>;
 }
-export const pick = defineComponent({ name: 'pick', schema: pickSchema, syntax: 'fence', component: Pick, docs: 'Rank options by weighted criterion scores (0–1). Weight chips cycle 1–2–3–0; arrow keys adjust weights or focus. Choose submits the option id and current weights.', examples: ['```ui:pick\n{"id":"plans","question":"Which plan?","criteria":[{"id":"price","label":"Price"}],"options":[{"id":"basic","title":"Basic","scores":{"price":0.9}}]}\n```'] });
+export const pick = defineComponent({ name: 'pick', parts: ["actions","ask","bar","bars","body","card-header","check","chip","choose","con","cons","criteria","criterion","criterion-label","empty","footer","header","item","list","live","match","pip","pips","pro","pros","rank","reason","root","subtitle","tag","title","toolbar","top","undo","value"], strings: {}, schema: pickSchema, syntax: 'fence', component: Pick, docs: 'Rank options by weighted criterion scores (0–1). Weight chips cycle 1–2–3–0; arrow keys adjust weights or focus. Choose submits the option id and current weights.', examples: ['```ui:pick\n{"id":"plans","question":"Which plan?","criteria":[{"id":"price","label":"Price"}],"options":[{"id":"basic","title":"Basic","scores":{"price":0.9}}]}\n```'] });
 registerComponent(pick);

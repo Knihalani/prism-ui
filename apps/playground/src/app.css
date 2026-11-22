@@ -18,9 +18,9 @@ button, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .chat-app button, .chat-app a, .chat-app input, .chat-app select, .chat-app textarea { outline-offset: 4px; }
 .chat-app :focus-visible { outline: 2px solid var(--prism-accent, var(--app-accent)); }
 .chat-app svg { flex: 0 0 auto; }
-.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; background: transparent; color: var(--app-muted) !important; border: 0; border-radius: var(--prism-radius-sm, 7px); transition: background var(--prism-duration, 160ms), color var(--prism-duration, 160ms); }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; background: transparent; color: var(--app-muted) !important; border: 0; border-radius: var(--prism-radius-sm, 7px); transition: background var(--prism-motion-base, 160ms), color var(--prism-motion-base, 160ms); }
 .icon-btn:hover { background: var(--app-fill); color: var(--app-text) !important; }
-.sidebar { width: 260px; flex: 0 0 260px; display: flex; flex-direction: column; background: var(--app-panel); padding: 18px 12px 12px; border-right: 1px solid var(--prism-hairline, var(--app-line)); }
+.sidebar { width: 260px; flex: 0 0 260px; display: flex; flex-direction: column; background: var(--app-panel); padding: 18px 12px 12px; border-right: 1px solid var(--prism-border, var(--app-line)); }
 .sidebar.collapsed { display: none; }
 .sidebar-top { display: flex; align-items: center; gap: 8px; padding: 0 2px 24px; }
 .new-chat { display: flex; align-items: center; gap: 10px; flex: 1; min-height: 36px; padding: 5px 10px; border: 0; border-radius: var(--prism-radius-md, 9px); background: transparent; text-align: left; font-weight: 500; font-size: 14px; }
@@ -31,7 +31,7 @@ button, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .chat-list > .list-heading:first-child { margin-top: 0; }
 .history-item { width: 100%; border: 0; border-radius: var(--prism-radius-sm, 7px); background: transparent; display: block; text-align: left; padding: 9px 12px; font-size: 13px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; color: var(--app-text); opacity: .83; }
 .history-item:hover, .history-item.selected { background: var(--app-fill); opacity: 1; }
-.sidebar-bottom { padding: 12px 4px 0; border-top: 1px solid var(--prism-hairline, var(--app-line)); }
+.sidebar-bottom { padding: 12px 4px 0; border-top: 1px solid var(--prism-border, var(--app-line)); }
 .sidebar-link { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; border-radius: var(--prism-radius-sm, 7px); background: transparent; padding: 8px; font-size: 13px; color: var(--app-muted) !important; text-align: left; }
 .sidebar-link:hover { background: var(--app-fill); color: var(--app-text) !important; }
 .sidebar-link kbd { margin-left: auto; font: 10px/1.4 inherit; color: var(--app-muted); }
@@ -45,26 +45,26 @@ button, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .landing-inner { width: min(100%, 720px); margin: auto; padding-bottom: 20px; }
 .landing h1 { margin: 0 0 30px; font-size: clamp(25px, 3vw, 32px); line-height: 1.3; font-weight: 450; letter-spacing: -.045em; text-align: center; }
 .composer-area { width: 100%; }
-.composer { display: flex; align-items: flex-end; gap: 12px; padding: 15px 14px 15px 20px; background: var(--prism-fill, var(--app-fill)); border: 1px solid transparent; border-radius: var(--prism-radius-xl, 20px); box-shadow: var(--app-shadow); transition: border-color var(--prism-duration, 160ms); }
-.composer:focus-within { border-color: var(--prism-hairline, var(--app-line)); }
+.composer { display: flex; align-items: flex-end; gap: 12px; padding: 15px 14px 15px 20px; background: var(--prism-fill, var(--app-fill)); border: 1px solid transparent; border-radius: var(--prism-radius-lg, 20px); box-shadow: var(--app-shadow); transition: border-color var(--prism-motion-base, 160ms); }
+.composer:focus-within { border-color: var(--prism-border, var(--app-line)); }
 .composer textarea { flex: 1; min-width: 0; min-height: 26px; max-height: 192px; overflow-y: auto; resize: none; border: 0; outline: 0 !important; color: var(--app-text); background: transparent; font-size: 15px; line-height: 24px; padding: 3px 0; border-radius: 0; scrollbar-width: thin; }
 .composer textarea::placeholder { color: var(--app-muted); opacity: .85; }
-.send-btn { flex: 0 0 auto; width: 32px; height: 32px; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--prism-accent, var(--app-accent)); color: var(--app-bg) !important; transition: transform var(--prism-duration, 160ms) var(--prism-ease-spring, cubic-bezier(.2,.8,.2,1)); }
+.send-btn { flex: 0 0 auto; width: 32px; height: 32px; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--prism-accent, var(--app-accent)); color: var(--app-bg) !important; transition: transform var(--prism-motion-base, 160ms) var(--prism-motion-spring, cubic-bezier(.2,.8,.2,1)); }
 .send-btn:hover:not(:disabled) { transform: scale(1.06); }
-.send-btn:disabled { background: var(--prism-fill-strong, var(--app-line)); color: var(--prism-muted, var(--app-muted)) !important; }
+.send-btn:disabled { background: var(--prism-fill-strong, var(--app-line)); color: var(--prism-text-muted, var(--app-muted)) !important; }
 .model-status { display: block; width: fit-content; max-width: 100%; margin: 10px auto 0; padding: 0 4px; background: transparent; border: 0; color: var(--app-muted) !important; font-size: 11px; line-height: 20px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
 .model-status:hover { color: var(--app-text) !important; }
 .suggestions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; margin-top: 31px; }
-.suggestion { position: relative; display: grid; grid-template-columns: 20px 1fr; gap: 3px 10px; text-align: left; padding: 14px; border: 1px solid transparent; border-radius: var(--prism-radius-lg, 12px); background: var(--prism-fill, var(--app-fill)); transition: transform var(--prism-duration, 180ms) var(--prism-ease-spring, cubic-bezier(.2,.8,.2,1)), background var(--prism-duration, 180ms); }
+.suggestion { position: relative; display: grid; grid-template-columns: 20px 1fr; gap: 3px 10px; text-align: left; padding: 14px; border: 1px solid transparent; border-radius: var(--prism-radius-lg, 12px); background: var(--prism-fill, var(--app-fill)); transition: transform var(--prism-motion-base, 180ms) var(--prism-motion-spring, cubic-bezier(.2,.8,.2,1)), background var(--prism-motion-base, 180ms); }
 .suggestion > svg { margin-top: 4px; color: var(--app-muted); }
 .suggestion strong { font-size: 13px; font-weight: 500; letter-spacing: -.01em; }
 .suggestion span { grid-column: 2; font-size: 11px; color: var(--app-muted); line-height: 1.6; }
 .suggestion:hover { background: var(--prism-fill-strong, var(--app-line)); transform: translateY(-1px); }
 .thread-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--app-line) transparent; overflow-anchor: auto; }
 .thread { max-width: 784px; padding: 22px 32px 42px; margin: 0 auto; }
-.user-turn { display: flex; justify-content: flex-end; margin: 0 0 28px; animation: turn-in 260ms var(--prism-ease-spring, ease-out) both; }
+.user-turn { display: flex; justify-content: flex-end; margin: 0 0 28px; animation: turn-in 260ms var(--prism-motion-spring, ease-out) both; }
 .user-turn > div { max-width: 85%; padding: 10px 17px; border: 0; border-radius: var(--prism-radius-lg, 15px); background: var(--prism-fill, var(--app-fill)); font-size: 15px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
-.assistant-turn { margin: 0 0 var(--prism-flow-gap, 30px); position: relative; animation: turn-in 260ms var(--prism-ease-spring, ease-out) both; }
+.assistant-turn { margin: 0 0 var(--prism-flow-gap, 30px); position: relative; animation: turn-in 260ms var(--prism-motion-spring, ease-out) both; }
 .assistant-turn:has(+ .assistant-turn) { margin-bottom: 1.35em; }
 .reply-content { min-height: 26px; overflow-wrap: anywhere; }
 .reply-content > .prism-root { padding: 0; background: transparent; font: 15px/1.7 var(--prism-font-display, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif); color: var(--app-text); }
@@ -74,33 +74,33 @@ button, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .reply-content .prism-root pre { max-width: 100%; }
 .thinking { height: 26px; line-height: 26px; color: var(--app-muted); font-size: 14px; }
 .thinking span { background: linear-gradient(100deg, var(--app-muted) 30%, var(--app-text) 50%, var(--app-muted) 70%); background-size: 220% 100%; background-clip: text; -webkit-background-clip: text; color: transparent; animation: thinking 1.6s linear infinite; }
-.turn-actions { position: absolute; display: flex; align-items: center; gap: 2px; margin-top: 4px; min-height: 28px; opacity: 0; pointer-events: none; transition: opacity var(--prism-duration, 160ms); }
+.turn-actions { position: absolute; display: flex; align-items: center; gap: 2px; margin-top: 4px; min-height: 28px; opacity: 0; pointer-events: none; transition: opacity var(--prism-motion-base, 160ms); }
 .last-turn .turn-actions { position: static; }
 .turn-actions .icon-btn { width: 28px; height: 28px; }
 .assistant-turn:hover .turn-actions, .assistant-turn:focus-within .turn-actions, .assistant-turn.last-turn .turn-actions { opacity: 1; pointer-events: auto; }
 .turn-actions span { font-size: 11px; color: var(--app-muted); margin-left: 8px; }
 .turn-error { font-size: 13px; color: var(--app-muted); }
 .composer-footer { position: relative; width: min(100%, 784px); align-self: center; padding: 10px 32px max(16px, env(safe-area-inset-bottom)); background: var(--app-bg); flex: 0 0 auto; }
-.jump-latest { position: absolute; top: -42px; left: calc(50% - 17px); width: 34px; height: 34px; border: 1px solid var(--prism-hairline, var(--app-line)); border-radius: 50%; background: var(--app-bg); box-shadow: var(--app-shadow); color: var(--app-text) !important; }
+.jump-latest { position: absolute; top: -42px; left: calc(50% - 17px); width: 34px; height: 34px; border: 1px solid var(--prism-border, var(--app-line)); border-radius: 50%; background: var(--app-bg); box-shadow: var(--app-shadow); color: var(--app-text) !important; }
 .sidebar-backdrop, .dialog-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, .28); z-index: 30; }
 .chat-app[data-prism-theme="dark"] :is(.sidebar-backdrop, .dialog-backdrop) { background: rgba(0, 0, 0, .5); }
 .dialog-backdrop { display: flex; align-items: flex-start; justify-content: center; padding: min(18vh, 160px) 20px 24px; overflow-y: auto; }
-.dialog { position: relative; width: min(100%, 520px); background: var(--app-bg); border: 1px solid var(--prism-hairline, var(--app-line)); border-radius: var(--prism-radius-xl, 16px); box-shadow: var(--prism-shadow-float, 0 20px 90px #0003); overflow: hidden; }
+.dialog { position: relative; width: min(100%, 520px); background: var(--app-bg); border: 1px solid var(--prism-border, var(--app-line)); border-radius: var(--prism-radius-lg, 16px); box-shadow: var(--prism-elevation-3, 0 20px 90px #0003); overflow: hidden; }
 .dialog-close { position: absolute; top: 15px; right: 13px; z-index: 1; }
-.palette-search { display: flex; align-items: center; gap: 12px; padding: 18px 58px 18px 22px; border-bottom: 1px solid var(--prism-hairline, var(--app-line)); color: var(--app-muted); }
+.palette-search { display: flex; align-items: center; gap: 12px; padding: 18px 58px 18px 22px; border-bottom: 1px solid var(--prism-border, var(--app-line)); color: var(--app-muted); }
 .palette-search input { width: 100%; border: 0; outline: 0 !important; background: transparent; color: var(--app-text); font-size: 15px; }
 .palette-search input::placeholder { color: var(--app-muted); }
 .palette-results { max-height: min(50dvh, 420px); overflow-y: auto; padding: 8px; scrollbar-width: thin; }
 .palette-result { display: flex; align-items: center; gap: 12px; padding: 10px 12px; width: 100%; border: 0; background: transparent; border-radius: var(--prism-radius-sm, 7px); text-align: left; font-size: 13px; }
 .palette-result svg { color: var(--app-muted); }
 .palette-result[aria-selected="true"] { background: var(--prism-accent-soft, var(--app-accent-soft)); }
-.palette-hint { padding: 10px 20px; font-size: 10px; color: var(--app-muted); border-top: 1px solid var(--prism-hairline, var(--app-line)); }
+.palette-hint { padding: 10px 20px; font-size: 10px; color: var(--app-muted); border-top: 1px solid var(--prism-border, var(--app-line)); }
 .empty-results { padding: 20px 12px; color: var(--app-muted); font-size: 13px; }
 .settings-dialog { padding: 29px; }
 .settings-dialog h2 { margin: 0 32px 6px 0; font-size: 20px; font-weight: 500; letter-spacing: -.025em; }
 .settings-dialog p { color: var(--app-muted); font-size: 13px; margin: 0 0 24px; }
 .settings-dialog label { display: block; font-size: 12px; font-weight: 500; margin: 18px 0; }
-.settings-dialog input, .settings-dialog select { display: block; width: 100%; margin-top: 7px; padding: 10px 12px; border: 1px solid var(--prism-hairline, var(--app-line)); border-radius: var(--prism-radius-md, 8px); background: var(--app-bg); color: var(--app-text); font-size: 14px; }
+.settings-dialog input, .settings-dialog select { display: block; width: 100%; margin-top: 7px; padding: 10px 12px; border: 1px solid var(--prism-border, var(--app-line)); border-radius: var(--prism-radius-md, 8px); background: var(--app-bg); color: var(--app-text); font-size: 14px; }
 .settings-dialog .settings-note { font-size: 11px; line-height: 1.7; margin: 22px 0; }
 .save-settings { display: block; margin-left: auto; padding: 9px 16px; background: var(--prism-accent, var(--app-accent)); color: var(--app-bg) !important; border: 0; border-radius: var(--prism-radius-md, 9px); font-size: 13px; }
 @keyframes turn-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
@@ -122,7 +122,7 @@ button, input, textarea, select { -webkit-tap-highlight-color: transparent; }
   .thread { padding: 15px 20px 30px; }
   .user-turn > div { max-width: 92%; }
   .composer-footer { padding: 8px 12px max(12px, env(safe-area-inset-bottom)); }
-  .composer { padding: 13px 12px 13px 16px; border-radius: var(--prism-radius-xl, 18px); gap: 8px; }
+  .composer { padding: 13px 12px 13px 16px; border-radius: var(--prism-radius-lg, 18px); gap: 8px; }
   .dialog-backdrop { padding: 90px 12px 20px; }
   .settings-dialog { padding: 25px; }
 }

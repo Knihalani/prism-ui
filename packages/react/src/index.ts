@@ -12,7 +12,7 @@ export { useFlash, useLocalWrite } from './flash';
 export type { PresentationState } from './presentation';
 export { ThemeScope, createTheme, defineTheme, fromCssVars, host, shadcn, useTheme } from './theme';
 export type { Theme, Tokens, ThemeTokens, PrismTheme, ComponentTheme, ThemeStyle, ThemeScopeProps, Density, Mode } from './theme';
-export { Icon } from './icons';
+export { Icon, iconNames } from './icons';
 export type { Icons, IconName } from './icons';
 export type { Format } from './format';
 export * from './markdown';

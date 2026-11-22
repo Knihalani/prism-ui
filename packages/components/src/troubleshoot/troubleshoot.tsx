@@ -1,7 +1,7 @@
 import { useContext, useEffect, useMemo, useRef, useState, type HTMLAttributes, type KeyboardEvent } from 'react';
 import type { Node } from '@prism-ui/core';
 import { s } from '@prism-ui/schema';
-import { ComponentContext, defaultRenderers, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, useSlot, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
+import { PrismPart, ComponentContext, defaultRenderers, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, useSlot, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
 
 export interface TroubleshootStep { title?: string; text: string; command?: string; yes?: string; no?: string; hint?: string }
@@ -68,8 +68,8 @@ export function useTroubleshoot(props: TroubleshootProps, ctx: PrismContextValue
     async copy() { clearTimeout(timer.current); try { await navigator.clipboard.writeText((commandNode?.value ?? '').replace(/^\$ /gm, '')); setCopyState('copied'); } catch { setCopyState('error'); } timer.current = setTimeout(() => setCopyState('idle'), 1500); },
   };
 }
-function Box(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
-function Empty(props: HTMLAttributes<HTMLDivElement>) { return <div {...usePart('troubleshoot', 'skeleton')} {...props} role="status" />; }
+function Box(props: HTMLAttributes<HTMLDivElement>) { return <PrismPart as="div" {...props} />; }
+function Empty(props: HTMLAttributes<HTMLDivElement>) { return <PrismPart as="div" {...usePart('troubleshoot', 'skeleton')} {...props} role="status" />; }
 function Command({ node }: { node: Node }) {
   const ctx = usePrism(), definition = ctx.registry.get('code');
   const View = ctx.components.code ?? definition?.component ?? defaultRenderers.code;
@@ -82,21 +82,21 @@ export function Troubleshooter({ props }: PrismComponentProps<TroubleshootProps>
   const body = usePart('troubleshoot', 'conversation'), history = usePart('troubleshoot', 'history'), item = usePart('troubleshoot', 'historyItem'), chip = usePart('troubleshoot', 'chip'), card = usePart('troubleshoot', 'step', vm.state), position = usePart('troubleshoot', 'position'), title = usePart('troubleshoot', 'stepTitle'), text = usePart('troubleshoot', 'text'), hint = usePart('troubleshoot', 'hint'), question = usePart('troubleshoot', 'question'), actions = usePart('troubleshoot', 'actions'), primary = usePart('troubleshoot', 'primary'), ghost = usePart('troubleshoot', 'ghost'), result = usePart('troubleshoot', 'result', vm.state);
   const command = usePart('troubleshoot', 'command');
   const Item = useSlot('troubleshoot', 'historyItem', Box), Card = useSlot('troubleshoot', 'step', Box), EmptyState = useSlot('troubleshoot', 'empty', Empty), Actions = useSlot('troubleshoot', 'actions', Box);
-  return <div {...body} onKeyDown={vm.onKeyDown}><ComponentFrame component="troubleshoot" title={vm.title} state={vm.state} ask undo>
-    {vm.path.length > 0 && <div {...history} aria-label={vm.labels.history}>{vm.path.map((entry, index) => <Item {...item} key={`${index}.${entry.step}`}><button {...ghost} type="button" onClick={() => vm.back(index)}><span {...text}>{vm.steps[entry.step]?.text ?? entry.step}</span><span {...chip} data-state={entry.answer}>{vm.labels[entry.answer]}</span></button></Item>)}</div>}
-    {vm.ended ? <div {...result} role="status"><h4 {...title}>{vm.result}</h4>{vm.sent && <p {...text}>{vm.labels.sent}</p>}<Actions {...actions}><button {...primary} type="button" onClick={vm.report} disabled={vm.sent}>{vm.labels.report}</button><button {...ghost} type="button" onClick={vm.restart}>{vm.labels.restart}</button></Actions></div> : <Card {...card}>
-      <h4 {...title}><span {...position} aria-live="polite">{vm.position}</span>{vm.step?.title}</h4>
+  return <PrismPart as="div" {...body} onKeyDown={vm.onKeyDown}><ComponentFrame component="troubleshoot" title={vm.title} state={vm.state} ask undo>
+    {vm.path.length > 0 && <PrismPart as="div" {...history} aria-label={vm.labels.history}>{vm.path.map((entry, index) => <Item {...item} key={`${index}.${entry.step}`}><PrismPart as="button" {...ghost} type="button" onClick={() => vm.back(index)}><PrismPart as="span" {...text}>{vm.steps[entry.step]?.text ?? entry.step}</PrismPart><PrismPart as="span" {...chip} data-state={entry.answer}>{vm.labels[entry.answer]}</PrismPart></PrismPart></Item>)}</PrismPart>}
+    {vm.ended ? <PrismPart as="div" {...result} role="status"><PrismPart as="h4" {...title}>{vm.result}</PrismPart>{vm.sent && <PrismPart as="p" {...text}>{vm.labels.sent}</PrismPart>}<Actions {...actions}><PrismPart as="button" {...primary} type="button" onClick={vm.report} disabled={vm.sent}>{vm.labels.report}</PrismPart><PrismPart as="button" {...ghost} type="button" onClick={vm.restart}>{vm.labels.restart}</PrismPart></Actions></PrismPart> : <Card {...card}>
+      <PrismPart as="h4" {...title}><PrismPart as="span" {...position} aria-live="polite">{vm.position}</PrismPart>{vm.step?.title}</PrismPart>
       {!vm.step || vm.loading ? <EmptyState aria-label={vm.labels.loading} /> : <>
-        <p {...text}>{vm.step.text}</p>
-        {vm.commandNode && <div {...command}><Command node={vm.commandNode} /><button {...ghost} type="button" onClick={vm.copy} aria-live="polite">{vm.copyState === 'copied' ? vm.labels.copied : vm.copyState === 'error' ? vm.labels.copyError : vm.labels.copy}</button></div>}
-        {vm.step.hint && <p {...hint}>{vm.step.hint}</p>}
+        <PrismPart as="p" {...text}>{vm.step.text}</PrismPart>
+        {vm.commandNode && <PrismPart as="div" {...command}><Command node={vm.commandNode} /><PrismPart as="button" {...ghost} type="button" onClick={vm.copy} aria-live="polite">{vm.copyState === 'copied' ? vm.labels.copied : vm.copyState === 'error' ? vm.labels.copyError : vm.labels.copy}</PrismPart></PrismPart>}
+        {vm.step.hint && <PrismPart as="p" {...hint}>{vm.step.hint}</PrismPart>}
       </>}
-      <p {...question}>{vm.labels.question}</p><Actions {...actions}><button {...primary} type="button" disabled={!vm.ready} onClick={() => vm.answer('yes')} aria-keyshortcuts="Y">{vm.labels.yes}</button><button {...ghost} type="button" disabled={!vm.ready} onClick={() => vm.answer('no')} aria-keyshortcuts="N">{vm.labels.no}</button></Actions>
+      <PrismPart as="p" {...question}>{vm.labels.question}</PrismPart><Actions {...actions}><PrismPart as="button" {...primary} type="button" disabled={!vm.ready} onClick={() => vm.answer('yes')} aria-keyshortcuts="Y">{vm.labels.yes}</PrismPart><PrismPart as="button" {...ghost} type="button" disabled={!vm.ready} onClick={() => vm.answer('no')} aria-keyshortcuts="N">{vm.labels.no}</PrismPart></Actions>
     </Card>}
-  </ComponentFrame></div>;
+  </ComponentFrame></PrismPart>;
 }
 const labelsSchema = s.object(Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, s.string().optional().describe(`Override the ${key} label${key.startsWith('fixed') ? '; {count} is the formatted step count' : ''}`).example(value)]))).optional().describe('Translated interface labels').example(defaults);
-export const troubleshootDefinition = defineComponent({ name: 'troubleshoot', schema: s.object({
+export const troubleshootDefinition = defineComponent({ name: 'troubleshoot', parts: ["actions","ask","body","chip","command","conversation","empty","footer","ghost","header","hint","history","historyItem","position","primary","question","result","root","skeleton","step","stepTitle","text","title","toolbar","undo"], strings: {}, schema: s.object({
   id: s.string().optional().describe('Persistent component state identifier').example('wifi'),
   title: s.string().optional().describe('Troubleshooting title').example('Wi-Fi drops'),
   start: s.string().describe('First step id').example('restart'),

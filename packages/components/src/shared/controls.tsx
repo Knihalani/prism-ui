@@ -1,15 +1,12 @@
 import { forwardRef, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
-import { cx } from '@prism-ui/react';
+import { PrismPart, Icon, cx } from '@prism-ui/react';
 
 type ButtonProps = ComponentPropsWithoutRef<'button'>;
 type InputProps = ComponentPropsWithoutRef<'input'>;
 type SpanProps = ComponentPropsWithoutRef<'span'>;
 
 export function CheckMark({ draw, className, ...props }: ComponentPropsWithoutRef<'svg'> & { draw?: boolean }) {
-  return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" {...props} aria-hidden="true" focusable="false"
-    className={cx('prism-check-mark', className)} data-draw={draw ? '' : undefined}>
-    <path d="m3.5 8 3 3 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>;
+  return <Icon width="14" height="14" {...props} name="check" className={cx('prism-check-mark', className)} data-draw={draw ? '' : undefined} />;
 }
 
 export interface PillProps extends ButtonProps {
@@ -22,32 +19,32 @@ export interface PillProps extends ButtonProps {
 export const Pill = forwardRef<HTMLButtonElement, PillProps>(function Pill(
   { variant = 'primary', sent = false, receipt, disabled, className, children, ...props }, ref,
 ) {
-  return <button ref={ref} type="button" {...props} className={cx('prism-pill', className)}
+  return <PrismPart as="button" ref={ref} type="button" {...props} className={cx('prism-pill', className)}
     disabled={disabled || sent} data-variant={variant} data-sent={sent ? '' : undefined}
     data-feedback={receipt != null ? '' : undefined}>
     {receipt == null ? children : <>
       <span aria-hidden={sent}>{children}</span>
       <span aria-hidden={!sent}><CheckMark />{receipt}</span>
     </>}
-  </button>;
+  </PrismPart>;
 });
 
 export interface ChipProps extends ButtonProps { pressed?: boolean }
 export const Chip = forwardRef<HTMLButtonElement, ChipProps>(function Chip({ pressed, className, ...props }, ref) {
-  return <button ref={ref} type="button" aria-pressed={pressed} {...props} className={cx('prism-chip', className)} />;
+  return <PrismPart as="button" ref={ref} type="button" aria-pressed={pressed} {...props} className={cx('prism-chip', className)} />;
 });
 
 export const IconButton = forwardRef<HTMLButtonElement, ButtonProps>(function IconButton({ className, ...props }, ref) {
-  return <button ref={ref} type="button" {...props} className={cx('prism-icon-btn', className)} />;
+  return <PrismPart as="button" ref={ref} type="button" {...props} className={cx('prism-icon-btn', className)} />;
 });
 
 export const Checkbox = forwardRef<HTMLInputElement, Omit<InputProps, 'type'>>(function Checkbox({ className, ...props }, ref) {
-  return <input ref={ref} {...props} type="checkbox" className={cx('prism-check', className)} />;
+  return <PrismPart as="input" ref={ref} {...props} type="checkbox" className={cx('prism-check', className)} />;
 });
 
 export interface SwitchProps extends ButtonProps { checked: boolean }
 export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(function Switch({ checked, className, ...props }, ref) {
-  return <button ref={ref} type="button" {...props} role="switch" aria-checked={checked} className={cx('prism-switch', className)} />;
+  return <PrismPart as="button" ref={ref} type="button" {...props} role="switch" aria-checked={checked} className={cx('prism-switch', className)} />;
 });
 
 export interface StepperProps extends SpanProps {
@@ -56,22 +53,22 @@ export interface StepperProps extends SpanProps {
   increase: ButtonProps & { 'aria-label': string };
 }
 export function Stepper({ value, decrease, increase, className, ...props }: StepperProps) {
-  return <span {...props} className={cx('prism-stepper', className)}>
-    <button type="button" {...decrease}>{decrease.children ?? '−'}</button>
+  return <PrismPart as="span" {...props} className={cx('prism-stepper', className)}>
+    <PrismPart as="button" type="button" {...decrease}>{decrease.children ?? <Icon name="minus" />}</PrismPart>
     <output>{value}</output>
-    <button type="button" {...increase}>{increase.children ?? '+'}</button>
-  </span>;
+    <PrismPart as="button" type="button" {...increase}>{increase.children ?? <Icon name="plus" />}</PrismPart>
+  </PrismPart>;
 }
 
 export interface InlineValueProps extends ButtonProps { dragging?: boolean }
 /** Wire the owning component's scrub and text-edit handlers to this trigger. */
 export const InlineValue = forwardRef<HTMLButtonElement, InlineValueProps>(function InlineValue({ dragging, className, ...props }, ref) {
-  return <button ref={ref} type="button" {...props} className={cx('prism-inline-value', className)}
+  return <PrismPart as="button" ref={ref} type="button" {...props} className={cx('prism-inline-value', className)}
     data-dragging={dragging ? '' : undefined} />;
 });
 
 export function KbdHint({ className, ...props }: ComponentPropsWithoutRef<'kbd'>) {
-  return <kbd {...props} className={cx('prism-kbd', className)} />;
+  return <PrismPart as="kbd" {...props} className={cx('prism-kbd', className)} />;
 }
 
 export interface OdometerProps extends SpanProps {
@@ -89,11 +86,11 @@ export function Odometer({ value, format = String, animate = true, className, ..
   }
   const previous = Array.from(roll.previous).filter(isDigit);
   if (!animate || previous.length === 0) {
-    return <span {...props} className={cx('prism-odometer', className)}>{text}</span>;
+    return <PrismPart as="span" {...props} className={cx('prism-odometer', className)}>{text}</PrismPart>;
   }
   const next = Array.from(text);
   let remaining = next.filter(isDigit).length;
-  return <span {...props} className={cx('prism-odometer', className)}>
+  return <PrismPart as="span" {...props} className={cx('prism-odometer', className)}>
     <span className="prism-odometer__label">{text}</span>
     <span aria-hidden="true">{next.map((character, index) => {
       if (!isDigit(character)) return character;
@@ -104,5 +101,5 @@ export function Odometer({ value, format = String, animate = true, className, ..
         {changed && <span key={`from-${roll.revision}`} className="prism-odometer__previous">{before}</span>}
       </span>;
     })}</span>
-  </span>;
+  </PrismPart>;
 }

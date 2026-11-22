@@ -152,8 +152,8 @@ test('ui:state applies only completed patches, once despite reparsing and strict
 
 test('parts, slots, class overrides, theme variables and unstyled data attributes', () => {
   function View() { const part = usePart('card', 'root', 'done'), Slot = useSlot('card', 'title', () => <b>Default</b>); return <section {...part}><Slot /></section>; }
-  const components = { card: View }, theme = createTheme({ accentSoft: '#abc', radiusMd: '8px' }, { bg: 'white' });
-  expect(theme).toEqual({ '--prism-accent-soft': '#abc', '--prism-radius-md': '8px', '--prism-bg': 'white' });
+  const components = { card: View }, theme = createTheme({ accentText: '#abc', radiusMd: '8px' }, { bg: 'white' });
+  expect(theme).toEqual({ '--prism-accent-text': '#abc', '--prism-radius-md': '8px', '--prism-bg': 'white' });
   expect(createTheme({ accent: 'red' }, theme)['--prism-bg']).toBe('white'); expect(cx('a', false, undefined, 'b')).toBe('a b');
   const props = { source: '::card\n', components, theme, animate: false, density: 'compact' as const, classNames: { card: { root: 'custom' } }, styles: { card: { root: { color: 'red' } } }, slots: { card: { title: () => <i>Override</i> } } };
   const view = render(<Prism {...props} />), section = () => view.container.querySelector('section')!;

@@ -74,18 +74,21 @@ export const isPrismTheme = (value: Theme): value is PrismTheme => typeof value 
 export function useTheme(theme?: Theme, mode?: Mode) {
   const parent = useContext(ThemeContext);
   const resolved = useMemo(() => theme && isPrismTheme(theme) ? resolveTheme(theme) : parent.theme, [theme, parent.theme]);
-  return { theme: resolved, mode: mode ?? (typeof theme === 'string' ? theme : parent.mode) };
+  const resolvedMode = mode ?? (typeof theme === 'string' ? theme : parent.mode);
+  return useMemo(() => ({ theme: resolved, mode: resolvedMode }), [resolved, resolvedMode]);
 }
 function declarations(tokens: Record<string, string | undefined>, variable: (key: string) => string = tokenVariable) {
   return Object.entries(tokens).map(([key, value]) => `${variable(key)}:${value};`).join('');
 }
 function themeCss(theme: ResolvedTheme) {
   const componentTokens = Object.entries(theme.components).map(([component, { tokens }]) => declarations(tokens ?? {}, key => `--prism-${component}-${key}`)).join('');
+  const componentRoots = Object.entries(theme.components).map(([component, { tokens }]) => `:scope [data-prism="${component}"][data-part="root"] {${declarations(tokens ?? {}, key => `--prism-${component}-${key}`)}}`).join('');
   const dark = declarations(theme.dark ?? {});
   return `@scope ([data-prism-theme-name="${theme.name}"]) to ([data-prism-theme-name]) {
     :scope {${declarations(theme.tokens ?? {})}${componentTokens}}
     :scope[data-prism-theme="dark"] {${dark}}
     @media (prefers-color-scheme:dark) { :scope[data-prism-theme="auto"] {${dark}} }
+    ${componentRoots}
     ${theme.css ?? ''}
   }`;
 }

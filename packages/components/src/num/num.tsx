@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { Node } from '@prism-ui/core';
 import { s, type Infer } from '@prism-ui/schema';
-import { defineComponent, registerComponent, useEmit, useFormat, useFormula, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
+import { PrismPart, defineComponent, registerComponent, useEmit, useFormat, useFormula, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
 
 const formatting = { format: s.enum(['number', 'currency', 'percent', 'compact']).default('number'), decimals: s.number({ min: 0, max: 20 }).optional(), currency: s.string().optional(), label: s.string().optional() };
 export const numSchema = s.object({ ...formatting, id: s.string().optional(), value: s.number().optional(), min: s.number().optional(), max: s.number().optional(), step: s.number({ min: 0 }).default(1) });
@@ -76,8 +76,8 @@ export function useNum(props: NumProps, ctx: PrismComponentProps<NumProps>) {
 }
 
 export function Num(ctx: PrismComponentProps<NumProps>) {
-  const num = useNum(ctx.props, ctx), Value = useSlot('num', 'value', 'span' as any);
-  return num.editing ? <input {...num.inputProps} /> : <Value {...num.rootProps}>{num.formatted}</Value>;
+  const num = useNum(ctx.props, ctx), Value = useSlot('num', 'value', useSlot('num', 'root', 'span' as any));
+  return num.editing ? <PrismPart as="input" {...num.inputProps} /> : <Value {...num.rootProps}>{num.formatted}</Value>;
 }
 
 export function useCalc(props: CalcProps, ctx: PrismComponentProps<CalcProps>) {
@@ -93,10 +93,10 @@ export function useCalc(props: CalcProps, ctx: PrismComponentProps<CalcProps>) {
   return { text: error ? props.errorLabel : format(animate && Number.isFinite(display) ? display : result), rootProps: { ...usePart('calc', 'root', error ? 'error' : 'ready'), 'aria-label': [props.label, error ? props.errorLabel : format(result)].filter(Boolean).join(': '), title: error ? expr : undefined } };
 }
 export function Calc(ctx: PrismComponentProps<CalcProps>) {
-  const calc = useCalc(ctx.props, ctx), Value = useSlot('calc', 'value', 'span' as any);
+  const calc = useCalc(ctx.props, ctx), Value = useSlot('calc', 'value', useSlot('calc', 'root', 'span' as any));
   return <Value {...calc.rootProps}>{calc.text}</Value>;
 }
-export const num = defineComponent({ name: 'num', schema: numSchema, syntax: 'inline', inline: true, component: Num, docs: 'Editable shared-store number. Drag, click to type, or use arrow keys; percent values are fractions.', examples: [':num[1200]{id=rent min=0 max=5000 step=50 format=currency}'] });
-export const calc = defineComponent({ name: 'calc', schema: calcSchema, syntax: 'inline', inline: true, component: Calc, docs: 'Read-only live formula over shared-store paths, with localized number formatting.', examples: [':calc[rent * 12]{format=currency}'] });
+export const num = defineComponent({ name: 'num', parts: ["input","root","value"], strings: {}, schema: numSchema, syntax: 'inline', inline: true, component: Num, docs: 'Editable shared-store number. Drag, click to type, or use arrow keys; percent values are fractions.', examples: [':num[1200]{id=rent min=0 max=5000 step=50 format=currency}'] });
+export const calc = defineComponent({ name: 'calc', parts: ["root","value"], strings: {}, schema: calcSchema, syntax: 'inline', inline: true, component: Calc, docs: 'Read-only live formula over shared-store paths, with localized number formatting.', examples: [':calc[rent * 12]{format=currency}'] });
 registerComponent(num);
 registerComponent(calc);

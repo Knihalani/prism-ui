@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent } from 'react';
-import { ComponentContext, useComponentState, useEmit, type PrismContextValue } from '@prism-ui/react';
+import { ComponentContext, useComponentState, useEmit, useStrings, type PrismContextValue } from '@prism-ui/react';
 import { createFeedback, createFrameController, previousAsResolved, sanitizeSvg, toMessage, wireframeDocument, type FeedbackPayload, type FeedbackState, type FeedbackPoint, type FrameController, type HitRect } from './engine';
 
 export type MockupDevice = 'desktop' | 'tablet' | 'mobile';
@@ -15,14 +15,14 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const component = useContext(ComponentContext), emit = useEmit();
   const enabled = options.enabled !== false;
   const complete = component?.node.complete !== false, kind = props.kind ?? 'html', framed = kind === 'html' || kind === 'wire';
-  const labels = { ...mockupLabels, ...props.labels }, title = props.title ?? labels.title, source = props.source ?? '';
+  const labels = { ...mockupLabels, ...props.labels, ...useStrings('mockup') }, title = props.title ?? labels.title, source = props.source ?? '';
   const [localDevice, writeDevice] = useComponentState<MockupDevice>('device', props.device ?? 'desktop'), [localZoom, writeZoom] = useComponentState('zoom', 1), [draft] = useComponentState<FeedbackState | undefined>('feedback', undefined), [submitted, setSubmitted] = useComponentState('submitted', false);
   const device = options.controls?.device ?? localDevice, setDevice = options.controls?.setDevice ?? writeDevice, zoom = options.controls?.zoom ?? localZoom, setZoom = options.controls?.setZoom ?? writeZoom;
   const [feedback] = useState(() => createFeedback({ ...draft, mockup: title, variant: props.variant, device }));
   const state = useSyncExternalStore(feedback.subscribe, feedback.getState, feedback.getState);
   const root = useRef<HTMLDivElement>(null), viewport = useRef<HTMLDivElement>(null), canvas = useRef<HTMLDivElement>(null), iframe = useRef<HTMLIFrameElement>(null), graphic = useRef<HTMLDivElement>(null), controller = useRef<FrameController | null>(null);
   const [visible, setVisible] = useState(typeof IntersectionObserver === 'undefined'), [containerWidth, setContainerWidth] = useState(1280), [contentHeight, setContentHeight] = useState(400), [naturalWidth, setNaturalWidth] = useState(800);
-  const [expanded, setExpanded] = useState(false), [showSource, setShowSource] = useState(false), [pen, setPen] = useState(false), [color, setColor] = useState('var(--prism-accent)'), [active, setActive] = useState<string | null>(null), [editing, setEditing] = useState<{ id: string; fresh: boolean; text: string } | null>(null), [comment, setComment] = useState(''), [announcement, announce] = useState(''), [reticle, setReticle] = useState<FeedbackPoint>([50, 50]), [focused, setFocused] = useState(false), [hover, setHover] = useState<FeedbackPoint | null>(null), [rubber, setRubber] = useState<FeedbackPoint[]>([]), [imageError, setImageError] = useState(false);
+  const [expanded, setExpanded] = useState(false), [showSource, setShowSource] = useState(false), [pen, setPen] = useState(false), [color, setColor] = useState('var(--prism-accent, #525252)'), [active, setActive] = useState<string | null>(null), [editing, setEditing] = useState<{ id: string; fresh: boolean; text: string } | null>(null), [comment, setComment] = useState(''), [announcement, announce] = useState(''), [reticle, setReticle] = useState<FeedbackPoint>([50, 50]), [focused, setFocused] = useState(false), [hover, setHover] = useState<FeedbackPoint | null>(null), [rubber, setRubber] = useState<FeedbackPoint[]>([]), [imageError, setImageError] = useState(false);
   const penValue = options.controls?.pen ?? pen, colorValue = options.controls?.color ?? color;
   const setPenValue = options.controls?.setPen ?? setPen, setColorValue = options.controls?.setColor ?? setColor;
   const gesture = useRef<{ points: FeedbackPoint[]; clientX: number; clientY: number } | null>(null);

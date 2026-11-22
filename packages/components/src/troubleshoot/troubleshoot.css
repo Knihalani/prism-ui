@@ -1,36 +1,36 @@
 .prism-root .prism-troubleshoot__conversation { max-width: 100%; }
-.prism-root .prism-troubleshoot__history { display: grid; gap: var(--prism-space2); margin-bottom: var(--prism-space4); padding-left: var(--prism-space3); border-left: 1px solid var(--prism-border); }
+.prism-root .prism-troubleshoot__history { display: grid; gap: var(--prism-space-2); margin-bottom: var(--prism-space-4); padding-left: var(--prism-space-3); border-left: 1px solid var(--prism-border); }
 .prism-root .prism-troubleshoot__historyItem { min-width: 0; }
-.prism-root .prism-troubleshoot__historyItem > button { display: flex; align-items: center; justify-content: space-between; gap: var(--prism-space3); width: 100%; text-align: left; }
+.prism-root .prism-troubleshoot__historyItem > button { display: flex; align-items: center; justify-content: space-between; gap: var(--prism-space-3); width: 100%; text-align: left; }
 .prism-root .prism-troubleshoot__historyItem .prism-troubleshoot__text { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin: 0; }
-.prism-root .prism-troubleshoot__chip { flex-shrink: 0; padding: var(--prism-space1) var(--prism-space2); border: 1px solid var(--prism-border-soft); border-radius: var(--prism-radius-sm); color: var(--prism-muted); font-size: var(--prism-text-xs); line-height: 1.2; }
-.prism-root .prism-troubleshoot__chip[data-state="yes"] { background: var(--prism-success-soft); color: var(--prism-success); }
-.prism-root .prism-troubleshoot__step { min-height: 240px; padding: var(--prism-space5); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-md); background: var(--prism-surface-soft); box-shadow: var(--prism-shadow-sm); }
-.prism-root .prism-troubleshoot__position { display: inline-block; margin-right: var(--prism-space3); color: var(--prism-muted); font-size: var(--prism-text-sm); font-weight: 400; font-variant-numeric: tabular-nums; }
-.prism-root .prism-troubleshoot__stepTitle { margin: 0 0 var(--prism-space3); color: var(--prism-text); font-size: var(--prism-text-lg); font-weight: 600; line-height: 1.4; letter-spacing: -.015em; }
-.prism-root .prism-troubleshoot__text { margin: 0 0 var(--prism-space4); white-space: pre-wrap; }
-.prism-root .prism-troubleshoot__hint { margin: var(--prism-space3) 0; color: var(--prism-muted); font-size: var(--prism-text-sm); }
-.prism-root .prism-troubleshoot__question { margin: var(--prism-space5) 0 var(--prism-space3); font-size: var(--prism-text-sm); font-weight: 500; }
-.prism-root .prism-troubleshoot__actions { display: flex; flex-wrap: wrap; gap: var(--prism-space2); }
-.prism-root :is(.prism-troubleshoot__primary, .prism-troubleshoot__ghost) { display: inline-flex; align-items: center; justify-content: center; min-height: var(--prism-space7); padding: var(--prism-space2) var(--prism-space4); border: 1px solid transparent; border-radius: var(--prism-radius-sm); font: 500 var(--prism-text-sm)/1.4 var(--prism-font-sans); cursor: pointer; transition: background var(--prism-duration-fast) var(--prism-ease), border-color var(--prism-duration-fast) var(--prism-ease); }
-.prism-root .prism-troubleshoot__primary { background: var(--prism-accent); color: var(--prism-bg); box-shadow: var(--prism-shadow-sm); }
-.prism-root .prism-troubleshoot__primary:hover:not(:disabled) { background: color-mix(in srgb, var(--prism-accent) 90%, var(--prism-text)); }
-.prism-root .prism-troubleshoot__ghost { background: transparent; color: var(--prism-muted); }
+.prism-root .prism-troubleshoot__chip { flex-shrink: 0; padding: var(--prism-space-1) var(--prism-space-2); border: 1px solid color-mix(in srgb, var(--prism-border) 50%, transparent); border-radius: var(--prism-radius-sm); color: var(--prism-text-muted); font-size: var(--prism-text-xs); line-height: 1.2; }
+.prism-root .prism-troubleshoot__chip[data-state="yes"] { background: color-mix(in srgb, var(--prism-positive) 8%, transparent); color: var(--prism-positive); }
+.prism-root .prism-troubleshoot__step { min-height: 240px; padding: var(--prism-space-5); border: 1px solid var(--prism-border); border-radius: var(--prism-radius-md); background: color-mix(in srgb, var(--prism-surface) 70%, transparent); box-shadow: var(--prism-elevation-1); }
+.prism-root .prism-troubleshoot__position { display: inline-block; margin-right: var(--prism-space-3); color: var(--prism-text-muted); font-size: var(--prism-text-sm); font-weight: var(--prism-weight-regular); font-variant-numeric: tabular-nums; }
+.prism-root .prism-troubleshoot__stepTitle { margin: 0 0 var(--prism-space-3); color: var(--prism-text); font-size: var(--prism-text-lg); font-weight: var(--prism-weight-semibold); line-height: 1.4; letter-spacing: -.015em; }
+.prism-root .prism-troubleshoot__text { margin: 0 0 var(--prism-space-4); white-space: pre-wrap; }
+.prism-root .prism-troubleshoot__hint { margin: var(--prism-space-3) 0; color: var(--prism-text-muted); font-size: var(--prism-text-sm); }
+.prism-root .prism-troubleshoot__question { margin: var(--prism-space-5) 0 var(--prism-space-3); font-size: var(--prism-text-sm); font-weight: var(--prism-weight-medium); }
+.prism-root .prism-troubleshoot__actions { display: flex; flex-wrap: wrap; gap: var(--prism-space-2); }
+.prism-root :is(.prism-troubleshoot__primary, .prism-troubleshoot__ghost) { display: inline-flex; align-items: center; justify-content: center; min-height: var(--prism-space-7); padding: var(--prism-space-2) var(--prism-space-4); border: 1px solid transparent; border-radius: var(--prism-radius-sm); font-family: var(--prism-font-body); font-size: var(--prism-text-sm); line-height: 1.4; font-weight: var(--prism-weight-medium); cursor: pointer; transition: background var(--prism-motion-fast) var(--prism-motion-ease), border-color var(--prism-motion-fast) var(--prism-motion-ease); }
+.prism-root .prism-troubleshoot__primary { background: var(--prism-accent, #525252); color: var(--prism-on-accent); box-shadow: var(--prism-elevation-1); }
+.prism-root .prism-troubleshoot__primary:hover:not(:disabled) { background: color-mix(in srgb, var(--prism-accent, #525252) 90%, var(--prism-text)); }
+.prism-root .prism-troubleshoot__ghost { background: transparent; color: var(--prism-text-muted); }
 .prism-root .prism-troubleshoot__command { position: relative; }
-.prism-root .prism-troubleshoot__command pre { padding-right: calc(var(--prism-space8) * 2 + var(--prism-space4)); }
-.prism-root .prism-troubleshoot__command > .prism-troubleshoot__ghost { position: absolute; top: var(--prism-space2); right: var(--prism-space2); padding: var(--prism-space1) var(--prism-space2); background: var(--prism-surface); opacity: 0; transition: opacity var(--prism-duration-fast) var(--prism-ease), background var(--prism-duration-fast) var(--prism-ease); }
+.prism-root .prism-troubleshoot__command pre { padding-right: calc(var(--prism-space-8) * 2 + var(--prism-space-4)); }
+.prism-root .prism-troubleshoot__command > .prism-troubleshoot__ghost { position: absolute; top: var(--prism-space-2); right: var(--prism-space-2); padding: var(--prism-space-1) var(--prism-space-2); background: var(--prism-surface); opacity: 0; transition: opacity var(--prism-motion-fast) var(--prism-motion-ease), background var(--prism-motion-fast) var(--prism-motion-ease); }
 .prism-root .prism-troubleshoot__command:is(:hover, :focus-within) > .prism-troubleshoot__ghost { opacity: 1; }
 @media (hover: none), (pointer: coarse) {
   .prism-root .prism-troubleshoot__command > .prism-troubleshoot__ghost { opacity: 1; }
 }
-.prism-root .prism-troubleshoot__ghost:hover:not(:disabled) { color: var(--prism-text); background: var(--prism-muted-soft); border-color: var(--prism-border-soft); }
+.prism-root .prism-troubleshoot__ghost:hover:not(:disabled) { color: var(--prism-text); background: color-mix(in srgb, var(--prism-text-muted) 8%, transparent); border-color: color-mix(in srgb, var(--prism-border) 50%, transparent); }
 .prism-root .prism-troubleshoot__actions > .prism-troubleshoot__ghost { border-color: var(--prism-border); }
 .prism-root :is(.prism-troubleshoot__primary, .prism-troubleshoot__ghost):disabled { opacity: .45; cursor: not-allowed; }
-.prism-root :is(.prism-troubleshoot__primary, .prism-troubleshoot__ghost):focus-visible { outline: 2px solid var(--prism-accent); outline-offset: var(--prism-space1); }
-.prism-root .prism-troubleshoot__result { min-height: 180px; padding: var(--prism-space5); border-radius: var(--prism-radius-md); border: 1px solid var(--prism-warning); background: var(--prism-warning-soft); }
-.prism-root .prism-troubleshoot__result[data-state="resolved"] { border-color: var(--prism-success); background: var(--prism-success-soft); }
-.prism-root .prism-troubleshoot__result[data-state="sent"] { border-color: var(--prism-border); background: var(--prism-surface-soft); }
-.prism-root .prism-troubleshoot__skeleton { min-height: var(--prism-space6); margin-bottom: var(--prism-space4); border-radius: var(--prism-radius-sm); background: linear-gradient(100deg, var(--prism-muted-soft) 20%, var(--prism-surface) 45%, var(--prism-muted-soft) 70%); background-size: 220% 100%; animation: prism-troubleshoot-shimmer calc(var(--prism-duration-base) * 6) linear infinite; }
+.prism-root :is(.prism-troubleshoot__primary, .prism-troubleshoot__ghost):focus-visible { outline: 2px solid var(--prism-accent, #525252); outline-offset: var(--prism-space-1); }
+.prism-root .prism-troubleshoot__result { min-height: 180px; padding: var(--prism-space-5); border-radius: var(--prism-radius-md); border: 1px solid var(--prism-warning); background: color-mix(in srgb, var(--prism-warning) 8%, transparent); }
+.prism-root .prism-troubleshoot__result[data-state="resolved"] { border-color: var(--prism-positive); background: color-mix(in srgb, var(--prism-positive) 8%, transparent); }
+.prism-root .prism-troubleshoot__result[data-state="sent"] { border-color: var(--prism-border); background: color-mix(in srgb, var(--prism-surface) 70%, transparent); }
+.prism-root .prism-troubleshoot__skeleton { min-height: var(--prism-space-6); margin-bottom: var(--prism-space-4); border-radius: var(--prism-radius-sm); background: linear-gradient(100deg, color-mix(in srgb, var(--prism-text-muted) 8%, transparent) 20%, var(--prism-surface) 45%, color-mix(in srgb, var(--prism-text-muted) 8%, transparent) 70%); background-size: 220% 100%; animation: prism-troubleshoot-shimmer calc(var(--prism-motion-base) * 6) linear infinite; }
 @keyframes prism-troubleshoot-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 .prism-root[data-animate="false"] .prism-troubleshoot__skeleton, .prism-root [data-animate="false"] .prism-troubleshoot__skeleton { animation: none; }
 @media (prefers-reduced-motion: reduce) {
