@@ -203,7 +203,8 @@ export const objects = defineTheme({
     :scope .prism-mockup__root::before, :scope .prism-mockup__root::after { content:""; position:absolute; top:-10px; left:20px; width:64px; height:24px; background:var(--prism-frame-tape); opacity:.8; rotate:-8deg; pointer-events:none; z-index:2; }
     :scope .prism-mockup__root::after { left:auto; right:20px; rotate:7deg; }
     :scope .prism-mockup__header { flex-direction:row; }
-    :scope .prism-mockup__viewport { border-radius:0; }
+    :scope .prism-mockup__viewport { border-radius:0; background-color:var(--prism-bg); background-image:var(--objects-grain); }
+    :scope .prism-mockup__stage { border-radius:1px; outline:0; box-shadow:0 8px 18px color-mix(in srgb,var(--prism-frame-slot) 65%,transparent); }
     :scope .prism-mockup__marker[data-kind="pin"] { border-radius:50%; background:var(--prism-frame-stamp); color:var(--prism-on-accent); box-shadow:0 2px 3px color-mix(in srgb,var(--prism-text) 30%,transparent),inset 0 2px 0 color-mix(in srgb,var(--prism-on-accent) 25%,transparent); }
     :scope .prism-mockup__popover { border:0; border-radius:0; background:var(--prism-frame-note-yellow); background-image:var(--objects-grain); box-shadow:var(--prism-elevation-2); }
     :scope .prism-mockup__popover::before { display:none; }
