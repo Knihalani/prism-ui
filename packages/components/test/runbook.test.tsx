@@ -3,6 +3,7 @@ import { afterEach, expect, test } from 'bun:test';
 import { Prism, createRegistry, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { runbookDefinition, stepDefinition } from '../src/runbook';
+import { troubleshootDefinition } from '../src/troubleshoot';
 
 const { act, cleanup, fireEvent, render } = await import('@testing-library/react');
 
@@ -21,6 +22,12 @@ test('each command row copies only its own fence', async () => {
   } finally { if (previous) Object.defineProperty(navigator, 'clipboard', previous); else Reflect.deleteProperty(navigator, 'clipboard'); }
 });
 const registry = createRegistry([runbookDefinition, stepDefinition]);
+test('nested artifacts keep ownership of their synthetic commands', () => {
+  const source = '::::runbook\n:::step{title="Investigate"}\n```ui:troubleshoot\n' + JSON.stringify({ start: 'a', steps: { a: { text: 'Try it.', command: 'echo nested' } } }) + '\n```\n:::\n::::';
+  const view = render(<Prism source={source} registry={createRegistry([runbookDefinition, stepDefinition, troubleshootDefinition])} />);
+  expect(view.getAllByRole('button', { name: 'Copy' }).length).toBe(1);
+  expect(view.container.querySelectorAll('[data-prism="runbook"][data-part="command"]').length).toBe(0);
+});
 test('nested blockquote and list fences retain command-row Copy', () => {
   const source = '::::runbook\n:::step{title="Nested commands"}\n> ```sh\n> echo quoted\n> ```\n\n- Commands:\n\n  ```sh\n  echo listed\n  ```\n:::\n::::';
   const view = render(<Prism source={source} registry={registry} />);

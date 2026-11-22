@@ -10,7 +10,7 @@ export interface RunbookProps { id?: string; title?: string; labels?: RunbookLab
 export interface StepProps { id?: string; title?: string }
 const defaults = { title: 'Runbook', of: 'of', progress: 'Progress', stuck: 'Stuck here?', copy: 'Copy', copied: 'Copied', copyError: 'Could not copy', loading: 'Loading steps', stuckMessage: `I'm stuck on step {step} of "{title}": {text}.` };
 function text(node: Node): string { return node.value ?? (node.children ?? []).map(text).join(node.type === 'paragraph' ? '' : '\n'); }
-function codes(node: Node): string[] { return node.type === 'code' ? [node.value ?? ''] : (node.children ?? []).flatMap(codes); }
+function codes(node: Node): Node[] { return node.type === 'code' ? [node] : (node.children ?? []).flatMap(codes); }
 function stepKey(node: Node): string { return String(node.props?.id ?? node.key); }
 
 export function useRunbook(props: RunbookProps, ctx: PrismContextValue) {
@@ -54,11 +54,12 @@ export function useStep(props: StepProps, ctx: PrismContextValue, node: Node) {
   const book = useContext(RunbookContext), format = useFormat();
   const index = book?.steps.findIndex(step => step.key === node.key) ?? -1;
   const done = !!book?.done[stepKey(node)], labels = book?.labels ?? defaults;
-  const commands = useMemo(() => codes(node).join('\n').replace(/^\$ /gm, ''), [node]);
+  const commandNodes = useMemo(() => codes(node), [node]);
+  const commands = useMemo(() => commandNodes.map(node => node.value ?? '').join('\n').replace(/^\$ /gm, ''), [commandNodes]);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
-  return { index, done, labels, title: props.title, animate: ctx.animate, commands, copyState, disabled: node.complete === false,
+  return { index, done, labels, title: props.title, animate: ctx.animate, commands, commandNodes, copyState, disabled: node.complete === false,
     number: index < 0 ? '' : format.number(index + 1), state: done ? 'done' : index >= 0 && book?.current === index ? 'current' : 'todo',
     toggle() { if (node.complete !== false) book?.toggle(stepKey(node)); }, stuck() { if (node.complete !== false) book?.stuck(node, index, props.title ?? ''); },
     onKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
@@ -79,6 +80,7 @@ const StepCommandContext = createContext<{ step: StepModel; View: ComponentType<
 function StepCommand(input: PrismComponentProps) {
   const { step: vm, View } = useContext(StepCommandContext)!;
   const command = usePart('runbook', 'command'), copy = usePart('runbook', 'copy');
+  if (!vm.commandNodes.some(node => node.key === input.node.key)) return <View {...input} />;
   return <PrismPart as="div" {...command} slotProps={{ step: vm } satisfies StepSlotProps} tabIndex={0}><View {...input} /><PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="button" {...copy} type="button" onClick={() => vm.copy(input.node.value ?? '')} aria-live="polite">{vm.copyState === 'copied' ? vm.labels.copied : vm.copyState === 'error' ? vm.labels.copyError : vm.labels.copy}</PrismPart></PrismPart>;
 }
 export function Step({ props, node, children, complete }: PrismComponentProps<StepProps>) {
