@@ -9,15 +9,17 @@ export function useStoreValue<T = unknown>(path: string): T {
   const snapshot = useCallback(() => store.get(path) as T, [store, path]);
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
-export function useComponentState<T>(key: string, initial: T | (() => T)): [T, Dispatch<SetStateAction<T>>] {
+export function useComponentState<T>(key: string, initial: T | (() => T), options?: { history?: boolean; initialHistory?: boolean }): [T, Dispatch<SetStateAction<T>>] {
   const component = useContext(ComponentContext); if (!component) throw Error('Component provider required');
   const store = useStore(), path = component.id + '.' + key, [fallback] = useState(initial);
   const localWrite = useLocalWrite();
+  const history = options?.history !== false;
+  const initialHistory = options?.initialHistory ?? history;
   const current = useStoreValue<T | undefined>(path);
-  useLayoutEffect(() => { if (store.get(path) === undefined) localWrite(() => store.set(path, fallback)); }, [store, path, fallback, localWrite]);
+  useLayoutEffect(() => { if (store.get(path) === undefined) localWrite(() => store.set(path, fallback, { history: initialHistory })); }, [store, path, fallback, localWrite, initialHistory]);
   const set = useCallback<Dispatch<SetStateAction<T>>>(value => {
-    localWrite(() => store.update(path, (old: T | undefined) => typeof value === 'function' ? (value as (value: T) => T)(old === undefined ? fallback : old) : value));
-  }, [store, path, fallback, localWrite]);
+    localWrite(() => store.update(path, (old: T | undefined) => typeof value === 'function' ? (value as (value: T) => T)(old === undefined ? fallback : old) : value, { history }));
+  }, [store, path, fallback, localWrite, history]);
   return [current === undefined ? fallback : current, set];
 }
 export function useFormula(expr: string): number {

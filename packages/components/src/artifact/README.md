@@ -27,7 +27,7 @@ export default function Counter() {
 ```
 ````
 
-Use `artifact:html`, `artifact:svg`, `artifact:js`, or `artifact:markdown` for the other source types. HTML and SVG patch in place as tokens arrive; HTML scripts, JS, and React run only when the fence closes. JS is an ES module with an empty `#app` mount point. React accepts JSX or TSX with a default component export. SVG is sanitized before entering the frame. `height=auto` reserves a size-based minimum (`size=sm|md|lg`) and fits the content up to 4,096 px, after which content scrolls in the frame. Set a pixel height to reserve an exact canvas size; use `variant=minimal` for flatter chrome.
+Use `artifact:html`, `artifact:svg`, `artifact:js`, or `artifact:markdown` for the other source types. HTML and SVG patch in place as tokens arrive; HTML scripts, JS, and React run only when the fence closes. JS is an ES module with an empty `#app` mount point. React accepts JSX or TSX with a default component export. SVG is sanitized before entering the frame. Artifacts are chromeless inline by default; hover or keyboard focus reveals controls. `height=auto` reserves space while streaming and then fits the measured content without an internal scrollbar (with a 1,000,000px safety limit). Set a pixel height to reserve an exact canvas size; use `variant=panel` to restore framed chrome. Build fluid layouts with semantic CSS tokens and container queries, not fixed-width page shells. The host font, theme, colour scheme and reduced-motion preference update live. See [the renderer guide](../../../../docs/RENDERERS.md) for adaptive examples and graphic feedback.
 
 ## Host policy and bridge
 
