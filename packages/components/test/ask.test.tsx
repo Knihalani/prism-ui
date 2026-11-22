@@ -136,3 +136,17 @@ test('bound prefill updates until edited, undo restores edits, and false is a va
   fireEvent.keyDown(view.getByRole('group'), { key: 'z', ctrlKey: true }); expect((view.getByRole('spinbutton', { name: /Guests/ }) as HTMLInputElement).value).toBe('6');
   fireEvent.click(view.getByRole('button', { name: 'Send' })); expect(view.getByRole('group').dataset.state).toBe('sent');
 });
+
+test('Undo of submission clears its receipt even when default answers are unchanged', () => {
+  const store = createStore(), actions: Action[] = [];
+  const view = render(<Prism source={source({ id: 'undo', fields: [{ id: 'name', label: 'Name', type: 'text', value: 'Ada' }] })} registry={registry} store={store} animate={false} onAction={action => actions.push(action)} />);
+  fireEvent.click(view.getByRole('button', { name: 'Send' }));
+  expect(store.get('undo.submitted')).toBe(true);
+  expect(view.getByRole('button', { name: 'Sent' })).toBeDefined();
+  fireEvent.click(view.getByRole('button', { name: 'Undo' }));
+  expect(store.get('undo.submitted')).toBe(false);
+  expect(view.queryByRole('button', { name: 'Sent' })).toBeNull();
+  expect((view.getByRole('textbox', { name: 'Name' }) as HTMLInputElement).value).toBe('Ada');
+  fireEvent.click(view.getByRole('button', { name: 'Send' }));
+  expect(actions).toHaveLength(2);
+});

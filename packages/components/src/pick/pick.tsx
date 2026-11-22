@@ -33,6 +33,8 @@ export function usePick(props: PickProps, ctx: PrismComponentProps<PickProps>) {
   useEffect(() => store.subscribe(`${id}.weights`, measureOrder), [store, id, measureOrder]);
   const frame = useFrame({ component: 'pick', title: props.question, ask: true, undo: true });
   const saved = useStoreValue(`${id}.weights`), chosen = useStoreValue<string | undefined>(`${id}.chosen`);
+  const previousChoice = useRef(chosen);
+  useEffect(() => { if (previousChoice.current !== chosen) reset(); previousChoice.current = chosen; }, [chosen, reset]);
   const readWeight = (criterion: string): unknown => store.get(`${id}.weights.${criterion}`);
   const weights = useMemo(() => weightsFor(props, readWeight), [props, saved, store, id]);
   const signature = JSON.stringify([weights, props.options]), previous = useRef(signature);
@@ -72,6 +74,7 @@ export function usePick(props: PickProps, ctx: PrismComponentProps<PickProps>) {
     }).sort((a, b) => Number(b.ready) - Number(a.ready) || b.match - a.match || a.index - b.index);
   }, [props.options, props.criteria, weights]);
   const onChoose = (option: string) => {
+    previousChoice.current = option;
     localWrite(() => store.set(`${id}.chosen`, option));
     send('choose', { option, weights: weightsFor(props, readWeight) }, interpolate(strings.chooseMessage, { choose: strings.choose, title: ranked.find(row => row.id === option)?.title ?? option }));
   };

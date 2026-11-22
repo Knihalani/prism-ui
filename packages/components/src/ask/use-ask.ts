@@ -46,7 +46,8 @@ export function useAsk(props: AskProps, ctx: PrismContextValue) {
   const component = useContext(ComponentContext), format = useFormat(), emit = useEmit(), localWrite = useLocalWrite(), { send, sent, reset } = useSent(), complete = useSettled();
   const strings = useStrings('ask', askStrings), labels = strings;
   const fields = useMemo(() => safeFields(props.fields), [props.fields]);
-  const [values, setValues] = useComponentState<Record<string, AskValue>>('values', {}), [touched, setTouched] = useComponentState<Record<string, boolean>>('touched', {}), [, setSubmitted] = useComponentState('submitted', false);
+  const [values, setValues] = useComponentState<Record<string, AskValue>>('values', {}), [touched, setTouched] = useComponentState<Record<string, boolean>>('touched', {}), [submitted, setSubmitted] = useComponentState('submitted', false);
+  useEffect(() => { if (!submitted) reset(); }, [submitted, reset]);
   const current = useMemo<Record<string, AskValue>>(() => Object.fromEntries(fields.filter(field => field.id).map(field => [field.id!, normalize(field, Object.hasOwn(values, field.id!) ? values[field.id!] : field.value)])), [fields, values]);
   const signature = JSON.stringify([fields, current]), previous = useRef(signature);
   useEffect(() => { if (previous.current !== signature) { reset(); setSubmitted(false); } previous.current = signature; }, [signature, reset]);

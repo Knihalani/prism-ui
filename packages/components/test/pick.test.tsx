@@ -134,3 +134,14 @@ test('empty, invalid scores and all-zero ties are safe and external weights re-r
   view.rerender(<Prism source={source({ options: [], criteria: [] })} animate={false} />);
   expect(view.getByText('Options will appear here')).toBeDefined();
 });
+
+test('Undo after choosing clears the sent receipt and permits choosing again', () => {
+  const view = setup();
+  fireEvent.click(within(view.container.querySelector('[data-option="budget"]') as HTMLElement).getByRole('button', { name: 'Choose' }));
+  expect(view.getByRole('button', { name: 'Sent' }).hasAttribute('disabled')).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Undo' }));
+  expect(view.store.get('plans.chosen')).toBeUndefined();
+  expect(view.queryByRole('button', { name: 'Sent' })).toBeNull();
+  fireEvent.click(within(view.container.querySelector('[data-option="budget"]') as HTMLElement).getByRole('button', { name: 'Choose' }));
+  expect(view.actions.filter(action => action.type === 'choose')).toHaveLength(2);
+});
