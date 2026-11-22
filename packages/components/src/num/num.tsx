@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent, type PointerEvent } from 'react';
 import type { Node } from '@prism-ui/core';
 import { compile } from '@prism-ui/state';
 import { s, type Infer } from '@prism-ui/schema';
@@ -38,8 +38,8 @@ export function useNum(props: NumProps, ctx: PrismComponentProps<NumProps>) {
   const step = props.step > 0 ? props.step : 1, min = props.min ?? -Infinity, max = Math.max(min, props.max ?? Infinity);
   const normalize = (n: number) => Math.max(min, Math.min(max, Number((Math.round((n - (props.min ?? 0)) / step) * step + (props.min ?? 0)).toPrecision(14))));
   const value = typeof current === 'number' && Number.isFinite(current) ? current : Number.isFinite(initial) ? normalize(initial) : 0;
-  const format = useNumberFormat(props), [editing, setEditing] = useState(false), [draft, setDraft] = useState(''), [scrubbing, setScrubbing] = useState(false);
-  const formatted = ready ? format(value) : strings.loadingLabel, layout = useInlineReadout(scrubbing, formatted);
+  const format = useNumberFormat(props), [editing, setEditing] = useState(false), [draft, setDraft] = useState(''), [scrubbing, setScrubbing] = useState(false), [hovered, setHovered] = useState(false), [focused, setFocused] = useState(false);
+  const formatted = ready ? format(value) : strings.loadingLabel, readoutVisible = ready && !editing && (scrubbing || hovered || focused), layout = useInlineReadout(readoutVisible, scrubbing ? formatted : strings.dragHint);
   const suppressClick = useRef(false), edit = useRef(false), previous = useRef(value), drag = useRef<{ x: number; previous: number; next: number; moved: boolean; pointer: number } | null>(null), frame = useRef<number | null>(null);
   const returnFocus = useRef(false);
   useLayoutEffect(() => { if (!editing && returnFocus.current) { returnFocus.current = false; layout.root.current?.focus(); } }, [editing, layout.root]);
@@ -84,9 +84,9 @@ export function useNum(props: NumProps, ctx: PrismComponentProps<NumProps>) {
     else if (active.moved) commit(active.next, active.previous);
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
-  return { id, value, ready, editing, scrubbing, flashing, strings, layout, formatted, label,
+  return { id, value, ready, editing, scrubbing, readoutVisible, flashing, strings, layout, formatted, label,
     parts: { value: usePart('num', 'value', ready ? 'ready' : 'loading'), readout: usePart('num', 'readout'), readoutValue: usePart('num', 'readout-value'), readoutHint: usePart('num', 'readout-hint'), icon: usePart('num', 'icon') },
-    rootProps: { ...usePart('num', 'root'), ...presentation, ref: layout.root, 'data-status': !ready ? 'loading' : editing ? 'editing' : scrubbing ? 'scrubbing' : 'ready', 'data-prism-flash': flashing ? '' : undefined, role: editing ? undefined : 'slider', tabIndex: editing ? undefined : ready ? 0 : -1, 'aria-label': editing ? undefined : label, 'aria-description': interpolate(strings.instructions, { step: format(step) }), 'aria-valuemin': editing ? undefined : props.min, 'aria-valuemax': editing ? undefined : props.max, 'aria-valuenow': editing ? undefined : value, 'aria-valuetext': editing ? undefined : interpolate(strings.valueLabel, { value: format(value) }), 'aria-busy': !ready, onKeyDown: editing ? undefined : onKeyDown, onPointerDown: editing ? undefined : onPointerDown, onPointerMove: editing ? undefined : onPointerMove, onPointerUp: (e: PointerEvent<HTMLElement>) => endDrag(e), onPointerCancel: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onLostPointerCapture: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onClick: editing ? undefined : () => { if (!suppressClick.current) beginEdit(); suppressClick.current = false; } },
+    rootProps: { ...usePart('num', 'root'), ...presentation, ref: layout.root, onPointerEnter: () => setHovered(true), onPointerLeave: () => setHovered(false), onFocus: () => setFocused(true), onBlur: (event: FocusEvent<HTMLElement>) => { if (!event.currentTarget.contains(event.relatedTarget as HTMLElement | null)) setFocused(false); }, 'data-status': !ready ? 'loading' : editing ? 'editing' : scrubbing ? 'scrubbing' : 'ready', 'data-prism-flash': flashing ? '' : undefined, role: editing ? undefined : 'slider', tabIndex: editing ? undefined : ready ? 0 : -1, 'aria-label': editing ? undefined : label, 'aria-description': interpolate(strings.instructions, { step: format(step) }), 'aria-valuemin': editing ? undefined : props.min, 'aria-valuemax': editing ? undefined : props.max, 'aria-valuenow': editing ? undefined : value, 'aria-valuetext': editing ? undefined : interpolate(strings.valueLabel, { value: format(value) }), 'aria-busy': !ready, onKeyDown: editing ? undefined : onKeyDown, onPointerDown: editing ? undefined : onPointerDown, onPointerMove: editing ? undefined : onPointerMove, onPointerUp: (e: PointerEvent<HTMLElement>) => endDrag(e), onPointerCancel: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onLostPointerCapture: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onClick: editing ? undefined : () => { if (!suppressClick.current) beginEdit(); suppressClick.current = false; } },
     inputProps: { ...usePart('num', 'input'), type: 'number', role: 'spinbutton', 'aria-label': label, min: props.min, max: props.max, step, value: draft, autoFocus: true, onFocus: (e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.select(), onChange: (e: React.ChangeEvent<HTMLInputElement>) => setDraft(e.target.value), onBlur: (e: React.FocusEvent<HTMLInputElement>) => finishEdit(false, e.currentTarget.value), onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); returnFocus.current = true; finishEdit(e.key === 'Escape', e.currentTarget.value); } } } };
 }
 
@@ -94,11 +94,10 @@ export function Num(ctx: PrismComponentProps<NumProps>) {
   const num = useNum(ctx.props, ctx), model = { num };
   return <PrismPart as="span" {...num.rootProps} slotProps={model}>
     {num.editing ? <PrismPart as="input" {...num.inputProps} slotProps={model} /> : <PrismPart as="span" {...num.parts.value} slotProps={model} data-prism-skeleton={!num.ready ? '' : undefined}>{num.formatted}</PrismPart>}
-    {num.scrubbing && <PrismPart as="span" {...num.parts.readout} slotProps={model} ref={num.layout.readout} style={{ ...num.parts.readout.style, ...num.layout.style }} data-side={num.layout.below ? 'below' : 'above'} aria-hidden="true">
+    {num.readoutVisible && <PrismPart as="span" {...num.parts.readout} slotProps={model} ref={num.layout.readout} style={{ ...num.parts.readout.style, ...num.layout.style }} data-side={num.layout.below ? 'below' : 'above'} aria-hidden="true">
       <PrismPart as={Icon} {...num.parts.icon} slotProps={model} name="chevron-left" />
-      <PrismPart as="span" {...num.parts.readoutValue} slotProps={model}>{interpolate(num.strings.readoutLabel, { label: num.label, value: num.formatted })}</PrismPart>
+      {num.scrubbing ? <PrismPart as="span" {...num.parts.readoutValue} slotProps={model}>{interpolate(num.strings.readoutLabel, { label: num.label, value: num.formatted })}</PrismPart> : <PrismPart as="span" {...num.parts.readoutHint} slotProps={model}>{num.strings.dragHint}</PrismPart>}
       <PrismPart as={Icon} {...num.parts.icon} slotProps={model} name="chevron-right" />
-      <PrismPart as="span" {...num.parts.readoutHint} slotProps={model}>{num.strings.dragHint}</PrismPart>
     </PrismPart>}
   </PrismPart>;
 }

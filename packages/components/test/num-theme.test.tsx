@@ -11,11 +11,12 @@ afterEach(cleanup);
 const source = ':num[12]{id=n} and :calc[n*2]';
 test('all declared Num/Calc parts accept slots in ready, edit, scrub, empty and error states', () => {
   const covered = { num: new Set<string>(), calc: new Set<string>() };
-  for (const fixture of ['ready', 'edit', 'scrub', 'empty', 'error']) {
+  for (const fixture of ['ready', 'hover', 'edit', 'scrub', 'empty', 'error']) {
     const content = fixture === 'empty' ? ':num[]{id=n} :calc[]{expr="n+"}' : fixture === 'error' ? ':num[12]{id=n} :calc[0/0]' : source;
     function mount(slots = {}) {
       const view = render(<Prism source={content} done={fixture !== 'empty'} animate={false} slots={slots} />);
       if (fixture === 'edit') fireEvent.click(view.getByRole('slider'));
+      if (fixture === 'hover') fireEvent.pointerEnter(view.getByRole('slider'));
       if (fixture === 'scrub') { const slider = view.getByRole('slider'); fireEvent.pointerDown(slider, { button: 0, pointerId: 1, clientX: 10 }); fireEvent.pointerMove(slider, { pointerId: 1, clientX: 22 }); }
       return view;
     }
@@ -51,8 +52,9 @@ test('translated strings, icons and typed model slots preserve editing, scrubbin
   expect(input.parentElement?.hasAttribute('aria-valuenow')).toBe(false);
   fireEvent.change(input, { target: { value: '-500' } }); fireEvent.keyDown(input, { key: 'Enter' }); expect(store.get('n')).toBe(-500);
   expect(document.activeElement).toBe(view.getByRole('slider'));
+  expect(view.getByText('Glisser doucement')).toBeDefined();
   const next = view.getByRole('slider'); fireEvent.pointerDown(next, { button: 0, pointerId: 3, clientX: 0 }); fireEvent.pointerMove(next, { pointerId: 3, clientX: 16 });
-  expect(view.getByText('Glisser doucement')).toBeDefined(); expect(view.container.querySelector('[data-custom-icon]')).not.toBeNull();
+  expect(view.queryByText('Glisser doucement')).toBeNull(); expect(view.getByText('-500 — Nombre n')).toBeDefined(); expect(view.container.querySelector('[data-custom-icon]')).not.toBeNull();
   fireEvent.pointerCancel(next, { pointerId: 3 }); expect(store.get('n')).toBe(-500);
   view.rerender(<Prism source=':calc[0/0]' theme={theme} animate={false} />); expect(view.getByText('Indisponible').getAttribute('title')).toBe('Expression 0/0');
 });
