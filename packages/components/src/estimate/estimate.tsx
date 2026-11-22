@@ -7,15 +7,14 @@ const itemSchema = s.object({ id: s.string(), label: s.string(), description: s.
 export const estimateSchema = s.object({ id: s.string().optional(), title: s.string().default('Estimate'), currency: s.string().optional(), items: s.array(itemSchema).default([]), taxRate: s.number({ min: 0 }).default(0), discount: s.number({ min: 0, max: 1 }).default(0), submit: s.string().default('Use this estimate'), subtotalLabel: s.string().default('Subtotal'), discountLabel: s.string().default('Discount'), taxLabel: s.string().default('Tax'), totalLabel: s.string().default('Total'), emptyLabel: s.string().default('Items will appear here'), decreaseLabel: s.string().default('Decrease'), increaseLabel: s.string().default('Increase'), itemCountLabel: s.string().default('items') });
 export type EstimateProps = Infer<typeof estimateSchema>;
 type Item = Infer<typeof itemSchema>;
-type ItemState = Record<string, { qty?: number; enabled?: boolean }>;
-const empty: ItemState = {};
+type ItemState = { qty?: number; enabled?: boolean };
 function quantity(item: Item, value: number) {
   const step = item.step > 0 ? item.step : 1;
   return Math.max(item.min, Math.min(Math.max(item.min, item.max ?? Infinity), Number((Math.round((value - item.min) / step) * step + item.min).toPrecision(14))));
 }
-function calculate(props: EstimateProps, state: ItemState) {
+function calculate(props: EstimateProps, readItem: (id: string) => ItemState | undefined) {
   const rows = props.items.filter(item => item.id).map(item => {
-    const saved = state[item.id], qty = quantity(item, Number.isFinite(saved?.qty) ? saved!.qty! : item.qty);
+    const saved = readItem(item.id), qty = quantity(item, Number.isFinite(saved?.qty) ? saved!.qty! : item.qty);
     const enabled = !item.optional || (saved?.enabled ?? item.enabled), ready = item.price !== undefined;
     return { ...item, qty, enabled, ready, amount: enabled && ready ? item.price! * qty : 0 };
   });
@@ -34,12 +33,13 @@ function useTween(value: number, animate: boolean) {
 }
 export function useEstimate(props: EstimateProps, ctx: PrismComponentProps<EstimateProps>) {
   const { store, animate } = usePrism(), format = useFormat(), emit = useEmit(), id = props.id ?? ctx.id;
-  const state = useStoreValue<ItemState | undefined>(`${id}.items`) ?? empty;
+  const state = useStoreValue(`${id}.items`);
   const storedSubtotal = useStoreValue(`${id}.subtotal`), storedTotal = useStoreValue(`${id}.total`);
-  const totals = useMemo(() => calculate(props, state), [props, state]);
+  const readItem = (itemId: string): ItemState | undefined => store.get(`${id}.items.${itemId}`);
+  const totals = useMemo(() => calculate(props, readItem), [props, state, store, id]);
   const currency = props.currency && /^[A-Z]{3}$/.test(props.currency) ? props.currency : undefined;
   const money = (value: number) => format.currency(value, currency);
-  const writeTotals = () => { const next = calculate(props, store.get(`${id}.items`) ?? empty); store.set(`${id}.subtotal`, next.subtotal); store.set(`${id}.total`, next.total); };
+  const writeTotals = () => { const next = calculate(props, readItem); store.set(`${id}.subtotal`, next.subtotal); store.set(`${id}.total`, next.total); };
   useLayoutEffect(() => {
     store.batch(() => {
       for (const row of totals.rows) {
@@ -67,7 +67,7 @@ export function useEstimate(props: EstimateProps, ctx: PrismComponentProps<Estim
       increaseProps: { type: 'button' as const, 'aria-label': `${props.increaseLabel} ${row.label}`, disabled: !row.enabled || !row.ready || row.qty >= (row.max ?? Infinity), onClick: () => update(row, 'qty', row.qty + (row.step || 1)) } };
   });
   const onUse = () => {
-    const current = calculate(props, store.get(`${id}.items`) ?? empty);
+    const current = calculate(props, readItem);
     const items = current.rows.filter(row => row.enabled && row.ready).map(({ id, label, qty, price, amount }) => ({ id, label, qty, price: price!, amount }));
     emit('use', { items, total: current.total }, `${props.submit}: ${format.number(items.length)} ${props.itemCountLabel}, ${props.totalLabel.toLowerCase()} ${money(current.total)}`);
   };

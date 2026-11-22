@@ -7,6 +7,20 @@ import { pick } from '../src/pick';
 
 afterEach(cleanup);
 
+test('dotted criterion ids use consistent nested store paths and literal action keys', () => {
+  const view = setup({ criteria: [{ id: 'cost.monthly', label: 'Cost' }, { id: 'quality', label: 'Quality' }], weights: { 'cost.monthly': 1, quality: 2 }, options: [{ id: 'budget', title: 'Budget', scores: { 'cost.monthly': 1, quality: 0 } }, { id: 'premium', title: 'Premium', scores: { 'cost.monthly': 0, quality: 0.9 } }] });
+  const chip = view.getByRole('button', { name: 'Cost, weight 1 of 3' });
+  expect(view.store.get('plans.weights.cost.monthly')).toBe(1); expect(order(view.container)).toEqual(['premium', 'budget']);
+  fireEvent.click(chip);
+  expect(view.store.get('plans.weights.cost.monthly')).toBe(2); expect(chip.getAttribute('aria-label')).toBe('Cost, weight 2 of 3');
+  expect(order(view.container)).toEqual(['budget', 'premium']);
+  act(() => view.store.undo()); expect(chip.getAttribute('aria-label')).toBe('Cost, weight 1 of 3'); expect(order(view.container)).toEqual(['premium', 'budget']);
+  act(() => view.store.set('plans.weights.cost.monthly', 3));
+  expect(chip.getAttribute('aria-label')).toBe('Cost, weight 3 of 3');
+  fireEvent.click(within(view.container.querySelector('[data-option="budget"]') as HTMLElement).getByRole('button', { name: 'Choose' }));
+  expect(view.actions.at(-1)?.payload).toEqual({ option: 'budget', weights: { 'cost.monthly': 3, quality: 2 } });
+});
+
 test('streamed criteria do not persist defaults ahead of explicit weights', () => {
   const store = createStore();
   const prefix = '```ui:pick\n{"id":"plans","criteria":[{"id":"price","label":"Price"},{"id":"quality","label":"Quality"}]';

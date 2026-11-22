@@ -9,22 +9,24 @@ export type PickProps = Infer<typeof pickSchema>;
 type Weights = Record<string, number>;
 const clamp = (value: unknown, fallback: number, max = 3) => typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.min(max, Math.round(value))) : fallback;
 const score = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
-function weightsFor(props: PickProps, saved: unknown): Weights {
-  return Object.fromEntries(props.criteria.filter(c => c.id).map(c => [c.id, clamp((saved as Weights | undefined)?.[c.id], clamp(props.weights?.[c.id], 1))]));
+function weightsFor(props: PickProps, readWeight: (id: string) => unknown): Weights {
+  return Object.fromEntries(props.criteria.filter(c => c.id).map(c => [c.id, clamp(readWeight(c.id), clamp(props.weights?.[c.id], 1))]));
 }
 export function usePick(props: PickProps, ctx: PrismComponentProps<PickProps>) {
   const { store, animate } = usePrism(), format = useFormat(), emit = useEmit(), id = props.id ?? ctx.id;
-  const saved = useStoreValue<Weights | undefined>(`${id}.weights`), chosen = useStoreValue<string | undefined>(`${id}.chosen`);
-  const weights = useMemo(() => weightsFor(props, saved), [props, saved]);
+  const saved = useStoreValue(`${id}.weights`), chosen = useStoreValue<string | undefined>(`${id}.chosen`);
+  const readWeight = (criterion: string): unknown => store.get(`${id}.weights.${criterion}`);
+  const weights = useMemo(() => weightsFor(props, readWeight), [props, saved, store, id]);
   useLayoutEffect(() => {
     if (!ctx.complete) return;
-    const current = store.get(`${id}.weights`);
-    if (Object.keys(weights).some(key => current?.[key] === undefined)) store.set(`${id}.weights`, { ...current, ...weights });
+    store.batch(() => {
+      for (const key of Object.keys(weights)) if (readWeight(key) === undefined) store.set(`${id}.weights.${key}`, weights[key]);
+    });
   }, [store, id, weights, ctx.complete]);
   const [focused, setFocused] = useState<string>(), chips = useRef(new Map<string, HTMLButtonElement>());
   const criteria = props.criteria.filter(c => c.id), active = criteria.some(c => c.id === focused) ? focused : criteria[0]?.id;
   const setWeight = (criterion: string, value: number) => store.set(`${id}.weights.${criterion}`, clamp(value, 1));
-  const cycle = (criterion: string) => { const current = weightsFor(props, store.get(`${id}.weights`)); setWeight(criterion, (current[criterion] + 1) % 4); };
+  const cycle = (criterion: string) => { const current = weightsFor(props, readWeight); setWeight(criterion, (current[criterion] + 1) % 4); };
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const criterion = criteria[index];
     if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); cycle(criterion.id); }
@@ -43,7 +45,7 @@ export function usePick(props: PickProps, ctx: PrismComponentProps<PickProps>) {
       return { ...option, index, ready, bars, match };
     }).sort((a, b) => Number(b.ready) - Number(a.ready) || b.match - a.match || a.index - b.index);
   }, [props.options, props.criteria, weights]);
-  const onChoose = (option: string) => { store.set(`${id}.chosen`, option); emit('choose', { option, weights: weightsFor(props, store.get(`${id}.weights`)) }); };
+  const onChoose = (option: string) => { store.set(`${id}.chosen`, option); emit('choose', { option, weights: weightsFor(props, readWeight) }); };
   const rows = ranked.map((option, index) => {
     const strongest = [...option.bars].filter(bar => bar.weight > 0).sort((a, b) => b.weight * b.score - a.weight * a.score).slice(0, 2).map(bar => bar.label);
     return { ...option, top: index === 0 && option.ready, chosen: chosen === option.id, rankText: format.number(index + 1), matchText: format.percent(option.match), chooseLabel: props.choose, chosenLabel: props.chosenLabel, topLabel: props.topLabel, matchLabel: props.matchLabel,

@@ -8,6 +8,23 @@ import '../src/num';
 
 afterEach(cleanup);
 
+test('dotted item ids share nested quantity and enabled paths with controls and undo', () => {
+  const view = setup({ items: [{ id: 'support.hours', label: 'Support hours', price: 10, qty: 2, optional: true }] }, ':num[2]{id=quote.items.support.hours.qty} :calc[quote.total]');
+  const input = view.getByRole('spinbutton', { name: 'Support hours' }) as HTMLInputElement;
+  expect(view.store.get('quote.items.support.hours.qty')).toBe(2);
+  fireEvent.click(view.getByRole('button', { name: 'Increase Support hours' }));
+  expect(input.value).toBe('3'); expect(view.store.get('quote.total')).toBe(30);
+  act(() => view.store.undo());
+  expect(input.value).toBe('2'); expect(view.store.get('quote.total')).toBe(20);
+  fireEvent.keyDown(view.getByRole('slider'), { key: 'ArrowUp' });
+  expect(input.value).toBe('3'); expect(view.store.get('quote.total')).toBe(30);
+  fireEvent.click(view.getByRole('checkbox', { name: 'Support hours' }));
+  expect(view.store.get('quote.items.support.hours.enabled')).toBe(false); expect(view.store.get('quote.total')).toBe(0);
+  act(() => view.store.undo());
+  fireEvent.click(view.getByRole('button', { name: 'Use this estimate' }));
+  expect(view.actions.at(-1)?.payload).toEqual({ items: [{ id: 'support.hours', label: 'Support hours', qty: 3, price: 10, amount: 30 }], total: 30 });
+});
+
 test('streaming partial and invalid currencies fall back until a complete code arrives', () => {
   const store = createStore();
   const view = render(<Prism source={'```ui:estimate\n{"id":"quote","items":[{"id":"seats","label":"Seats","price":20}],"currency":"'} done={false} store={store} animate={false} locale="en-US" currency="GBP" />);
