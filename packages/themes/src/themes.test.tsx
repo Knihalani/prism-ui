@@ -298,6 +298,26 @@ for (const theme of [print, objects, instrument]) {
   }
 }
 
+for (const theme of [print, objects, instrument]) {
+  test(`${theme.name} sliders display effective model weights for malformed saved values`, () => {
+    const store = createStore(), actions: { type: string; payload: unknown }[] = [];
+    const saved = (learning: unknown) => ({ learning, cost: 5, speed: false, unknown: Infinity });
+    store.set('fallback.weights', saved('invalid'));
+    const source = '```ui:pick\n' + JSON.stringify({ id: 'fallback', weights: { learning: 2, cost: 3, speed: 0, unknown: 'invalid' }, criteria: [{ id: 'learning', label: 'Learning' }, { id: 'cost', label: 'Cost' }, { id: 'speed', label: 'Speed' }, { id: 'unknown', label: 'Unknown' }], options: [{ id: 'alpha', title: 'Alpha', scores: { learning: .9, cost: .2 } }, { id: 'beta', title: 'Beta', scores: { learning: .4, cost: .8 } }] }) + '\n```';
+    const view = render(<Prism source={source} theme={theme} store={store} animate={false} onAction={action => actions.push(action)} />), ui = within(view.container);
+    for (const invalid of ['invalid', false, NaN, Infinity, {}, [], null, undefined]) {
+      act(() => store.set('fallback.weights', saved(invalid)));
+      for (const [label, expected] of [['Learning', '2'], ['Cost', '3'], ['Speed', '0'], ['Unknown', '1']]) {
+        const slider = ui.getByRole('slider', { name: `${label} weight` }) as HTMLInputElement;
+        expect(slider.value).toBe(expected);
+        expect(slider.closest('label')?.querySelector('output')?.textContent).toBe(expected);
+      }
+    }
+    fireEvent.click(ui.getAllByRole('button', { name: 'Choose Beta ↗' })[0]);
+    expect(actions.at(-1)).toMatchObject({ type: 'choose', payload: { option: 'beta', weights: { learning: 2, cost: 3, speed: 0, unknown: 1 } } });
+  });
+}
+
 const workflowSource = [
   ':badge[Pilot]{tone="accent"}',
   ':::callout{title="Keep it small"}\nOne useful conversation.\n:::',

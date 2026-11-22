@@ -1,5 +1,5 @@
-import { Children, createElement, forwardRef, useContext, type InputHTMLAttributes, type ReactElement } from 'react';
-import { ComponentContext, PrismPart, defineTheme, useFormat, usePart, usePrism, useStoreValue, useStrings } from '@prism-ui/react';
+import { Children, createElement, forwardRef, type InputHTMLAttributes, type ReactElement } from 'react';
+import { PrismPart, defineTheme, useFormat, usePart, useStrings } from '@prism-ui/react';
 import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
 import type { usePick } from '@prism-ui/components/pick';
@@ -35,9 +35,6 @@ const segments = {
   g: '9,36 35,36 40,41 35,46 9,46 4,41',
 };
 const digits: Record<string, string> = { '0': 'abcdef', '1': 'bc', '2': 'abdeg', '3': 'abcdg', '4': 'bcfg', '5': 'acdfg', '6': 'acdefg', '7': 'abc', '8': 'abcdefg', '9': 'abcdfg', '-': 'g' };
-function weightValue(value: unknown, fallback = 1) {
-  return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.min(3, Math.round(value))) : fallback;
-}
 function Segments({ value }: { value: string }) {
   const chars = [...value];
   return <svg viewBox={`0 0 ${Math.max(1, chars.length) * 48} 84`} aria-hidden="true" data-segmented="">{chars.map((char, index) => <g key={index} transform={`translate(${index * 48} 0)`}>{char === '.' ? <circle cx="8" cy="75" r="5" fill="currentColor" /> : Object.entries(segments).map(([key, points]) => <polygon key={key} points={points} fill="currentColor" opacity={(digits[char] ?? '').includes(key) ? .96 : .055} />)}</g>)}</svg>;
@@ -53,13 +50,9 @@ export const SegmentedTotal = forwardRef<HTMLDivElement, SlotProps & { estimate:
   </div>;
 });
 const Faders = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<typeof usePick> }>(function Faders({ as, model, frame, overflow, pick, children, ...props }, ref) {
-  const context = useContext(ComponentContext)!, { store } = usePrism(), strings = useStrings('pick');
-  const id = context.props.id ?? context.id;
-  useStoreValue(`${id}.weights`);
-  const initial = context.props.weights as Record<string, number> | undefined;
-  const criteria = context.props.criteria as { id: string; label: string }[];
-  return <div {...props} ref={ref} data-instrument-faders="">{criteria.filter(criterion => criterion.id).map(criterion => {
-    const weight = weightValue(store.get(`${id}.weights.${criterion.id}`), weightValue(initial?.[criterion.id]));
+  const strings = useStrings('pick');
+  return <div {...props} ref={ref} data-instrument-faders="">{pick.chips.map(criterion => {
+    const weight = criterion.weight;
     return <label className="instrument-fader" key={criterion.id}><span>{criterion.label}<output>{weight}</output></span><input type="range" min={0} max={3} step={1} value={weight} aria-label={`${criterion.label} ${strings.weightLabel}`} onInput={event => pick.setWeight(criterion.id, Number(event.currentTarget.value))} /><i aria-hidden="true" /></label>;
   })}</div>;
 });

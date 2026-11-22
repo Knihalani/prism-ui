@@ -1,5 +1,5 @@
 import { Children, createContext, createElement, forwardRef, useContext, type ElementType, type InputHTMLAttributes, type ReactElement, type ReactNode } from 'react';
-import { ComponentContext, PrismPart, defineTheme, useFormat, usePart, usePrism, useStoreValue, useStrings } from '@prism-ui/react';
+import { ComponentContext, PrismPart, defineTheme, useFormat, usePart, useStrings } from '@prism-ui/react';
 import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { usePick } from '@prism-ui/components/pick';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
@@ -55,14 +55,9 @@ const Total = forwardRef<HTMLDivElement, SlotProps & { estimate: EstimateModel }
 });
 
 const Criteria = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<typeof usePick> }>(function Criteria({ as, model, frame, overflow, pick, children, ...props }, ref) {
-  const context = useContext(ComponentContext)!, { store } = usePrism(), strings = useStrings('pick');
-  const id = context.props.id ?? context.id;
-  useStoreValue(`${id}.weights`);
-  const initial = context.props.weights as Record<string, number> | undefined;
-  const criteria = context.props.criteria as { id: string; label: string }[];
-  return <div {...props} ref={ref}>{criteria.map(criterion => {
-    const raw = store.get(`${id}.weights.${criterion.id}`) ?? initial?.[criterion.id] ?? 1;
-    const weight = typeof raw === 'number' && Number.isFinite(raw) ? Math.max(0, Math.min(3, Math.round(raw))) : 1;
+  const strings = useStrings('pick');
+  return <div {...props} ref={ref}>{pick.chips.map(criterion => {
+    const weight = criterion.weight;
     return <label className="print-weight" key={criterion.id}><span>{criterion.label}<output>{weight}</output></span><input type="range" min={0} max={3} step={1} value={weight} aria-label={`${criterion.label} ${strings.weightLabel}`} onInput={event => pick.setWeight(criterion.id, Number(event.currentTarget.value))} /></label>;
   })}</div>;
 });
