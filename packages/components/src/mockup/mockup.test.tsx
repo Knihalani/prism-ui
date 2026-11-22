@@ -221,7 +221,7 @@ test('streaming grows source without replacing controller; empty and partial SVG
   const b = setup({ kind: 'svg', source: '' }, false); b.rerender({ kind: 'svg', source: '<svg><circle r="4"/><path d="' }, false); expect(b.view.container.querySelector('circle')).not.toBeNull();
 });
 test('pin target, comment and overall submit an exact payload and message; edit resubmits', async () => {
-  const a = setup({ title: 'Pricing', variant: 'A' }); expect((a.view.getByText('Submit feedback') as HTMLButtonElement).disabled).toBe(true);
+  const a = setup({ title: 'Pricing', variant: 'A' }); expect((a.view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement).disabled).toBe(true);
   await act(async () => { a.pointer('pointerdown', 250, 100); a.pointer('pointerup', 250, 100); });
   a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'Make it bigger'); fireEvent.click(a.view.getByText('Save'));
   a.change(a.view.getByRole('textbox', { name: 'Overall feedback' }), 'Looks good'); fireEvent.click(a.view.getByText('Submit feedback'));
@@ -242,7 +242,7 @@ test('keyboard reticle, previous resolved items and persisted drafts exclude res
   const a = setup({ previous: { overall: '', items: [{ n: 1, kind: 'pin', x: 10, y: 10, comment: 'Old' }] } });
   fireEvent.keyDown(a.canvas(), { key: 'ArrowRight' }); fireEvent.keyDown(a.canvas(), { key: 'ArrowDown', shiftKey: true }); fireEvent.keyDown(a.canvas(), { key: 'Enter' });
   expect(a.model.state.items[0]).toMatchObject({ x: 52, y: 60 }); a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'New'); fireEvent.click(a.view.getByText('Save')); fireEvent.click(a.view.getByText('Submit feedback')); expect((a.actions[0].payload as any).items).toHaveLength(1); expect(a.view.getByRole('button', { name: 'Resolved 1: Old' }).getAttribute('aria-disabled')).toBe('true');
-  fireEvent.click(a.view.getByText('Edit feedback')); a.rerender({ title: 'Updated' }); expect(a.view.getByText('New')).toBeDefined();
+  fireEvent.click(a.view.getByText('Edit feedback')); a.rerender({ title: 'Updated' }); expect(a.view.getByText('New', { selector: '[data-part="list"] [data-part="item"] span' })).toBeDefined();
 });
 test('direct image directive and plugin fences resolve through the registry', () => {
   const registry = createRegistry([mockupDefinition]); const view = render(<Prism registry={registry} plugins={[mockupPlugin]} source={'::mockup{kind=image src="https://example.com/a.png" title="Poster"}\n\n```mockup:svg {title="Logo"}\n<svg><rect width="10"/></svg>\n```'} />); expect(view.getByRole('img', { name: 'Poster' })).toBeDefined(); expect(view.container.querySelector('rect')).not.toBeNull();

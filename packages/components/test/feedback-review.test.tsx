@@ -26,6 +26,7 @@ test('feedback popover exits inertly, can reopen mid-exit, and keeps the submit 
   fireEvent.click(view.getByRole('button', { name: 'Save' }));
   expect(view.queryByRole('dialog')).toBeNull();
   expect(dialog.getAttribute('data-closing')).toBe(''); expect(dialog.hasAttribute('inert')).toBe(true);
+  expect(dialog.getAttribute('aria-hidden')).toBe('true');
   fireEvent.click(view.getByRole('button', { name: 'Comment 1: Keep this overview' }));
   expect(view.getByRole('dialog')).toBe(dialog); expect(dialog.hasAttribute('inert')).toBe(false);
   const submit = view.getByRole('button', { name: 'Submit feedback' });
@@ -34,6 +35,7 @@ test('feedback popover exits inertly, can reopen mid-exit, and keeps the submit 
   expect(submit.querySelector('.prism-check-mark path')).not.toBeNull();
   expect(view.getByRole('button', { name: /Feedback sent/ })).toBe(submit);
   expect(dialog.hasAttribute('data-submitted')).toBe(true);
+  expect(dialog.getAttribute('aria-hidden')).toBe('true'); expect(dialog.hasAttribute('inert')).toBe(true);
   expect(view.queryByRole('dialog')).toBeNull();
   await waitFor(() => expect(dialog.isConnected).toBe(false), { timeout: 1500 });
 });
