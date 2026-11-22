@@ -19,9 +19,9 @@
 .prism-datatable__intro { flex: 1; min-inline-size: 0; }
 .prism-datatable__title {
   margin: 0;
-  font: 600 15px/1.4 var(--prism-font-sans);
+  font: 600 15px/1.65 var(--prism-font-sans);
 }
-.prism-datatable__subtitle { margin: 8px 0 0; color: var(--prism-muted); font: 400 12px/1.7 var(--prism-font-sans); }
+.prism-datatable__subtitle { margin: 5px 0 0; color: var(--prism-muted); font: 400 12px/1.7 var(--prism-font-sans); }
 .prism-datatable__filter {
   align-self: end;
   width: min(36%, 175px);
@@ -32,7 +32,7 @@
   border-block-end: 1px solid var(--prism-hairline);
   background: transparent;
   color: inherit;
-  font: 400 var(--prism-text-sm)/1.35 var(--prism-font-sans);
+  font: 400 13px/1.65 var(--prism-font-sans);
 }
 .prism-datatable__filter:focus { border-block-end-color: var(--prism-accent); }
 .prism-datatable__details { display: none; }
@@ -100,17 +100,22 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto auto;
   align-items: center;
-  column-gap: 4px;
-  row-gap: 20px;
-  min-height: 28px;
+  column-gap: 14px;
+  row-gap: 24px;
+  min-height: 22px;
   margin-block-start: 16px;
 }
 .prism-datatable__actions { display: contents; }
 .prism-datatable__range { grid-column: 2; }
 .prism-datatable__previous { grid-column: 3; }
 .prism-datatable__next { grid-column: 4; }
-:is(.prism-datatable__previous, .prism-datatable__next).prism-icon-btn { font: 400 20px/1 var(--prism-font-sans); }
-.prism-datatable__submit { grid-column: 1 / -1; justify-self: start; }
+:is(.prism-datatable__previous, .prism-datatable__next).prism-icon-btn {
+  inline-size: 22px;
+  block-size: 22px;
+  font: 400 20px/1 var(--prism-font-sans);
+}
+.prism-datatable__submission { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; }
+.prism-datatable__action-hint { color: var(--prism-muted); font: 400 12px/1.7 var(--prism-font-sans); }
 .prism-datatable__root :disabled { cursor: default; }
 .prism-datatable__scroll :focus-visible { outline-offset: -2px; }
 .prism-datatable__empty { padding: var(--prism-space6) 0; color: var(--prism-muted); font-size: var(--prism-text-sm); text-align: center; }
@@ -135,9 +140,10 @@
   .prism-datatable__root:not(:hover, :focus-within) > .prism-datatable__toolbar > :is(.prism-datatable__ask, .prism-datatable__undo) { opacity: 0; }
 }
 @container (max-width: 470px) {
-  .prism-datatable__toolbar { column-gap: var(--prism-space1); row-gap: var(--prism-space2); }
-  .prism-datatable__intro { flex: 1 1 160px; }
-  .prism-datatable__filter { order: 1; flex: 1 1 100%; width: 100%; margin-block-start: var(--prism-space2); }
+  .prism-datatable__toolbar { column-gap: var(--prism-space1); row-gap: 0; }
+  .prism-datatable__intro { flex: 1 1 0; }
+  .prism-datatable__subtitle { max-inline-size: 135px; font-size: 11px; }
+  .prism-datatable__filter { order: 1; flex: 1 1 100%; width: 100%; margin-block-start: 12px; }
   .prism-datatable__table { font-size: 16px; }
   .prism-datatable__heading, .prism-datatable__cell { padding-inline: var(--prism-space2); }
   .prism-datatable__details {
@@ -145,12 +151,21 @@
     order: 2;
     align-items: center;
     min-height: 32px;
+    margin-block-start: 9px;
     padding: 0;
     border: 0;
     background: transparent;
     color: var(--prism-muted);
-    font: 400 13px/1.4 var(--prism-font-sans);
+    font: 400 12px/1.65 var(--prism-font-sans);
     cursor: pointer;
   }
+  .prism-datatable__action-hint { flex-basis: 100%; font-size: 11px; }
+  .prism-datatable__root[data-hide-details] .prism-datatable__table:not([data-virtual]) { table-layout: fixed; }
+  .prism-datatable__root[data-hide-details] .prism-datatable__heading:has(.prism-datatable__checkbox) { width: 29px; }
+  .prism-datatable__root[data-hide-details] .prism-datatable__heading[data-align="right"]:not([data-detail]) { width: min(25cqi, 77px); }
+  .prism-datatable__root[data-hide-details] .prism-datatable__heading[data-align="right"][data-magnitude]:not([data-detail]) { width: min(23cqi, 66px); }
+  .prism-datatable__root[data-hide-details] :is(.prism-datatable__heading, .prism-datatable__cell)[data-align] { padding-inline-start: 1px; }
+  .prism-datatable__root[data-hide-details] :is(.prism-datatable__heading, .prism-datatable__cell)[data-align="right"] { padding-inline-end: 5px; }
+  .prism-datatable__root[data-hide-details] .prism-datatable__cell[data-align]:not([data-detail]) { overflow: hidden; text-overflow: ellipsis; }
   .prism-datatable__root[data-hide-details] :is(.prism-datatable__cell, .prism-datatable__heading)[data-detail] { display: none; }
 }

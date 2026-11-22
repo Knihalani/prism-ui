@@ -13,6 +13,7 @@ export type DataTableRow = Record<string, unknown>;
 export interface DataTableProps {
   id?: string; title?: string; subtitle?: string; caption?: string; columns?: DataTableColumn[]; rows?: DataTableRow[];
   pageSize?: number; selectable?: boolean; select?: 'single' | 'multiple'; filter?: boolean;
+  actionLabel?: string; actionHint?: string;
   height?: number; density?: 'compact' | 'comfortable' | 'spacious'; complete?: boolean;
 }
 export interface DataTableSelection { rows: DataTableRow[]; indices: number[] }
@@ -35,6 +36,8 @@ export const dataTableSchema = s.object({
   pageSize: s.number({ min: 0, step: 1 }).optional().describe('Rows/page. Default 0: all rows, windowed above 200.'),
   selectable: s.boolean().optional().describe('Enable checkboxes and Use N selected.'),
   select: s.enum(['single', 'multiple']).optional().describe('Enable selection; selectable defaults to multiple.'),
+  actionLabel: s.string().optional().describe('Label for the action that submits the selected rows.'),
+  actionHint: s.string().optional().describe('Supporting text next to the selection action.'),
   filter: s.boolean().optional().describe('Show fuzzy search (default true).'),
   height: s.number({ min: 80 }).optional().describe('Max scroll height (px). Default: 360 when virtualized, otherwise fit page.'),
   density: s.enum(['compact', 'comfortable', 'spacious']).optional().describe('Row spacing override.'),
@@ -45,7 +48,7 @@ export const dataTableSchema = s.object({
   }],
   rows: [{ name: 'Ada' }], pageSize: 10, selectable: true,
   id: undefined, title: undefined, subtitle: undefined, caption: undefined, select: undefined,
-  filter: undefined, height: undefined, density: undefined,
+  filter: undefined, height: undefined, density: undefined, actionLabel: undefined, actionHint: undefined,
 });
 
 const emptyRows: DataTableRow[] = [];

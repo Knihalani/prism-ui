@@ -63,6 +63,7 @@ export function DataTable({ props: inputProps, complete, node }: PrismComponentP
   const styled = (name: string) => ctx.unstyled ? undefined : name;
   const [showDetails, setShowDetails] = useState(false);
   const tableId = useId();
+  const hintId = useId();
   const canHideDetails = !ctx.unstyled && vm.columns.some(column => column.detail) && vm.columns.some(column => !column.detail);
   const magnitudes = useMemo(() => vm.columns.map(column => {
     if (ctx.unstyled || !column.magnitude) return 0;
@@ -143,7 +144,7 @@ export function DataTable({ props: inputProps, complete, node }: PrismComponentP
         {props.caption && <Part part="caption" as="caption">{props.caption}</Part>}
         <Part part="header" as="thead"><tr>
           {vm.mode && <Part part="heading" as="th" scope="col">{vm.mode === 'multiple' && <Checkbox aria-label="Select all rows on page" checked={vm.pageSelected} mixed={vm.selectedOnPage > 0 && !vm.pageSelected} onChange={vm.togglePage} />}</Part>}
-          {vm.columns.map(column => <Part key={column.key} part="heading" as="th" scope="col" aria-sort={complete && vm.sort?.key === column.key ? vm.sort.direction === 'asc' ? 'ascending' : 'descending' : 'none'} data-align={column.align} data-detail={column.detail ? '' : undefined}>
+          {vm.columns.map(column => <Part key={column.key} part="heading" as="th" scope="col" aria-sort={complete && vm.sort?.key === column.key ? vm.sort.direction === 'asc' ? 'ascending' : 'descending' : 'none'} data-align={column.align} data-detail={column.detail ? '' : undefined} data-magnitude={column.magnitude ? '' : undefined}>
             <Part part="sort" as="button" type="button" disabled={!complete} onClick={() => sortBy(column.key)} onKeyDown={(event: React.KeyboardEvent) => { if (event.key === 'Enter') { event.preventDefault(); sortBy(column.key); } }} aria-label={`Sort by ${column.label}`}>
               {column.label}<span aria-hidden="true">{vm.sort?.key === column.key && complete ? vm.sort.direction === 'asc' ? ' ↑' : ' ↓' : ' ↕'}</span>
             </Part>
@@ -177,9 +178,12 @@ export function DataTable({ props: inputProps, complete, node }: PrismComponentP
       <Part part="range">{vm.range}</Part>
       <Part part="actions">
       {vm.pageSize > 0 && <><Part part="previous" className={styled('prism-icon-btn')} as="button" type="button" aria-label="Previous page" title="Previous page" disabled={vm.currentPage === 0} onClick={() => { vm.changePage(vm.currentPage - 1); resetScroll(); }}>‹</Part><Part part="next" className={styled('prism-icon-btn')} as="button" type="button" aria-label="Next page" title="Next page" disabled={vm.currentPage >= vm.pageCount - 1} onClick={() => { vm.changePage(vm.currentPage + 1); resetScroll(); }}>›</Part></>}
-      {vm.mode && <Part part="submit" className={styled('prism-pill')} as="button" type="button" disabled={!vm.selected.length} data-feedback="" data-sent={sent ? '' : undefined} onClick={vm.submit}>
-        <span aria-hidden={sent || undefined} hidden={ctx.unstyled && sent}>Use {vm.selected.length} selected</span>
-        <span aria-hidden={!sent || undefined} hidden={ctx.unstyled && !sent}>{ctx.unstyled ? <FrameIcon name="check" /> : <CheckMark />} Sent · {sentCount}</span>
+      {vm.mode && <Part part="submission">
+        <Part part="submit" className={styled('prism-pill')} as="button" type="button" disabled={!vm.selected.length} aria-describedby={props.actionHint ? hintId : undefined} data-feedback="" data-sent={sent ? '' : undefined} onClick={vm.submit}>
+          <span aria-hidden={sent || undefined} hidden={ctx.unstyled && sent}>{props.actionLabel || `Use ${vm.selected.length} selected`}</span>
+          <span aria-hidden={!sent || undefined} hidden={ctx.unstyled && !sent}>{ctx.unstyled ? <FrameIcon name="check" /> : <CheckMark />} Sent · {sentCount}</span>
+        </Part>
+        {props.actionHint && <Part part="action-hint" as="span" id={hintId}>{props.actionHint}</Part>}
       </Part>}
     </Part></Part>
     <Part part="status" role="status" aria-live="polite">{vm.announcement}</Part>

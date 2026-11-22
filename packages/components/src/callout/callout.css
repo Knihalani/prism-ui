@@ -25,11 +25,11 @@
   align-items: baseline;
   gap: var(--prism-space2);
   min-height: 1.35em;
-  padding-inline-end: 32px;
 }
+.prism-root .prism-callout__header:has(.prism-callout__ask) { padding-inline-end: 32px; }
 .prism-root .prism-callout__icon { align-self: center; color: var(--prism-callout-color); flex: none; }
-.prism-root .prism-callout__title { margin: 0; font: 600 16px/1.35 var(--prism-font-sans); }
-.prism-root .prism-callout__body:not(:empty) { margin-top: var(--prism-space2); }
+.prism-root .prism-callout__title { margin: 0; font: 600 16px/1.65 var(--prism-font-sans); }
+.prism-root .prism-callout__body:not(:empty) { margin-top: 10px; font-size: 16px; line-height: 1.8; }
 .prism-root .prism-callout__ask { position: absolute; inset-block-start: -4px; inset-inline-end: 0; }
 .prism-root .prism-callout__skeleton {
   --prism-skeleton-width: 69%;
