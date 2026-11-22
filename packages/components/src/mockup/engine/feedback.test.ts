@@ -81,6 +81,31 @@ describe('feedback state and history', () => {
 });
 
 describe('feedback anchors', () => {
+  test('editing a comment with an unchanged target preserves its anchor and follows later layouts', () => {
+    for (const target of [{ selector: '#cta', text: 'Sign up' }, { selector: '#cta' }]) {
+      const { model } = fixture();
+      const pin = model.addPin({ x: 25, y: 30, target, targetBox: { x: 20, y: 20, w: 20, h: 20 } });
+      model.edit(pin.id, { comment: 'Make this bigger', target: { ...target, html: '<button class="new">Sign up</button>' } });
+      expect(model.getState().items[0].anchor).toEqual(pin.anchor);
+      expect(model.anchorRequests()).toEqual([{ key: pin.id, ...target }]);
+      model.reanchor({ [pin.id]: { x: 40, y: 40, w: 40, h: 40 } });
+      expect(model.getState().items[0]).toMatchObject({ x: 50, y: 60, comment: 'Make this bigger' });
+      model.undo();
+      expect(model.getState().items[0]).toMatchObject({ x: 50, y: 60, comment: '' });
+      expect(model.getState().items[0].anchor).toEqual(pin.anchor);
+    }
+  });
+
+  test('changing target selector or text, or removing the target, still clears its anchor', () => {
+    for (const target of [{ selector: '#other', text: 'Sign up' }, { selector: '#cta', text: 'Changed' }, { selector: '#cta' }, undefined]) {
+      const { model } = fixture();
+      const pin = model.addPin({ x: 25, y: 30, target: { selector: '#cta', text: 'Sign up' }, targetBox: { x: 20, y: 20, w: 20, h: 20 } });
+      model.edit(pin.id, { target });
+      expect(model.getState().items[0].anchor).toBeUndefined();
+      expect(model.anchorRequests()).toEqual([]);
+    }
+  });
+
   test('registers anchors and moves pins and regions without creating history or emitting unchanged layouts', () => {
     const { model } = fixture();
     const target = { selector: '#cta', text: 'Sign up', html: '<button>Sign up</button>' };

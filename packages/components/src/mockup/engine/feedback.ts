@@ -237,7 +237,7 @@ export function createFeedback(init: FeedbackInit = {}) {
           Object.assign(item, drawing({ strokes }));
         } else if (item.kind === 'region') Object.assign(item, box({ x: item.x, y: item.y, w: item.w ?? 0, h: item.h ?? 0 }));
         else { item.x = clamp(item.x); item.y = clamp(item.y); }
-        if ('target' in patch && !targetBox) delete item.anchor;
+        if ('target' in patch && !targetBox && (original.target?.selector !== item.target?.selector || original.target?.text !== item.target?.text)) delete item.anchor;
         if (targetBox) anchor(item, targetBox);
         else if (item.anchor && ['x', 'y', 'w', 'h'].some(key => key in patch)) anchor(item, boxes[item.anchor.key] ?? undefined);
       });
