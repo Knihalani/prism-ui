@@ -8,6 +8,26 @@ import '../src/num';
 
 afterEach(cleanup);
 
+test('streaming summary amounts stay skeletons until settlement, including empty and missing-price estimates', () => {
+  for (const items of [[], [{ id: 'seats', label: 'Seats' }], [{ id: 'seats', label: 'Seats', price: 20, qty: 3 }]]) {
+    const text = source({ items }), partial = text.slice(0, text.lastIndexOf('\n```'));
+    const view = render(<Prism source={partial} done={false} animate={false} />);
+    const summary = view.container.querySelector('[data-part="summary"]')!;
+    expect(view.getByRole('group').dataset.state).toBe('streaming');
+    expect(summary.getAttribute('aria-busy')).toBe('true');
+    expect(summary.querySelectorAll('[data-prism-skeleton-line]')).toHaveLength(2);
+    expect(summary.textContent).not.toContain('$0.00');
+    expect(summary.querySelector('[aria-live]')?.textContent).toBe('');
+    const total = summary.querySelector('[data-part="total-value"]');
+    view.rerender(<Prism source={text} animate={false} />);
+    expect(summary.hasAttribute('aria-busy')).toBe(false);
+    expect(summary.querySelector('[data-prism-skeleton]')).toBeNull();
+    expect(summary.querySelector('[data-part="total-value"]')).toBe(total);
+    expect(total?.textContent).toBe(items.some(item => 'price' in item) ? '$60.00' : '$0.00');
+    view.unmount();
+  }
+});
+
 test('sent receipt describes the final middleware-delivered estimate', () => {
   const view = render(<Prism source={source()} onAction={() => {}} middleware={[(action, next) => next({ ...action, payload: { items: [{ id: 'seats' }], total: 42 } })]} animate={false} />);
   fireEvent.click(view.getByRole('button', { name: 'Use this estimate' }));
@@ -96,11 +116,13 @@ test('dotted item ids share nested quantity and enabled paths with controls and 
   expect(view.actions.at(-1)?.payload).toEqual({ items: [{ id: 'support.hours', label: 'Support hours', qty: 3, price: 10, amount: 30 }], total: 30 });
 });
 
-test('streaming partial and invalid currencies fall back until a complete code arrives', () => {
+test('streaming currencies stay skeletons and settle with a valid code or currency fallback', () => {
   const store = createStore();
   const view = render(<Prism source={'```ui:estimate\n{"id":"quote","items":[{"id":"seats","label":"Seats","price":20}],"currency":"'} done={false} store={store} animate={false} locale="en-US" currency="GBP" />);
   for (const [currency, code] of [['', 'GBP'], ['U', 'GBP'], ['US', 'GBP'], ['U1D', 'GBP'], ['USDD', 'GBP'], ['USD', 'USD'], ['EUR', 'EUR'], ['eur', 'EUR'], [' eUr ', 'EUR'], ['  ', 'GBP'], [' u ', 'GBP']]) {
     view.rerender(<Prism source={'```ui:estimate\n{"id":"quote","items":[{"id":"seats","label":"Seats","price":20}],"currency":"' + currency} done={false} store={store} animate={false} locale="en-US" currency="GBP" />);
+    expect(view.container.querySelector('[data-part="total-value"] [data-prism-skeleton]')).toBeTruthy();
+    view.rerender(<Prism source={'```ui:estimate\n{"id":"quote","items":[{"id":"seats","label":"Seats","price":20}],"currency":"' + currency + '"}\n```'} done store={store} animate={false} locale="en-US" currency="GBP" />);
     expect(view.container.querySelector('[data-part="total-value"]')?.textContent).toBe(new Intl.NumberFormat('en-US', { style: 'currency', currency: code }).format(20));
   }
   view.rerender(<Prism source={source({ currency: 'EUR', items: [{ id: 'seats', label: 'Seats', price: 20 }] })} store={store} animate={false} locale="en-US" currency="GBP" />);

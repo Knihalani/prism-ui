@@ -89,15 +89,19 @@ function EstimateSkeleton() {
   const item = usePart('estimate', 'item', 'loading'), details = usePart('estimate', 'details'), label = usePart('estimate', 'label'), price = usePart('estimate', 'price'), stepper = usePart('estimate', 'stepper'), amount = usePart('estimate', 'amount');
   return <StreamSkeleton style={{ display: 'contents' }}><div {...item} aria-hidden="true"><div {...details}><div {...label} data-prism-skeleton-line="">&nbsp;</div><div {...price}>&nbsp;</div></div><div {...stepper} className={cx(stepper.className, !unstyled && 'prism-stepper')}><button disabled>−</button><input {...input} disabled size={2} value="" readOnly /><button disabled>+</button></div><span {...amount}>&nbsp;</span></div></StreamSkeleton>;
 }
+function AmountSkeleton() {
+  return <StreamSkeleton as="span" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}><span data-prism-skeleton-line="" style={{ height: '.55em' }} /></StreamSkeleton>;
+}
 export function Estimate(ctx: PrismComponentProps<EstimateProps>) {
   const { unstyled } = usePrism(), presentation = usePresentation(), settled = useSettled();
+  const streaming = presentation['data-state'] === 'streaming';
   const estimate = useEstimate(ctx.props, ctx), { parts } = estimate;
   const Item = useSlot('estimate', 'item', EstimateItem), Empty = useSlot('estimate', 'empty', 'div' as any), Actions = useSlot('estimate', 'actions', 'div' as any);
   return <ComponentFrame component="estimate" title={estimate.title} state={presentation['data-state']} undo ask actions={<Actions {...parts.actions}><button {...parts.submit} className={cx(parts.submit.className, !unstyled && 'prism-pill')} aria-label={estimate.submit} data-sent={!!estimate.sent || undefined} type="button" disabled={!estimate.canUse} onClick={estimate.onUse}>{estimate.sent ? <><ActionCheck /><span>{estimate.sentLabel}</span></> : estimate.submit}</button></Actions>}>
     <MicroActions />
     <div {...parts.list}>{estimate.rows.map(row => <Item key={row.id} row={row} />)}{!settled && Array.from({ length: Math.max(0, 2 - estimate.rows.length) }, (_, index) => <EstimateSkeleton key={`pending-${index}`} />)}{settled && !estimate.rows.length && <Empty {...parts.empty}>{estimate.emptyLabel}</Empty>}</div>
-    <div {...parts.summary}>{estimate.summary.map(line => <div key={line.label} {...parts.summaryRow}><span {...parts.summaryLabel}>{line.label}</span><span {...parts.summaryValue}>{line.value}</span></div>)}
-      <div {...parts.total}><span {...parts.totalLabel}>{estimate.totalLabel}</span><span {...parts.totalValue} ref={estimate.totalRef} data-prism-flash={estimate.flash ? '' : undefined} aria-hidden="true">{estimate.totalText}</span><span {...parts.live} aria-live="polite">{estimate.finalTotalText}</span></div>
+    <div {...parts.summary} aria-busy={streaming || undefined}>{estimate.summary.map(line => <div key={line.label} {...parts.summaryRow}><span {...parts.summaryLabel}>{line.label}</span><span {...parts.summaryValue}>{streaming ? <>{'\u00a0'}<AmountSkeleton /></> : line.value}</span></div>)}
+      <div {...parts.total}><span {...parts.totalLabel}>{estimate.totalLabel}</span><span {...parts.totalValue} ref={estimate.totalRef} data-prism-flash={estimate.flash ? '' : undefined} aria-hidden="true">{streaming ? <>{'\u00a0'}<AmountSkeleton /></> : estimate.totalText}</span><span {...parts.live} aria-live="polite">{streaming ? '' : estimate.finalTotalText}</span></div>
     </div>
   </ComponentFrame>;
 }

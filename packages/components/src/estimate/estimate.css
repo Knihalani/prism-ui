@@ -34,10 +34,10 @@
 .prism-root .prism-estimate__item[data-state="loading"] .prism-estimate__amount { min-width: 8ch; }
 .prism-root .prism-estimate__summary { width: min(100%, 280px); margin: 22px 0 0 auto; }
 .prism-root .prism-estimate__summary-row { display: flex; justify-content: space-between; gap: 24px; padding-block: 7px; color: var(--prism-muted); font-size: 12px; }
-.prism-root .prism-estimate__summary-value { text-align: right; }
+.prism-root .prism-estimate__summary-value { position: relative; display: inline-block; min-inline-size: 8ch; text-align: right; }
 .prism-root .prism-estimate__total { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; padding-top: 18px; margin-top: 10px; border-top: 1px solid var(--estimate-hairline); }
 .prism-root .prism-estimate__total-label { color: var(--prism-muted); font-size: 12px; }
-.prism-root .prism-estimate__total-value { font-size: 32px; font-weight: 650; line-height: 1.15; letter-spacing: -.03em; text-align: right; }
+.prism-root .prism-estimate__total-value { position: relative; display: inline-block; min-inline-size: 8ch; font-size: 32px; font-weight: 650; line-height: 1.15; letter-spacing: -.03em; text-align: right; }
 .prism-root .prism-estimate__live { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .prism-root .prism-estimate__empty { min-height: 90px; display: grid; place-items: center; color: var(--prism-muted); font-size: 13px; }
 .prism-root .prism-estimate__root .prism-estimate__footer { display: flex; justify-content: flex-end; padding: 20px 0 0; border: 0; background: transparent; }
