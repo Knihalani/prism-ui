@@ -1,37 +1,13 @@
-# Prism playground
+# Prism chat demo
 
-An entirely local Vite + React workbench. From the repository root:
+Run `bun run dev` from the repository root. Build with `bun run --cwd apps/playground build`; preview with `bunx vite preview --host 0.0.0.0` in this directory.
 
-```sh
-bun install --no-save
-bun run dev
-```
+A minimal chat interface, with a registry-backed sidebar of working examples. Messages stream eight characters every 20ms through `<Prism>`. Enter sends; Shift+Enter inserts a newline; Stop cancels the current response. Picking another example interrupts the previous response. This is a local, keyword-routed demo, not an AI connection.
 
-Open the URL printed by Vite (normally http://localhost:5173). No API key or backend is needed. `--no-save` keeps the shared root lockfile untouched; this app was added under an app-only change constraint.
+All assistant messages share one localStorage-backed store. Each reply gets its own explicit component IDs, so repeated demos do not collide. New chat clears the thread and resets the playground persistence namespace. Thread text itself is not persisted. The store/persistence module and reusable parser fixtures are retained.
 
-```sh
-bun run --cwd apps/playground build
-bun run --cwd apps/playground test
-```
+Component actions become user messages with expandable JSON payloads, followed by scripted replies. Submitting an estimate demonstrates an agent state patch by increasing its seat count by one (up to 25).
 
-## Workflow
+`src/catalogue.ts` defines grouped, realistic examples and routing keywords; newly registered components are also discovered from the registry. Both artifact and mockup plugins are enabled. Mockup images use a local SVG; React artifacts use the artifact package’s pinned CDN compiler/import map.
 
-- Edit Markdown on the left; the right pane renders `<Prism source>` immediately.
-- **Stream** creates a real AsyncIterable passed to `<Prism stream>`. Configure characters/tick and milliseconds/tick before or during playback. Pause/resume preserves the iterator; Stop finalizes the received prefix. Source is read-only during playback. Shared store values persist across reloads and example changes using `localStorageAdapter('prism-ui')` with namespace `playground`. **Reset state** in the State drawer clears this saved snapshot and restores defaults.
-- The example menu is built from `defaultRegistry.list()` after importing `@prism-ui/components`. Every registered directive gets its declared examples, with a basic syntax fallback if it has none. `tab` is wrapped in `tabs`, and `calc` gets a seed state. Utility exports such as hooks and ComponentFrame are not standalone directives. New exports that register definitions automatically appear after Vite reloads; component CSS is discovered by a Vite glob.
-- The preview enables the component package's `artifactPlugin` and `mockupPlugin`, so their custom fences render interactively in both source and streaming mode rather than as ordinary code blocks.
-- The kitchen sink is a realistic assistant reply combining Markdown, badges, callout, comparison, live numbers, an estimate, a data table, and a sourced summary.
-- **Actions** stores every `onAction` object, including payload, context and message, displaying the newest first. Selecting another fixture or Clear explicitly clears the log.
-- **State** shows the subscribed shared store and applies validated JSON patches through `store.apply`, the same set/merge/delete operation used by `ui:state`. Invalid JSON/patch shapes show an error without changing state.
-- **Prompt docs** is the actual `toPromptDocs(defaultRegistry)` output, with a clipboard button and a selectable fallback when clipboard access is denied.
-- Theme, density, motion, unstyled mode and locale/currency are passed to Prism. The chrome also uses the shipped Prism theme tokens. Unstyled affects the preview, not the workbench chrome.
-
-## Stats methodology
-
-The Vite-only `@prism-ui/core` alias transparently wraps **the actual parser used by Prism**; no duplicate parser or estimated timing is used. Parse milliseconds sum `push`, `end` and `root` API calls. This includes finalization but excludes React rendering and lazy descendant reads outside those API calls. Chunks counts nonempty parser pushes; the final empty decoder flush is excluded. Source mode is one chunk per full source parse, while stream mode counts emitted chunks. Characters are UTF-16 code units (surrogate pairs stay together during replay).
-
-Render commits come from React Profiler around Prism, including interactive component updates. Stats polling is outside that subtree, so it doesn't inflate the counter. Profiler callbacks are development-only in standard React builds; a production build labels this counter “Dev only.”
-
-All app dependencies/configuration live here. Only the root workspace glob and `dev` script are changed outside the app.
-
-See [BUGS.md](BUGS.md) for component limitations encountered during browser verification.
+Tests: `bun test apps/playground/test`. The production build typechecks the app as well as bundling it.
