@@ -1,12 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type HTMLAttributes } from 'react';
 import { ThemeScope } from '@prism-ui/react';
 import { usePlaygroundController, readModePreference, type AppProps } from './usePlayground';
 import { parseLocation, serialiseLocation } from './url-state';
 import { availableThemes } from './themes';
+import { themeFontCss } from './theme-fonts';
+import { artifactFontStyle } from './artifact-fonts';
 import { ChatShell, EditorShell, WorkspaceShell, ShellSwitcher } from './shells';
 import { Palette } from './ui/Palette';
 import { Settings } from './ui/Settings';
 import './shells.css';
+
+function ShellFrame({ 'data-prism-theme-name': theme, ...props }: HTMLAttributes<HTMLDivElement> & { 'data-prism-theme-name'?: string }) {
+  return <div {...props} data-theme={theme} style={{ ...props.style, ...artifactFontStyle }}><style>{themeFontCss}</style>{props.children}</div>;
+}
 
 export function App(props: AppProps) {
   const [selection, setSelection] = useState(() => parseLocation(window.location.search, availableThemes.map(theme => theme.name)));
@@ -17,7 +23,7 @@ export function App(props: AppProps) {
     const restore = () => { const next = parseLocation(location.search, availableThemes.map(theme => theme.name)); setSelection(next); c.setThemeChoice(next.mode ?? readModePreference()); c.setDrawer(false); };
     window.addEventListener('popstate', restore); return () => window.removeEventListener('popstate', restore);
   }, []);
-  return <ThemeScope theme={selected} mode={c.mode} density={selection.shell === 'chat' ? 'comfortable' : 'compact'} animate={!c.reduced} className={'chat-app shell shell-' + selection.shell} data-shell={selection.shell} data-mode={c.mode}>
+  return <ThemeScope as={ShellFrame} theme={selected} mode={c.mode} density={selection.shell === 'chat' ? 'comfortable' : 'compact'} animate={!c.reduced} className={'chat-app shell shell-' + selection.shell} data-shell={selection.shell} data-mode={c.mode}>
     <div className="shell-stage" key={selection.shell} inert={!!c.overlay || undefined}>
       {selection.shell === 'chat' ? <ChatShell c={c} /> : selection.shell === 'editor' ? <EditorShell c={c} /> : <WorkspaceShell c={c} />}
     </div>

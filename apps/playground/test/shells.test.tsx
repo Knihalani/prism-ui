@@ -2,6 +2,7 @@ import '../../../packages/react/test/setup';
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { host } from '@prism-ui/react';
+import { SegmentedTotal } from '@prism-ui/themes';
 import { App } from '../src/App';
 import { fast } from '../src/agent/pace';
 import { parseLocation, serialiseLocation, shells } from '../src/url-state';
@@ -26,12 +27,32 @@ test('theme enumeration puts host first and discovers future theme objects, not 
   expect(availableThemes[0]).toBe(host);
   expect(availableThemes.map(theme => theme.name)).toContain('refraction');
   expect(availableThemes.map(theme => theme.name)).toContain('instrument');
+  expect(availableThemes.map(theme => theme.name)).toEqual(expect.arrayContaining(['host', 'refraction', 'instrument', 'print', 'objects']));
+  expect(availableThemes).toHaveLength(5);
+  expect(availableThemes).not.toContain(SegmentedTotal);
+});
+test.each(['print', 'objects'])('%s styles the reply, not the host chrome, and round-trips through a shell change', async name => {
+  const state = { shell: 'editor', theme: name, mode: 'dark' } as const;
+  const names = availableThemes.map(theme => theme.name);
+  expect(parseLocation(serialiseLocation(state), names)).toEqual(state);
+  history.replaceState(null, '', '?' + serialiseLocation(state));
+  const view = render(<App pace={fast} />);
+  const select = view.getByRole('combobox', { name: 'Design theme' }) as HTMLSelectElement;
+  expect(Array.from(select.options).map(option => option.value)).toEqual(names);
+  expect(select.value).toBe(name);
+  expect(view.container.querySelector('.shell')?.getAttribute('data-theme')).toBe(name);
+  expect(view.container.querySelector('.shell')?.hasAttribute('data-prism-theme-name')).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: 'Workspace' }));
+  expect(parseLocation(location.search, names)).toEqual({ ...state, shell: 'workspace' });
+  fireEvent.change(view.getByRole('combobox', { name: 'Choose conversation or scenario' }), { target: { value: 'scenario:deploy' } });
+  await waitFor(() => expect(view.container.querySelector('.reply-content > .prism-root')?.getAttribute('data-prism-theme-name')).toBe(name));
+  await waitFor(() => expect(view.container.querySelector(name === 'print' ? '[data-print-header]' : '[data-objects-header]')).not.toBeNull());
 });
 test.each(shells)('%s renders and interacts with the same scenario reply', async shell => {
   history.replaceState(null, '', '?shell=' + shell + '&theme=host&mode=dark');
   const view = render(<App pace={fast} />);
   expect(view.container.querySelector('[data-shell]')?.getAttribute('data-shell')).toBe(shell);
-  expect(view.container.querySelector('[data-prism-theme-name]')?.getAttribute('data-prism-theme-name')).toBe('host');
+  expect(view.container.querySelector('.shell')?.getAttribute('data-theme')).toBe('host');
   if (shell === 'chat') fireEvent.click(view.getByRole('button', { name: 'Recover the deploy' }));
   else fireEvent.change(view.getByRole('combobox', { name: 'Choose conversation or scenario' }), { target: { value: 'scenario:deploy' } });
   await waitFor(() => expect(view.container.querySelector('[data-prism="troubleshoot"]')).not.toBeNull());
@@ -64,7 +85,7 @@ test('mode falls back to saved preference; changing theme and mode updates the U
   history.replaceState(null, '', '?shell=workspace&theme=instrument&mode=dark');
   act(() => window.dispatchEvent(new PopStateEvent('popstate')));
   expect(view.container.querySelector('[data-shell]')?.getAttribute('data-shell')).toBe('workspace');
-  expect(view.container.querySelector('[data-prism-theme-name]')?.getAttribute('data-prism-theme-name')).toBe('instrument');
+  expect(view.container.querySelector('.shell')?.getAttribute('data-theme')).toBe('instrument');
 });
 test('invalid URL and storage values fall back to chat, host and the system color preference', () => {
   const original = window.matchMedia;
@@ -74,7 +95,7 @@ test('invalid URL and storage values fall back to chat, host and the system colo
     history.replaceState(null, '', '?shell=invalid&theme=invalid&mode=invalid');
     const view = render(<App pace={fast} />);
     expect(view.container.querySelector('[data-shell]')?.getAttribute('data-shell')).toBe('chat');
-    expect(view.container.querySelector('[data-prism-theme-name]')?.getAttribute('data-prism-theme-name')).toBe('host');
+    expect(view.container.querySelector('.shell')?.getAttribute('data-theme')).toBe('host');
     expect(view.container.querySelector('[data-prism-theme]')?.getAttribute('data-prism-theme')).toBe('dark');
   } finally { window.matchMedia = original; }
 });
