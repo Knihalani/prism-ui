@@ -10,6 +10,15 @@ import { pick } from '../../components/src/pick';
 
 afterEach(cleanup);
 
+test('replacing a completed estimate never writes new totals under the previous id', () => {
+  const store = createStore(), registry = createRegistry([estimate]);
+  const source = (id: string, price: number) => '```ui:estimate\n' + JSON.stringify({ id, items: [{ id: 'seat', price, qty: 1 }] }) + '\n```';
+  const view = render(<Prism store={store} registry={registry} source={source('first', 20)}/>);
+  view.rerender(<Prism store={store} registry={registry} source={source('second', 90)}/>);
+  expect(store.get('first.total')).toBe(20);
+  expect(store.get('second.total')).toBe(90);
+});
+
 test('character-by-character estimate/pick streams persist only provisional keys or final ids', async () => {
   const registry = createRegistry([estimate, pick]), saved: object[] = [], memory = memoryAdapter();
   const adapter: Adapter = { load: memory.load, save(ns, data) { saved.push(data); memory.save(ns, data); } };

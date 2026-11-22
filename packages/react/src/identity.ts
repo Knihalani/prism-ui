@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { Node } from '@prism-ui/core';
 import type { Store } from '@prism-ui/state';
 
@@ -29,11 +29,12 @@ export function migrateComponentState(store: Store, from: string, to: string) {
 
 export function useComponentId(node: Node, requested: unknown, store: Store) {
   const target = node.complete === false || !Object.isFrozen(node) ? node.key : String(requested ?? node.key);
-  const [id, setId] = useState(target);
+  const previous = useRef(target), [, refresh] = useState(0);
+  const migrating = previous.current === node.key && target !== node.key;
   useLayoutEffect(() => {
-    if (id === target) return;
-    if (id === node.key) migrateComponentState(store, node.key, target);
-    setId(target);
-  }, [id, target, node.key, store]);
-  return id;
+    if (migrating) migrateComponentState(store, node.key, target);
+    previous.current = target;
+    if (migrating) refresh(value => value + 1);
+  }, [target, node.key, store, migrating]);
+  return { id: target, ready: !migrating };
 }

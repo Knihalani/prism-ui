@@ -57,11 +57,12 @@ function Directive({ node }: { node: Node }) {
   const def = context.registry.get(name), raw = useBindings(node, context.store);
   const result = def?.schema?.coerce(raw) ?? { value: raw, issues: [], partial: false };
   const coerced = result.value ?? {}, complete = node.complete !== false;
-  const id = useComponentId(node, coerced.id ?? raw.id, context.store);
+  const { id, ready } = useComponentId(node, coerced.id ?? raw.id, context.store);
   const props = coerced.id === undefined ? coerced : { ...coerced, id };
   const View = !complete && result.partial && def?.fallback ? def.fallback : context.components[name] ?? def?.component;
   const children = renderChildren(node);
   const value = useMemo(() => ({ name, id, props, node, def }), [name, id, props, node, def]);
+  if (!ready) return null;
   return <ComponentContext.Provider value={value}>{View ? <View node={node} props={props} id={id} complete={complete} partial={result.partial} issues={result.issues}>{children}</View> : <div data-prism="unknown" data-name={name}>{children}</div>}</ComponentContext.Provider>;
 }
 function renderChildren(node: Node) { return node.children?.map(child => <NodeView key={child.key} node={Object.isFrozen(child) ? child : { ...child }} />); }
