@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type HTMLAttributes, type KeyboardEvent } from 'react';
+import { Children, createContext, isValidElement, useContext, useEffect, useMemo, useRef, useState, type HTMLAttributes, type KeyboardEvent } from 'react';
 import type { Node } from '@prism-ui/core';
 import { s } from '@prism-ui/schema';
 import { ComponentContext, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, useSlot, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
@@ -29,17 +29,19 @@ export function useRunbook(props: RunbookProps, ctx: PrismContextValue) {
 }
 const RunbookContext = createContext<ReturnType<typeof useRunbook> | null>(null);
 function Box(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
-function Empty(props: HTMLAttributes<HTMLDivElement>) { const root = usePart('runbook', 'empty'), part = usePart('runbook', 'skeleton'); return <div {...root} {...props} role="status">{[0, 1, 2].map(key => <div key={key} {...part} aria-hidden="true" />)}</div>; }
+function Empty(props: HTMLAttributes<HTMLDivElement>) { const root = usePart('runbook', 'empty'), part = usePart('runbook', 'skeleton'); return <div {...root} {...props} role="status"><div {...part} aria-hidden="true" /></div>; }
 export function Runbook(input: PrismComponentProps<RunbookProps>) {
   return <RunbookView {...input} />;
 }
 function RunbookView({ props, children }: PrismComponentProps<RunbookProps>) {
   const vm = useRunbook(props, usePrism());
+  const streaming = useContext(ComponentContext)?.node.complete === false;
+  const content = streaming ? Children.toArray(children).filter(child => isValidElement<{ node: Node }>(child) && child.props.node?.type === 'component' && child.props.node.name === 'step') : children;
   const progress = usePart('runbook', 'progress'), track = usePart('runbook', 'track'), fill = usePart('runbook', 'fill'), status = usePart('runbook', 'status');
   const EmptyState = useSlot('runbook', 'empty', Empty);
   return <RunbookContext.Provider value={vm}><ComponentFrame component="runbook" title={vm.title} state={vm.complete ? 'complete' : 'active'} ask undo toolbar={<div {...progress}>
     <span {...status} aria-live="polite">{vm.progress}</span><div {...track} role="progressbar" aria-label={vm.labels.progress} aria-valuemin={0} aria-valuenow={vm.count} aria-valuemax={vm.steps.length}><div {...fill} style={{ ...fill.style, width: `${vm.steps.length ? vm.count / vm.steps.length * 100 : 0}%` }} /></div>
-  </div>}>{vm.steps.length === 0 && <EmptyState aria-label={vm.labels.loading} />}{children}</ComponentFrame></RunbookContext.Provider>;
+  </div>}>{vm.steps.length === 0 && <EmptyState aria-label={vm.labels.loading} />}{content}</ComponentFrame></RunbookContext.Provider>;
 }
 export function useStep(props: StepProps, ctx: PrismContextValue, node: Node) {
   const book = useContext(RunbookContext), format = useFormat();

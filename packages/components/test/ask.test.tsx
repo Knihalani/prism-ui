@@ -108,7 +108,7 @@ test('segmented select arrows wrap, switch uses keyboard click and Enter submits
 test('streaming empty rows, label skeleton and last-field control skeleton remain safe until complete', () => {
   const initial = '```ui:ask\n{"id":"stream","fields":[';
   const view = render(<Prism source={initial} done={false} registry={registry} />);
-  expect(view.container.querySelectorAll('[data-part="skeleton"]').length).toBe(2);
+  expect(view.container.querySelectorAll('[data-part="skeleton"]').length).toBe(1);
   expect((view.getByRole('button', { name: 'Send' }) as HTMLButtonElement).disabled).toBe(true);
   const partial = initial + '{"id":"name","type":"text"';
   view.rerender(<Prism source={partial} done={false} registry={registry} />);

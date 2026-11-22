@@ -45,9 +45,11 @@
 .prism-root .prism-ask__summaryRow { display: grid; grid-template-columns: minmax(100px, 1fr) 2fr; align-items: baseline; gap: var(--prism-space4); padding: var(--prism-space2) 0; border-bottom: 1px solid var(--prism-border-soft); font-size: var(--prism-text-sm); }
 .prism-root .prism-ask__summaryLabel { color: var(--prism-muted); }
 .prism-root .prism-ask__summaryValue { white-space: pre-wrap; font-variant-numeric: tabular-nums; }
-.prism-root .prism-ask__skeleton { min-height: var(--prism-space8); height: var(--prism-space8); width: 100%; margin-block: var(--prism-space2); border-radius: var(--prism-radius-sm); background: linear-gradient(100deg, var(--prism-muted-soft) 20%, var(--prism-surface-soft) 45%, var(--prism-muted-soft) 70%); background-size: 220% 100%; animation: prism-ask-shimmer calc(var(--prism-duration-base) * 6) linear infinite; }
+.prism-root .prism-ask__skeleton { min-height: calc(var(--prism-space7) + var(--prism-space1)); height: calc(var(--prism-space7) + var(--prism-space1)); width: 100%; border-radius: var(--prism-radius-sm); background: linear-gradient(100deg, var(--prism-muted-soft) 20%, var(--prism-surface-soft) 45%, var(--prism-muted-soft) 70%); background-size: 220% 100%; animation: prism-ask-shimmer calc(var(--prism-duration-base) * 6) linear infinite; }
 .prism-root .prism-ask__empty { grid-column: 1 / -1; }
-.prism-root .prism-ask__empty .prism-ask__skeleton { height: 76px; }
+.prism-root .prism-ask__empty .prism-ask__skeleton { min-height: var(--prism-space6); height: var(--prism-space6); }
+.prism-root .prism-ask__field[data-type="textarea"] .prism-ask__skeleton { min-height: calc(var(--prism-space8) * 2); }
+.prism-root .prism-ask__field:has(> .prism-ask__label:only-child) .prism-ask__label { margin-bottom: 0; }
 .prism-root .prism-ask__label[data-state="loading"] { max-width: 45%; border-radius: var(--prism-radius-sm); background: var(--prism-muted-soft); }
 @keyframes prism-ask-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 .prism-root[data-animate="false"] .prism-ask__skeleton, .prism-root [data-animate="false"] .prism-ask__skeleton { animation: none; }

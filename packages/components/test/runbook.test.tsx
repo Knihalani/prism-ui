@@ -53,7 +53,9 @@ test('keyboard toggles, arrow focus and frame undo work; unrelated state does no
 test('streaming grows from empty skeleton through missing title and partial body', () => {
   const initial = '::::runbook{title="Deploy"}\n';
   const view = render(<Prism source={initial} done={false} registry={registry} />);
-  expect(view.container.querySelectorAll('[data-part="skeleton"]').length).toBe(3);
+  expect(view.container.querySelectorAll('[data-part="skeleton"]').length).toBe(1);
+  view.rerender(<Prism source={initial + ':::step{title="Installing'} done={false} registry={registry} />);
+  expect(view.queryByText(':::step{title="Installing')).toBeNull();
   view.rerender(<Prism source={initial + ':::step\nHel'} done={false} registry={registry} />);
   expect(view.container.querySelector('[data-part="stepTitle"]')?.getAttribute('data-state')).toBe('loading');
   view.rerender(<Prism source={initial + ':::step\nHello world\n:::\n::::\n'} registry={registry} />);

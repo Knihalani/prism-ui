@@ -69,7 +69,7 @@ export function useAsk(props: AskProps, ctx: PrismContextValue) {
 }
 type Model = ReturnType<typeof useAsk>;
 function Box(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
-function Empty({ label }: { label: string }) { const root = usePart('ask', 'empty'), part = usePart('ask', 'skeleton'); return <div {...root} role="status" aria-label={label}>{[0, 1].map(index => <div key={index} {...part} />)}</div>; }
+function Empty({ label }: { label: string }) { const root = usePart('ask', 'empty'), part = usePart('ask', 'skeleton'); return <div {...root} role="status" aria-label={label}><div {...part} /></div>; }
 function Field({ field, index, vm }: { field: AskField; index: number; vm: Model }) {
   const unique = useId(), id = `ask-${unique}`, errorId = `${id}-error`, hintId = `${id}-hint`;
   const root = usePart('ask', 'field', vm.loading(index) ? 'loading' : undefined), label = usePart('ask', 'label', field.label ? undefined : 'loading'), required = usePart('ask', 'required'), suggested = usePart('ask', 'suggested'), control = usePart('ask', 'control'), hint = usePart('ask', 'hint'), errorPart = usePart('ask', 'error'), skeleton = usePart('ask', 'skeleton'), unit = usePart('ask', 'unit'), wrap = usePart('ask', 'inputWrap'), segments = usePart('ask', 'segments'), segment = usePart('ask', 'segment'), switchPart = usePart('ask', 'switch'), thumb = usePart('ask', 'thumb'), optionPart = usePart('ask', 'option');
@@ -94,7 +94,7 @@ function Field({ field, index, vm }: { field: AskField; index: number; vm: Model
   else input = <input {...control} {...attrs} ref={ref} type={field.type ?? 'text'} value={typeof value === 'boolean' ? String(value) : value ?? ''} min={field.min} max={field.max} step={field.step} placeholder={field.placeholder} onChange={event => vm.change(key, normalize(field, event.target.value))} onBlur={onBlur} />;
   return <div {...root} data-type={field.type} data-wide={field.type === 'text' || field.type === 'textarea' || undefined}>
     <label {...label} id={`${id}-label`} htmlFor={id}>{field.label ?? <span aria-hidden="true">&nbsp;</span>}{field.required && <span {...required} aria-hidden="true"> *</span>}{vm.suggested(field) && <span {...suggested}>{vm.labels.suggested}</span>}</label>
-    <div {...wrap}>{input}{field.unit && <span {...unit}>{field.unit}</span>}</div>
+    {field.type && <div {...wrap}>{input}{field.unit && <span {...unit}>{field.unit}</span>}</div>}
     {field.hint && <div {...hint} id={hintId}>{field.hint}</div>}{error && <div {...errorPart} id={errorId} role="alert">{error}</div>}
   </div>;
 }

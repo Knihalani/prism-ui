@@ -2,7 +2,7 @@
 .prism-root .prism-runbook__progress { min-width: 100px; color: var(--prism-muted); font-size: var(--prism-text-xs); font-variant-numeric: tabular-nums; }
 .prism-root .prism-runbook__track { height: 4px; margin-top: var(--prism-space1); border-radius: var(--prism-radius-sm); background: var(--prism-muted-soft); overflow: hidden; }
 .prism-root .prism-runbook__fill { height: 100%; background: var(--prism-accent); transition: width var(--prism-duration-base) var(--prism-ease); }
-.prism-root .prism-runbook__step { position: relative; padding: var(--prism-space3) var(--prism-space4); margin-bottom: var(--prism-space3); min-height: 120px; border: 1px solid var(--prism-border-soft); border-radius: var(--prism-radius-md); background: var(--prism-surface); transition: border-color var(--prism-duration-base) var(--prism-ease); }
+.prism-root .prism-runbook__step { position: relative; padding: var(--prism-space3) var(--prism-space4); margin-bottom: var(--prism-space3); min-height: calc(var(--prism-space7) + var(--prism-space3) * 2 + 2px); border: 1px solid var(--prism-border-soft); border-radius: var(--prism-radius-md); background: var(--prism-surface); transition: border-color var(--prism-duration-base) var(--prism-ease); }
 .prism-root .prism-runbook__step[data-numbered="true"] { margin-left: calc(var(--prism-space7) + var(--prism-space3)); }
 .prism-root .prism-runbook__step[data-numbered="true"]:not(:last-child)::before { content: ""; position: absolute; left: calc(-1 * (var(--prism-space3) + var(--prism-space7) / 2)); top: calc(var(--prism-space3) + var(--prism-space7)); bottom: calc(-2 * var(--prism-space3)); width: 1px; background: var(--prism-border); }
 .prism-root .prism-runbook__step[data-numbered="true"] .prism-runbook__check { position: absolute; left: calc(-1 * (var(--prism-space7) + var(--prism-space3))); top: var(--prism-space3); }
@@ -14,6 +14,7 @@
 .prism-root .prism-runbook__check[data-state="current"] { color: var(--prism-accent); background: var(--prism-accent-soft); border-color: var(--prism-accent); box-shadow: 0 0 0 var(--prism-space1) var(--prism-accent-soft); }
 .prism-root .prism-runbook__check[data-state="done"] { color: var(--prism-surface); background: var(--prism-success); border-color: var(--prism-success); }
 .prism-root .prism-runbook__stepBody { margin-top: var(--prism-space3); min-width: 0; }
+.prism-root .prism-runbook__stepBody:empty { margin-top: 0; }
 .prism-root .prism-runbook__stepBody[data-state="done"] { color: var(--prism-muted); }
 .prism-root .prism-runbook__actions { display: flex; justify-content: flex-end; flex-shrink: 0; gap: var(--prism-space2); min-height: var(--prism-space7); margin-left: auto; }
 .prism-root :is(.prism-runbook__copy, .prism-runbook__stuck) { border: 0; border-radius: var(--prism-radius-sm); padding: var(--prism-space1) var(--prism-space2); background: transparent; color: var(--prism-muted); font: 500 var(--prism-text-sm) var(--prism-font-sans); cursor: pointer; }
@@ -21,7 +22,7 @@
 .prism-root .prism-runbook__stuck { opacity: 0; }
 .prism-root .prism-runbook__step:is(:hover, :focus-within, [data-state="current"]) .prism-runbook__stuck { opacity: 1; }
 .prism-root :is(.prism-runbook__check, .prism-runbook__copy, .prism-runbook__stuck):focus-visible { outline: 2px solid var(--prism-accent); outline-offset: var(--prism-space1); }
-.prism-root .prism-runbook__skeleton { height: 120px; margin-bottom: var(--prism-space3); border-radius: var(--prism-radius-md); background: var(--prism-muted-soft); }
+.prism-root .prism-runbook__skeleton { height: calc(var(--prism-space7) + var(--prism-space3) * 2 + 2px); border-radius: var(--prism-radius-md); background: var(--prism-muted-soft); }
 .prism-root .prism-runbook__skeleton { background: linear-gradient(100deg, var(--prism-muted-soft) 20%, var(--prism-surface-soft) 45%, var(--prism-muted-soft) 70%); background-size: 220% 100%; }
 .prism-root .prism-runbook__stepTitle[data-state="loading"] { width: 40%; height: var(--prism-space5); border-radius: var(--prism-radius-sm); background: var(--prism-muted-soft); }
 @keyframes prism-runbook-pulse { 50% { opacity: .55; } }
