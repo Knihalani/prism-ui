@@ -115,8 +115,10 @@ test('actions queue their replies in order without truncating the active stream'
   await waitFor(() => expect(x.queryByRole('button', { name: 'Stop response' }) === null).toBe(true));
   const replies = x.container.querySelectorAll('[data-message=assistant]');
   expect(replies[1].textContent).toContain('The goal isn’t perfection');
-  expect(replies[2].textContent).toContain('Got it — I’ve noted');
-  expect(replies[3].textContent).toContain('Got it — I’ve noted');
+  expect(replies[2].textContent).toContain('Concierge pilot');
+  expect(replies[2].textContent).not.toContain('Self-serve pilot');
+  expect(replies[3].textContent).toContain('Self-serve pilot');
+  expect(replies[3].textContent).not.toContain('Concierge pilot');
 });
 
 test.each(['Stop response', 'New chat'])('%s discards queued action replies', async control => {

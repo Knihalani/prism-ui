@@ -6,7 +6,7 @@ import { JsonScanner } from './json';
 import { Plugins, type InlineExtensions, type ParserOptions } from './plugins';
 
 const fence = (s: string) => /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(s);
-const directive = (s: string) => /^ {0,3}(:{2,})([\w-]+)(?:\{(.*)\})?\s*$/.exec(s);
+const directive = (s: string) => /^ {0,3}(:{2,})([\w-]+)[ \t]*(?:\{(.*)\})?\s*$/.exec(s);
 const item = (s: string) => /^( *)([-+*]|\d+[.)])\s+(.*)$/.exec(s);
 const thematic = (s: string) => /^ {0,3}(?:(?:\*\s*){3,}|(?:-\s*){3,}|(?:_\s*){3,})$/.test(s);
 const cells = (s: string) => s.trim().replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map(s => s.trim().replace(/\\\|/g, '|'));

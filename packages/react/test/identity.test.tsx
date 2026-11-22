@@ -178,7 +178,7 @@ test('finalization preserves provisional edits and migrates once without history
   view.rerender(<StrictMode><Prism scope="test" registry={registry} store={store} source={'```ui:counter\n{"id":"final"}\n```'}/></StrictMode>);
   expect(store.snapshot()).toEqual({ final: { count: 4 } });
   expect(saved.slice(before)).toEqual([{ final: { count: 4 } }]);
-  expect(store.canUndo).toBe(false);
+  expect(store.canUndo()).toBe(false);
   fireEvent.click(view.getByRole('button', { name: 'final' }));
   expect(store.get('final.count')).toBe(5);
 });
@@ -188,7 +188,7 @@ test('migration fills missing fields but preserves hydrated final state and remo
   const seen: object[] = []; store.subscribe('*', () => seen.push(store.snapshot()));
   migrateComponentState(store, '0.1', 'final');
   expect(store.snapshot()).toEqual({ final: { count: 9, nested: { fresh: true, saved: true } } });
-  expect(seen).toEqual([store.snapshot()]); expect(store.canUndo).toBe(false);
+  expect(seen).toEqual([store.snapshot()]); expect(store.canUndo()).toBe(false);
   migrateComponentState(store, 'missing', 'final'); migrateComponentState(store, 'final', 'final');
   expect(seen).toHaveLength(1);
   migrateComponentState(store, 'final', '__proto__.polluted');

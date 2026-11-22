@@ -63,7 +63,7 @@ export function App({ pace = { chars: 8, delay: 20 } }: { pace?: { chars: number
   }
   function onAction(action: Action) {
     if (action.type === 'copy') return;
-    let reply = 'Got it — I’ve noted your choice. Your changes stay in this conversation. You can keep exploring above, or ask me for the next part of the plan.';
+    let reply = `Got it — I’ve noted “${action.message || 'your choice'}”. Your changes stay in this conversation. You can keep exploring above, or ask me for the next part of the plan.`;
     if (action.component === 'estimate' && action.type === 'use') {
       const path = action.id + '.items.seats.qty', current = store.get(path);
       if (typeof current === 'number') {

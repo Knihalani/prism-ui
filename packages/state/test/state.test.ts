@@ -23,16 +23,16 @@ test('nested batches, patches and bounded history', () => {
   const s = createStore(); let n = 0; s.subscribe('*', () => n++);
   s.undo(); s.redo(); s.batch(() => {}); expect(n).toBe(0);
   s.batch(() => { s.set('a', 1); s.batch(() => s.set('b', 2)); });
-  expect(n).toBe(1); s.undo(); expect(s.snapshot()).toEqual({}); expect(s.canRedo).toBe(true);
+  expect(n).toBe(1); s.undo(); expect(s.snapshot()).toEqual({}); expect(s.canRedo()).toBe(true);
   s.redo(); expect(s.get()).toEqual({ a: 1, b: 2 });
   s.apply({ set: { obj: { a: 1, nested: { x: 1 } } }, merge: { obj: { nested: { y: 2 } } }, delete: ['a'] });
   expect(n).toBe(4); expect(s.get('obj')).toEqual({ a: 1, nested: { x: 1, y: 2 } });
   s.undo(); expect(s.get('a')).toBe(1); expect(s.get('obj')).toBeUndefined();
   s.apply({ merge: { empty: {} } }); expect(s.get('empty')).toEqual({});
-  s.set('c', 3); expect(s.canRedo).toBe(false);
+  s.set('c', 3); expect(s.canRedo()).toBe(false);
   for (let i = 0; i < 110; i++) s.set('x', i);
   for (let i = 0; i < 100; i++) s.undo();
-  expect(s.canUndo).toBe(false); expect(s.get('x')).toBe(9);
+  expect(s.canUndo()).toBe(false); expect(s.get('x')).toBe(9);
 });
 
 test('pollution is blocked in initial, loaded and all write operations', async () => {

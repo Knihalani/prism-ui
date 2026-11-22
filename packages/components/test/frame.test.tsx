@@ -39,29 +39,29 @@ test('ask emits the enclosing directive context and the default human message', 
 test('undo is reactive, restores state, and becomes disabled when history empties', () => {
   const view = setup({ undo: true }), button = view.getByRole('button', { name: 'Undo' }) as HTMLButtonElement;
   expect(button.disabled).toBe(true);
-  act(() => view.store.set('count', 1)); expect(button.disabled).toBe(false);
-  fireEvent.click(button); expect(view.store.get('count')).toBeUndefined(); expect(button.disabled).toBe(true);
-  act(() => view.store.redo()); expect(button.disabled).toBe(false); expect(view.store.get('count')).toBe(1);
+  act(() => view.store.set('demo.count', 1)); expect(button.disabled).toBe(false);
+  fireEvent.click(button); expect(view.store.get('demo.count')).toBeUndefined(); expect(button.disabled).toBe(true);
+  act(() => view.store.redo()); expect(button.disabled).toBe(false); expect(view.store.get('demo.count')).toBe(1);
 });
 
 test('keyboard undo and redo support Control and Meta, with Escape blurring focus', () => {
   const view = setup({ undo: true }), group = view.getByRole('group');
-  act(() => view.store.set('value', 1));
-  fireEvent.keyDown(group, { key: 'z', ctrlKey: true }); expect(view.store.get('value')).toBeUndefined();
-  fireEvent.keyDown(group, { key: 'Z', ctrlKey: true, shiftKey: true }); expect(view.store.get('value')).toBe(1);
-  fireEvent.keyDown(group, { key: 'z', metaKey: true }); expect(view.store.get('value')).toBeUndefined();
-  fireEvent.keyDown(group, { key: 'z', metaKey: true, shiftKey: true }); expect(view.store.get('value')).toBe(1);
+  act(() => view.store.set('demo.value', 1));
+  fireEvent.keyDown(group, { key: 'z', ctrlKey: true }); expect(view.store.get('demo.value')).toBeUndefined();
+  fireEvent.keyDown(group, { key: 'Z', ctrlKey: true, shiftKey: true }); expect(view.store.get('demo.value')).toBe(1);
+  fireEvent.keyDown(group, { key: 'z', metaKey: true }); expect(view.store.get('demo.value')).toBeUndefined();
+  fireEvent.keyDown(group, { key: 'z', metaKey: true, shiftKey: true }); expect(view.store.get('demo.value')).toBe(1);
   const ask = view.getByRole('button', { name: 'Ask about this' }); act(() => ask.focus()); expect(document.activeElement).toBe(ask);
   fireEvent.keyDown(ask, { key: 'Escape' }); expect(document.activeElement).not.toBe(ask);
 });
 
 test('disabled undo leaves history alone and nested frames do not undo twice', () => {
-  const view = setup({ ask: false }); act(() => view.store.set('value', 1));
-  fireEvent.keyDown(view.getByRole('group'), { key: 'z', ctrlKey: true }); expect(view.store.get('value')).toBe(1);
+  const view = setup({ ask: false }); act(() => view.store.set('demo.value', 1));
+  fireEvent.keyDown(view.getByRole('group'), { key: 'z', ctrlKey: true }); expect(view.store.get('demo.value')).toBe(1);
   expect(view.queryByRole('button')).toBeNull();
   function Nested() { return <ComponentFrame component="outer" title="Outer" undo><ComponentFrame component="inner" title="Inner" undo /></ComponentFrame>; }
-  view.rerender(<Prism source={'::example\n'} components={{ example: Nested }} store={view.store} />);
-  act(() => view.store.set('value', 2)); fireEvent.keyDown(view.getByRole('group', { name: 'Inner' }), { key: 'z', ctrlKey: true }); expect(view.store.get('value')).toBe(1);
+  view.rerender(<Prism source={'::example{id=demo}\n'} components={{ example: Nested }} store={view.store} />);
+  act(() => view.store.set('demo.value', 2)); fireEvent.keyDown(view.getByRole('group', { name: 'Inner' }), { key: 'z', ctrlKey: true }); expect(view.store.get('demo.value')).toBe(1);
 });
 
 test('unstyled removes both class families but preserves data, custom classes and styles', () => {
