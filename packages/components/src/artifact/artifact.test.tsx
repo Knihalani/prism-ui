@@ -57,6 +57,27 @@ test('SSR and schemas expose usable artifact chrome and documented fence metadat
   expect(registry.docs()).toContain('fixed height in pixels');
 });
 
+test('reloading migrated artifact feedback preserves its iframe and document on completion', async () => {
+  const restore = observeFrames(), store = createStore();
+  const text = '```artifact:html {id=feedback-migration}\n<p>Stable frame</p>';
+  const ui = (done: boolean) => <Prism source={text + (done ? '\n```' : '')} done={done} plugins={plugins} registry={registry} store={store} />;
+  const view = render(ui(false));
+  try {
+    const frame = await waitFor(() => { const frame = view.container.querySelector('iframe'); if (!frame) throw Error('No frame'); return frame; });
+    const document = frame.srcdoc;
+    fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+    const overall = view.getByRole('textbox', { name: 'Overall feedback' });
+    act(() => overall.focus());
+    fireEvent.change(overall, { target: { value: 'Keep this artifact draft' } });
+    fireEvent.keyUp(overall, { key: 'Unidentified' });
+    view.rerender(ui(true));
+    expect((view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('Keep this artifact draft');
+    expect(store.get('feedback-migration.inlineFeedback.feedback')).toMatchObject({ overall: 'Keep this artifact draft' });
+    expect(view.container.querySelector('iframe')).toBe(frame);
+    expect(frame.srcdoc).toBe(document);
+  } finally { cleanup(); restore(); }
+});
+
 test('streaming partial React source reserves its preview without a frame or compiler', () => {
   const partial = '```artifact:react {title="A calculator" height=267}\nexport default function A(';
   const view = render(<Prism source={partial} plugins={plugins} registry={registry} done={false} />);

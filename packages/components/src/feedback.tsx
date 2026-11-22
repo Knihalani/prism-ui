@@ -7,7 +7,7 @@ import { useMockup } from './mockup/use-mockup';
 import './mockup/mockup.css';
 import './feedback.css';
 
-export function InlineFeedback({ children }: FeedbackSurfaceProps) {
+export function InlineFeedback({ children, targetKey }: FeedbackSurfaceProps) {
   const component = useContext(ComponentContext)!, inline = usePrism().registry.get(component.name)?.inline;
   const [open, setOpen] = useState(false), [activated, setActivated] = useState(false), trigger = useRef<HTMLButtonElement>(null);
   const root = useRef<HTMLDivElement>(null), viewport = useRef<HTMLDivElement>(null);
@@ -18,7 +18,7 @@ export function InlineFeedback({ children }: FeedbackSurfaceProps) {
     <PrismPart as="span" className="prism-inline-feedback__target" ref={viewport}>
       {children}
     </PrismPart>
-    {activated && <FeedbackEditor open={open} close={close} surface={{ root, viewport }} />}
+    {activated && <FeedbackEditor key={targetKey} open={open} close={close} surface={{ root, viewport }} />}
   </PrismPart>;
 }
 function FeedbackEditor({ open, close, surface }: { open: boolean; close(): void; surface: NonNullable<import('./mockup/use-mockup').MockupOptions['surface']> }) {

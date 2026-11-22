@@ -43,10 +43,10 @@ export class RenderBoundary extends Component<{ children: ReactNode; name: strin
   render() { return this.state.failed ? <div role="alert" data-prism-render-error={this.props.name}>This content couldn’t be displayed.</div> : this.props.children; }
 }
 
-export interface FeedbackSurfaceProps { children: ReactNode }
+export interface FeedbackSurfaceProps { children: ReactNode; targetKey?: string }
 let feedbackSurface: ComponentType<FeedbackSurfaceProps> | undefined;
 export function registerFeedbackSurface(surface: ComponentType<FeedbackSurfaceProps>) { feedbackSurface = surface; }
-export function FeedbackSurface({ children }: FeedbackSurfaceProps) {
+export function FeedbackSurface({ children, targetKey }: FeedbackSurfaceProps) {
   const Surface = feedbackSurface;
-  return Surface ? <Surface>{children}</Surface> : <>{children}</>;
+  return Surface ? <Surface targetKey={targetKey}>{children}</Surface> : <>{children}</>;
 }

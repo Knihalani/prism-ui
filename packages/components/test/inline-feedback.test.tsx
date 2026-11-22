@@ -27,6 +27,37 @@ test('opening, editing, submitting and closing inline feedback preserve unrelate
   expect(store.get('budget')).toBe(2);
 });
 
+for (const replacement of ['id', 'store'] as const) for (const saved of [false, true]) {
+  test(`feedback reloads ${saved ? 'saved' : 'empty'} drafts when its ${replacement} changes`, () => {
+    const store = createStore(), nextStore = replacement === 'store' ? createStore() : store;
+    const nextId = replacement === 'id' ? 'replacement' : 'target';
+    if (saved) nextStore.set(`${nextId}.inlineFeedback.feedback`, { items: [], overall: 'Saved for replacement' }, { history: false });
+    const ui = (text: string, activeStore = store) => <Prism store={activeStore} renderers={{ 'feedback-test': View }} feedback source={text} />;
+    const view = render(ui(source));
+    fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+    fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+    change(view.getByPlaceholderText('Add a comment…'), 'Original pin');
+    fireEvent.click(view.getByRole('button', { name: 'Save' }));
+    change(view.getByRole('textbox', { name: 'Overall feedback' }), 'Original draft');
+    view.rerender(ui(source.replace('target', nextId), nextStore));
+    expect((view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe(saved ? 'Saved for replacement' : '');
+    expect(nextStore.get(`${nextId}.inlineFeedback.feedback`)).toMatchObject({ items: [], overall: saved ? 'Saved for replacement' : '' });
+    expect(store.get('target.inlineFeedback.feedback')).toMatchObject({ overall: 'Original draft', items: [{ comment: 'Original pin' }] });
+  });
+}
+
+test('feedback reloads migrated drafts on streaming finalization without remounting the renderer', () => {
+  const store = createStore();
+  const ui = (done: boolean) => <Prism store={store} renderers={{ 'feedback-test': View }} feedback done={done} source={done ? source : source.slice(0, -3)} />;
+  const view = render(ui(false)), input = view.getByText('Actual input');
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  change(view.getByRole('textbox', { name: 'Overall feedback' }), 'Keep this draft');
+  view.rerender(ui(true));
+  expect((view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('Keep this draft');
+  expect(store.get('target.inlineFeedback.feedback')).toMatchObject({ overall: 'Keep this draft' });
+  expect(view.getByText('Actual input')).toBe(input);
+});
+
 test('feedback preserves valid phrasing content for inline built-ins, including the open editor', () => {
   const view = render(<Prism feedback source="Budget :num[3]{id=quantity} per seat." />);
   const paragraph = view.container.querySelector('p')!;
