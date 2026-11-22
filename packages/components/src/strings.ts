@@ -29,9 +29,11 @@ export const componentStrings = {
     "nbsp": "\u00a0"
   },
   "callout": {
+    "label": "Callout",
     "askAboutThis": "Ask about this"
   },
   "card": {
+    "selectMessage": "User select in card: {payload}",
     "askAboutThis": "Ask about this",
     "sent": "Sent"
   },
@@ -94,7 +96,9 @@ export const componentStrings = {
     "pageStatus": "Page {page} of {pages}",
     "nextPage": "Next page"
   },
+  "grid": { "label": "Grid" },
   "tabs": {
+    "tablistLabel": "Tabs",
     "loadingTab": "Loading tab"
   }
 };

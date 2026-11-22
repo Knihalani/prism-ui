@@ -33,7 +33,7 @@ test('registry fixtures declare every rendered part and rendered declared parts 
       components++;
       for (const part of parts) {
         const Marker = ({ as, children, ...props }: any) => {
-          const { row, model, estimate, runbook, step, troubleshoot, summary, point, action, ...attributes } = props;
+          const { row, model, estimate, runbook, step, troubleshoot, summary, point, action, card, callout, grid, badge, tabs, tab, ...attributes } = props;
           return createElement(as ?? tags.get(`${component}.${part}`)!, { ...attributes, 'data-slot-marker': `${component}.${part}` }, children);
         };
         const slots: Slots = { [component]: { [part]: Marker } };
