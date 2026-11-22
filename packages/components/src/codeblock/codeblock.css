@@ -82,7 +82,7 @@
   background: var(--prism-codeblock-highlight, var(--prism-accent, var(--prism-codeblock-accent-text, var(--prism-accent-text))));
 }
 .prism-codeblock__skeleton {
-  --prism-skeleton-width: 11ch;
+  --prism-skeleton-width: var(--prism-codeblock-skeleton-width, calc(var(--prism-codeblock-space-7, var(--prism-space-7)) * 4));
   align-self: center;
 }
 @media (hover: hover) {
