@@ -19,7 +19,11 @@ test('static cards rank in order, explain the top pick and expose docs', () => {
   const view = setup();
   expect(order(view.container)).toEqual(['budget', 'premium']);
   expect(view.getByText("Best for you because it's strong on Price and Quality")).toBeDefined();
-  expect(view.getByText('1 · 50%')).toBeDefined(); expect(view.getByText('2 · 45%')).toBeDefined();
+  expect(view.getByText('#1')).toBeDefined(); expect(view.getByText('#2')).toBeDefined();
+  expect(view.getByText('50% match')).toBeDefined(); expect(view.getByText('45% match')).toBeDefined();
+  expect(view.getByText('Top pick')).toBeDefined();
+  expect(view.container.querySelector('[data-part="value"]')?.textContent).toBe('100%');
+  expect(view.container.querySelectorAll('[data-part="pip"][data-state="on"]').length).toBe(2);
   expect(view.getByText('✓ Low cost')).toBeDefined(); expect(view.getByText('– Basic features')).toBeDefined(); expect(view.getByText('Value')).toBeDefined();
   expect(view.container.querySelector('[data-part="live"]')?.textContent).toBe('Top pick: Budget');
   expect(view.getByRole('group', { name: 'Which plan?' })).toBeDefined();
@@ -70,7 +74,7 @@ test('streaming option without scores renders a skeleton then becomes ranked', (
 
 test('empty, invalid scores and all-zero ties are safe and external weights re-rank', () => {
   const view = setup({ weights: { price: 0, quality: 0 } });
-  expect(order(view.container)).toEqual(['budget', 'premium']); expect(view.getByText('1 · 0%')).toBeDefined();
+  expect(order(view.container)).toEqual(['budget', 'premium']); expect(view.getAllByText('0% match').length).toBe(2);
   act(() => view.store.set('plans.weights.quality', 3)); expect(order(view.container)).toEqual(['premium', 'budget']);
   view.rerender(<Prism source={source({ options: [{ id: 'bad', title: 'Bad', scores: 'invalid' }] })} animate={false} />);
   expect(view.container.querySelector('[data-option="bad"]')?.getAttribute('data-state')).toBe('loading');
