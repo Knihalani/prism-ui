@@ -8,7 +8,7 @@ export { useAsk } from './use-ask';
 export type { AskProps, AskField, AskLabels, AskValue, AskModel } from './use-ask';
 
 function Empty({ ask }: { ask: AskModel }) { const root = usePart('ask', 'empty'), part = usePart('ask', 'skeleton'); return <PrismPart as="div" {...root} slotProps={{ ask }} role="status" aria-label={ask.strings.loading}><PrismPart as="span" {...part} slotProps={{ ask }} data-prism-skeleton="" /></PrismPart>; }
-function Field({ field, index, vm, inline = false }: { field: AskField; index: number; vm: AskModel; inline?: boolean }) {
+function Field({ field, index, vm, inline = false, trailing }: { field: AskField; index: number; vm: AskModel; inline?: boolean; trailing?: ReactNode }) {
   const model = { field, index, ask: vm, vm };
   const themeStrings = vm.strings;
   const unique = useId(), id = `ask-${unique}`, errorId = `${id}-error`, hintId = `${id}-hint`;
@@ -35,7 +35,7 @@ function Field({ field, index, vm, inline = false }: { field: AskField; index: n
   else input = <PrismPart slotProps={model} as="input" {...control} {...attrs} ref={ref} type={field.type ?? 'text'} value={typeof value === 'boolean' ? String(value) : value ?? ''} min={field.min} max={field.max} step={field.step} placeholder={field.placeholder} onChange={event => vm.change(key, normalize(field, event.target.value))} onBlur={onBlur} />;
   return <PrismPart slotProps={model} as={inline ? "span" : "div"} {...root} data-inline={inline || undefined} data-suggested={!vm.submitted && vm.suggested(field) || undefined} data-type={field.type} data-wide={field.type === 'text' || field.type === 'textarea' || undefined}>
     <PrismPart slotProps={model} as="label" {...label} id={`${id}-label`} htmlFor={id} data-prism-skeleton={!field.label ? '' : undefined}>{field.label ?? <PrismPart as="span" {...placeholder} slotProps={model} aria-hidden="true">{themeStrings.nbsp}</PrismPart>}{field.required && <PrismPart slotProps={model} as="span" {...required} aria-hidden="true">{vm.strings.requiredMark}</PrismPart>}{!vm.submitted && vm.suggested(field) && <PrismPart slotProps={model} as="span" {...suggested}>{vm.labels.suggested}</PrismPart>}</PrismPart>
-    {field.type && <PrismPart slotProps={model} as="span" {...wrap} data-sent={vm.submitted || undefined}>{input}{vm.submitted && <PrismPart as="button" {...confirmed} slotProps={model} type="button" aria-label={interpolate(vm.strings.editValue, { label: field.label ?? key, value: vm.display(field) })} onClick={() => vm.edit(key)}>{vm.display(field)}</PrismPart>}{field.unit && <PrismPart slotProps={model} as="span" {...unit}>{field.unit}</PrismPart>}</PrismPart>}
+    {field.type && <PrismPart slotProps={model} as="span" {...wrap} data-sent={vm.submitted || undefined}>{input}{vm.submitted && <PrismPart as="button" {...confirmed} slotProps={model} type="button" aria-label={interpolate(vm.strings.editValue, { label: field.label ?? key, value: vm.display(field) })} onClick={() => vm.edit(key)}>{vm.display(field)}{trailing}</PrismPart>}{field.unit && <PrismPart slotProps={model} as="span" {...unit}>{field.unit}</PrismPart>}</PrismPart>}
     {field.hint && <PrismPart slotProps={model} as="span" {...hint} id={hintId}>{field.hint}</PrismPart>}{error && <PrismPart slotProps={model} as="span" {...errorPart} id={errorId} role="alert">{error}</PrismPart>}
   </PrismPart>;
 }
@@ -57,7 +57,7 @@ export function Ask({ props }: PrismComponentProps<AskProps>) {
   const ask = useAsk(props, usePrism()), { frame } = ask, model = { ask };
   const form = usePart('ask', 'form'), grid = usePart('ask', 'fields');
   const sentence = usePart('ask', 'sentence'), chunk = usePart('ask', 'sentence-chunk'), text = usePart('ask', 'sentence-text'), punctuation = usePart('ask', 'sentence-punctuation');
-  const renderField = (field: AskField, inline = false) => <Field key={field.id ?? ask.fields.indexOf(field)} field={field} index={ask.fields.indexOf(field)} vm={ask} inline={inline} />;
+  const renderField = (field: AskField, inline = false, trailing?: ReactNode) => <Field key={field.id ?? ask.fields.indexOf(field)} field={field} index={ask.fields.indexOf(field)} vm={ask} inline={inline} trailing={trailing} />;
   const remaining = [...(ask.sentence?.remaining ?? ask.fields), ...(ask.submitted ? ask.receiptFields.filter(field => !ask.fields.some(item => item.id === field.id)) : [])];
   return <AskFramePart part="root" as="section" ask={ask} {...frame.rootProps} data-status={ask.submitted ? 'submitted' : 'editing'} data-prism-flash={ask.flashing ? '' : undefined}>
     <AskFramePart part="header" as="header" ask={ask} {...frame.parts.header}>
@@ -69,7 +69,7 @@ export function Ask({ props }: PrismComponentProps<AskProps>) {
     </AskFramePart>
     <AskFramePart part="body" ask={ask} {...frame.parts.body}>
       <PrismPart as="form" {...form} slotProps={model} aria-live="polite" noValidate onKeyDown={ask.onKeyDown} onSubmit={event => { event.preventDefault(); ask.submit(); }}>
-        {ask.sentence && <PrismPart as="div" {...sentence} slotProps={model}>{ask.sentence.chunks.map((item, index) => <PrismPart as="span" {...text} slotProps={{ ask, field: item.field }} key={index}>{item.text}<PrismPart as="span" {...chunk} slotProps={{ ask, field: item.field }}>{item.lead && <PrismPart as="span" {...text} slotProps={{ ask, field: item.field }}>{item.lead}</PrismPart>}{renderField(item.field, true)}{item.punctuation && <PrismPart as="span" {...punctuation} slotProps={{ ask, field: item.field }}>{item.punctuation}</PrismPart>}</PrismPart></PrismPart>)}{ask.sentence.tail && <PrismPart as="span" {...text} slotProps={model}>{ask.sentence.tail}</PrismPart>}</PrismPart>}
+        {ask.sentence && <PrismPart as="div" {...sentence} slotProps={model}>{ask.sentence.chunks.map((item, index) => <PrismPart as="span" {...text} slotProps={{ ask, field: item.field }} key={index}>{item.text}<PrismPart as="span" {...chunk} slotProps={{ ask, field: item.field }}>{item.lead && <PrismPart as="span" {...text} slotProps={{ ask, field: item.field }}>{item.lead}</PrismPart>}{renderField(item.field, true, item.punctuation ? <PrismPart as="span" {...punctuation} slotProps={{ ask, field: item.field }}>{item.punctuation}</PrismPart> : null)}{item.punctuation && <PrismPart as="span" {...punctuation} slotProps={{ ask, field: item.field }} data-sent={ask.submitted || undefined} aria-hidden={ask.submitted || undefined}>{item.punctuation}</PrismPart>}</PrismPart></PrismPart>)}{ask.sentence.tail && <PrismPart as="span" {...text} slotProps={model}>{ask.sentence.tail}</PrismPart>}</PrismPart>}
         <PrismPart as="div" {...grid} slotProps={model}>{remaining.length ? remaining.map(field => renderField(field)) : !ask.fields.length ? <Empty ask={ask} /> : null}</PrismPart>
         <AskActions ask={ask} />
       </PrismPart>

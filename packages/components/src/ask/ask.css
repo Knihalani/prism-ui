@@ -37,6 +37,8 @@
 .prism-root .prism-ask__sentence { font-family: var(--prism-ask-font-display, var(--prism-font-display)); font-size: var(--prism-ask-text-lg, var(--prism-text-lg)); line-height: 2.2; overflow-wrap: anywhere; margin-block-end: var(--prism-ask-space-3, var(--prism-space-3)); }
 .prism-root .prism-ask__sentence-chunk { display: inline-flex; align-items: baseline; gap: var(--prism-ask-space-1, var(--prism-space-1)); max-inline-size: 100%; vertical-align: baseline; }
 .prism-root .prism-ask__sentence-punctuation { margin-inline-start: calc(-1 * var(--prism-ask-space-1, var(--prism-space-1))); }
+.prism-root .prism-ask__sentence-punctuation[data-sent] { visibility: hidden; }
+.prism-root .prism-ask__confirmed-value .prism-ask__sentence-punctuation { display: contents; margin: 0; }
 .prism-root .prism-ask__field[data-inline] { position: relative; display: inline-flex; flex-wrap: wrap; inline-size: 12ch; vertical-align: baseline; }
 .prism-root .prism-ask__field[data-inline][data-type="number"] { inline-size: auto; }
 .prism-root .prism-ask__field[data-inline][data-type="number"] .prism-ask__control { flex: 0 1 auto; inline-size: 4ch; }
@@ -73,3 +75,13 @@
 .prism-root .prism-ask__field[data-inline] .prism-ask__confirmed-value { padding: 0; }
 .prism-root .prism-ask__confirmed-value:focus-visible { outline: 2px solid var(--prism-ask-focus, var(--prism-focus)); outline-offset: 2px; }
 @container prism-ask (max-width: 420px) { .prism-root .prism-ask__sentence { font-size: var(--prism-ask-text-base, var(--prism-text-base)); } }
+@supports (field-sizing: content) {
+  @container prism-ask (min-width: 560px) {
+    .prism-root .prism-ask__sentence { font-family: var(--prism-ask-font-body, var(--prism-font-body)); font-size: var(--prism-ask-text-base, var(--prism-text-base)); }
+    .prism-root .prism-ask__field[data-type="textarea"] .prism-ask__control { field-sizing: content; min-block-size: calc(2lh + var(--prism-ask-space-2, var(--prism-space-2))); }
+    .prism-root .prism-ask__field[data-inline]:is([data-type="text"], [data-type="date"]) { inline-size: fit-content; }
+    .prism-root .prism-ask__field[data-inline]:is([data-type="text"], [data-type="date"]) .prism-ask__inputWrap { inline-size: auto; }
+    .prism-root .prism-ask__field[data-inline]:is([data-type="text"], [data-type="date"]) .prism-ask__control { field-sizing: content; inline-size: auto; min-inline-size: 2ch; }
+    .prism-root .prism-ask__field[data-inline]:is([data-type="text"], [data-type="date"]) .prism-ask__inputWrap[data-sent] > .prism-ask__control { inline-size: 0; min-inline-size: 0; }
+  }
+}

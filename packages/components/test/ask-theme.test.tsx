@@ -121,3 +121,12 @@ test('sentence blanks wrap as semantic chunks, preserve native ISO dates and lea
   for (const sentence of ['Missing {unknown}.', 'Repeat {party} and {party}.', 'Long {notes}.', 'No blanks']) { view.rerender(<Prism source={source({ sentence, fields })} registry={registry} />); expect(view.container.querySelector('[data-part="sentence"]')).toBeNull(); expect(view.getByRole('spinbutton')).toBeDefined(); }
   expect(registry.docs()).toContain('sentence'); expect(registry.docs()).toContain('{fieldId}');
 });
+
+test('sent punctuation follows the confirmed answer while hidden layout spacers retain the editing geometry', () => {
+  const view = render(<Prism source={source({ sentence: 'Book for {party} on {date}.', fields })} registry={registry} onAction={() => {}} />);
+  fireEvent.click(view.getByRole('button', { name: 'Send' }));
+  const date = view.container.querySelector('[data-type="date"] [data-part="confirmed-value"]')!;
+  expect(date.querySelector('[data-part="sentence-punctuation"]')?.textContent).toBe('.');
+  expect(date.textContent).toMatch(/\.$/);
+  expect(view.container.querySelector('[data-part="sentence-punctuation"][data-sent]')?.getAttribute('aria-hidden')).toBe('true');
+});
