@@ -9,6 +9,8 @@ export type { Action, Middleware, PrismContextValue, Components, Slots, ClassNam
 export { useStoreValue, useComponentState, useFormula, useEmit } from './hooks';
 export { usePresentation, useSettled, useSent, StreamCaret, StreamSkeleton } from './presentation';
 export { useFlash, useLocalWrite } from './flash';
+export { spring, useReducedMotion, useSpringValue, useCollapse, createFlip } from './motion';
+export type { SpringOptions, SpringValueOptions, FlipOptions, FlipElements } from './motion';
 export type { PresentationState } from './presentation';
 export { ThemeScope, createTheme, defineTheme, fromCssVars, host, shadcn, useTheme } from './theme';
 export type { Theme, Tokens, ThemeTokens, PrismTheme, ComponentTheme, ThemeStyle, ThemeScopeProps, Density, Mode } from './theme';
