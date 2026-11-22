@@ -107,6 +107,28 @@ describe('createStreamMorpher', () => {
       for (const chunk of [1, 7, 50]) streamPage(page, chunk);
     }
   });
+  test('flushes bare body text before document closing tags in one shot and at every split', () => {
+    for (const html of [
+      '<html><body>Hello</body></html>',
+      '<body>Hello</body>',
+      '<!doctype html><html><head></head><body>Hello &amp; goodbye</body></html>',
+      '<html><body><b>First</b> then bare text</body></html>',
+      '<html><body></body></html>',
+    ]) {
+      const expected = document();
+      morphDocument(expected, html);
+      const oneShot = document();
+      createStreamMorpher(oneShot).update(html);
+      expect(oneShot.body.innerHTML).toBe(expected.body.innerHTML);
+      for (let offset = 0; offset <= html.length; offset++) {
+        const doc = document();
+        const stream = createStreamMorpher(doc);
+        stream.update(html.slice(0, offset));
+        stream.update(html);
+        expect(doc.body.innerHTML).toBe(expected.body.innerHTML);
+      }
+    }
+  });
   test('scanner handles quoted >, comments with tags, raw text, void and SVG elements', () => {
     const page = '<div title="a > b" data-x=\'c>d\'><!-- <div><script> -->' +
       '<script>const html = "</div><p>"; const x = 1 < 2;</script>' +

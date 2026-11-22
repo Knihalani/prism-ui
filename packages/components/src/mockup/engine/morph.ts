@@ -259,7 +259,10 @@ export function createStreamMorpher(doc: Document, opts: MorphOptions = {}): { u
             flush(html, token); syncHead(); frames.pop(); frames[0]!.offset = scan + 1;
           } else if (frames.length !== 1) { fail(); return; }
           else {
-            if (closing) { ended = true; frames[0]!.anchor = root.lastChild; }
+            if (closing) {
+              if (!ended) flush(html, token);
+              ended = true; frames[0]!.anchor = root.lastChild;
+            }
             frames[0]!.offset = scan + 1;
           }
           token = -1; scan++; continue;
