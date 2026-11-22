@@ -1,5 +1,5 @@
 import '../../react/test/setup';
-import { expect, test } from 'bun:test';
+import { afterEach, expect, test } from 'bun:test';
 import { createElement, forwardRef, type CSSProperties, type HTMLAttributes } from 'react';
 import { act, cleanup, fireEvent, render, within } from '@testing-library/react';
 import { Prism, defineTheme, type Action } from '@prism-ui/react';
@@ -7,6 +7,8 @@ import { createStore } from '@prism-ui/state';
 import { pick, type PickSlotProps } from '../src/pick';
 import { interpolate } from '../src/interpolate';
 import { useFlip } from '../src/pick/flip';
+
+afterEach(cleanup);
 
 const options = [{ id: 'basic', title: 'Basic', subtitle: 'Small teams', tag: 'Value', scores: { price: .9 }, pros: ['Low cost'], cons: ['Fewer features'] }, { id: 'plus', title: 'Plus', scores: { price: .5 } }];
 const source = (props: object = {}) => '```ui:pick\n' + JSON.stringify({ id: 'plans', criteria: [{ id: 'price', label: 'Price' }], options, ...props }) + '\n```';
@@ -119,6 +121,39 @@ test('generic frame slots remain fallbacks and component slots take priority', (
   view.rerender(<Prism source={source()} animate={false} slots={{ frame: { root: FrameRoot }, pick: { root: PickRoot } }} />);
   expect(view.container.querySelector('[data-frame-root]')).toBeNull();
   expect(view.container.querySelector('[data-pick-root]')).not.toBeNull();
+});
+
+test('compact option disclosures retain actions, keyboard focus and streaming/empty states', () => {
+  const actions: Action[] = [];
+  const compact = defineTheme({ name: 'pick-compact', components: { pick: { styles: { list: { '--prism-pick-compact': '1' } as CSSProperties } } } });
+  const view = render(<Prism source={source()} theme={compact} animate={false} onAction={action => actions.push(action)} />);
+  const winner = view.container.querySelector('[data-option="basic"]')!, other = view.container.querySelector('[data-option="plus"]')!;
+  expect(within(other as HTMLElement).getByRole('heading', { name: 'Plus', level: 4 })).toBeDefined();
+  const details = other.querySelector('[data-part="details"]')!, summary = other.querySelector('[data-part="summary"]')!;
+  expect(winner.querySelector('[data-part="details"]')?.hasAttribute('hidden')).toBe(false);
+  expect(summary.getAttribute('aria-expanded')).toBe('false');
+  expect(summary.getAttribute('aria-controls')).toBe(details.id);
+  expect(details.hasAttribute('hidden')).toBe(true);
+  fireEvent.click(summary);
+  expect(summary.getAttribute('aria-expanded')).toBe('true');
+  expect(details.hasAttribute('hidden')).toBe(false);
+  fireEvent.click(summary);
+  expect(summary.getAttribute('aria-expanded')).toBe('false');
+  const choose = within(other as HTMLElement).getByRole('button', { name: 'Choose' });
+  fireEvent.focus(choose);
+  expect(summary.getAttribute('aria-expanded')).toBe('true');
+  fireEvent.click(choose);
+  expect(actions.at(-1)?.payload).toEqual({ option: 'plus', weights: { price: 1 } });
+  expect(within(other as HTMLElement).getByRole('button', { name: 'Sent' }).hasAttribute('data-sent')).toBe(true);
+  expect(view.container.querySelector('[data-part="root"]')?.getAttribute('data-state')).toBe('sent');
+  fireEvent.click(view.getByRole('button', { name: 'Price, weight 1 of 3' }));
+  expect(view.container.querySelector('[data-part="root"]')?.getAttribute('data-state')).toBe('ready');
+  view.rerender(<Prism source={source({ options: [{ id: 'bad', title: 'Bad', scores: 'invalid' }] })} theme={compact} animate={false} />);
+  expect(view.getByRole('button', { name: 'Choose' }).hasAttribute('disabled')).toBe(true);
+  fireEvent.click(view.container.querySelector('[data-part="summary"]')!);
+  expect(view.container.querySelector('[data-part="details"]')?.hasAttribute('hidden')).toBe(false);
+  view.rerender(<Prism source={source({ options: [] })} theme={compact} animate={false} />);
+  expect(view.getByText('Options will appear here')).toBeDefined();
 });
 
 test('Pick reorder reads motion tokens, cancels animations and respects disabled/reduced motion', () => {

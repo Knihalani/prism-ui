@@ -1,4 +1,4 @@
-import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState, type ElementType, type KeyboardEvent } from 'react';
+import { createElement, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ElementType, type FocusEvent, type KeyboardEvent } from 'react';
 import { s, type Infer } from '@prism-ui/schema';
 import { useStrings, Icon, PrismPart, defineComponent, registerComponent, useEmit, useFlash, useFormat, useLocalWrite, usePart, usePrism, useSent, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
 import { useFrame, type FramePart } from '../frame';
@@ -43,6 +43,12 @@ export function usePick(props: PickProps, ctx: PrismComponentProps<PickProps>) {
     }));
   }, [store, id, weights, ctx.complete]);
   const [focused, setFocused] = useState<string>(), chips = useRef(new Map<string, HTMLButtonElement>());
+  const [compact, setCompact] = useState(false), [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const expand = (option: string, toggle = false) => setExpanded(current => {
+    const next = new Set(current);
+    if (toggle && next.has(option)) next.delete(option); else next.add(option);
+    return next;
+  });
   const criteria = props.criteria.filter(c => c.id), active = criteria.some(c => c.id === focused) ? focused : criteria[0]?.id;
   const setWeight = (criterion: string, value: number) => localWrite(() => { reset(); setRecordPath(store, `${id}.weights`, criterion, clamp(value, 1)); });
   const cycle = (criterion: string) => { const current = weightsFor(props, readWeight); setWeight(criterion, (current[criterion] + 1) % 4); };
@@ -70,13 +76,23 @@ export function usePick(props: PickProps, ctx: PrismComponentProps<PickProps>) {
   };
   const rows = ranked.map((option, index) => {
     const strongest = [...option.bars].filter(bar => bar.weight > 0).sort((a, b) => b.weight * b.score - a.weight * a.score).slice(0, 2).map(bar => bar.label);
-    return { ...option, top: index === 0 && option.ready, chosen: chosen === option.id, sent: (sent?.payload as { option?: string } | undefined)?.option === option.id, rankText: format.number(index + 1), matchText: format.percent(option.match), rankLabel: interpolate(strings.rank, { rank: format.number(index + 1) }), matchDescription: interpolate(strings.match, { match: format.percent(option.match), label: strings.matchLabel }), chooseLabel: props.choose, chosenLabel: props.chosenLabel, topLabel: props.topLabel, matchLabel: props.matchLabel,
+    return { ...option, top: index === 0 && option.ready, expanded: !compact || (index === 0 && option.ready) || expanded.has(option.id), onExpand: () => expand(option.id), onToggle: () => expand(option.id, true), chosen: chosen === option.id, sent: (sent?.payload as { option?: string } | undefined)?.option === option.id, rankText: format.number(index + 1), matchText: format.percent(option.match), rankLabel: interpolate(strings.rank, { rank: format.number(index + 1) }), matchDescription: interpolate(strings.match, { match: format.percent(option.match), label: strings.matchLabel }), chooseLabel: props.choose, chosenLabel: props.chosenLabel, topLabel: props.topLabel, matchLabel: props.matchLabel,
       reason: index === 0 && option.ready && strongest.length ? interpolate(strings.reason, { best: strings.bestLabel, criteria: strongest.join(interpolate(strings.criteriaSeparator, { and: strings.andLabel })) }) : undefined,
       bars: option.bars.map(bar => ({ ...bar, text: format.percent(bar.score) })), onChoose: () => onChoose(option.id) };
   });
   const listRef = useFlip(animate && ranked.every(row => row.ready));
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const update = () => setCompact(getComputedStyle(list).getPropertyValue('--prism-pick-compact').trim() === '1');
+    update();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(update);
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [listRef]);
   const parts = { criteria: usePart('pick', 'criteria'), chip: usePart('pick', 'chip'), pip: usePart('pick', 'pip'), pips: usePart('pick', 'pips'), list: usePart('pick', 'list'), empty: usePart('pick', 'empty'), live: usePart('pick', 'live') };
-  return { parts, rows, listRef, frame, strings, flashing, question: props.question, emptyLabel: props.emptyLabel,
+  return { parts, rows, listRef, frame, strings, flashing, compact, question: props.question, emptyLabel: props.emptyLabel,
     onAsk: () => emit('ask', undefined, strings.askMessage),
     announcement: rows[0]?.ready ? interpolate(strings.announcement, { label: strings.topLabel, title: rows[0].title }) : '',
     chips: criteria.map((c, index) => ({ ...c, weight: weights[c.id], pips: [1, 2, 3].map(n => n <= weights[c.id]), props: { ref: (element: HTMLButtonElement | null) => { if (element) chips.current.set(c.id, element); else chips.current.delete(c.id); }, type: 'button' as const, tabIndex: active === c.id ? 0 : -1, 'aria-pressed': weights[c.id] > 0, 'aria-label': interpolate(strings.weightDescription, { criterion: c.label, weightLabel: strings.weightLabel, weight: format.number(weights[c.id]), ofLabel: strings.ofLabel, max: format.number(3) }), onFocus: () => setFocused(c.id), onClick: () => cycle(c.id), onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => onKeyDown(event, index) } })) };
@@ -85,9 +101,9 @@ export type PickModel = ReturnType<typeof usePick>;
 export type PickOption = PickModel['rows'][number];
 export type PickCriterion = PickOption['bars'][number];
 export type PickWeight = PickModel['chips'][number];
-export const pickParts = ['root', 'header', 'title', 'toolbar', 'body', 'footer', 'ask', 'undo', 'criteria', 'chip', 'pips', 'pip', 'list', 'empty', 'live', 'item', 'card-header', 'rank', 'match', 'top', 'tag', 'check', 'subtitle', 'reason', 'bars', 'criterion', 'criterion-label', 'bar', 'value', 'pros', 'pro', 'cons', 'con', 'actions', 'choose', 'icon'] as const;
+export const pickParts = ['root', 'header', 'title', 'toolbar', 'body', 'footer', 'ask', 'undo', 'criteria', 'chip', 'pips', 'pip', 'list', 'empty', 'live', 'item', 'card-header', 'summary', 'details', 'rank', 'match', 'top', 'tag', 'check', 'subtitle', 'reason', 'bars', 'criterion', 'criterion-label', 'bar', 'value', 'pros', 'pro', 'cons', 'con', 'actions', 'choose', 'icon'] as const;
 export type PickPart = typeof pickParts[number];
-type OptionPart = 'item' | 'card-header' | 'rank' | 'match' | 'top' | 'tag' | 'check' | 'subtitle' | 'reason' | 'bars' | 'pros' | 'pro' | 'cons' | 'con' | 'actions' | 'choose';
+type OptionPart = 'item' | 'card-header' | 'summary' | 'details' | 'rank' | 'match' | 'top' | 'tag' | 'check' | 'subtitle' | 'reason' | 'bars' | 'pros' | 'pro' | 'cons' | 'con' | 'actions' | 'choose';
 export type PickSlotProps = {
   [Part in PickPart]: { pick: PickModel; option?: PickOption; row?: PickOption } &
     (Part extends OptionPart ? { option: PickOption; row: PickOption } :
@@ -95,7 +111,7 @@ export type PickSlotProps = {
       Part extends 'pip' ? { weight: PickWeight; level: number } :
       Part extends 'criterion' | 'criterion-label' | 'bar' | 'value' ? { option: PickOption; row: PickOption; criterion: PickCriterion } : {});
 };
-function PickIcon({ name, pick, option }: { name: 'check' | 'minus' | 'ask' | 'undo'; pick: PickModel; option?: PickOption }) {
+function PickIcon({ name, pick, option }: { name: 'check' | 'minus' | 'ask' | 'undo' | 'chevron'; pick: PickModel; option?: PickOption }) {
   return <PrismPart as={Icon} {...usePart('pick', 'icon')} name={name} slotProps={{ pick, option }} />;
 }
 function PickFramePart({ part, pick, as = 'div', ...props }: { part: FramePart; pick: PickModel; as?: ElementType; [key: string]: any }) {
@@ -105,16 +121,20 @@ function PickFramePart({ part, pick, as = 'div', ...props }: { part: FramePart; 
   return <PrismPart as={as} {...props} slotProps={{ pick }} />;
 }
 function PickItem({ option, pick }: { option: PickOption; pick: PickModel }) {
-  const row = option, model = { pick, option, row };
+  const row = option, model = { pick, option, row }, detailsId = useId(), collapsible = pick.compact && !row.top;
+  const summary = usePart('pick', 'summary'), details = usePart('pick', 'details');
   const parts = { item: usePart('pick', 'item', !row.ready ? 'loading' : row.chosen ? 'chosen' : row.top ? 'top' : 'ready'), header: usePart('pick', 'card-header'), rank: usePart('pick', 'rank'), match: usePart('pick', 'match'), top: usePart('pick', 'top'), value: usePart('pick', 'value'), title: usePart('pick', 'title'), subtitle: usePart('pick', 'subtitle'), tag: usePart('pick', 'tag'), reason: usePart('pick', 'reason'), bars: usePart('pick', 'bars'), criterion: usePart('pick', 'criterion'), criterionLabel: usePart('pick', 'criterion-label'), bar: usePart('pick', 'bar'), pros: usePart('pick', 'pros'), cons: usePart('pick', 'cons'), pro: usePart('pick', 'pro'), con: usePart('pick', 'con'), actions: usePart('pick', 'actions'), choose: usePart('pick', 'choose'), check: usePart('pick', 'check') };
-  return <PrismPart as="article" {...parts.item} slotProps={model} data-option={row.id} data-top={row.top || undefined} data-flash={pick.flashing ? '' : undefined} aria-busy={!row.ready}>
-    <PrismPart as="div" {...parts.header} slotProps={model}>
-      <PrismPart as="span" {...parts.rank} slotProps={model}>{row.rankLabel}</PrismPart>
-      <PrismPart as="span" {...parts.match} slotProps={model} data-prism-skeleton={!row.ready ? '' : undefined}>{row.ready ? row.matchDescription : pick.strings.loadingLabel}</PrismPart>
+  return <PrismPart as="article" {...parts.item} slotProps={model} data-option={row.id} data-top={row.top || undefined} data-expanded={row.expanded} data-flash={pick.flashing ? '' : undefined} aria-busy={!row.ready}>
+    <PrismPart as="h4" {...parts.header} slotProps={model} aria-label={row.title}>
+      <PrismPart as={collapsible ? 'button' : 'span'} {...summary} slotProps={model} {...(collapsible ? { type: 'button' as const } : {})} aria-expanded={collapsible ? row.expanded : undefined} aria-controls={collapsible ? detailsId : undefined} onClick={collapsible ? row.onToggle : undefined} onFocus={collapsible ? (event: FocusEvent<HTMLElement>) => { if (event.currentTarget.matches(':focus-visible')) row.onExpand(); } : undefined}>
+        <PrismPart as="span" {...parts.rank} slotProps={model}>{row.rankLabel}</PrismPart>
+        <PrismPart as="span" {...parts.title} slotProps={model}>{row.title}</PrismPart>
+        <PrismPart as="span" {...parts.match} slotProps={model} aria-label={row.matchDescription} data-prism-skeleton={!row.ready ? '' : undefined}>{row.ready ? (pick.compact ? row.matchText : row.matchDescription) : pick.strings.loadingLabel}{collapsible && <PickIcon name="chevron" pick={pick} option={option} />}</PrismPart>
+      </PrismPart>
       {row.top && <PrismPart as="span" {...parts.top} slotProps={model}>{row.topLabel}</PrismPart>}
       {row.tag && <PrismPart as="span" {...parts.tag} slotProps={model}>{row.tag}</PrismPart>}
     </PrismPart>
-    <PrismPart as="h4" {...parts.title} slotProps={model}>{row.title}</PrismPart>
+    <PrismPart as="div" {...details} slotProps={model} id={detailsId} hidden={!row.expanded}>
     {row.subtitle && <PrismPart as="p" {...parts.subtitle} slotProps={model}>{row.subtitle}</PrismPart>}
     {row.reason && <PrismPart as="p" {...parts.reason} slotProps={model}>{row.reason}</PrismPart>}
     <PrismPart as="div" {...parts.bars} slotProps={model}>{row.bars.map(criterion => <PrismPart as="div" key={criterion.id} {...parts.criterion} slotProps={{ ...model, criterion }} data-state={criterion.weight ? 'active' : 'off'}>
@@ -124,7 +144,8 @@ function PickItem({ option, pick }: { option: PickOption; pick: PickModel }) {
     </PrismPart>)}</PrismPart>
     {!!row.pros.length && <PrismPart as="ul" {...parts.pros} slotProps={model}>{row.pros.map((pro, index) => <PrismPart as="li" key={index} {...parts.pro} slotProps={model}><PickIcon name="check" pick={pick} option={option} />{pro}</PrismPart>)}</PrismPart>}
     {!!row.cons.length && <PrismPart as="ul" {...parts.cons} slotProps={model}>{row.cons.map((con, index) => <PrismPart as="li" key={index} {...parts.con} slotProps={model}><PickIcon name="minus" pick={pick} option={option} />{con}</PrismPart>)}</PrismPart>}
-    <PrismPart as="div" {...parts.actions} slotProps={model}>{row.chosen && <PrismPart as="span" {...parts.check} slotProps={model}><PickIcon name="check" pick={pick} option={option} />{row.chosenLabel}</PrismPart>}<PrismPart as="button" {...parts.choose} slotProps={model} type="button" disabled={!row.ready || row.sent} onClick={row.onChoose}>{row.sent ? <><PickIcon name="check" pick={pick} option={option} />{pick.strings.sentLabel}</> : row.chooseLabel}</PrismPart></PrismPart>
+    </PrismPart>
+    <PrismPart as="div" {...parts.actions} slotProps={model}>{row.chosen && <PrismPart as="span" {...parts.check} slotProps={model}><PickIcon name="check" pick={pick} option={option} />{row.chosenLabel}</PrismPart>}<PrismPart as="button" {...parts.choose} slotProps={model} type="button" data-sent={row.sent || undefined} disabled={!row.ready || row.sent} onFocus={row.onExpand} onClick={row.onChoose}>{row.sent ? <><PickIcon name="check" pick={pick} option={option} />{pick.strings.sentLabel}</> : row.chooseLabel}</PrismPart></PrismPart>
   </PrismPart>;
 }
 export function Pick(ctx: PrismComponentProps<PickProps>) {
