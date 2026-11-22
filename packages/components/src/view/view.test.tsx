@@ -187,3 +187,16 @@ test('frame:none and single-node root render bare artifacts', () => {
   expect(view.getByText('New').getAttribute('data-tone')).toBe('success');
   expect(view.container.querySelector('.prism-view__card')).not.toBeNull();
 });
+
+test('streaming: a button whose handler is still streaming is disabled and sends nothing', () => {
+  const actions: Action[] = [];
+  const full = gallery.pricing, cut = full.lastIndexOf('"$ref": "plan"') + 10;
+  const view = render(<Prism source={full.slice(0, cut)} done={false} onAction={a => { actions.push(a); }} />);
+  const button = view.getByRole('button', { name: /Continue with/ }) as HTMLButtonElement;
+  expect(button.disabled).toBe(true);
+  fireEvent.click(button);
+  expect(actions).toEqual([]);
+  view.rerender(<Prism source={full} onAction={a => { actions.push(a); }} />);
+  fireEvent.click(view.getByRole('button', { name: /Continue with/ }));
+  expect(actions.at(-1)?.payload).toEqual({ plan: 'pro', annual: true, seats: 5 });
+});

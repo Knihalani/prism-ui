@@ -9,7 +9,7 @@ import { bindPath, collect, evaluate, isOpen, listPath, resolve, resolvePath, ru
 export const viewSchema = s.object({
   id: s.string().describe('Stable id; view-local state lives under it').optional(),
   title: s.string().describe('Header title; omit with frame:"none" for a bare inline artifact').optional(),
-  frame: s.enum(['card', 'none']).describe('card (default) or none for chrome-less inline UI').optional(),
+  frame: s.enum(['card', 'inline', 'none']).describe('card (default, raised surface), inline (flows with the reply) or none (chrome-less artifact)').optional(),
   state: s.any().describe('Initial view-local state object; its keys become bindable paths. Put it first').optional(),
   children: s.array(s.any()).describe('Root nodes').optional(),
   actions: s.array(s.any()).describe('Footer nodes, usually the one primary button').optional(),
@@ -124,6 +124,7 @@ function useActions(scope: ViewScope) {
   const view = useContext(ViewContext)!;
   const { store } = view.prism;
   return useCallback((spec: unknown, extra?: Record<string, unknown>) => {
+    if (isOpen(spec)) return;
     let action: ReturnType<typeof run>;
     const writer = {
       get: (path: string) => store.get(path), set: (path: string, value: unknown) => store.set(path, value),
@@ -252,7 +253,7 @@ function Spacer(p: PrimitiveProps) { return <div {...p.part('spacer')} data-size
 function Button(p: PrimitiveProps) {
   const view = useContext(ViewContext)!;
   const get: Read = path => view.prism.store.get(path);
-  const disabled = flag(p.node.disabled, p.props.disabled, p.scope, get);
+  const disabled = flag(p.node.disabled, p.props.disabled, p.scope, get) || isOpen(p.node.onClick);
   return <button type="button" {...p.part('button')} {...tokens(p.props)} data-variant={pick(p.props.variant, new Set(['primary', 'secondary', 'ghost', 'outline', 'danger', 'link'])) ?? 'secondary'} data-full={p.props.full ? '' : undefined}
     disabled={disabled} aria-label={p.props.ariaLabel ? text(p.props.ariaLabel) : undefined} onClick={() => p.act(p.node.onClick)}>
     <Icon name={p.props.icon} p={p} />{p.props.label !== undefined && <span>{text(p.props.label)}</span>}<Icon name={p.props.iconRight} p={p} />
@@ -448,7 +449,7 @@ export function useView(props: ViewProps, ctx: PrismContextValue, { id, complete
   const live = useRef({ prism: ctx, send }); live.current.prism = ctx; live.current.send = send;
   const runtime = useMemo<ViewRuntime>(() => ({ id, streaming, format, config, get prism() { return live.current.prism; }, send: (type, payload, message) => live.current.send(type, payload, message) }), [id, streaming, format, config, ctx.store, ctx.registry]);
   const root = typeof tree.type === 'string' ? (({ id: _i, title: _t, state: _s, frame: _f, actions: _a, ...node }) => node)(tree as any) : tree.children;
-  return { runtime, scope, root, actions: tree.actions, title: typeof tree.title === 'string' ? template(tree.title, scope, p => store.get(p), format) : undefined, frame: tree.frame === 'none' ? 'none' : 'card', sent, streaming };
+  return { runtime, scope, root, actions: tree.actions, title: typeof tree.title === 'string' ? template(tree.title, scope, p => store.get(p), format) : undefined, frame: tree.frame === 'none' || tree.frame === 'inline' ? tree.frame : 'card', sent, streaming };
 }
 
 function DefaultBody(props: React.HTMLAttributes<HTMLDivElement>) { return <div {...props} />; }
@@ -458,12 +459,12 @@ export function View({ props, id, complete }: PrismComponentProps<ViewProps>) {
   const Body = useSlot('view', 'body', DefaultBody);
   const body = <ViewContext.Provider value={view.runtime}><Body {...partOf(ctx, 'content')} data-streaming={view.streaming ? '' : undefined}><Nodes nodes={view.root} scope={view.scope} path="n" depth={0} /></Body></ViewContext.Provider>;
   const actions = Array.isArray(view.actions) && view.actions.length ? <ViewContext.Provider value={view.runtime}><div {...partOf(ctx, 'actions')}><Nodes nodes={view.actions} scope={view.scope} path="a" depth={0} /></div></ViewContext.Provider> : undefined;
-  return <ComponentFrame component="view" title={view.title} label={view.title ?? 'Interactive view'} state={view.sent ? 'sent' : view.streaming ? 'streaming' : 'ready'} undo actions={actions} className={view.frame === 'none' ? 'prism-view--bare' : undefined}>{body}</ComponentFrame>;
+  return <ComponentFrame component="view" title={view.title} label={view.title ?? 'Interactive view'} state={view.sent ? 'sent' : view.streaming ? 'streaming' : 'ready'} undo actions={actions} variant={view.frame === 'card' ? 'card' : 'inline'} className={view.frame === 'none' ? 'prism-view--bare' : undefined}>{body}</ComponentFrame>;
 }
 export { iconNames };
 
 const DOCS = `Freeform view: a safe declarative JSON UI tree, the escape hatch for any inline artifact (dashboards, forms, pickers, calculators, checklists, comparisons). No code runs: only these nodes, bindings and handlers. Streams node by node, so emit "state" first, then children top to bottom.
-TOP LEVEL: {"id","title"?,"frame"?:"card"|"none","state"?:{initial view-local values},"children":[nodes],"actions"?:[footer nodes, usually ONE primary button]}. A single node object (with "type") also works as the whole view.
+TOP LEVEL: {"id","title"?,"frame"?:"card"|"inline"|"none","state"?:{initial view-local values},"children":[nodes],"actions"?:[footer nodes, usually ONE primary button]}. A single node object (with "type") also works as the whole view.
 NODE: {"type", ...props, "when"?: expr, "children"?: [nodes or strings]}. Strings in children are text nodes.
 LAYOUT: stack {direction:"row"|"column", gap 0-8, align start|center|end|stretch|baseline, justify start|center|end|between|around, wrap}; row/column (stack shorthands); grid {cols 1-6|"auto", gap} collapses on narrow screens; card {title, subtitle, icon, badge, selected: expr, onClick} (selectable cards become accessible buttons); box {variant:"soft"|"outline"|"plain", pad 0-8}; divider {label?}; spacer.
 CONTENT: text {text (inline markdown), tone, size xs|sm|md|lg|xl, weight regular|medium|semibold|bold, textAlign, mono}; markdown {text (block markdown)}; heading {text, level 1-4, subtitle, icon}; stat {label, value, format, unit, delta (number, + is up), deltaFormat, invert (down is good), hint, icon}; badge {text, tone, icon}; image {src https only, alt, ratio "16:9", fit, caption}; icon {name, tone, size}; avatar {name, src, size}; progress {value 0-1 (or with max), max, label, tone, format, showValue}; table {columns:[{key,label,align,format}] | ["key"], rows:[{...}] or {"$ref"}, sortable (default true)}; booleans render as check marks, strings as markdown.
