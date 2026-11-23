@@ -1,5 +1,7 @@
 import { expect, test } from 'bun:test';
 import { markdownDocument } from '../scripts/markdown';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 test('docs expose stable duplicate anchors, highlighted copyable fences and ordered TOC', () => {
   const { html, toc } = markdownDocument('# Guide\n\n## Install\n\n```js\nconst x = "ready"\n```\n\n## Install\n\n### Next step', '/prism-ui/', '/repo/docs');
@@ -14,6 +16,16 @@ test('relative doc links preserve fragments while repository paths resolve on ma
   expect(html).toContain('https://github.com/Knihalani/prism-ui/blob/main/packages/react/src/index.ts#L1');
   expect(html).toContain('href="https://example.com"');
   expect(html).toContain('https://raw.githubusercontent.com/Knihalani/prism-ui/main/docs/diagram.svg');
+});
+test('production docs directory with a trailing slash keeps cross-doc links on site', () => {
+  const directory = fileURLToPath(new URL('../../../docs/', import.meta.url));
+  for (const base of ['/', '/prism-ui/']) {
+    const source = readFileSync(new URL('../../../docs/INTEGRATION.md', import.meta.url), 'utf8');
+    const { html } = markdownDocument(source, base, directory);
+    expect(html).toContain(`href="${base}docs/prompting/"`);
+    expect(html).not.toContain('blob/main/docs/PROMPTING.md');
+    expect(markdownDocument('[Theme](./THEMING.md?view=all#tokens)', base, directory).html).toContain(`href="${base}docs/theming/?view=all#tokens"`);
+  }
 });
 test('empty docs and unknown fenced languages remain readable without unsafe markup', () => {
   expect(markdownDocument('', '/', '/repo/docs')).toEqual({ html: '', toc: [] });

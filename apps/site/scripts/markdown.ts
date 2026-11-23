@@ -5,6 +5,7 @@ import { sitePath } from '../src/paths';
 import type { Heading } from '../src/docs';
 
 export function markdownDocument(source: string, base: string, directory: string) {
+  const docsRoot = resolve(directory);
   const md = new MarkdownIt({ highlight: (code, language) => language && hljs.getLanguage(language) ? hljs.highlight(code, { language }).value : '' });
   md.block.ruler.before('paragraph', 'source-comment', (state, start, _, silent) => {
     const line = state.src.slice(state.bMarks[start] + state.tShift[start], state.eMarks[start]);
@@ -17,8 +18,8 @@ export function markdownDocument(source: string, base: string, directory: string
   md.renderer.rules.link_open = (tokens, index, options, env, self) => {
     const token = tokens[index], href = token.attrGet('href') ?? '';
     if (href && !/^(?:[a-z]+:|\/\/|#)/i.test(href)) {
-      const url = new URL(href, 'https://example.com/docs/'), target = resolve(directory, decodeURIComponent(url.pathname.slice('/docs/'.length)));
-      token.attrSet('href', url.pathname.startsWith('/docs/') && dirname(target) === directory && target.endsWith('.md')
+      const url = new URL(href, 'https://example.com/docs/'), target = resolve(docsRoot, decodeURIComponent(url.pathname.slice('/docs/'.length)));
+      token.attrSet('href', url.pathname.startsWith('/docs/') && dirname(target) === docsRoot && target.endsWith('.md')
         ? sitePath(base, `docs/${basename(target, '.md').toLowerCase()}/${url.search}${url.hash}`)
         : `https://github.com/Knihalani/prism-ui/blob/main${url.pathname}${url.search}${url.hash}`);
     }
