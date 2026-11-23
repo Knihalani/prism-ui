@@ -30,6 +30,14 @@ test('Print and Objects expose named themes and dark tokens', () => {
   expect('components' in objects).toBe(true);
 });
 
+test('Instrument tabs keep whole labels in a scrollable strip with narrow chassis padding', () => {
+  const view = render(<Prism theme={instrument} source={'::::tabs{title="Be available"}\n:::tab{label="Before"}\nFirst\n:::\n:::tab{label="During"}\nSecond\n:::\n::::'} animate={false} />);
+  expect(within(view.container).getByRole('tab', { name: 'Before' }).textContent).toBe('Before');
+  expect(instrument.css).toContain('flex-wrap:nowrap; overflow-x:auto;');
+  expect(instrument.css).toContain('flex:0 0 auto; white-space:nowrap; overflow-wrap:normal; word-break:normal;');
+  expect(instrument.css).toContain('@container (max-width:360px) { :scope .prism-tabs__root { padding:10px; }');
+});
+
 test('Print totals size against the account column and retain the complete section index', () => {
   const view = render(<Prism source={source} theme={print} animate={false} />);
   expect(view.container.querySelector('.print-index')?.textContent).toBe('01 / ESTIMATE');

@@ -287,7 +287,10 @@ export const instrument = defineTheme({
     :scope :is(.prism-card__title,.prism-callout__title,.prism-tabs__title,.prism-grid__title) { font:500 11px/1.5 var(--prism-font-mono); text-transform:uppercase; letter-spacing:.06em; }
     :scope .prism-callout__root { border-left:3px solid var(--prism-accent); }
     :scope .prism-callout__icon { color:var(--prism-accent-text); }
-    :scope .prism-tabs__list { gap:6px; padding:14px 0 4px; border:0; }
+    :scope .prism-tabs__list { gap:6px; padding:14px 0 4px; border:0; flex-wrap:nowrap; overflow-x:auto; }
+    :scope .prism-tabs__root .prism-tabs__list .prism-tabs__tab { flex:0 0 auto; white-space:nowrap; overflow-wrap:normal; word-break:normal; }
+    :scope .prism-tabs__title { overflow-wrap:normal; word-break:normal; }
+    @container (max-width:360px) { :scope .prism-tabs__root { padding:10px; } :scope .prism-tabs__tab { padding:10px 9px; } }
     :scope .prism-tabs__tab { border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:0 3px 0 var(--prism-frame-key-shadow); }
     :scope .prism-tabs__tab[aria-selected="true"] { background:var(--prism-bg); color:var(--prism-text); box-shadow:inset 0 2px 3px var(--prism-frame-key-shadow); transform:translateY(2px); border-top:2px solid var(--prism-accent); }
     :scope .prism-runbook__check { border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:0 2px 0 var(--prism-frame-key-shadow); }
