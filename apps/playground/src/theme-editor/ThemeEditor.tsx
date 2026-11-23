@@ -2,7 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties
 import { tokenVariable, type Tokens } from '@prism-ui/react';
 import { availableThemes } from '../themes';
 import { Icon } from '../ui/Icon';
-import { baseValue, clearToken, radiusScale, setToken, spaceScale, springTokens, toTheme, tokenCatalogue, typeScale, type EditTarget, type ThemeDraft, type TokenDefinition } from './model';
+import { baseValue, clearToken, radiusScale, setToken, spaceScale, springTokens, toTheme, tokenCatalogue, typeScale, type EditTarget, type SpringProfile, type ThemeDraft, type TokenDefinition } from './model';
 import { exportTheme, slugName } from './export-theme';
 import { importCssVariables, type CssImport } from './import-css';
 
@@ -59,14 +59,10 @@ function Highlight({ code }: { code: string }) {
   }
   return <>{pieces}{code.slice(from)}</>;
 }
-function SpringControl({ bouncy = false, easing, duration, onChange }: { bouncy?: boolean; easing?: string; duration?: string; onChange(tokens: Partial<Tokens>): void }) {
-  const profiles = useRef(new Map<string, { response: number; damping: number }>()), [replay, setReplay] = useState(0);
-  const { response, damping } = profiles.current.get(easing + '|' + duration) ?? { response: bouncy ? .4 : .35, damping: bouncy ? .7 : .85 };
-  const update = (response: number, damping: number) => {
-    const tokens = springTokens(response, damping, bouncy ? 'bouncy' : 'spring');
-    profiles.current.set((bouncy ? tokens.motionSpringBouncy : tokens.motionSpring) + '|' + (bouncy ? tokens.motionSpringBouncyDuration : tokens.motionSpringDuration), { response, damping });
-    onChange(tokens);
-  };
+function SpringControl({ bouncy = false, easing, duration, profile, onChange }: { bouncy?: boolean; easing?: string; duration?: string; profile?: SpringProfile; onChange(profile: SpringProfile): void }) {
+  const [replay, setReplay] = useState(0);
+  const { response, damping } = profile ?? { response: bouncy ? .4 : .35, damping: bouncy ? .7 : .85 };
+  const update = (response: number, damping: number) => onChange({ response, damping });
   const name = bouncy ? 'Bouncy' : 'Spring', generated = springTokens(response, damping, bouncy ? 'bouncy' : 'spring');
   const curve = easing ?? (bouncy ? generated.motionSpringBouncy : generated.motionSpring)!;
   const values = curve.startsWith('linear(') ? curve.slice(7, -1).split(',').map(Number) : [];
@@ -88,6 +84,7 @@ export function ThemeEditor({ draft, mode, onMode, onChange, onClose, undo, redo
   useEffect(() => { setCopied(false); }, [code]);
   const value = (key: keyof Tokens, target: EditTarget = 'light') => baseValue(theme, key, target);
   const merge = (tokens: Partial<Tokens>, target: EditTarget = 'light') => onChange({ ...draft, [target === 'dark' ? 'dark' : 'tokens']: { ...draft[target === 'dark' ? 'dark' : 'tokens'], ...tokens } });
+  const mergeSpring = (variant: 'spring' | 'bouncy', profile: SpringProfile) => onChange({ ...draft, tokens: { ...draft.tokens, ...springTokens(profile.response, profile.damping, variant) }, springProfiles: { ...draft.springProfiles, [variant]: profile } });
   const rows = (group: string) => tokenCatalogue.filter(token => token.group === group).map(token => row(token));
   const count = (group: string) => tokenCatalogue.filter(token => token.group === group && (draft.tokens[token.key] !== undefined || draft.dark[token.key] !== undefined)).length;
   const total = new Set([...Object.keys(draft.tokens), ...Object.keys(draft.dark)]).size;
@@ -114,8 +111,8 @@ export function ThemeEditor({ draft, mode, onMode, onChange, onClose, undo, redo
     <header className="te-header"><div className="te-eyebrow"><span><i />THEME STUDIO</span><button className="te-icon" aria-label="Close theme editor" onClick={onClose}><Icon name="close" /></button></div>
       <label className="te-sr-only" htmlFor={nameId}>Theme name</label><input className="te-name" id={nameId} ref={nameRef} value={draft.name} placeholder="Untitled theme" onChange={event => onChange({ ...draft, name: event.target.value })} />
       <div className="te-base"><label htmlFor={baseId}>Start from</label><select id={baseId} value={pendingBase ?? draft.base} onChange={event => setPendingBase(event.target.value)}>{availableThemes.map(base => <option value={base.name} key={base.name}>{base.name[0].toUpperCase() + base.name.slice(1)}</option>)}</select><span className="te-saved"><i />Saved locally</span></div>
-      {pendingBase && <div className="te-base-choice"><span>Use {pendingBase}?</span><button onClick={() => { onChange({ ...draft, base: pendingBase }); setPendingBase(undefined); }}>Keep edits</button><button onClick={() => { onChange({ ...draft, base: pendingBase, tokens: {}, dark: {} }); setPendingBase(undefined); }}>Start fresh</button></div>}
-      <div className="te-toolbar"><span>{total} override{total === 1 ? '' : 's'}</span><div><button className="te-icon" aria-label="Undo theme edit" disabled={!canUndo} onClick={undo}>↶</button><button className="te-icon" aria-label="Redo theme edit" disabled={!canRedo} onClick={redo}>↷</button><button onClick={() => onChange({ ...draft, tokens: {}, dark: {} })} disabled={!total}>Reset all</button></div></div>
+      {pendingBase && <div className="te-base-choice"><span>Use {pendingBase}?</span><button onClick={() => { onChange({ ...draft, base: pendingBase }); setPendingBase(undefined); }}>Keep edits</button><button onClick={() => { onChange({ ...draft, base: pendingBase, tokens: {}, dark: {}, springProfiles: undefined }); setPendingBase(undefined); }}>Start fresh</button></div>}
+      <div className="te-toolbar"><span>{total} override{total === 1 ? '' : 's'}</span><div><button className="te-icon" aria-label="Undo theme edit" disabled={!canUndo} onClick={undo}>↶</button><button className="te-icon" aria-label="Redo theme edit" disabled={!canRedo} onClick={redo}>↷</button><button onClick={() => onChange({ ...draft, tokens: {}, dark: {}, springProfiles: undefined })} disabled={!total && !draft.springProfiles}>Reset all</button></div></div>
       <div className="te-target" role="group" aria-label="Editing colour mode">{(['light', 'dark'] as const).map(target => <button key={target} aria-pressed={mode === target} onClick={() => onMode(target)}><Icon name={target === 'light' ? 'sun' : 'moon'} />{target === 'light' ? 'Light' : 'Dark'}</button>)}<span>Live preview <i /></span></div>
     </header>
     <div className="te-scroll">
@@ -137,7 +134,7 @@ export function ThemeEditor({ draft, mode, onMode, onChange, onClose, undo, redo
       <Group title="Motion" caption="Timing & feel" count={count('motion')}>{shared}
         {(['motionInstant', 'motionFast', 'motionBase', 'motionSlow'] as const).map((key, i) => <Slider key={key} label={['Instant', 'Fast', 'Base', 'Slow'][i] + ' duration'} value={ms(value(key))} min={0} max={1000} step={10} unit="ms" onChange={next => merge({ [key]: next + 'ms' })} />)}
         {tokenCatalogue.filter(token => ['motionEase', 'motionEaseInOut', 'motionEaseExit'].includes(token.key)).map(row)}
-        <SpringControl easing={value('motionSpring')} duration={value('motionSpringDuration')} onChange={merge} /><SpringControl bouncy easing={value('motionSpringBouncy')} duration={value('motionSpringBouncyDuration')} onChange={merge} />
+        <SpringControl profile={draft.springProfiles?.spring} easing={value('motionSpring')} duration={value('motionSpringDuration')} onChange={profile => mergeSpring('spring', profile)} /><SpringControl bouncy profile={draft.springProfiles?.bouncy} easing={value('motionSpringBouncy')} duration={value('motionSpringBouncyDuration')} onChange={profile => mergeSpring('bouncy', profile)} />
         <details className="te-nested"><summary>Spring CSS & durations</summary>{tokenCatalogue.filter(token => token.key.startsWith('motionSpring')).map(row)}</details>
         {tokenCatalogue.filter(token => ['motionStagger', 'motionDistance', 'motionScale', 'motionBlur'].includes(token.key)).map(row)}
       </Group>

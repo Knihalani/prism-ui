@@ -40,6 +40,14 @@ test('font stacks use readable single quotes and preserve escaping in either quo
   expect(evaluate(source)).toEqual(toTheme(draft, availableThemes));
 });
 
+test('persisted spring builder metadata is excluded from the live theme and export', () => {
+  const draft: ThemeDraft = { name: 'Spring builder', base: 'host', tokens: { motionSpringDuration: '600ms' }, dark: {}, springProfiles: { spring: { response: .58, damping: .64 } } };
+  const source = exportTheme(draft);
+  expect(source).not.toContain('springProfiles');
+  expect(toTheme(draft, availableThemes)).not.toHaveProperty('springProfiles');
+  expect(evaluate(source)).toEqual(toTheme(draft, availableThemes));
+});
+
 test('empty maps are omitted and every catalogue key round-trips in stable catalogue order', () => {
   const empty: ThemeDraft = { name: '', base: 'host', tokens: {}, dark: {} };
   const source = exportTheme(empty);

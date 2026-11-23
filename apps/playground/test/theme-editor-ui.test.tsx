@@ -45,6 +45,43 @@ function open(view: ReturnType<typeof render>) {
   return within(view.getByRole('complementary', { name: 'Theme editor' }));
 }
 
+test.each(['Spring', 'Bouncy'])('%s parameters survive reopening, storage restore and undo/redo', name => {
+  let view = render(<App />);
+  let editor = open(view);
+  const variant = name === 'Spring' ? 'spring' : 'bouncy';
+  edit(editor.getByRole('slider', { name: name + ' response', hidden: true }), '.58');
+  edit(editor.getByRole('slider', { name: name + ' damping', hidden: true }), '.64');
+  fireEvent.click(editor.getByRole('button', { name: 'Close theme editor' }));
+  editor = open(view);
+  expect((editor.getByRole('slider', { name: name + ' response', hidden: true }) as HTMLInputElement).value).toBe('0.58');
+  expect((editor.getByRole('slider', { name: name + ' damping', hidden: true }) as HTMLInputElement).value).toBe('0.64');
+  edit(editor.getByRole('slider', { name: name + ' response', hidden: true }), '.72');
+  expect(stored().draft.tokens).toMatchObject(springTokens(.72, .64, variant));
+  fireEvent.click(editor.getByRole('button', { name: 'Undo theme edit' }));
+  expect(stored().draft.tokens).toMatchObject(springTokens(.58, .64, variant));
+  expect((editor.getByRole('slider', { name: name + ' response', hidden: true }) as HTMLInputElement).value).toBe('0.58');
+  fireEvent.click(editor.getByRole('button', { name: 'Redo theme edit' }));
+  expect(stored().draft.tokens).toMatchObject(springTokens(.72, .64, variant));
+  view.unmount();
+  view = render(<App />);
+  editor = within(view.getByRole('complementary', { name: 'Theme editor' }));
+  expect((editor.getByRole('slider', { name: name + ' response', hidden: true }) as HTMLInputElement).value).toBe('0.72');
+  edit(editor.getByRole('slider', { name: name + ' damping', hidden: true }), '.81');
+  expect(stored().draft.tokens).toMatchObject(springTokens(.72, .81, variant));
+  fireEvent.click(editor.getByRole('button', { name: 'Reset all' }));
+  expect((editor.getByRole('slider', { name: name + ' response', hidden: true }) as HTMLInputElement).value).toBe(name === 'Spring' ? '0.35' : '0.4');
+});
+
+test('invalid persisted spring parameters are discarded without losing token overrides', () => {
+  localStorage.setItem(editorStorageKey, JSON.stringify({ open: true, draft: { name: 'Saved', base: 'host', tokens: { accent: '#123456' }, dark: {}, springProfiles: { spring: { response: -1, damping: .8 }, bouncy: { response: .4, damping: 'bad' } } } }));
+  const view = render(<App />);
+  const editor = within(view.getByRole('complementary', { name: 'Theme editor' }));
+  expect((editor.getByRole('slider', { name: 'Spring response', hidden: true }) as HTMLInputElement).value).toBe('0.35');
+  expect((editor.getByRole('slider', { name: 'Bouncy response', hidden: true }) as HTMLInputElement).value).toBe('0.4');
+  expect(stored().draft.springProfiles).toBeUndefined();
+  expect(stored().draft.tokens.accent).toBe('#123456');
+});
+
 test('toggle is nonmodal, restores focus, and round-trips editor URL state without changing theme parsing', () => {
   const view = render(<App />);
   const editor = open(view);

@@ -1,6 +1,7 @@
 import { defineTheme, spring, type PrismTheme, type Tokens } from '@prism-ui/react';
 
-export type ThemeDraft = { name: string; base: string; tokens: Partial<Tokens>; dark: Partial<Tokens> };
+export type SpringProfile = { response: number; damping: number };
+export type ThemeDraft = { name: string; base: string; tokens: Partial<Tokens>; dark: Partial<Tokens>; springProfiles?: Partial<Record<'spring' | 'bouncy', SpringProfile>> };
 export type EditTarget = 'light' | 'dark';
 export type TokenGroup = 'colour' | 'font' | 'type' | 'weight' | 'radius' | 'space' | 'elevation' | 'motion';
 export type ControlKind = 'colour' | 'font' | 'length' | 'number' | 'shadow' | 'duration' | 'easing' | 'text';

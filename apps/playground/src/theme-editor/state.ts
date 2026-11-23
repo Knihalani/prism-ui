@@ -4,13 +4,21 @@ import { tokenCatalogue, type ThemeDraft } from './model';
 
 export const editorStorageKey = 'prism-theme-editor';
 export const newDraft = (base: string): ThemeDraft => ({ name: 'My theme', base, tokens: {}, dark: {} });
-function restore() {
+function restore(): { draft: ThemeDraft | null; open: boolean } {
   try {
     const value = JSON.parse(localStorage.getItem(editorStorageKey) ?? 'null');
     const draft = value?.draft;
     if (!draft || typeof draft.name !== 'string' || !availableThemes.some(base => base.name === draft.base)) return { draft: null, open: value?.open === true };
     const tokens = (map: unknown) => Object.fromEntries(tokenCatalogue.flatMap(({ key }) => map && typeof map === 'object' && typeof (map as Record<string, unknown>)[key] === 'string' ? [[key, (map as Record<string, string>)[key]]] : []));
-    return { draft: { name: draft.name, base: draft.base, tokens: tokens(draft.tokens), dark: tokens(draft.dark) }, open: value.open === true };
+    const springProfiles: NonNullable<ThemeDraft['springProfiles']> = {};
+    for (const name of ['spring', 'bouncy'] as const) {
+      const profile = draft.springProfiles?.[name];
+      if (typeof profile?.response === 'number' && Number.isFinite(profile.response) && profile.response >= .1 && profile.response <= 1 &&
+          typeof profile.damping === 'number' && Number.isFinite(profile.damping) && profile.damping >= .3 && profile.damping <= 1.5) {
+        springProfiles[name] = { response: profile.response, damping: profile.damping };
+      }
+    }
+    return { draft: { name: draft.name, base: draft.base, tokens: tokens(draft.tokens), dark: tokens(draft.dark), ...(Object.keys(springProfiles).length ? { springProfiles } : {}) }, open: value.open === true };
   } catch { return { draft: null, open: false }; }
 }
 export function useThemeEditor(initialBase: string, urlOpen?: boolean) {
