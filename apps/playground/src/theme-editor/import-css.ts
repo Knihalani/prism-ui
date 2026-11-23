@@ -3,7 +3,8 @@ import type { Tokens } from '@prism-ui/react';
 export type CssImport = { tokens: Partial<Tokens>; dark: Partial<Tokens>; mapped: string[]; unmapped: string[] };
 type Variables = { values: Map<string, string>; candidates: Map<string, string> };
 type Mode = 'light' | 'dark';
-type Context = { modes: Mode[]; media?: Mode };
+type RootScope = { neutral: boolean; modes: Mode[] };
+type Context = { roots?: RootScope; media?: Mode[]; blocked?: boolean };
 const variables = (): Variables => ({ values: new Map(), candidates: new Map() });
 
 function withoutComments(css: string): string {
@@ -41,33 +42,119 @@ function withoutNegation(selector: string): string {
   return result;
 }
 
+function splitList(value: string): string[] | null {
+  const parts: string[] = [];
+  let start = 0, depth = 0, quote = '';
+  for (let i = 0; i < value.length; i++) {
+    const c = value[i];
+    if (quote) { if (c === '\\') i++; else if (c === quote) quote = ''; }
+    else if (c === '"' || c === "'") quote = c;
+    else if (c === '(' || c === '[') depth++;
+    else if (c === ')' || c === ']') { if (--depth < 0) return null; }
+    else if (c === ',' && !depth) { parts.push(value.slice(start, i).trim()); start = i + 1; }
+  }
+  if (depth || quote) return null;
+  parts.push(value.slice(start).trim());
+  return parts.every(Boolean) ? parts : null;
+}
+
+function rootModes(selector: string): Mode[] | null {
+  let rest = withoutNegation(selector).trim(), found = false;
+  const modes = new Set<Mode>();
+  while (rest) {
+    const space = /^[\s>+~]+/.exec(rest);
+    if (space) { rest = rest.slice(space[0].length); continue; }
+    if (/^:host\(/i.test(rest)) {
+      const end = closingParen(rest, 6);
+      if (end < 0) return null;
+      const inner = rootModes(rest.slice(6, end));
+      if (!inner) return null;
+      inner.forEach(mode => modes.add(mode)); found = true; rest = rest.slice(end + 1); continue;
+    }
+    const root = /^(?::root|:host|html|body)(?![\w-])/i.exec(rest);
+    const themeClass = /^\.(?:theme-)?(dark|light)(?![\w-])/.exec(rest);
+    const attribute = /^\[\s*data-(?:theme|mode)\s*(?:=\s*(?:"([^"]*)"|'([^']*)'|([^\]\s]+))\s*)?\]/i.exec(rest);
+    const match = root ?? themeClass ?? attribute;
+    if (!match) return null;
+    const mode = themeClass?.[1] ?? (attribute?.[1] ?? attribute?.[2] ?? attribute?.[3]);
+    if (mode === 'dark' || mode === 'light') modes.add(mode);
+    found = true; rest = rest.slice(match[0].length);
+  }
+  return found ? [...modes] : null;
+}
+
+function mediaModes(header: string): Mode[] | undefined | null {
+  const queries = splitList(header.replace(/^@media\s*/i, ''));
+  if (!queries) return null;
+  const union = new Set<Mode>();
+  let constrained = false;
+  for (const query of queries) {
+    let rest = query.toLowerCase(), negated = false, type = 'all', otherConditions = 0;
+    const modifier = /^(not|only)\s+/.exec(rest);
+    if (modifier) { negated = modifier[1] === 'not'; rest = rest.slice(modifier[0].length); }
+    const mediaType = /^(all|screen)\b/.exec(rest);
+    if (mediaType) {
+      type = mediaType[1]; rest = rest.slice(mediaType[0].length).trim();
+      if (rest) { if (!/^and\b/.test(rest)) return null; rest = rest.slice(3).trim(); if (!rest) return null; }
+    }
+    let modes: Mode[] = ['light', 'dark'], hasScheme = false;
+    if (!rest && !mediaType) return null;
+    while (rest) {
+      const feature = /^\(\s*([\w-]+)\s*:\s*([^()]*)\)/.exec(rest);
+      if (!feature) return null;
+      const [, name, raw] = feature, value = raw.trim();
+      if (name === 'prefers-color-scheme') {
+        if (value !== 'dark' && value !== 'light') return null;
+        modes = modes.filter(mode => mode === value); hasScheme = true;
+      } else if (/^(?:(?:min-|max-)?(?:width|height|aspect-ratio|resolution)|orientation|hover|any-hover|pointer|any-pointer|prefers-reduced-motion|prefers-contrast|forced-colors)$/.test(name)) otherConditions++;
+      else return null;
+      rest = rest.slice(feature[0].length).trim();
+      if (rest) { if (!/^and\b/.test(rest)) return null; rest = rest.slice(3).trim(); if (!rest) return null; }
+    }
+    if (negated) {
+      if (!hasScheme || modes.length !== 1 || otherConditions || type !== 'all') return null;
+      modes = modes[0] === 'dark' ? ['light'] : ['dark'];
+    }
+    constrained ||= hasScheme;
+    modes.forEach(mode => union.add(mode));
+  }
+  return constrained ? [...union] : undefined;
+}
+
+function selectedModes(context: Context): Mode[] {
+  if (context.blocked || !context.roots) return [];
+  const modes = new Set([...context.roots.modes, ...(context.roots.neutral ? context.media ?? ['light' as const] : [])]);
+  return [...modes].filter(mode => !context.media || context.media.includes(mode));
+}
+
 function targets(header: string, inherited: Context): Context {
+  if (inherited.blocked) return inherited;
   if (/^@media\b/i.test(header)) {
-    const preference = /\(\s*prefers-color-scheme\s*:\s*(dark|light)\s*\)/i.exec(header)?.[1].toLowerCase() as Mode | undefined;
-    const media = inherited.media === 'dark' ? 'dark' : preference ?? inherited.media;
-    return { modes: media ? [media] : inherited.modes, media };
+    const modes = mediaModes(header);
+    if (modes === null) return { ...inherited, blocked: true };
+    if (!modes) return inherited;
+    const media = inherited.media ? modes.filter(mode => inherited.media!.includes(mode)) : modes;
+    return { ...inherited, media, blocked: !media.length };
   }
-  if (/^@theme(?:\s+inline)?\s*$/i.test(header)) return { ...inherited, modes: inherited.modes.length ? inherited.modes : ['light'] };
-  if (header.startsWith('@') || inherited.media) return inherited;
-  const result = new Set<Mode>();
-  for (const selector of withoutNegation(header).split(',')) {
-    const classes = selector.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, '""').replace(/\[[^\]]*\]/g, '');
-    if (/\.(?:dark|theme-dark)(?![\w-])/i.test(classes) || /\[data-(?:theme|mode)\s*=\s*(?:"dark"|'dark'|dark)\s*\]/i.test(selector)) result.add('dark');
-    else if (/:root(?![\w-])/.test(classes)) result.add('light');
-  }
-  return { ...inherited, modes: [...result] };
+  if (/^@theme(?:\s+inline)?\s*$/i.test(header)) return { ...inherited, roots: inherited.roots ?? { neutral: true, modes: [] } };
+  if (header.startsWith('@')) return inherited;
+  const scopes = (splitList(header) ?? []).map(rootModes).filter(scope => scope !== null);
+  if (!scopes.length) return { ...inherited, blocked: true };
+  const roots = { neutral: scopes.some(scope => !scope.length), modes: [...new Set(scopes.flat())] };
+  return { ...inherited, roots };
 }
 
 function parse(css: string) {
   css = withoutComments(css);
-  const light = variables(), dark = variables(), names = new Set<string>();
+  const light = variables(), dark = variables(), names = new Set<string>(), ignored = new Set<string>();
   let i = 0;
   function declaration(text: string, modes: Mode[]) {
     const match = /^\s*(--[\w-]+)\s*:\s*([\s\S]+)$/.exec(text);
-    if (!match || !modes.length) return;
+    if (!match) return;
     const [, name, raw] = match, value = raw.replace(/\s*!important\s*$/i, '').trim();
     if (!value) return;
     names.add(name);
+    if (!modes.length) { ignored.add(name); return; }
     for (const mode of modes) {
       const map = mode === 'dark' ? dark : light;
       map.values.set(name, value);
@@ -88,16 +175,16 @@ function parse(css: string) {
         const nested = targets(css.slice(start, i).trim(), context);
         i++; block(nested); start = i; continue;
       } else if (!parens && (c === ';' || c === '}')) {
-        declaration(css.slice(start, i), context.modes); i++; start = i;
+        declaration(css.slice(start, i), selectedModes(context)); i++; start = i;
         if (c === '}') return;
         continue;
       }
       i++;
     }
-    declaration(css.slice(start, i), context.modes);
+    declaration(css.slice(start, i), selectedModes(context));
   }
-  block({ modes: [] });
-  return { light, dark, names };
+  block({});
+  return { light, dark, names, ignored };
 }
 
 function closingParen(text: string, start: number): number {
@@ -168,12 +255,12 @@ function mapTokens(map: Variables, used: Set<string>): Partial<Tokens> {
 }
 
 export function importCssVariables(css: string): CssImport {
-  const { light, dark, names } = parse(css), used = new Set<string>();
+  const { light, dark, names, ignored } = parse(css), used = new Set<string>();
   const tokens = mapTokens(light, used);
   const values = new Map([...light.values, ...dark.values]);
   const effectiveDark = mapTokens({ values, candidates: new Map([...light.candidates, ...dark.candidates]) }, used);
   const declaredDark = mapTokens({ values, candidates: dark.candidates }, used);
   if (declaredDark.bg !== undefined || declaredDark.textMuted !== undefined) declaredDark.textSubtle = effectiveDark.textSubtle;
   const overrides = Object.fromEntries(Object.entries(effectiveDark).filter(([key, value]) => value !== tokens[key as keyof Tokens] || declaredDark[key as keyof Tokens] !== undefined));
-  return { tokens, dark: overrides, mapped: [...names].filter(name => used.has(name)), unmapped: [...names].filter(name => !used.has(name)) };
+  return { tokens, dark: overrides, mapped: [...names].filter(name => used.has(name)), unmapped: [...names].filter(name => !used.has(name) || ignored.has(name)) };
 }

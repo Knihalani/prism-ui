@@ -107,8 +107,8 @@ test('explicit dark values remain overrides even when equal to light, including 
   expect(result.dark).toEqual({ bg: '#fff', accent: '#123', accentText: '#123', textSubtle: 'color-mix(in srgb, #666 70%, #fff)' });
 });
 
-test('empty and garbage input return an empty import and unrelated selectors are ignored', () => {
-  for (const css of ['', 'hello world', '/* unterminated', 'body{--primary:red}', ':root{--primary:;}']) {
+test('empty and garbage input return an empty import', () => {
+  for (const css of ['', 'hello world', '/* unterminated', ':root{--primary:;}']) {
     expect(importCssVariables(css)).toEqual({ tokens: {}, dark: {}, mapped: [], unmapped: [] });
   }
   expect(importCssVariables(':root{--unknown:ok}').unmapped).toEqual(['--unknown']);
@@ -150,4 +150,87 @@ test('nested media and layer blocks retain dark context through root and theme b
   `);
   expect(result.tokens).toEqual({ bg: '#fff', accent: '#123', accentText: '#123' });
   expect(result.dark).toEqual({ bg: '#111', accent: '#abc', accentText: '#abc' });
+});
+
+test('component variables cannot overwrite theme roots inside scheme media queries', () => {
+  const result = importCssVariables(`
+    :root { --background: #fff; }
+    @media (prefers-color-scheme: dark) {
+      :root { --background: #111; }
+      .card { --background: red; --primary: blue; }
+    }
+  `);
+  expect(result.tokens.bg).toBe('#fff');
+  expect(result.dark.bg).toBe('#111');
+  expect(result.dark.accent).toBeUndefined();
+  expect(result.unmapped).toContain('--primary');
+});
+
+test.each(['.card', '.dark .card', ':root .card', 'html body .card', '.card.dark'])('%s is not a theme root, with or without media', selector => {
+  for (const css of [selector + '{--primary:red}', '@media(prefers-color-scheme:dark){' + selector + '{--primary:red}}']) {
+    const result = importCssVariables(css);
+    expect(result.tokens).toEqual({});
+    expect(result.dark).toEqual({});
+    expect(result.unmapped).toContain('--primary');
+  }
+});
+
+test.each([':root', 'html', 'body', ':host', '[data-theme]', 'html[data-theme=custom]', 'html body'])('%s is a theme root inside and outside media', selector => {
+  expect(importCssVariables(selector + '{--primary:red}').tokens.accent).toBe('red');
+  const result = importCssVariables('@media(prefers-color-scheme:dark){' + selector + '{--primary:blue}}');
+  expect(result.tokens).toEqual({});
+  expect(result.dark.accent).toBe('blue');
+});
+
+test.each([
+  ['not all and (prefers-color-scheme: dark)', ['light']],
+  ['not all and (prefers-color-scheme: light)', ['dark']],
+  ['(prefers-color-scheme: dark), (prefers-color-scheme: light)', ['light', 'dark']],
+  ['(prefers-color-scheme: dark), not all and (prefers-color-scheme: dark)', ['light', 'dark']],
+  ['not all and (prefers-color-scheme: dark), (prefers-color-scheme: light)', ['light']],
+  ['only screen and (prefers-color-scheme: dark)', ['dark']],
+])('media list %s has confident scheme targets', (query, modes) => {
+  const result = importCssVariables('@media ' + query + '{:root{--primary:red}}');
+  expect(result.tokens.accent).toBe(modes.includes('light') ? 'red' : undefined);
+  expect(result.dark.accent).toBe(modes.includes('dark') ? 'red' : undefined);
+});
+
+test.each([
+  '(prefers-color-scheme: sepia)',
+  'not all and (prefers-color-scheme: dark) and (min-width:600px)',
+  'not screen and (prefers-color-scheme: dark)',
+  '(prefers-color-scheme: dark), (unknown-feature: unknown)',
+  '(prefers-color-scheme: dark) or (prefers-color-scheme: light)',
+])('ambiguous media %s is skipped and reports ignored variables', query => {
+  const result = importCssVariables('@media ' + query + '{@layer base{:root{--primary:red}}}');
+  expect(result).toEqual({ tokens: {}, dark: {}, mapped: [], unmapped: ['--primary'] });
+});
+
+test('nested scheme constraints intersect and do not revive an ignored component scope', () => {
+  const result = importCssVariables(`
+    @media(prefers-color-scheme:dark) {
+      @layer base { @media(min-width:600px) { body { --background: #111; } } }
+      @media(prefers-color-scheme:light) { :root { --primary: red; } }
+    }
+    .card { @media(prefers-color-scheme:dark) { :root { --foreground: red; } } }
+  `);
+  expect(result.tokens).toEqual({});
+  expect(result.dark).toEqual({ bg: '#111' });
+  expect(result.unmapped).toContain('--primary');
+  expect(result.unmapped).toContain('--foreground');
+});
+
+test.each([':host(.dark)', 'html.dark body', 'body[data-theme=dark]', '[data-mode=dark]'])('%s combines theme-root selectors without admitting component classes', selector => {
+  const result = importCssVariables(selector + '{--primary:red}');
+  expect(result.tokens).toEqual({});
+  expect(result.dark.accent).toBe('red');
+});
+
+test('ignored declarations are reported even when the same variable also has a mapped root value', () => {
+  const result = importCssVariables(':root{--primary:green}@media(unknown-feature:unknown){:root{--primary:red}}');
+  expect(result.tokens.accent).toBe('green');
+  expect(result.dark).toEqual({});
+  expect(result.mapped).toContain('--primary');
+  expect(result.unmapped).toContain('--primary');
+  expect(importCssVariables('.DARK{--primary:red}').tokens).toEqual({});
 });
