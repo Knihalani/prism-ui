@@ -40,8 +40,8 @@ its fonts are requested once, only after selection. The host site uses system
 fonts, so loading example fonts does not change the page shell.
 Mockup's browser-visibility gate does not produce a hydration-stable first render.
 Its island therefore hydrates the server HTML as a snapshot before mounting the
-live content in an effect; its complete prerendered preview stays readable with
-JavaScript off. Other component islands hydrate their Prism tree directly.
+live content in an effect; its prerendered shell and authoring source stay readable
+with JavaScript off. Other component islands hydrate their Prism tree directly.
 The index uses script-disabled sandbox frames for static HTML/SVG media previews,
 derived through the real fence plugins; neither media preview runs JavaScript.
 

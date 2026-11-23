@@ -16,8 +16,9 @@
 .gallery-card { min-width: 0; position: relative; }
 .gallery-preview { height: 220px; overflow: hidden; padding: 18px; background: var(--soft); border: 1px solid var(--line); border-radius: 8px; pointer-events: none; font-size: 13px; mask-image: linear-gradient(#000 0 76%, transparent 100%); }
 .gallery-preview > .prism-root { font-size: 13px; }
+.gallery-preview.static-preview .prism-root { color-scheme: inherit; }
 .gallery-media-preview { display: block; width: 100%; height: 160px; border: 0; }
-.gallery-preview .prism-datatable__root { --prism-datatable-host-background: var(--soft); }
+.gallery-preview .prism-root .prism-datatable__root :is(.prism-datatable__heading, .prism-datatable__selection-heading, .prism-datatable__selection-cell, .prism-datatable__cell) { background: var(--soft); }
 .gallery-preview:has(.prism-num__root, .prism-calc__root, .prism-badge__root) { display: grid; place-items: center; }
 .gallery-preview:has(.prism-num__root, .prism-calc__root, .prism-badge__root) > .prism-root { font-size: 22px; width: 100%; text-align: center; }
 .gallery-preview .prism-paragraph__root { margin-block: 0 12px; }
