@@ -52,7 +52,7 @@ test('a grouped variant id change restores its destination draft instead of the 
 test('two streamed blocks form one switcher; tabs switch and compare shows both with one overall and submit', () => {
   const x = setup(); expect(x.view.getAllByRole('tablist')).toHaveLength(1); expect(x.view.getAllByRole('tab').map(el => el.textContent)).toEqual(['A', 'B', 'Compare']); expect(x.view.getByLabelText('Streaming')).toBeDefined(); expect(x.view.getAllByRole('application')).toHaveLength(1); expect(x.view.container.querySelectorAll('iframe')).toHaveLength(1);
   fireEvent.click(x.view.getByRole('tab', { name: 'B' })); expect(x.view.getByRole('tab', { name: 'B' }).getAttribute('aria-selected')).toBe('true'); expect(x.view.container.querySelectorAll('iframe')).toHaveLength(1);
-  fireEvent.click(x.view.getByRole('tab', { name: 'Compare' })); expect(x.view.getAllByRole('application')).toHaveLength(2); expect(x.view.container.querySelectorAll('iframe')).toHaveLength(2); expect(x.view.getAllByRole('textbox', { name: 'Overall feedback' })).toHaveLength(1); expect(x.view.getAllByText('Submit feedback')).toHaveLength(1);
+  fireEvent.click(x.view.getByRole('tab', { name: 'Compare' })); expect(x.view.getAllByRole('application')).toHaveLength(2); expect(x.view.container.querySelectorAll('iframe')).toHaveLength(2); expect(x.view.getAllByRole('textbox', { name: 'Overall feedback' })).toHaveLength(1); expect(x.view.getAllByRole('button', { name: /^Send \d+ comments?$/ })).toHaveLength(1);
 });
 test('compare has one shared toolbar, propagates controls, and saves pending drafts on submit', () => {
   const x = setup(a + b + '</h1>\n```', true);
@@ -72,24 +72,24 @@ test('compare has one shared toolbar, propagates controls, and saves pending dra
   fireEvent.click(x.view.getByRole('button', { name: 'Prefer this B' }));
   fireEvent.keyDown(x.view.getAllByRole('application')[1], { key: 'Enter' });
   x.change(x.view.getByRole('textbox', { name: 'Add a comment…' }), 'Pending B draft');
-  expect((x.view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement).disabled).toBe(false);
+  expect((x.view.getByRole('button', { name: /^Send \d+ comments?$/ }) as HTMLButtonElement).disabled).toBe(false);
   expect(x.view.getByText('1 comment')).toBeDefined();
   expect(x.view.getByRole('button', { name: 'Undo' }).querySelector('svg')).not.toBeNull();
-  fireEvent.click(x.view.getByText('Submit feedback'));
+  fireEvent.click(x.view.getByRole('button', { name: /^Send \d+ comments?$/ }));
   expect((x.actions[0].payload as any).variants).toEqual([{ variant: 'B', items: [{ n: 1, kind: 'pin', x: 50, y: 50, comment: 'Pending B draft' }] }]);
-  expect(x.view.getByText('Feedback sent · 1 comment')).toBeDefined();
+  expect(x.view.getByRole('button', { name: 'Sent · 1 comment' })).toBeDefined();
 });
 test('group payload includes all commented variants, shared overall and preference exactly', () => {
   const x = setup(a + b + '</h1>\n```', true);
-  expect((x.view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement).disabled).toBe(true);
+  expect((x.view.getByRole('button', { name: /^Send \d+ comments?$/ }) as HTMLButtonElement).disabled).toBe(true);
   comment(x.view.getByRole('application'), 'Bigger heading', x.view);
   fireEvent.click(x.view.getByRole('tab', { name: 'B' })); comment(x.view.getByRole('application'), 'Better spacing', x.view);
   x.change(x.view.getByRole('textbox', { name: 'Overall feedback' }), 'Both are promising');
-  fireEvent.click(x.view.getByRole('tab', { name: 'Compare' })); fireEvent.click(x.view.getByRole('button', { name: 'Prefer this B' })); fireEvent.click(x.view.getByText('Submit feedback'));
+  fireEvent.click(x.view.getByRole('tab', { name: 'Compare' })); fireEvent.click(x.view.getByRole('button', { name: 'Prefer this B' })); fireEvent.click(x.view.getByRole('button', { name: /^Send \d+ comments?$/ }));
   const itemsA = [{ n: 1, kind: 'pin' as const, x: 50, y: 50, comment: 'Bigger heading' }], itemsB = [{ n: 1, kind: 'pin' as const, x: 50, y: 50, comment: 'Better spacing' }];
   const payload = { mockup: 'Pricing', variant: 'B', device: 'desktop', overall: 'Both are promising', items: itemsB, variants: [{ variant: 'A', items: itemsA }, { variant: 'B', items: itemsB }], preferred: 'B' };
   expect(x.actions.map(({ type, payload, message }) => ({ type, payload, message }))).toEqual([{ type: 'feedback', payload, message: [toMessage({ mockup: 'Pricing', variant: 'A', device: 'desktop', overall: '', items: itemsA }), toMessage({ mockup: 'Pricing', variant: 'B', device: 'desktop', overall: payload.overall, items: itemsB }), 'Preferred: B'].join('\n\n') }]);
-  fireEvent.click(x.view.getByText('Edit feedback')); fireEvent.click(x.view.getByRole('tab', { name: 'B' })); fireEvent.click(x.view.getByText('Submit feedback')); expect((x.actions[1].payload as any).variant).toBe('B'); expect((x.actions[1].payload as any).items).toEqual(itemsB);
+  fireEvent.click(x.view.getByText('Edit feedback')); fireEvent.click(x.view.getByRole('tab', { name: 'B' })); fireEvent.click(x.view.getByRole('button', { name: /^Send \d+ comments?$/ })); expect((x.actions[1].payload as any).variant).toBe('B'); expect((x.actions[1].payload as any).items).toEqual(itemsB);
 });
 test('roving tabs support arrows, Home and End and persist selection', () => {
   const x = setup(); const first = x.view.getByRole('tab', { name: 'A' }); act(() => first.focus()); fireEvent.keyDown(first, { key: 'ArrowRight' }); const second = x.view.getByRole('tab', { name: 'B' }); expect(document.activeElement).toBe(second); expect(second.tabIndex).toBe(0); expect(first.tabIndex).toBe(-1); expect(x.store.get('alpha.groupTab')).toBe('1');
@@ -104,5 +104,5 @@ test('B arriving and streaming does not remount A frame, while inactive variants
 test('nonconsecutive blocks and separate stores do not combine; empty group payload omits preference', () => {
   const x = setup(a + 'A separating paragraph.\n\n' + b); expect(x.view.getAllByRole('tablist')).toHaveLength(2); x.view.unmount();
   const y = setup(a), z = setup(a); expect(y.view.container.querySelectorAll('[role=tablist]')).toHaveLength(1); expect(z.view.container.querySelectorAll('[role=tablist]')).toHaveLength(1);
-  y.change(within(y.view.container).getByRole('textbox', { name: 'Overall feedback' }), 'Only overall'); fireEvent.click(within(y.view.container).getByText('Submit feedback')); expect(y.actions[0].payload).toEqual({ mockup: 'Pricing', variant: 'A', device: 'desktop', overall: 'Only overall', items: [], variants: [] });
+  y.change(within(y.view.container).getByRole('textbox', { name: 'Overall feedback' }), 'Only overall'); fireEvent.click(within(y.view.container).getByRole('button', { name: /^Send \d+ comments?$/ })); expect(y.actions[0].payload).toEqual({ mockup: 'Pricing', variant: 'A', device: 'desktop', overall: 'Only overall', items: [], variants: [] });
 });

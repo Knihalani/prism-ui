@@ -1,4 +1,4 @@
-.prism-root[data-prism-presentation] :is(.prism-enter, .prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-chart__plot, .prism-tab__root, .prism-view__content [data-prism="view"]:not(.prism-view__skeleton, [data-prism-skeleton-line]), .prism-artifact__root, .prism-mockup__root, .prism-mockup__popover, .prism-mockup__marker, .prism-troubleshoot__historyItem, .prism-troubleshoot__step, .prism-troubleshoot__result, .prism-frame__overflowContent) {
+.prism-root[data-prism-presentation] :is(.prism-enter, .prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-chart__plot, .prism-tab__root, .prism-view__content [data-prism="view"]:not(.prism-view__skeleton, [data-prism-skeleton-line]), .prism-artifact__root, .prism-mockup__root, .prism-mockup__popover, .prism-troubleshoot__historyItem, .prism-troubleshoot__step, .prism-troubleshoot__result, .prism-frame__overflowContent) {
   opacity: 1;
   translate: 0 0;
   filter: blur(0);
@@ -6,7 +6,7 @@
   transition-delay: calc(min(var(--prism-motion-index, 0), 8) * var(--prism-motion-stagger));
 }
 @starting-style {
-  .prism-root[data-prism-presentation] :is(.prism-enter, .prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-chart__plot, .prism-tab__root, .prism-view__content [data-prism="view"]:not(.prism-view__skeleton, [data-prism-skeleton-line]), .prism-artifact__root, .prism-mockup__root, .prism-mockup__popover, .prism-mockup__marker, .prism-troubleshoot__historyItem, .prism-troubleshoot__step, .prism-troubleshoot__result, .prism-frame__overflowContent):not([data-prism-entered]) {
+  .prism-root[data-prism-presentation] :is(.prism-enter, .prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-chart__plot, .prism-tab__root, .prism-view__content [data-prism="view"]:not(.prism-view__skeleton, [data-prism-skeleton-line]), .prism-artifact__root, .prism-mockup__root, .prism-mockup__popover, .prism-troubleshoot__historyItem, .prism-troubleshoot__step, .prism-troubleshoot__result, .prism-frame__overflowContent):not([data-prism-entered]) {
     opacity: 0; translate: 0 var(--prism-motion-distance); filter: blur(var(--prism-motion-blur));
   }
 }

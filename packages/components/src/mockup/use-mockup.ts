@@ -2,11 +2,12 @@ import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useS
 import { ComponentContext, useStoreValue, useSent, useFlash, usePrism, useTheme, useStrings, useEmit, type PrismContextValue } from '@prism-ui/react';
 import { createFeedback, createFrameController, previousAsResolved, sanitizeSvg, toMessage, wireframeDocument, feedbackMessageStrings, type FeedbackPayload, type FeedbackState, type FeedbackPoint, type FrameController, type HitRect } from './engine';
 import { regionDimensions } from './outline';
+import { placeComposer } from './placement';
 
 export type MockupDevice = 'desktop' | 'tablet' | 'mobile';
 export type MockupTool = 'pin' | 'region' | 'draw';
 export interface LiveGesture { points: FeedbackPoint[]; pressure: number[]; realPressure: boolean; hover: FeedbackPoint | null; tool: MockupTool }
-export const mockupLabels = { ...feedbackMessageStrings, pin: 'Pin', region: 'Region', toolGroup: 'Feedback tools', toolShortcut: '{tool} ({key})', toolChanged: '{tool} tool selected', regionAdded: 'Region selected: {size} pixels', devices: 'Device', colorOption: 'Pen colour {n}', resolvedComment: 'Resolved {n}: {text}', editComment: 'Edit {n}', deleteComment: 'Delete {n}', preferred: 'Preferred: {variant}', variants: 'Variants', compare: 'Compare', prefer: 'Prefer this', streaming: 'Streaming', title: 'Mockup', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobile', zoomOut: 'Zoom out', zoomIn: 'Zoom in', fit: 'Fit', fullscreen: 'Fullscreen', source: 'View source', copy: 'Copy', draw: 'Draw', color: 'Pen colour', canvas: 'Design canvas. Press Enter to add a comment', hint: 'Click to comment · drag to select', empty: 'Click anywhere on the design to leave a comment.', overall: 'Overall feedback', save: 'Save', delete: 'Delete', edit: 'Edit', placeholder: 'Add a comment…', undo: 'Undo', redo: 'Redo', submit: 'Submit feedback', sent: 'Feedback sent · {n} comments', editFeedback: 'Edit feedback', countOne: '{n} comment', countOther: '{n} comments', sentOne: 'Feedback sent · {n} comment', sentOther: 'Feedback sent · {n} comments', count: '{n} comments', comment: 'Comment {n}: {text}', added: 'Comment {n} added', removed: 'Comment removed', loading: 'Loading design', imageError: 'Image unavailable', resolved: 'Resolved' };
+export const mockupLabels = { targetPoint: '{x}%, {y}%', cancelComment: 'Close comment', saveHint: '↵ Save', sendHintMac: '⌘↵ Send', sendHintControl: 'Ctrl↵ Send', escapeHint: 'Esc', shortcuts: 'P / R / D tools', openComment: 'Open comment {n}', sendOne: 'Send {n} comment', sendOther: 'Send {n} comments', receiptOne: 'Sent · {n} comment', receiptOther: 'Sent · {n} comments', ...feedbackMessageStrings, pin: 'Pin', region: 'Region', toolGroup: 'Feedback tools', toolShortcut: '{tool} ({key})', toolChanged: '{tool} tool selected', regionAdded: 'Region selected: {size} pixels', devices: 'Device', colorOption: 'Pen colour {n}', resolvedComment: 'Resolved {n}: {text}', editComment: 'Edit {n}', deleteComment: 'Delete {n}', preferred: 'Preferred: {variant}', variants: 'Variants', compare: 'Compare', prefer: 'Prefer this', streaming: 'Streaming', title: 'Mockup', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobile', zoomOut: 'Zoom out', zoomIn: 'Zoom in', fit: 'Fit', fullscreen: 'Fullscreen', source: 'View source', copy: 'Copy', draw: 'Draw', color: 'Pen colour', canvas: 'Design canvas. Press Enter to add a comment', hint: 'Click to comment · drag to select', empty: 'Click anywhere on the design to leave a comment.', overall: 'Overall feedback', save: 'Save', delete: 'Delete', edit: 'Edit', placeholder: 'Add a comment…', undo: 'Undo', redo: 'Redo', submit: 'Submit feedback', sent: 'Feedback sent · {n} comments', editFeedback: 'Edit feedback', countOne: '{n} comment', countOther: '{n} comments', sentOne: 'Feedback sent · {n} comment', sentOther: 'Feedback sent · {n} comments', count: '{n} comments', comment: 'Comment {n}: {text}', added: 'Comment {n} added', removed: 'Comment removed', loading: 'Loading design', imageError: 'Image unavailable', resolved: 'Resolved' };
 export type MockupLabels = Partial<typeof mockupLabels>;
 export interface MockupProps { id?: string; kind?: 'html' | 'svg' | 'wire' | 'image'; source?: string; src?: string; title?: string; device?: MockupDevice; variant?: string; group?: string; height?: number; previous?: FeedbackPayload; labels?: MockupLabels }
 export interface MockupControls { device: MockupDevice; setDevice(device: MockupDevice): void; zoom: number; setZoom(zoom: number): void; pen: boolean; setPen(pen: boolean): void; tool?: MockupTool; setTool?(tool: MockupTool): void; color: string; setColor(color: string): void }
@@ -43,7 +44,14 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   function setTool(next: MockupTool) { cancelGesture(); if (options.controls?.setTool) options.controls.setTool(next); else { writeTool(next); options.controls?.setPen(next === 'draw'); } announce(labels.toolChanged.replace('{tool}', labels[next])); }
   const setPenValue = (value: boolean) => setTool(value ? 'draw' : 'pin');
   useEffect(() => () => { const g = gesture.current; if (g?.element.hasPointerCapture?.(g.pointerId)) g.element.releasePointerCapture(g.pointerId); }, []);
-  const pending = useRef<{ id: string } | null>(null);
+  const pending = useRef<{ id: string } | null>(null), created = useRef(new Set<string>()), listRef = useRef<HTMLSpanElement>(null), focusReturn = useRef<HTMLElement | null>(null);
+  function highlight(id: string | null, fromCanvas = false) {
+    setActive(id);
+    const list = listRef.current; if (!id || !fromCanvas || !list || list.scrollHeight <= list.clientHeight) return;
+    const row = Array.from(list.querySelectorAll<HTMLElement>('[data-feedback-row]')).find(row => row.dataset.feedbackRow === id); if (!row) return;
+    const bounds = list.getBoundingClientRect(), rect = row.getBoundingClientRect();
+    if (rect.top < bounds.top) list.scrollTop -= bounds.top - rect.top; else if (rect.bottom > bounds.bottom) list.scrollTop += rect.bottom - bounds.bottom;
+  }
   const previousDraft = useRef({ path, draft });
   const completeRef = useRef(complete); completeRef.current = complete;
   const grow = (height: number) => setContentHeight(old => completeRef.current ? Math.max(1, height) : Math.max(old, height, 400));
@@ -76,7 +84,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   useEffect(() => { const element = graphic.current?.querySelector('svg'); if (!element) return; const box = element.getAttribute('viewBox')?.split(/[\s,]+/).map(Number); setNaturalWidth(box?.[2] || Number(element.getAttribute('width')) || 800); grow(box?.[3] || Number(element.getAttribute('height')) || 400); }, [svg, visible, enabled]);
   const width = options.inline ? containerWidth : framed ? widths[device] : naturalWidth, scale = options.inline ? 1 : (framed ? Math.min(1, containerWidth / width) : containerWidth / width) * zoom;
   const resolved = props.previous ? previousAsResolved(props.previous) : [];
-  function open(id: string, fresh = false) { const item = feedback.getState().items.find(item => item.id === id); if (!item) return; if (pending.current && pending.current.id !== id) { feedback.remove(pending.current.id); pending.current = null; } setEditing({ id, fresh, text: item.comment }); setComment(item.comment); setActive(id); }
+  function open(id: string, fresh = false) { focusReturn.current = (!fresh && Array.from(root.current?.querySelectorAll<HTMLElement>('[data-feedback-id]') ?? []).find(node => node.dataset.feedbackId === id)) || canvas.current; const item = feedback.getState().items.find(item => item.id === id); if (!item) return; if (pending.current && pending.current.id !== id) { feedback.remove(pending.current.id); pending.current = null; } setEditing({ id, fresh, text: item.comment }); setComment(item.comment); setActive(id); }
   function commit(change: (value: FeedbackState) => FeedbackState, sent = false) {
     let result!: FeedbackState;
     ctx.store.update(path, (saved: (FeedbackState & { submitted?: boolean }) | undefined) => {
@@ -96,25 +104,16 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     const value = createFeedback({ ...saved, mockup: title, variant: props.variant, device, overall: working.overall, items: (saved?.items ?? []).map(item => working.items.find(current => current.id === item.id) ?? item) }).toJSON();
     return createFeedback(editing ? withItem(value, editing.id, comment) : value);
   }
-  function remove(id: string) { const fresh = pending.current?.id === id, saved = ctx.store.get(path)?.items.some((item: { id: string }) => item.id === id); feedback.remove(id); close(); if (!fresh && saved) commit(value => ({ ...value, items: value.items.filter(item => item.id !== id) })); announce(labels.removed); }
-  function close(restoreFocus = false) { pending.current = null; setEditing(null); if (restoreFocus) canvas.current?.focus({ preventScroll: true }); }
-  function popoverPosition(x: number, y: number) {
-    if (options.inline) {
-      const bounds = viewport.current?.getBoundingClientRect();
-      const availableWidth = bounds?.width || containerWidth, availableHeight = bounds?.height || contentHeight;
-      const popupWidth = Math.min(320, Math.max(0, availableWidth - 24)), popupHeight = 180;
-      const left = Math.max(12, Math.min(availableWidth - popupWidth - 12, x / 100 * availableWidth));
-      const top = Math.max(12, Math.min(availableHeight - popupHeight - 12, y / 100 * availableHeight + 20));
-      return { left, top, width: popupWidth, transformOrigin: `${x / 100 * availableWidth - left}px ${y / 100 * availableHeight - top}px` };
-    }
+  function remove(id: string) { const fresh = pending.current?.id === id, saved = ctx.store.get(path)?.items.some((item: { id: string }) => item.id === id); feedback.remove(id); close(true); if (!fresh && saved) commit(value => ({ ...value, items: value.items.filter(item => item.id !== id) })); announce(labels.removed); }
+  const restoreTarget = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => { if (!editing && restoreTarget.current) { const node = restoreTarget.current; restoreTarget.current = null; (node.isConnected ? node : canvas.current)?.focus({ preventScroll: true }); } }, [editing]);
+  function close(restoreFocus = false) { pending.current = null; if (restoreFocus) restoreTarget.current = focusReturn.current ?? canvas.current; setEditing(null); }
+  function popoverPosition(x: number, y: number, height = 210) {
     const bounds = root.current?.getBoundingClientRect(), artboard = canvas.current?.getBoundingClientRect();
-    const availableWidth = bounds?.width || containerWidth, availableHeight = bounds?.height || contentHeight * scale;
-    const popupWidth = Math.min(320, Math.max(0, availableWidth - 24)), popupHeight = 180;
-    const anchorX = (artboard?.left ?? 0) - (bounds?.left ?? 0) + x / 100 * (artboard?.width || width * scale);
-    const anchorY = (artboard?.top ?? 0) - (bounds?.top ?? 0) + y / 100 * (artboard?.height || contentHeight * scale);
-    const left = Math.max(12, Math.min(availableWidth - popupWidth - 12, anchorX));
-    const top = Math.max(12, Math.min(availableHeight - popupHeight - 12, anchorY + 20));
-    return { left, top, width: popupWidth, transformOrigin: `${anchorX - left}px ${anchorY - top}px` };
+    const surface = bounds?.width ? bounds : { left: 0, top: 0, width: containerWidth, height: contentHeight };
+    const anchor = { x: (artboard?.left ?? surface.left) + x / 100 * (artboard?.width || width * scale), y: (artboard?.top ?? surface.top) + y / 100 * (artboard?.height || contentHeight * scale) };
+    const placement = placeComposer(surface, anchor, { width: document.documentElement.clientWidth || window.innerWidth, height: window.innerHeight }, height, root.current?.querySelector('[data-feedback-submit]')?.getBoundingClientRect());
+    return { left: placement.left - surface.left, top: placement.top - surface.top, width: placement.width, transformOrigin: placement.transformOrigin, '--prism-mockup-caret-x': placement.caretX + 'px', '--prism-mockup-caret-y': placement.caretY + 'px', '--prism-mockup-caret-side': placement.side };
   }
   function save(restoreFocus = false) { const edit = editing; close(restoreFocus); if (edit) { feedback.edit(edit.id, { comment }); commit(value => withItem(value, edit.id, comment)); } }
   function saveOverall(event?: { relatedTarget: EventTarget | null }) { if (event?.relatedTarget instanceof Element && root.current?.contains(event.relatedTarget) && event.relatedTarget.closest('[data-feedback-submit]')) return; const overall = feedback.getState().overall; if (overall !== (ctx.store.get(path)?.overall ?? '')) commit(value => ({ ...value, overall })); }
@@ -147,6 +146,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   function add(rect: HitRect, points?: FeedbackPoint[], client?: FeedbackPoint, pressure?: number[]) {
     if (pending.current) feedback.remove(pending.current.id);
     const item = points ? feedback.addDrawing({ points, pressure: pressure ? [pressure] : undefined, color: colorValue }) : rect.w !== undefined ? feedback.addRegion({ ...rect, w: rect.w, h: rect.h ?? 0 }) : feedback.addPin(rect);
+    created.current.add(item.id);
     pending.current = { id: item.id };
     open(item.id, true); announce(labels.added.replace('{n}', String(item.n)));
     if (points) {
@@ -185,8 +185,11 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.stopPropagation(); if (field || state.overall !== (draft?.overall ?? '') || editing && comment !== editing.text) return; event.preventDefault(); event.shiftKey ? redo() : undo(); }
   }
   function canvasKey(event: KeyboardEvent<HTMLDivElement>) { if (event.target !== event.currentTarget || submitted || event.ctrlKey || event.metaKey) return; const step = event.shiftKey ? 10 : 2; if (event.key.startsWith('Arrow')) { event.preventDefault(); setReticle(([x, y]) => [clamp(x + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0)), clamp(y + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0))]); } if (event.key === 'Enter') { event.preventDefault(); add({ x: reticle[0], y: reticle[1] }); } }
-  function submit() { const candidate = submission(); if (submitted || !candidate.canSubmit) return; cancelGesture(); close(); const saved = commit(() => candidate.toJSON(), true); const payload = createFeedback(saved).toPayload(), message = toMessage(payload, { strings: labels }); if (options.inline) emit('feedback', { ...payload, target: { name: component!.name, id: component!.id }, coordinates: 'percent' }, message); else receipt.send('feedback', payload, message); setEditing(null); }
-  return { flash, props, kind, framed, complete, labels, title, source, svg, root, viewport, canvas, iframe, graphic, visible: visible && enabled, width, scale, contentHeight, device, setDevice, zoom, setZoom, expanded, showSource, setShowSource, tool, setTool, pen: tool === 'draw', setPen: setPenValue, color: colorValue, setColor: setColorValue, active, setActive, editing, comment, setComment, announcement, reticle, focused, setFocused, live, livePaint, get hover() { return live.current.hover; }, get rubber() { return live.current.points; }, pointer, onKeyDown, canvasKey, feedback: { ...feedback, canUndo, canRedo, undo, redo }, state, resolved, submitted, setSubmitted, open, remove, save, saveOverall, move, cancel, close, popoverPosition, locale: ctx.format.locale, canSubmit: submission().canSubmit, imageError, setImageError,
+  function submit() { const candidate = submission(); if (submitted || !candidate.canSubmit) return;
+    const pill = root.current?.querySelector('[data-feedback-submit]')?.getBoundingClientRect();
+    if (pill) for (const node of Array.from(root.current?.querySelectorAll<HTMLElement>('[data-part="marker"],[data-part="stroke"]') ?? [])) { const bounds = node.getBoundingClientRect(); node.style.setProperty('--prism-mockup-exit-x', `${(pill.left + pill.width / 2 - bounds.left - bounds.width / 2) / scale}px`); node.style.setProperty('--prism-mockup-exit-y', `${(pill.top + pill.height / 2 - bounds.top - bounds.height / 2) / scale}px`); }
+    cancelGesture(); close(); const saved = commit(() => candidate.toJSON(), true); const payload = createFeedback(saved).toPayload(), message = toMessage(payload, { strings: labels }); if (options.inline) emit('feedback', { ...payload, target: { name: component!.name, id: component!.id }, coordinates: 'percent' }, message); else receipt.send('feedback', payload, message); setEditing(null); }
+  return { flash, created, listRef, highlight, props, kind, framed, complete, labels, title, source, svg, root, viewport, canvas, iframe, graphic, visible: visible && enabled, width, scale, contentHeight, device, setDevice, zoom, setZoom, expanded, showSource, setShowSource, tool, setTool, pen: tool === 'draw', setPen: setPenValue, color: colorValue, setColor: setColorValue, active, setActive, editing, comment, setComment, announcement, reticle, focused, setFocused, live, livePaint, get hover() { return live.current.hover; }, get rubber() { return live.current.points; }, pointer, onKeyDown, canvasKey, feedback: { ...feedback, canUndo, canRedo, undo, redo }, state, resolved, submitted, setSubmitted, open, remove, save, saveOverall, move, cancel, close, popoverPosition, locale: ctx.format.locale, canSubmit: submission().canSubmit, imageError, setImageError,
     imageSrc: /^(https:|data:image\/)/i.test((props.src ?? source).trim()) ? (props.src ?? source).trim() : undefined,
     imageLoaded(width: number, height: number) { setNaturalWidth(width || 800); grow(height || 400); },
     async fullscreen() { try { if (document.fullscreenElement) await document.exitFullscreen(); else if (root.current?.requestFullscreen) await root.current.requestFullscreen(); else setExpanded(old => !old); } catch { setExpanded(old => !old); } },

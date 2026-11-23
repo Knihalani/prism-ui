@@ -4,6 +4,7 @@ import { ComponentFrame } from '../frame';
 import { useFeedbackTarget } from '../feedback';
 import { artifactSchema, type ArtifactProps } from './model';
 import { useArtifact, artifactStrings } from './use-artifact';
+import './artifact.css';
 
 const languages = { react: 'tsx', html: 'html', svg: 'html', js: 'js', markdown: 'markdown' };
 export type ArtifactModel = ReturnType<typeof useArtifact>;

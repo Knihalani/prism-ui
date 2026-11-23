@@ -107,6 +107,18 @@ export const objects = defineTheme({
     mockup: { strings: { sectionIndex: '03 / DESIGN' } }, view: { strings: { sectionIndex: '04 / SETUP' } },
   },
   css: `
+
+    :scope .prism-mockup__toolGroup { border-color:var(--prism-border-strong); box-shadow:var(--prism-elevation-1); }
+    :scope .prism-mockup__tool { background:var(--prism-surface-raised); font-family:var(--prism-font-mono); }
+    :scope .prism-mockup__tool[aria-pressed="true"] { background:var(--prism-accent); color:var(--prism-on-accent); }
+    :scope .prism-mockup__popover { background:var(--prism-surface-raised); border-radius:1px; border-top:5px solid var(--prism-frame-tape); box-shadow:var(--prism-elevation-2); }
+    :scope .prism-mockup__composerHeader { font:20px var(--prism-font-display); color:var(--prism-text); }
+    :scope .prism-mockup__popover .prism-mockup__input { border:0; border-bottom:1px solid var(--prism-border); border-radius:0; background:repeating-linear-gradient(transparent 0,transparent calc(1.5em - 1px),var(--prism-border) 1.5em); line-height:1.5; }
+    :scope .prism-mockup__list { padding-inline:var(--prism-space-2); background:var(--prism-surface-raised); box-shadow:var(--prism-elevation-1); }
+    :scope .prism-mockup__item { border-bottom:1px solid var(--prism-border); border-radius:0; }
+    :scope .prism-mockup__badge { font-family:var(--prism-font-mono); border:1px solid var(--prism-border); }
+    :scope .prism-mockup__marker[data-kind="pin"] { border:3px solid var(--prism-surface-raised); box-shadow:0 3px 0 var(--prism-border-strong),var(--prism-elevation-1); }
+    :scope .prism-mockup__dimension { border-radius:1px; background:var(--prism-accent); color:var(--prism-on-accent); box-shadow:var(--prism-elevation-1); }
     ${receiptMotion}
     :scope [data-objects-printer] { --prism-motion-slow:var(--prism-estimate-motion-slow); }
     :scope .objects-receipt { translate:0 0; transition:translate var(--prism-motion-slow) var(--prism-motion-ease); }

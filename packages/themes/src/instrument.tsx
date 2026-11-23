@@ -112,6 +112,17 @@ export const instrument = defineTheme({
     view: { strings: { sectionIndex: '04 / SETUP' } },
   },
   css: `
+
+    :scope .prism-mockup__toolGroup { gap:3px; padding:3px; overflow:visible; background:var(--prism-bg); border-color:var(--prism-border-strong); }
+    :scope .prism-mockup__tool { border:1px solid var(--prism-border); border-radius:3px; background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:0 2px 0 var(--prism-frame-key-shadow); font:10px var(--prism-font-mono); text-transform:uppercase; }
+    :scope .prism-mockup__tool[aria-pressed="true"] { background:var(--prism-bg); color:var(--prism-accent-text); box-shadow:inset 0 2px 3px var(--prism-frame-display); }
+    :scope .prism-mockup__dimension { background:var(--prism-frame-display); color:var(--prism-accent-text); border:1px solid var(--prism-border-strong); border-radius:2px; letter-spacing:.06em; }
+    :scope .prism-mockup__popover { border:1px solid var(--prism-border-strong); border-top:3px solid var(--prism-accent); background:var(--prism-surface); box-shadow:var(--prism-elevation-2); }
+    :scope .prism-mockup__composerHeader { font-family:var(--prism-font-mono); text-transform:uppercase; letter-spacing:.06em; }
+    :scope .prism-mockup__badge { border-radius:3px; background:var(--prism-frame-display); color:var(--prism-accent-text); font-family:var(--prism-font-mono); box-shadow:inset 0 1px 2px var(--prism-frame-key-shadow); }
+    :scope .prism-mockup__badge::before { content:''; inline-size:4px; block-size:4px; position:absolute; inset:2px auto auto 2px; border-radius:50%; background:var(--prism-accent); }
+    :scope .prism-mockup__badge { position:relative; }
+    :scope .prism-mockup__item { border:1px solid var(--prism-border); margin-block:3px; background:var(--prism-surface-raised); }
     ${receiptMotion}
     :scope [data-instrument-module] { --prism-motion-spring-duration:140ms; }
     :scope .prism-view__content { --prism-motion-spring-duration:var(--prism-motion-fast); }

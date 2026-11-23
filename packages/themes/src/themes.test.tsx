@@ -93,7 +93,7 @@ test('Print leaves native feedback intact while preserving edits and submit acti
   const source = '```ui:mockup\n' + JSON.stringify({ id: 'figure', kind: 'svg', source: '<svg viewBox="0 0 100 100"><rect width="100" height="100"/></svg>' }) + '\n```';
   const view = render(<Prism source={source} theme={print} animate={false} onAction={action => actions.push(action)} />);
   const field = within(view.container).getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement;
-  const submit = within(view.container).getByRole('button', { name: 'Submit feedback' });
+  const submit = within(view.container).getByRole('button', { name: /^Send \d+ comments?$/ });
   expect(field.getAttribute('rows')).toBeNull();
   expect(field.hasAttribute('model')).toBe(false);
   expect(submit.hasAttribute('disabled')).toBe(true);
@@ -374,6 +374,6 @@ for (const theme of [print, objects, instrument]) {
     expect(components.artifact).toBeUndefined();
     expect(components.feedback).toBeUndefined();
     expect(components.mockup?.slots).toBeUndefined();
-    expect(theme.css).not.toMatch(/prism-(artifact__|inline-feedback|mockup__(input|overall|count|feedbackFooter|marker|popover|primary))/);
+    expect(theme.css).not.toMatch(/prism-(artifact__|inline-feedback|mockup__(overall|count|feedbackFooter|primary))/);
   });
 }

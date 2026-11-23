@@ -8,6 +8,7 @@ import { useMockup, type MockupModel, type MockupProps } from './use-mockup';
 import { createFeedback, pathStrokes } from './engine/feedback';
 import { drawingOutline, regionDimensions, strokeOutline } from './outline';
 import { mockupPlugin } from './plugin';
+import { placeComposer } from './placement';
 import '../feedback';
 
 const observer = globalThis.IntersectionObserver;
@@ -162,4 +163,51 @@ test('group keyboard submission keeps variants and the overall group comment', (
   const overall = view.getByRole('textbox', { name: 'Overall feedback' });
   change(overall, 'Both work'); fireEvent.keyDown(overall, { key: 'Enter', metaKey: true });
   expect(actions).toHaveLength(2); expect(actions[1].payload).toMatchObject({ overall: 'Both work' });
+});
+
+test('creation-only pin motion is consumed before undo/redo, while rows and markers share active state', () => {
+  const x = setup(); x.pointer('pointerdown', 200, 100); x.pointer('pointerup', 200, 100);
+  expect(x.view.container.querySelector('[data-part="marker"]')?.getAttribute('data-created')).toBe('true');
+  expect(x.view.container.querySelector('[data-part="ripple"]')).not.toBeNull();
+  const composer = x.view.getByRole('textbox', { name: 'Add a comment…' }); change(composer, 'A useful note'); fireEvent.keyDown(composer, { key: 'Enter' });
+  const row = x.view.getByRole('listitem'); fireEvent.mouseEnter(row); expect(x.view.container.querySelector('[data-part="marker"]')?.getAttribute('data-active')).toBe('true');
+  fireEvent.mouseLeave(row); fireEvent.mouseEnter(x.view.getByRole('button', { name: 'Comment 1: A useful note' })); expect(row.getAttribute('data-active')).toBe('true');
+  act(() => x.model.feedback.undo()); act(() => x.model.feedback.redo());
+  expect(x.view.container.querySelector('[data-part="marker"]')?.hasAttribute('data-created')).toBe(false);
+  expect(x.view.container.querySelector('[data-part="ripple"]')).toBeNull();
+});
+
+test('composer traps tab, exposes kind/number and platform hints, and restores marker focus', () => {
+  const x = setup(); fireEvent.keyDown(x.canvas, { key: 'Enter' });
+  const composer = x.view.getByRole('textbox', { name: 'Add a comment…' }); change(composer, 'Ready'); fireEvent.keyDown(composer, { key: 'Enter' });
+  const marker = x.view.getByRole('button', { name: 'Comment 1: Ready' }); act(() => marker.focus()); fireEvent.click(marker);
+  const input = x.view.getByRole('textbox', { name: 'Add a comment…' }); act(() => input.focus());
+  const first = x.view.getByRole('button', { name: 'Close comment' }); act(() => first.focus());
+  fireEvent.keyDown(first, { key: 'Tab', shiftKey: true }); expect(document.activeElement === x.view.getByRole('button', { name: /^Delete$/ })).toBe(true);
+  fireEvent.keyDown(document.activeElement!, { key: 'Tab' }); expect(document.activeElement === first).toBe(true);
+  expect(x.view.container.querySelector('[data-part="composerHeader"]')?.textContent).toContain('1');
+  expect(x.view.container.querySelector('[data-part="keyboardHints"]')?.textContent).toContain('↵ Save');
+  fireEvent.keyDown(document.activeElement!, { key: 'Escape' }); expect(document.activeElement === marker).toBe(true);
+});
+
+test('composer placement flips off edges and avoids the annotation and submit pill', () => {
+  const surface = { left: 20, top: 50, width: 280, height: 600 }, viewport = { width: 330, height: 750 };
+  for (const anchor of [{x:25,y:55},{x:295,y:55},{x:25,y:640},{x:295,y:640}]) {
+    const result = placeComposer(surface, anchor, viewport, 200, {left:20,top:500,width:280,height:40});
+    expect(result.left).toBeGreaterThanOrEqual(20); expect(result.left + result.width).toBeLessThanOrEqual(300);
+    expect(result.top).toBeGreaterThanOrEqual(12); expect(result.top + 200).toBeLessThanOrEqual(738);
+    expect(anchor.y < result.top || anchor.y > result.top + 200 || anchor.x < result.left || anchor.x > result.left + result.width).toBe(true);
+  }
+  expect(placeComposer(surface,{x:150,y:640},viewport,200).side).toBe('bottom');
+});
+
+test('canvas synchronization scrolls only a scrollable annotation list, not the page', () => {
+  const x = setup(); expect(x.view.getByText(/P \/ R \/ D tools/)).not.toBeNull();
+  x.pointer('pointerdown', 100, 100); x.pointer('pointerup', 100, 100); const input = x.view.getByRole('textbox', { name: 'Add a comment…' }); change(input, 'Visible note'); fireEvent.keyDown(input, { key: 'Enter' });
+  const list = x.model.listRef.current!, row = x.view.getByRole('listitem'), id = x.model.state.items[0].id;
+  list.getBoundingClientRect = () => new DOMRect(0,0,280,100); row.getBoundingClientRect = () => new DOMRect(0,200,280,30);
+  Object.defineProperties(list, { scrollHeight: { configurable:true,value:100 }, clientHeight: { configurable:true,value:100 } });
+  const scrollY = window.scrollY; act(() => x.model.highlight(id, true)); expect(list.scrollTop).toBe(0);
+  Object.defineProperty(list, 'scrollHeight', { configurable:true,value:300 }); act(() => x.model.highlight(id, true)); expect(list.scrollTop).toBe(130); expect(window.scrollY).toBe(scrollY);
+  act(() => x.model.highlight('missing', true)); expect(list.scrollTop).toBe(130);
 });

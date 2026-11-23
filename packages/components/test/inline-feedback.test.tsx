@@ -79,7 +79,7 @@ test('saved feedback is store-owned through revisions, local cancellation, final
   change(view.getByPlaceholderText('Add a comment…'), 'Committed with submit');
   change(overall, 'Submitted overall');
   expect(store.get('target.feedback.overall')).toBe('Committed on blur');
-  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  fireEvent.click(view.getByRole('button', { name: /^Send \d+ comments?$/ }));
   const submission = store.get('target.feedback');
   expect(submission).toMatchObject({ submitted: true, overall: 'Submitted overall' });
   expect(submission.items).toHaveLength(3);
@@ -133,7 +133,7 @@ test('definitions opt in/out; empty and canceled feedback never create saved sta
   fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
   fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
   fireEvent.keyDown(view.getByPlaceholderText('Add a comment…'), { key: 'Escape' });
-  expect(view.getByRole('button', { name: 'Submit feedback' }).hasAttribute('disabled')).toBe(true);
+  expect(view.getByRole('button', { name: /^Send \d+ comments?$/ }).hasAttribute('disabled')).toBe(true);
   expect(actions).toEqual([]);
   expect(store.snapshot()).toEqual({});
   view.rerender(<Prism store={store} renderers={{ 'feedback-test': disabled }} feedback source={source} />);
