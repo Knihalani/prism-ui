@@ -5,7 +5,6 @@ import { createStore } from '@prism-ui/state';
 import { num, calc } from '@prism-ui/components/num';
 import { pick } from '@prism-ui/components/pick';
 import { chartDefinition } from '@prism-ui/components/chart';
-import { tableDef } from '@prism-ui/components/table';
 import { refraction } from '@prism-ui/themes/refraction';
 import { instrument } from '@prism-ui/themes/instrument';
 import { print } from '@prism-ui/themes/print';
@@ -20,7 +19,7 @@ export const comparisonSource = [
   '```', '', '```ui:chart',
   '{"type":"bar","title":"Room to grow","x":"month","height":150,"series":[{"key":"people","label":"People"}],"data":[{"month":"Apr","people":8},{"month":"May","people":10},{"month":"Jun","people":12}]}',
   '```', '', 'Your first month, at a glance:', '',
-  '| Included | Amount |', '| --- | ---: |', '| Seats | :calc[seats] |', '| Per seat | $18 |', '| Monthly | :calc[seats * 18]{format=currency decimals=0} |',
+  '- Seats: **:calc[seats]**', '- Per seat: **$18**', '- Monthly: **:calc[seats * 18]{format=currency decimals=0}**',
 ].join('\n');
 
 const variants = [
@@ -30,7 +29,7 @@ const variants = [
   { name: 'Print', description: 'Bold type and a paper sensibility.', theme: print },
   { name: 'Objects', description: 'Tactile, friendly, a little playful.', theme: objects },
 ];
-const registry = createRegistry([num, calc, pick, chartDefinition, tableDef]);
+const registry = createRegistry([num, calc, pick, chartDefinition]);
 const fontFamilies = ['Inter:wght@400;500;600&family=Instrument+Serif&family=JetBrains+Mono', 'IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono', 'Inter+Tight:wght@400;500;600;700;800;900&family=IBM+Plex+Mono', 'DM+Sans:wght@400;500;600&family=Caveat:wght@400;600'];
 
 function Reply({ theme, mode, index }: { theme: Theme | undefined; mode: 'auto' | 'light' | 'dark'; index: number }) {
