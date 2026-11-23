@@ -1,12 +1,104 @@
 import '../../react/test/setup';
 import { afterEach, expect, test } from 'bun:test';
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
-import { Prism, type Middleware } from '@prism-ui/react';
+import { Prism, type Action, type Middleware } from '@prism-ui/react';
+import { createStore } from '@prism-ui/state';
 import '../src';
 
 afterEach(cleanup);
 const fence = (name: string, props: object) => '```ui:' + name + '\n' + JSON.stringify(props) + '\n```';
 const quote = fence('estimate', { id: 'quote', items: [{ id: 'seat', label: 'Seat', price: 10 }] });
+function type(input: HTMLElement, value: string) { act(() => input.focus()); fireEvent.change(input, { target: { value } }); fireEvent.keyUp(input); }
+
+test.each(['name', '$global.preferences.name'])('view edits to %s invalidate the receipt and allow revised submissions', bind => {
+  const actions: Action[] = [], store = createStore();
+  const source = fence('view', { id: 'prefs', state: { name: 'Ada' }, children: [
+    { type: 'input', label: 'Name', value: { $bind: bind } },
+    { type: 'button', label: 'Save', onClick: { action: 'save', payload: { name: { $ref: bind } } } },
+  ] });
+  const view = render(<Prism source={source} store={store} onAction={action => actions.push(action)} />);
+  const button = view.getByRole('button', { name: 'Save' }) as HTMLButtonElement;
+  fireEvent.click(button);
+  expect(button.disabled).toBe(true);
+  act(() => store.set('unrelated', 'change'));
+  expect(button.disabled).toBe(true);
+  type(view.getByRole('textbox', { name: 'Name' }), 'Grace');
+  expect(button.disabled).toBe(false);
+  expect(button.hasAttribute('data-sent')).toBe(false);
+  fireEvent.click(button);
+  expect(button.disabled).toBe(true);
+  expect(actions.at(-1)?.payload).toEqual({ name: 'Grace' });
+});
+
+test('estimate resets after UI edits and store undo, not unrelated writes', () => {
+  const store = createStore(), actions: Action[] = [];
+  const view = render(<Prism source={quote} store={store} onAction={action => actions.push(action)} />);
+  const button = view.getByRole('button', { name: 'Use this estimate' }) as HTMLButtonElement;
+  fireEvent.click(button);
+  fireEvent.click(view.getByRole('button', { name: 'Increase Seat' }));
+  expect(button.disabled).toBe(false);
+  fireEvent.click(button);
+  expect(button.disabled).toBe(true);
+  act(() => store.set('unrelated', 1, { history: false }));
+  expect(button.disabled).toBe(true);
+  act(() => store.undo());
+  expect(button.disabled).toBe(false);
+  fireEvent.click(button);
+  expect(actions.at(-1)?.payload).toMatchObject({ total: 10 });
+});
+
+test('editing a view while delivery is pending invalidates the old acknowledgement', () => {
+  let deliver: (() => void) | undefined;
+  const view = render(<Prism source={fence('view', { state: { name: 'Ada' }, children: [
+    { type: 'input', label: 'Name', value: { $bind: 'name' } },
+    { type: 'button', label: 'Save', onClick: { action: 'save' } },
+  ] })} middleware={[(action, next) => { deliver = () => next(action); }]} onAction={() => {}} />);
+  const button = view.getByRole('button', { name: 'Save' }) as HTMLButtonElement;
+  fireEvent.click(button);
+  type(view.getByRole('textbox', { name: 'Name' }), 'Grace');
+  act(() => deliver?.());
+  expect(button.hasAttribute('data-sent')).toBe(false); expect(button.disabled).toBe(false);
+  fireEvent.click(button); act(() => deliver?.());
+  expect(button.hasAttribute('data-sent')).toBe(true);
+});
+
+test('pick weight changes invalidate chosen state and submit updated weights', () => {
+  const actions: Action[] = [];
+  const view = render(<Prism source={fence('pick', { criteria: [{ id: 'reach', label: 'Reach' }], options: [{ id: 'one', title: 'One', scores: { reach: 1 } }] })} onAction={action => actions.push(action)} />);
+  const button = view.getByRole('button', { name: 'Choose' }) as HTMLButtonElement;
+  fireEvent.click(button);
+  expect(button.disabled).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Reach, weight 1 of 3' }));
+  expect(button.disabled).toBe(false);
+  fireEvent.click(button);
+  expect(actions.at(-1)?.payload).toEqual({ option: 'one', weights: { reach: 2 } });
+});
+
+test('runbook completion changes invalidate a stuck receipt', () => {
+  const actions: Action[] = [];
+  const view = render(<Prism source={'::::runbook\n:::step{title="Start" id="start"}\nStart here.\n:::\n::::'} onAction={action => actions.push(action)} />);
+  const button = view.getByRole('button', { name: 'Stuck here?' }) as HTMLButtonElement;
+  fireEvent.click(button);
+  expect(button.disabled).toBe(true);
+  fireEvent.click(view.getByRole('checkbox', { name: 'Start' }));
+  expect(button.disabled).toBe(false);
+  fireEvent.click(button);
+  expect(actions.at(-1)?.payload).toMatchObject({ done: true });
+});
+
+test('ask edit and summary action changes already allow revised submissions', () => {
+  const ask = render(<Prism source={fence('ask', { fields: [{ id: 'name', label: 'Name', type: 'text', value: 'Ada' }] })} onAction={() => {}} />);
+  fireEvent.click(ask.getByRole('button', { name: 'Send' }));
+  fireEvent.click(ask.getByRole('button', { name: 'Edit' }));
+  type(ask.getByRole('textbox', { name: 'Name' }), 'Grace');
+  expect((ask.getByRole('button', { name: 'Send' }) as HTMLButtonElement).disabled).toBe(false);
+  ask.unmount();
+  const summary = render(<Prism source={fence('summary', { actions: [{ text: 'Ship it' }] })} onAction={() => {}} />);
+  const button = summary.getByRole('button', { name: 'Send action items' }) as HTMLButtonElement;
+  fireEvent.click(button);
+  fireEvent.click(summary.getByRole('checkbox'));
+  expect(button.disabled).toBe(false);
+});
 
 test.each([
   ['estimate', quote, 'Use this estimate', 'Sent'],

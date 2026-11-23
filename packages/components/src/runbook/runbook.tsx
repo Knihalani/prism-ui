@@ -1,5 +1,5 @@
 import { componentStrings, formatComponentMessage } from '../strings';
-import { Children, createContext, isValidElement, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ComponentType } from 'react';
+import { Children, createContext, isValidElement, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ComponentType } from 'react';
 import type { Node } from '@prism-ui/core';
 import { s } from '@prism-ui/schema';
 import { useStrings, useCollapse, Icon, PrismPart, StreamSkeleton, ComponentContext, PrismContext, cx, defaultRenderers, defineComponent, registerComponent, useComponentState, useSent, useFormat, usePart, usePrism, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
@@ -18,7 +18,11 @@ export function useRunbook(props: RunbookProps, ctx: PrismContextValue) {
   const node = useContext(ComponentContext)?.node;
   const steps = useMemo(() => node?.children?.filter(child => child.type === 'component' && child.name === 'step') ?? [], [node]);
   const [done, setDone] = useComponentState<Record<string, boolean>>('done', {});
-  const { sent, send } = useSent(), format = useFormat();
+  const { sent, send, reset } = useSent(), format = useFormat();
+  const previous = useRef(done);
+  useLayoutEffect(() => {
+    if (previous.current !== done) { previous.current = done; reset(); }
+  }, [done, reset]);
   const labels = { ...defaults, ...props.labels, ...useStrings('runbook') };
   const count = useMemo(() => steps.filter(step => done[stepKey(step)]).length, [steps, done]);
   const current = useMemo(() => steps.findIndex(step => !done[stepKey(step)]), [steps, done]);

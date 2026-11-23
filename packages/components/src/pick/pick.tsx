@@ -20,6 +20,10 @@ export function usePick(props: PickProps, ctx: PrismComponentProps<PickProps>) {
   const saved = useStoreValue(`${id}.weights`), chosen = useStoreValue<string | undefined>(`${id}.chosen`);
   const readWeight = (criterion: string): unknown => store.get(`${id}.weights.${criterion}`);
   const weights = useMemo(() => weightsFor(props, readWeight), [props, saved, store, id]);
+  const signature = JSON.stringify(weights), previous = useRef(signature);
+  useLayoutEffect(() => {
+    if (previous.current !== signature) { previous.current = signature; store.set(`${id}.chosen`, undefined, { history: false }); }
+  }, [signature, store, id]);
   useLayoutEffect(() => {
     if (!ctx.complete) return;
     store.batch(() => {

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, type KeyboardEvent } from 'react';
+import { useLayoutEffect, useMemo, useRef, type KeyboardEvent } from 'react';
 import { s, type Infer } from '@prism-ui/schema';
 import { defineComponent, registerComponent, Icon, PrismPart, cx, useFormat, usePart, usePrism, useSent, useSlot, useSpringValue, useStrings, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
@@ -45,8 +45,12 @@ export function useEstimate(props: EstimateProps, ctx: PrismComponentProps<Estim
       writeTotals();
     });
   }, [store, id, totals, storedSubtotal, storedTotal, ctx.complete]);
+  const payload = { items: totals.rows.filter(row => row.enabled && row.ready).map(({ id, label, qty, price, amount }) => ({ id, label, qty, price: price!, amount })), total: totals.total };
+  const signature = JSON.stringify(payload), previous = useRef(signature);
+  useLayoutEffect(() => {
+    if (previous.current !== signature) { previous.current = signature; reset(); }
+  }, [signature, reset]);
   const update = (item: Item, key: 'qty' | 'enabled', value: number | boolean) => store.batch(() => {
-    reset();
     setRecordPath(store, `${id}.items`, `${item.id}.${key}`, key === 'qty' ? quantity(item, value as number) : value); writeTotals();
   });
   const rows = totals.rows.map(row => {

@@ -474,7 +474,12 @@ export function useView(props: ViewProps, ctx: PrismContextValue, { id, complete
     const init = () => store.batch(() => { for (const key of Object.keys(stateObj)) if (store.get(`${id}.${key}`) === undefined) store.set(`${id}.${key}`, stateObj[key]); }, { history: false });
     if (store.hydrated === false) void store.ready?.then(init); else init();
   }, [store, id, stateReady, stateObj]);
-  const { send, sent } = useSent();
+  const { send, sent, reset } = useSent();
+  const receiptPaths = useMemo(() => [...collect(tree, scope, new Set([id]), 0, true)], [tree, scope, id]);
+  useLayoutEffect(() => {
+    const unsubscribe = receiptPaths.map(path => store.subscribe(path, reset));
+    return () => unsubscribe.forEach(off => off());
+  }, [store, receiptPaths, reset]);
   const resolvedStrings = useStrings('view', { ...viewStrings, title: typeof tree.title === 'string' ? tree.title : viewStrings.title });
   const strings = useMemo(() => resolvedStrings, [JSON.stringify(resolvedStrings)]);
   const format = useMemo(() => viewFormatter(ctx.format, strings), [ctx.format, strings]);
