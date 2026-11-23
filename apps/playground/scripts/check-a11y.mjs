@@ -189,7 +189,7 @@ async function exercise(page, label) {
       await page.keyboard.press('Enter');
       await settle(page);
       result.pinCreated = await page.locator('[data-kind="pin"]').count();
-      const submit = page.getByRole('button', { name: 'Submit feedback', exact: true }).last();
+      const submit = page.getByRole('button', { name: /^Send \d+ comments?$/ }).last();
       if (await submit.count() && await submit.isEnabled()) {
         await submit.focus(); await page.keyboard.press('Enter'); await settle(page);
         result.feedbackSubmitted = await page.locator('[data-feedback-submit][data-sent]').count() > 0;

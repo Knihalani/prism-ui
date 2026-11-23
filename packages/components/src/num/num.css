@@ -9,7 +9,13 @@
 .prism-root .prism-num__readout { position: absolute; z-index: 5; inset-inline-start: var(--prism-num-readout-x, 0px); inset-block-end: calc(100% + var(--prism-num-space-1, var(--prism-space-1))); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--prism-num-space-1, var(--prism-space-1)) var(--prism-num-space-2, var(--prism-space-2)); box-sizing: border-box; inline-size: max-content; max-inline-size: var(--prism-num-readout-width, 100cqi); padding: 0 var(--prism-num-space-2, var(--prism-space-2)); border: 1px solid var(--prism-num-border, var(--prism-border)); border-radius: var(--prism-num-radius-md, var(--prism-radius-md)); background: var(--prism-num-surface-raised, var(--prism-surface-raised)); color: var(--prism-num-text, var(--prism-text)); box-shadow: var(--prism-num-elevation-1, var(--prism-elevation-1)); font-family: var(--prism-num-font-body, var(--prism-font-body)); font-size: var(--prism-num-text-xs, var(--prism-text-xs)); line-height: 1.5; text-decoration: none; pointer-events: none; }
 .prism-root .prism-num__readout[data-side="below"] { inset-block-end: auto; inset-block-start: calc(100% + var(--prism-num-space-1, var(--prism-space-1))); }
 .prism-root .prism-num__readout-value { min-inline-size: 0; overflow-wrap: anywhere; font-family: var(--prism-num-font-numeric, var(--prism-font-numeric)); font-weight: var(--prism-num-weight-semibold, var(--prism-weight-semibold)); }
-.prism-root .prism-num__readout-value, .prism-root .prism-num__readout-hint { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.prism-root .prism-num__readout-value { white-space: nowrap; }
+.prism-root .prism-num__readout[data-scrubbing] { grid-template-columns: minmax(0, 1fr); }
+.prism-root .prism-num__readout[data-scrubbing] > .prism-num__icon { display: none; }
+.prism-root .prism-num__readout-value { display: flex; }
+.prism-root .prism-num__readout-value [data-readout-label] { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: pre; }
+.prism-root .prism-num__readout-value [data-readout-amount] { flex: none; }
+.prism-root .prism-num__readout-hint { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .prism-root .prism-num__readout-hint { min-inline-size: 0; color: var(--prism-num-text-muted, var(--prism-text-muted)); }
 .prism-root .prism-num__icon { inline-size: 1em; block-size: 1em; }
 .prism-root .prism-calc__root { font-family: var(--prism-calc-font-numeric, var(--prism-font-numeric)); font-size: inherit; font-variant-numeric: tabular-nums; color: var(--prism-calc-text, var(--prism-text)); border-radius: var(--prism-calc-radius-sm, var(--prism-radius-sm)); overflow-wrap: anywhere; transition: background var(--prism-calc-motion-base, var(--prism-motion-base)) var(--prism-calc-motion-spring, var(--prism-motion-spring)); }

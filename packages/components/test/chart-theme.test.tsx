@@ -13,6 +13,13 @@ const series = [{ key: 'revenue', label: 'Revenue' }, { key: 'cost', label: 'Cos
 const base: ChartProps = { id: 'answer', title: 'Revenue', subtitle: 'Monthly', insight: 'February was strongest', x: 'month', data, series, annotations: [{ x: 'Jan', label: 'Launch' }], pivots: [{ label: 'Bars', type: 'bar' }] };
 const source = (props: ChartProps) => '\x60\x60\x60ui:chart\n' + JSON.stringify(props) + '\n\x60\x60\x60';
 
+test('compact headers keep utility actions beside the heading instead of reserving a blank row', async () => {
+  const css = await Bun.file(new URL('../src/chart/chart.css', import.meta.url)).text();
+  expect(css).toContain('@container prism-chart (max-width: 320px)');
+  expect(css).toContain('.prism-root .prism-chart__header { flex-wrap: nowrap;');
+  expect(css).toContain('.prism-chart__heading { flex: 1; }');
+});
+
 test('compact headless geometry thins ticks and line charts ignore bar/area stacking', () => {
   let model!: ChartModel;
   function Headless({ props }: PrismComponentProps<ChartProps>) { model = useChart(props, usePrism(), 280, 0); return <button onClick={() => model.activate({ index: 1, series: 0 })}>Explore</button>; }

@@ -3,6 +3,7 @@ import { ComponentContext, useCollapse, Icon, cx, useEmit, usePart, usePresentat
 
 export interface FrameOptions {
   component: string; title?: string; label?: string; state?: string; ask?: boolean; undo?: boolean;
+  onEscape?(event: KeyboardEvent<HTMLElement>): void;
 }
 export interface ComponentFrameProps extends FrameOptions {
   variant?: 'inline' | 'card';
@@ -16,7 +17,7 @@ function useFramePart(component: string, part: FramePart, state?: string) {
   const frame = usePart('frame', part), own = usePart(component, part, state);
   return { ...own, className: cx(component !== 'frame' && frame.className, own.className) || undefined, style: frame.style || own.style ? { ...frame.style, ...own.style } : undefined };
 }
-export function useFrame({ component, title, label, state, ask = true, undo = false }: FrameOptions) {
+export function useFrame({ component, title, label, state, ask = true, undo = false, onEscape }: FrameOptions) {
   const { store, animate, unstyled } = usePrism(), emit = useEmit();
   const presentation = usePresentation(), strings = useStrings(component);
   const { id } = useContext(ComponentContext)!;
@@ -28,12 +29,16 @@ export function useFrame({ component, title, label, state, ask = true, undo = fa
   const onRedo = useCallback(() => store.redo(id), [store, id]);
   const onKeyDown = useCallback((event: KeyboardEvent<HTMLElement>) => {
     if (event.defaultPrevented) return;
-    if (event.key === 'Escape') (event.currentTarget.ownerDocument.activeElement as HTMLElement | null)?.blur?.();
+    if (event.key === 'Escape') {
+      onEscape?.(event);
+      if (event.defaultPrevented) return;
+      (event.currentTarget.ownerDocument.activeElement as HTMLElement | null)?.blur?.();
+    }
     if (undo && !event.altKey && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
       event.preventDefault(); event.stopPropagation();
       if (event.shiftKey) store.redo(id); else store.undo(id);
     }
-  }, [store, undo, id]);
+  }, [store, undo, id, onEscape]);
   const parts = {
     root: useFramePart(component, 'root', state), header: useFramePart(component, 'header'), title: useFramePart(component, 'title'),
     toolbar: useFramePart(component, 'toolbar'), body: useFramePart(component, 'body'), footer: useFramePart(component, 'footer'),
@@ -78,7 +83,7 @@ export function useFrameOverflow() {
   const [open, setOpen] = useState(false), trigger = useRef<HTMLElement>(null), id = useId();
   const close = () => { setOpen(false); trigger.current?.focus(); };
   return { open, setOpen, trigger, id, close, onKeyDown(event: KeyboardEvent<HTMLElement>) {
-    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
+    if (event.key === 'Escape' && open && !event.defaultPrevented) { event.preventDefault(); event.stopPropagation(); close(); }
   } };
 }
 export interface FrameOverflowSlotProps<Model = unknown> extends HTMLAttributes<HTMLElement> { as?: ElementType; ref?: Ref<HTMLElement>; model?: Model; overflow?: ReturnType<typeof useFrameOverflow>; open?: boolean }

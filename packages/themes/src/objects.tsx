@@ -4,6 +4,7 @@ import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
 import type { usePick } from '@prism-ui/components/pick';
 import { receiptMotion } from './motion';
+import { MockupToolContent, mockupToolCss } from './mockup-tools';
 
 type SlotProps = FrameSlotProps<unknown>;
 type PickRow = ReturnType<typeof usePick>['rows'][number];
@@ -17,7 +18,7 @@ const Header = forwardRef<HTMLElement, SlotProps>(function Header({ as = 'header
 });
 const Tool = forwardRef<HTMLElement, SlotProps>(function Tool({ as = 'button', model, frame, overflow, children, ...props }, ref) {
   const component = (props as Record<string, unknown>)['data-prism'] as string;
-  return createElement(as, { ...props, ref, 'data-objects-tool': supported.has(component) ? '' : undefined }, supported.has(component) ? props['aria-label'] : children);
+  return createElement(as, { ...props, ref, 'data-objects-tool': supported.has(component) ? '' : undefined }, component === 'mockup' ? <MockupToolContent label={props['aria-label']}>{children}</MockupToolContent> : supported.has(component) ? props['aria-label'] : children);
 });
 const Receipt = forwardRef<HTMLElement, SlotProps>(function Receipt({ as = 'section', model, frame, overflow, children, ...props }, ref) {
   const { sent } = useSent(), strings = useStrings('estimate');
@@ -109,6 +110,19 @@ export const objects = defineTheme({
     mockup: { strings: { sectionIndex: '03 / DESIGN' } }, view: { strings: { sectionIndex: '04 / SETUP' } },
   },
   css: `
+    ${mockupToolCss}
+
+    :scope .prism-mockup__toolGroup { border-color:var(--prism-border-strong); box-shadow:var(--prism-elevation-1); }
+    :scope .prism-mockup__tool { background:var(--prism-surface-raised); font-family:var(--prism-font-mono); }
+    :scope .prism-mockup__tool[aria-pressed="true"] { background:var(--prism-accent); color:var(--prism-on-accent); }
+    :scope .prism-mockup__popover { background:var(--prism-surface-raised); border-radius:1px; border-top:5px solid var(--prism-frame-tape); box-shadow:var(--prism-elevation-2); }
+    :scope .prism-mockup__composerHeader { font:20px var(--prism-font-display); color:var(--prism-text); }
+    :scope .prism-mockup__popover .prism-mockup__input { border:0; border-bottom:1px solid var(--prism-border); border-radius:0; background:transparent; line-height:1.5; }
+    :scope .prism-mockup__list { padding-inline:var(--prism-space-2); background:var(--prism-surface-raised); box-shadow:var(--prism-elevation-1); }
+    :scope .prism-mockup__item { border-bottom:1px solid var(--prism-border); border-radius:0; }
+    :scope .prism-mockup__badge { font-family:var(--prism-font-mono); border:1px solid var(--prism-border); }
+    :scope .prism-mockup__marker[data-kind="pin"] { border:3px solid var(--prism-surface-raised); box-shadow:0 3px 0 var(--prism-border-strong),var(--prism-elevation-1); }
+    :scope .prism-mockup__dimension { border-radius:1px; background:var(--prism-accent); color:var(--prism-on-accent); box-shadow:var(--prism-elevation-1); }
     ${receiptMotion}
     :scope [data-objects-printer] { --prism-motion-slow:var(--prism-estimate-motion-slow); }
     :scope .objects-receipt { translate:0 0; transition:translate var(--prism-motion-slow) var(--prism-motion-ease); }
@@ -275,12 +289,15 @@ export const objects = defineTheme({
     :scope :is(.prism-runbook__progress,.prism-summary__actionsTitle,.prism-summary__progress,.prism-troubleshoot__position,.prism-grid__meta) { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text-muted); }
     :scope .prism-runbook__actions { min-width:0; }
     :scope .prism-runbook__stuck { font:10px var(--prism-font-mono); }
-    :scope .prism-tabs__list { gap:0; min-height:40px; overflow:visible; flex-wrap:wrap; }
-    :scope .prism-tabs__tab { min-width:0; white-space:normal; flex:1; padding:12px 14px; color:var(--prism-text-muted); font:11px/1.5 var(--prism-font-mono); }
+    :scope .prism-tabs__list { gap:0; min-height:40px; overflow-x:auto; flex-wrap:nowrap; }
+    :scope .prism-tabs__tab { min-width:0; white-space:nowrap; overflow-wrap:normal; word-break:normal; flex:0 0 auto; padding:12px 14px; color:var(--prism-text-muted); font:11px/1.5 var(--prism-font-mono); }
     :scope .prism-tabs__indicator { display:none; }
     :scope .prism-tab__body { padding:18px 0; }
     :scope .prism-badge__root { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text); }
-    :scope .prism-badge__root[data-variant="solid"] { background:var(--prism-accent); color:var(--prism-on-accent); }
+    :scope .prism-badge__root[data-tone="neutral"] { --prism-badge-color:var(--prism-text); }
+    :scope .prism-badge__root[data-variant="solid"] { background:var(--prism-badge-color); color:var(--prism-badge-on-accent,#fff); }
+    :scope .prism-badge__root[data-variant="solid"][data-tone="neutral"] { color:var(--prism-bg); }
+    :scope .prism-badge__root[data-variant="solid"][data-tone="accent"] { color:var(--prism-on-accent); }
     :scope .prism-grid__body { gap:20px; }
     :scope .prism-grid__body > .prism-card__root { margin:0; }
     :scope .prism-grid__body > .prism-card__root::before { display:none; }
@@ -331,6 +348,7 @@ export const objects = defineTheme({
     :scope .prism-summary__pointRow { min-height:0; padding-block:12px; }
     :scope .prism-summary__footer { padding:16px 0 0; margin-top:16px; border-top:1px solid var(--prism-border); background:none; gap:12px; flex-wrap:wrap; }
     :scope .prism-tabs__body { padding:0; }
+    @container (max-width:360px) { :scope .prism-tabs__root { padding:12px; } :scope .prism-tabs__tab { padding-inline:9px; } }
     @container (max-width:420px) { :scope .prism-summary__footer { align-items:stretch; flex-direction:column; } :scope .prism-summary__send { width:100%; justify-content:center; } }
 
     :scope .prism-runbook__stepBody .prism-paragraph__root { line-height:26px; }

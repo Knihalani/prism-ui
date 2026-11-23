@@ -75,7 +75,7 @@ function FeedbackReceipt() {
 }
 test.each([
   ['shared', SharedReceipt, 'Submit', 'Submitted'],
-  ['feedback', FeedbackReceipt, 'Submit feedback', 'Feedback sent · 1 comment'],
+  ['feedback', FeedbackReceipt, 'Send 1 comment', 'Sent · 1 comment'],
 ] as const)('%s receipt routes its exact past-tense label to the single root announcer', async (name, component, button, expected) => {
   const registry = createRegistry([{ name, component }]), view = render(<Prism registry={registry} source={'::' + name} />);
   const output = view.container.querySelector('[data-prism-announcer]')!;

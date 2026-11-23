@@ -29,11 +29,11 @@ test('feedback popover exits inertly, can reopen mid-exit, and keeps the submit 
   expect(dialog.getAttribute('aria-hidden')).toBe('true');
   fireEvent.click(view.getByRole('button', { name: 'Comment 1: Keep this overview' }));
   expect(view.getByRole('dialog')).toBe(dialog); expect(dialog.hasAttribute('inert')).toBe(false);
-  const submit = view.getByRole('button', { name: 'Submit feedback' });
+  const submit = view.getByRole('button', { name: /^Send \d+ comments?$/ });
   fireEvent.click(submit);
   expect(actions).toHaveLength(1); expect(submit.hasAttribute('data-sent')).toBe(true);
   expect(submit.querySelector('.prism-check-mark path')).not.toBeNull();
-  expect(view.getByRole('button', { name: /Feedback sent/ })).toBe(submit);
+  expect(view.getByRole('button', { name: /^Sent ·/ })).toBe(submit);
   expect(dialog.hasAttribute('data-submitted')).toBe(true);
   expect(dialog.getAttribute('aria-hidden')).toBe('true'); expect(dialog.hasAttribute('inert')).toBe(true);
   expect(view.queryByRole('dialog')).toBeNull();
@@ -46,13 +46,16 @@ test('animate=false removes canceled feedback immediately and never sends an emp
   fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
   fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
   const dialog = view.getByRole('dialog');
-  expect(view.getByRole('button', { name: 'Submit feedback' }).hasAttribute('disabled')).toBe(true);
+  expect(view.getByRole('button', { name: /^Send \d+ comments?$/ }).hasAttribute('disabled')).toBe(true);
   fireEvent.keyDown(view.getByPlaceholderText('Add a comment…'), { key: 'Escape' });
   expect(dialog.isConnected).toBe(false); expect(actions).toHaveLength(0);
 });
 
 test('feedback motion uses transitions and leaves region geometry out of transition lists', async () => {
   const css = await Bun.file(new URL('../src/mockup/mockup.css', import.meta.url)).text();
+  const shared = await Bun.file(new URL('../src/styles/motion.css', import.meta.url)).text();
+  expect(shared.split('@media (prefers-reduced-motion: reduce)')[0]).not.toContain('prism-mockup__marker');
+  expect(css).toContain('[data-animate="false"]');
   expect(css).toContain('scale var(--prism-motion-spring-bouncy-duration) var(--prism-motion-spring-bouncy)');
   expect(css).toContain('transition-timing-function: var(--prism-motion-ease-exit)');
   expect(css).toContain('transition-delay: var(--prism-motion-slow)');
@@ -61,7 +64,7 @@ test('feedback motion uses transitions and leaves region geometry out of transit
   expect(css).toContain('filter: blur(var(--prism-motion-blur))');
   expect(css).toContain('transition: stroke-dashoffset var(--prism-motion-fast)');
   expect(css).not.toMatch(/transition:\s*(?:all|width|height|left|top)\b/);
-  expect(css.match(/\.prism-mockup__(?:popover|marker)[^{]*\{[^}]*\}/g)?.every(rule => !rule.includes('animation:'))).toBe(true);
+  expect(css.match(/\.prism-mockup__(?:popover|marker)[^{]*\{[^}]*\}/g)?.filter(rule => !rule.includes('[data-created]') && !rule.includes('animation: none')).every(rule => !rule.includes('animation:'))).toBe(true);
 });
 
 test('reveals use delayed hover entry, instant exit and undelayed focus/open states', async () => {
@@ -92,7 +95,7 @@ test('inline feedback ignores the rendered component submitted flag', () => {
   act(() => store.set('target.submitted', true));
   expect(view.getByRole('textbox', { name: 'Overall feedback' })).toBeDefined();
   expect(view.queryByText('Edit feedback')).toBeNull();
-  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  fireEvent.click(view.getByRole('button', { name: /^Send \d+ comments?$/ }));
   expect(store.get('target.feedback.submitted')).toBe(true);
   act(() => store.set('target.submitted', false));
   expect(view.getByText('Edit feedback')).toBeDefined();
@@ -100,7 +103,7 @@ test('inline feedback ignores the rendered component submitted flag', () => {
 });
 
 test('tabbing through Submit commits an overall comment without submitting it', () => {
-  const { view, store, actions } = setup(), overall = view.getByRole('textbox', { name: 'Overall feedback' }), submit = view.getByRole('button', { name: 'Submit feedback' });
+  const { view, store, actions } = setup(), overall = view.getByRole('textbox', { name: 'Overall feedback' }), submit = view.getByRole('button', { name: /^Send \d+ comments?$/ });
   change(overall, 'Saved when leaving the field');
   fireEvent.blur(overall, { relatedTarget: submit });
   act(() => submit.focus());
@@ -113,7 +116,7 @@ test('tabbing through Submit commits an overall comment without submitting it', 
 
 test('overall blur into Submit merges the live text and receipt into one history entry', () => {
   const { view, store, actions } = setup(), before = store.get('target.feedback');
-  const overall = view.getByRole('textbox', { name: 'Overall feedback' }), submit = view.getByRole('button', { name: 'Submit feedback' });
+  const overall = view.getByRole('textbox', { name: 'Overall feedback' }), submit = view.getByRole('button', { name: /^Send \d+ comments?$/ });
   change(overall, 'Atomic submission');
   fireEvent.blur(overall, { relatedTarget: submit });
   expect(store.get('target.feedback')).toEqual(before);
@@ -141,14 +144,14 @@ for (const kind of ['pin', 'region'] as const) test(`clearing the only ${kind} c
   act(() => store.set('target.feedback.overall', ''));
   fireEvent.click(view.getByRole('button', { name: 'Comment 1: Only comment' }));
   change(view.getByPlaceholderText('Add a comment…'), '   ');
-  const before = store.snapshot(), submit = view.getByRole('button', { name: 'Submit feedback' });
+  const before = store.snapshot(), submit = view.getByRole('button', { name: /^Send \d+ comments?$/ });
   expect(submit.hasAttribute('disabled')).toBe(true);
   fireEvent.click(submit);
   expect(actions).toEqual([]);
   expect(store.snapshot()).toEqual(before);
   change(view.getByRole('textbox', { name: 'Overall feedback' }), 'A meaningful overall comment');
-  expect(view.getByRole('button', { name: 'Submit feedback' }).hasAttribute('disabled')).toBe(false);
-  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  expect(view.getByRole('button', { name: /^Send \d+ comments?$/ }).hasAttribute('disabled')).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: /^Send \d+ comments?$/ }));
   expect(actions).toHaveLength(1);
   expect(actions[0].payload).toMatchObject({ mockup: 'feedback-review', overall: 'A meaningful overall comment', items: [] });
 });

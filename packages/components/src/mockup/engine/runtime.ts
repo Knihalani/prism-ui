@@ -23,7 +23,7 @@ export function installRuntime(win: Window, opts: RuntimeOptions): () => void {
     return { x: (rect.left + win.scrollX) / size.width * 100, y: (rect.top + win.scrollY) / size.height * 100,
       w: rect.width / size.width * 100, h: rect.height / size.height * 100 };
   };
-  const snippet = (el: Element) => ((el as HTMLElement).innerText ?? el.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  const snippet = (el: Element) => (el.getAttribute('aria-label') || el.getAttribute('alt') || (el as HTMLElement).innerText || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80);
   const query = (selector: string): Element | null => { try { return doc.querySelector(selector); } catch { return null; } };
   const escape = (text: string) => Array.from(text, char => /[a-zA-Z0-9_-]/.test(char) ? char : `\\${char.codePointAt(0)!.toString(16)} `).join('');
   const unique = (selector: string, el: Element) => {

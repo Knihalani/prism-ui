@@ -65,6 +65,6 @@
 .prism-chart__legend-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .prism-chart__swatch { flex: none; }
 .prism-chart__error { position: absolute; inset: 45% 0 auto; text-align: center; color: var(--prism-chart-danger, var(--prism-danger)); font-size: var(--prism-chart-text-sm, var(--prism-text-sm)); }
-@container prism-chart (max-width: 320px) { .prism-chart__legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; } .prism-chart__legend-item { padding-inline: var(--prism-chart-space-1, var(--prism-space-1)); min-block-size: 26px; } .prism-chart__pivot { padding-block: var(--prism-chart-space-1, var(--prism-space-1)); } .prism-chart__tick { font-size: var(--prism-chart-text-xs, var(--prism-text-xs)); } }
+@container prism-chart (max-width: 320px) { .prism-root .prism-chart__header { flex-wrap: nowrap; gap: var(--prism-chart-space-2, var(--prism-space-2)); } .prism-chart__heading { flex: 1; } .prism-chart__legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; } .prism-chart__legend-item { padding-inline: var(--prism-chart-space-1, var(--prism-space-1)); min-block-size: 26px; } .prism-chart__pivot { padding-block: var(--prism-chart-space-1, var(--prism-space-1)); } .prism-chart__tick { font-size: var(--prism-chart-text-xs, var(--prism-text-xs)); } }
 @media (hover: hover) { .prism-chart__root:not(:hover, :focus-within) .prism-chart__actions { opacity: 0; } }
 @media (hover: none) { .prism-chart__actions { opacity: 1; } }
