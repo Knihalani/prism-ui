@@ -66,8 +66,10 @@ bun add ai@5.0.60 @ai-sdk/react@2.0.60 @ai-sdk/openai@2.0.41 zod@3.25.76
 Mount POST at `/api/chat`. The optional tool returns a validated patch, not a
 server-side store mutation. Its result reaches the client as a typed tool part.
 Remove the tool and its client effect if using only automatic `ui:state` fences.
-Incoming history keeps text and validated applyState tool parts (including input/output),
-but strips file and source parts before conversion to prevent server-side SDK downloads.
+Incoming history keeps text and validated applyState tool parts with a result
+(`output-available` or `output-error`), dropping unfinished calls so later turns
+cannot send an unmatched tool call. File and source parts are stripped before
+conversion to prevent server-side SDK downloads.
 
 <!-- snippet: ai-route -->
 ```ts
@@ -90,7 +92,8 @@ export async function safeChatMessages(input: unknown) {
   const messages = await validateUIMessages<ChatMessage>({ messages: input, tools });
   return messages.filter(message => message.role !== 'system').map(message => ({
     id: message.id, role: message.role,
-    parts: message.parts.filter(part => part.type === 'text' || part.type === 'tool-applyState'),
+    parts: message.parts.filter(part => part.type === 'text' ||
+      (part.type === 'tool-applyState' && (part.state === 'output-available' || part.state === 'output-error'))),
   })).filter(message => message.parts.length > 0);
 }
 export async function POST(request: Request): Promise<Response> {

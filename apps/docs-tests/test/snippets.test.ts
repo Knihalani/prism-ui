@@ -70,26 +70,33 @@ test('AI history retains applyState calls and results but removes file and sourc
   const { convertToModelMessages } = await import('ai');
   const patch = { set: { 'planning.room': 'north' } };
   const tool = { type: 'tool-applyState', toolCallId: 'apply-1', state: 'output-available', input: patch, output: patch };
+  const failed = { type: 'tool-applyState', toolCallId: 'apply-error', state: 'output-error', input: patch, errorText: 'State update failed.' };
   const text = { type: 'text', text: 'Updated the room.' };
   const messages = await safeChatMessages([{ id: 'assistant', role: 'assistant', parts: [
-    tool, text,
+    tool, failed, text,
     { type: 'file', mediaType: 'application/pdf', url: 'https://example.test/private.pdf' },
     { type: 'source-url', sourceId: 'link', url: 'https://example.test/source' },
     { type: 'source-document', sourceId: 'document', mediaType: 'application/pdf', title: 'Document' },
   ] }]);
-  expect(messages).toEqual([{ id: 'assistant', role: 'assistant', parts: [tool, text] }]);
+  expect(messages).toEqual([{ id: 'assistant', role: 'assistant', parts: [tool, failed, text] }]);
   const converted = convertToModelMessages(messages);
   expect(converted).toEqual(expect.arrayContaining([
     expect.objectContaining({ role: 'assistant', content: expect.arrayContaining([
-      expect.objectContaining({ type: 'tool-call', toolName: 'applyState', input: patch }),
+      expect.objectContaining({ type: 'tool-call', toolCallId: 'apply-1', toolName: 'applyState', input: patch }),
+      expect.objectContaining({ type: 'tool-call', toolCallId: 'apply-error', toolName: 'applyState', input: patch }),
     ]) }),
     expect.objectContaining({ role: 'tool', content: expect.arrayContaining([
       expect.objectContaining({ type: 'tool-result', toolName: 'applyState', output: { type: 'json', value: patch } }),
+      expect.objectContaining({ type: 'tool-result', toolCallId: 'apply-error', toolName: 'applyState', output: { type: 'error-text', value: failed.errorText } }),
     ]) }),
   ]));
-  const pending = { type: 'tool-applyState', toolCallId: 'apply-2', state: 'input-available', input: patch };
-  expect(await safeChatMessages([{ id: 'pending', role: 'assistant', parts: [pending] }]))
-    .toEqual([{ id: 'pending', role: 'assistant', parts: [pending] }]);
+  for (const state of ['input-streaming', 'input-available']) {
+    const pending = { type: 'tool-applyState', toolCallId: 'apply-2', state, input: patch };
+    expect(await safeChatMessages([{ id: 'pending', role: 'assistant', parts: [pending] }])).toEqual([]);
+    const interrupted = await safeChatMessages([{ id: 'interrupted', role: 'assistant', parts: [text, pending] }]);
+    expect(interrupted).toEqual([{ id: 'interrupted', role: 'assistant', parts: [text] }]);
+    expect(convertToModelMessages(interrupted)).toMatchObject([{ role: 'assistant', content: [{ type: 'text', text: text.text }] }]);
+  }
 });
 
 test('documented SDK adapters yield text, ignore non-text deltas and propagate errors', async () => {
