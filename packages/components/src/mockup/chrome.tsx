@@ -8,7 +8,7 @@ import type { MockupModel } from './use-mockup';
 
 function Box({ model, ...props }: HTMLAttributes<HTMLDivElement> & { model?: unknown }) { return <div {...props} />; }
 function FeedbackPill({ model, as, ...props }: PillProps & { model?: unknown; as?: ElementType }) { return <Pill {...props} />; }
-export function MockupToolbar({ vm, model }: { model: MockupModel | MockupGroupModel; vm: Pick<MockupModel, 'labels' | 'framed' | 'device' | 'setDevice' | 'zoom' | 'setZoom' | 'fullscreen' | 'showSource' | 'setShowSource' | 'pen' | 'setPen' | 'color' | 'setColor'> }) {
+export function MockupToolbar({ vm, model }: { model: MockupModel | MockupGroupModel; vm: Pick<MockupModel, 'labels' | 'framed' | 'device' | 'setDevice' | 'zoom' | 'setZoom' | 'fullscreen' | 'showSource' | 'setShowSource' | 'tool' | 'setTool' | 'color' | 'setColor'> }) {
   const devices = usePart('mockup', 'devices'), actions = usePart('mockup', 'headerActions');
   const toolbar = usePart('mockup', 'tools'), button = usePart('mockup', 'button'), Actions = useSlot('mockup', 'headerActions', Box);
   return <Actions {...actions} model={model} className={[toolbar.className, actions.className].filter(Boolean).join(' ')}>
@@ -17,9 +17,12 @@ export function MockupToolbar({ vm, model }: { model: MockupModel | MockupGroupM
     <FrameOverflow component="mockup" model={model}>{vm.framed && <PrismPart slotProps={{ model }} as="button" {...button} aria-label={vm.labels.tablet} title={vm.labels.tablet} aria-pressed={vm.device === 'tablet'} onClick={() => vm.setDevice('tablet')}><Icon name="tablet" /></PrismPart>}<MockupPenTools vm={vm} model={model} /><PrismPart slotProps={{ model }} as="button" {...button} title={vm.labels.fullscreen} aria-label={vm.labels.fullscreen} onClick={vm.fullscreen}><Icon name="fullscreen" /></PrismPart><PrismPart slotProps={{ model }} as="button" {...button} title={vm.labels.source} aria-label={vm.labels.source} aria-pressed={vm.showSource} onClick={() => vm.setShowSource(!vm.showSource)}><Icon name="source" /></PrismPart></FrameOverflow>
   </Actions>;
 }
-export function MockupPenTools({ vm, model }: { model: MockupModel | MockupGroupModel; vm: Pick<MockupModel, 'labels' | 'pen' | 'setPen' | 'color' | 'setColor'> }) {
-  const toolbar = usePart('mockup', 'tools'), button = usePart('mockup', 'button');
-  return <PrismPart slotProps={{ model }} as="span" {...toolbar}><PrismPart slotProps={{ model }} as="button" {...button} aria-pressed={vm.pen} onClick={() => vm.setPen(!vm.pen)}><Icon name="pen" />{vm.labels.draw}</PrismPart>{vm.pen && ['var(--prism-mockup-accent, var(--prism-accent))', 'var(--prism-danger)', 'var(--prism-positive)', 'var(--prism-warning)'].map((color, i) => <PrismPart slotProps={{ model }} as="button" key={color} {...button} title={vm.labels.colorOption.replace('{n}', String(i + 1))} aria-label={vm.labels.colorOption.replace('{n}', String(i + 1))} aria-pressed={vm.color === color} onClick={() => vm.setColor(color)} style={{ ...button.style, color }}><Icon name="circle" /></PrismPart>)}</PrismPart>;
+export function MockupPenTools({ vm, model }: { model: MockupModel | MockupGroupModel; vm: Pick<MockupModel, 'labels' | 'tool' | 'setTool' | 'color' | 'setColor'> }) {
+  const toolbar = usePart('mockup', 'tools'), button = usePart('mockup', 'button'), group = usePart('mockup', 'toolGroup'), tool = usePart('mockup', 'tool');
+  return <PrismPart slotProps={{ model }} as="span" {...toolbar}>
+    <PrismPart slotProps={{ model }} as="span" {...group} role="group" aria-label={vm.labels.toolGroup}>{(['pin', 'region', 'draw'] as const).map((value, i) => <PrismPart slotProps={{ model }} as="button" key={value} {...tool} type="button" aria-pressed={vm.tool === value} aria-keyshortcuts={['P', 'R', 'D'][i]} title={vm.labels.toolShortcut.replace('{tool}', vm.labels[value]).replace('{key}', ['P', 'R', 'D'][i])} onClick={() => vm.setTool(value)}><Icon name={value === 'draw' ? 'pen' : value} />{vm.labels[value]}</PrismPart>)}</PrismPart>
+    {vm.tool === 'draw' && ['var(--prism-mockup-accent, var(--prism-accent))', 'var(--prism-danger)', 'var(--prism-positive)', 'var(--prism-warning)'].map((color, i) => <PrismPart slotProps={{ model }} as="button" key={color} {...button} title={vm.labels.colorOption.replace('{n}', String(i + 1))} aria-label={vm.labels.colorOption.replace('{n}', String(i + 1))} aria-pressed={vm.color === color} onClick={() => vm.setColor(color)} style={{ ...button.style, color }}><Icon name="circle" /></PrismPart>)}
+  </PrismPart>;
 }
 export function MockupSource({ vm, model }: { model: MockupModel | MockupGroupModel; vm: Pick<MockupModel, 'labels' | 'source' | 'copy'> }) {
   const source = usePart('mockup', 'source'), button = usePart('mockup', 'button');

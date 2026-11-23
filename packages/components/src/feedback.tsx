@@ -33,7 +33,7 @@ function FeedbackEditor({ open, close, surface }: { open: boolean; close(): void
   const input = usePart('mockup', 'input'), overall = usePart('mockup', 'overall');
   const labels = useStrings('feedback', { title: 'Graphic feedback' });
   useEffect(() => { if (!open) vm.cancel(false); }, [open]);
-  return <PrismPart as="span" className="prism-inline-feedback__editor" hidden={!open} aria-label={labels.title} onKeyDown={event => { vm.onKeyDown(event); if (event.key === 'Escape') close(); }}>
+  return <PrismPart as="span" className="prism-inline-feedback__editor" hidden={!open} aria-label={labels.title} onKeyDown={event => { vm.onKeyDown(event); if (event.key === 'Escape' && !event.defaultPrevented) close(); }}>
       {open && !vm.submitted && surface.viewport.current && createPortal(<MockupAnnotations vm={vm} popover={false} />, surface.viewport.current)}
       <FeedbackPopover vm={vm} surface={surface} open={open} />
       {!vm.submitted && <><MockupPenTools vm={vm} model={vm} /><PrismPart slotProps={{ model: vm }} as="label" {...overall}>{vm.labels.overall}<PrismPart slotProps={{ model: vm }} as="textarea" {...input} value={vm.state.overall} onChange={event => vm.feedback.setOverall(event.target.value)} onBlur={vm.saveOverall} /></PrismPart></>}
