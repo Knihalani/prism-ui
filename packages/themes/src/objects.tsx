@@ -4,6 +4,7 @@ import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
 import type { usePick } from '@prism-ui/components/pick';
 import { receiptMotion } from './motion';
+import { MockupToolContent, mockupToolCss } from './mockup-tools';
 
 type SlotProps = FrameSlotProps<unknown>;
 type PickRow = ReturnType<typeof usePick>['rows'][number];
@@ -17,7 +18,7 @@ const Header = forwardRef<HTMLElement, SlotProps>(function Header({ as = 'header
 });
 const Tool = forwardRef<HTMLElement, SlotProps>(function Tool({ as = 'button', model, frame, overflow, children, ...props }, ref) {
   const component = (props as Record<string, unknown>)['data-prism'] as string;
-  return createElement(as, { ...props, ref, 'data-objects-tool': supported.has(component) ? '' : undefined }, supported.has(component) ? props['aria-label'] : children);
+  return createElement(as, { ...props, ref, 'data-objects-tool': supported.has(component) ? '' : undefined }, component === 'mockup' ? <MockupToolContent label={props['aria-label']}>{children}</MockupToolContent> : supported.has(component) ? props['aria-label'] : children);
 });
 const Receipt = forwardRef<HTMLElement, SlotProps>(function Receipt({ as = 'section', model, frame, overflow, children, ...props }, ref) {
   const { sent } = useSent(), strings = useStrings('estimate');
@@ -107,6 +108,19 @@ export const objects = defineTheme({
     mockup: { strings: { sectionIndex: '03 / DESIGN' } }, view: { strings: { sectionIndex: '04 / SETUP' } },
   },
   css: `
+    ${mockupToolCss}
+
+    :scope .prism-mockup__toolGroup { border-color:var(--prism-border-strong); box-shadow:var(--prism-elevation-1); }
+    :scope .prism-mockup__tool { background:var(--prism-surface-raised); font-family:var(--prism-font-mono); }
+    :scope .prism-mockup__tool[aria-pressed="true"] { background:var(--prism-accent); color:var(--prism-on-accent); }
+    :scope .prism-mockup__popover { background:var(--prism-surface-raised); border-radius:1px; border-top:5px solid var(--prism-frame-tape); box-shadow:var(--prism-elevation-2); }
+    :scope .prism-mockup__composerHeader { font:20px var(--prism-font-display); color:var(--prism-text); }
+    :scope .prism-mockup__popover .prism-mockup__input { border:0; border-bottom:1px solid var(--prism-border); border-radius:0; background:transparent; line-height:1.5; }
+    :scope .prism-mockup__list { padding-inline:var(--prism-space-2); background:var(--prism-surface-raised); box-shadow:var(--prism-elevation-1); }
+    :scope .prism-mockup__item { border-bottom:1px solid var(--prism-border); border-radius:0; }
+    :scope .prism-mockup__badge { font-family:var(--prism-font-mono); border:1px solid var(--prism-border); }
+    :scope .prism-mockup__marker[data-kind="pin"] { border:3px solid var(--prism-surface-raised); box-shadow:0 3px 0 var(--prism-border-strong),var(--prism-elevation-1); }
+    :scope .prism-mockup__dimension { border-radius:1px; background:var(--prism-accent); color:var(--prism-on-accent); box-shadow:var(--prism-elevation-1); }
     ${receiptMotion}
     :scope [data-objects-printer] { --prism-motion-slow:var(--prism-estimate-motion-slow); }
     :scope .objects-receipt { translate:0 0; transition:translate var(--prism-motion-slow) var(--prism-motion-ease); }

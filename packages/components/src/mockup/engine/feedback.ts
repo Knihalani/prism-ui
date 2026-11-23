@@ -19,6 +19,7 @@ export interface FeedbackItem {
   w?: number;
   h?: number;
   path?: string;
+  pressure?: readonly (readonly number[])[];
   color?: string;
   comment: string;
   target?: FeedbackTarget;
@@ -37,7 +38,7 @@ export interface FeedbackInit extends FeedbackContext {
 export interface FeedbackPayload extends FeedbackContext {
   overall: string;
   items: (Pick<FeedbackItem, 'n' | 'kind' | 'x' | 'y' | 'comment'> &
-    Partial<Pick<FeedbackItem, 'w' | 'h' | 'path' | 'target'>>)[];
+    Partial<Pick<FeedbackItem, 'w' | 'h' | 'path' | 'pressure' | 'target'>>)[];
 }
 export interface PinInput { x: number; y: number; comment?: string; target?: FeedbackTarget; targetBox?: Box }
 export interface RegionInput extends PinInput { w: number; h: number }
@@ -46,6 +47,8 @@ export interface DrawingInput {
   points?: FeedbackPoint[];
   strokes?: FeedbackPoint[][];
   path?: string;
+  pressure?: readonly (readonly number[])[];
+  simplify?: boolean;
   color?: string;
   comment?: string;
 }
@@ -76,7 +79,7 @@ function box(input: Box): Box {
   const sx = clamp(x), sy = clamp(y);
   return { x: Math.min(sx, ex), y: Math.min(sy, ey), w: Math.abs(ex - sx), h: Math.abs(ey - sy) };
 }
-function simplify(points: FeedbackPoint[], tolerance = .12): FeedbackPoint[] {
+export function simplifyDrawingPoints(points: FeedbackPoint[], tolerance = .12): FeedbackPoint[] {
   if (points.length < 3) return points;
   const keep = new Set([0, points.length - 1]);
   const stack = [[0, points.length - 1]];
@@ -96,20 +99,21 @@ function simplify(points: FeedbackPoint[], tolerance = .12): FeedbackPoint[] {
   return [...keep].sort((a, b) => a - b).map(index => points[index]);
 }
 
-function drawing(input: DrawingInput): Box & { path: string } {
+function drawing(input: DrawingInput): Box & { path: string; pressure?: number[][] } {
   let strokes = input.strokes ?? (input.points ? [input.points] : []);
   if (input.path !== undefined) strokes = pathStrokes(input.path);
   const normalized = strokes.filter(stroke => stroke.length).map(stroke => stroke.map(([x, y]): FeedbackPoint => [round(clamp(x), 2), round(clamp(y), 2)]));
-  const clean = normalized.map(stroke => simplify(stroke));
+  const clean = input.pressure || input.simplify === false ? normalized : normalized.map(stroke => simplifyDrawingPoints(stroke));
   if (!clean.length) throw new Error('A drawing requires at least one point');
+  if (input.pressure && (input.pressure.length !== clean.length || input.pressure.some((stroke, i) => stroke.length !== clean[i].length || stroke.some(p => !Number.isFinite(p))))) throw new Error('Drawing pressure must match its points');
   const points = normalized.flat();
   let x = 100, y = 100, ex = 0, ey = 0;
   for (const p of points) { x = Math.min(x, p[0]); y = Math.min(y, p[1]); ex = Math.max(ex, p[0]); ey = Math.max(ey, p[1]); }
-  return { x, y, w: ex - x, h: ey - y, path: clean.map(stroke => stroke.map((p, i) => `${i ? 'L' : 'M'}${p[0]} ${p[1]}`).join('')).join('') };
+  return { x, y, w: ex - x, h: ey - y, path: clean.map(stroke => stroke.map((p, i) => `${i ? 'L' : 'M'}${p[0]} ${p[1]}`).join('')).join(''), ...(input.pressure ? { pressure: input.pressure.map(stroke => stroke.map(p => Math.max(0, Math.min(1, p)))) } : {}) };
 }
 
 // Flatten SVG paths into percent-space strokes before simplifying.
-function pathStrokes(path: string): FeedbackPoint[][] {
+export function pathStrokes(path: string): FeedbackPoint[][] {
   const tokens = path.match(/[a-zA-Z]|[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?/g) ?? [];
   if (path.replace(/[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?|[MmLlHhVvCcSsQqTtAaZz]|[\s,]/g, '')) throw new Error('Invalid drawing path');
   const strokes: FeedbackPoint[][] = [];
@@ -188,7 +192,7 @@ export function createFeedback(init: FeedbackInit = {}) {
       const moved = box({ x: b.x + a.fx * b.w, y: b.y + a.fy * b.h, w: (a.fw ?? 0) * b.w, h: (a.fh ?? 0) * b.h });
       if (item.kind === 'drawing' && item.path) {
         const strokes = pathStrokes(item.path).map(stroke => stroke.map(([x, y]): FeedbackPoint => [moved.x + (x - item.x) * (item.w ? moved.w / item.w : 1), moved.y + (y - item.y) * (item.h ? moved.h / item.h : 1)]));
-        Object.assign(item, drawing({ strokes }));
+        Object.assign(item, drawing({ strokes, pressure: item.pressure, simplify: false }));
       } else {
         item.x = moved.x; item.y = moved.y;
         if (item.kind === 'region') { item.w = moved.w; item.h = moved.h; }
@@ -252,10 +256,10 @@ export function createFeedback(init: FeedbackInit = {}) {
           if (value === undefined && (['x', 'y', 'comment'].includes(key) || (key === 'path' && item.kind === 'drawing'))) continue;
           if (value === undefined) delete record[key]; else record[key] = copy(value);
         }
-        if (item.kind === 'drawing' && patch.path !== undefined) Object.assign(item, drawing({ path: patch.path }));
+        if (item.kind === 'drawing' && patch.path !== undefined) { delete item.pressure; Object.assign(item, drawing({ path: patch.path, pressure: patch.pressure, simplify: false })); }
         else if (item.kind === 'drawing' && original.path && ['x', 'y', 'w', 'h'].some(key => key in patch)) {
           const strokes = pathStrokes(original.path).map(stroke => stroke.map(([x, y]): FeedbackPoint => [item.x + (x - original.x) * (original.w ? (item.w ?? original.w) / original.w : 1), item.y + (y - original.y) * (original.h ? (item.h ?? original.h) / original.h : 1)]));
-          Object.assign(item, drawing({ strokes }));
+          Object.assign(item, drawing({ strokes, pressure: item.pressure, simplify: false }));
         } else if (item.kind === 'region') Object.assign(item, box({ x: item.x, y: item.y, w: item.w ?? 0, h: item.h ?? 0 }));
         else { item.x = clamp(item.x); item.y = clamp(item.y); }
         if ('target' in patch && !targetBox && (original.target?.selector !== item.target?.selector || original.target?.text !== item.target?.text)) delete item.anchor;
@@ -291,6 +295,7 @@ export function createFeedback(init: FeedbackInit = {}) {
         n: item.n, kind: item.kind, x: round(item.x), y: round(item.y),
         ...(item.w === undefined ? {} : { w: round(item.w) }), ...(item.h === undefined ? {} : { h: round(item.h) }),
         ...(item.path === undefined ? {} : { path: item.path }), comment: item.comment,
+        ...(item.pressure === undefined ? {} : { pressure: copy(item.pressure) }),
         ...(item.target ? { target: { selector: item.target.selector, ...(item.target.text === undefined ? {} : { text: item.target.text }), ...(item.target.html === undefined ? {} : { html: item.target.html.replace(/\s+/g, ' ').trim().slice(0, 300) }) } } : {})
       })) };
     },
