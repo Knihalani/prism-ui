@@ -1,5 +1,5 @@
-import { Children, createElement, forwardRef, useContext, type InputHTMLAttributes, type ReactElement } from 'react';
-import { ComponentContext, PrismPart, defineTheme, useFlash, useFormat, usePart, useStrings } from '@prism-ui/react';
+import { Children, createElement, forwardRef, useContext, useId, type InputHTMLAttributes, type ReactElement } from 'react';
+import { ComponentContext, Icon, PrismPart, defineTheme, useFlash, useFormat, usePart, useStrings } from '@prism-ui/react';
 import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
 import type { usePick } from '@prism-ui/components/pick';
@@ -59,21 +59,25 @@ const Faders = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<typeof 
     return <label className="instrument-fader" key={criterion.id}><span>{criterion.label}<output>{weight}</output></span><input type="range" min={0} max={3} step={1} value={weight} aria-label={`${criterion.label} ${strings.weightLabel}`} onInput={event => pick.setWeight(criterion.id, Number(event.currentTarget.value))} /><i aria-hidden="true" /></label>;
   })}</div>;
 });
-const Module = forwardRef<HTMLElement, SlotProps & { row: PickRow }>(function Module({ as = 'article', model, frame, overflow, row, children, ...props }, ref) {
+const Module = forwardRef<HTMLElement, SlotProps & { row: PickRow; pick: ReturnType<typeof usePick> }>(function Module({ as = 'article', model, frame, overflow, row, pick, children, ...props }, ref) {
   const strings = useStrings('pick'), format = useFormat();
+  const detailsId = useId(), collapsible = pick.compact && !row.top;
   const context = useContext(ComponentContext)!, changed = useFlash(`${context.props.id ?? context.id}.weights`);
   const part = usePart('pick', 'item', !row.ready ? 'loading' : row.chosen ? 'chosen' : row.top ? 'top' : 'ready');
   const title = usePart('pick', 'title'), subtitle = usePart('pick', 'subtitle'), bars = usePart('pick', 'bars'), choose = usePart('pick', 'choose');
   return createElement(as, { ...part, ...props, ref, 'data-instrument-module': '', 'data-option': row.id, 'data-top': row.top || undefined, 'data-instrument-change': changed ? '' : undefined, 'aria-busy': !row.ready }, <>
     <div className="instrument-module-index">{strings.optionIndex.replace('{n}', format.number(row.index + 1, { minimumIntegerDigits: 2 }))}<i key={row.top ? 'on' : 'off'} data-instrument-led="" aria-hidden="true" /></div>
-    <PrismPart as="h4" {...title}>{row.title}</PrismPart>{row.subtitle && <PrismPart as="p" {...subtitle}>{row.subtitle}</PrismPart>}
+    <PrismPart as="h4" {...title}>{collapsible ? <button className="instrument-module-disclosure" type="button" aria-expanded={row.expanded} aria-controls={detailsId} onClick={row.onToggle}>{row.title}<Icon name="chevron" /></button> : row.title}</PrismPart>
     <div className="instrument-score" data-instrument-score="" role="img" aria-label={row.ready ? `${row.matchText} ${row.matchLabel}` : strings.emptyLabel}><Segments key={row.match} value={row.ready ? String(Math.round(row.match * 100)) : '--'} /></div>
+    <div id={detailsId} className="instrument-module-details" hidden={!row.expanded}>
+    {row.subtitle && <PrismPart as="p" {...subtitle}>{row.subtitle}</PrismPart>}
     <PrismPart as="div" {...bars}>{row.bars.map(bar => <div className="instrument-rating" key={bar.id}><span>{bar.label}</span><span>{format.number(Math.round(bar.score * 10))}{strings.ratingSuffix}</span></div>)}</PrismPart>
     {!!row.pros.length && <ul className="instrument-notes">{row.pros.map((pro, index) => <li key={index}>{pro}</li>)}</ul>}
     {!!row.cons.length && <ul className="instrument-notes">{row.cons.map((con, index) => <li key={index}>{con}</li>)}</ul>}
     {row.tag && <span className="instrument-tag">{row.tag}</span>}
     {row.chosen && <span className="instrument-tag" role="status">{row.chosenLabel}</span>}
     <div className="instrument-module-actions">{!row.top && <PrismPart as="button" {...choose} type="button" disabled={!row.ready} onClick={row.onChoose}>{strings.chooseTemplate.replace('{title}', row.title)}</PrismPart>}</div>
+    </div>
   </>);
 });
 const Modules = forwardRef<HTMLDivElement, SlotProps>(function Modules({ as, model, frame, overflow, children, ...props }, ref) {
@@ -201,6 +205,11 @@ export const instrument = defineTheme({
     :scope .instrument-fader > i { display:block; height:5px; margin-inline:2px; background:repeating-linear-gradient(90deg,var(--prism-border-strong) 0 1px,transparent 1px calc((100% - 1px)/10)); }
     :scope .prism-pick__list { display:block; padding:0; }
     :scope .instrument-module-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:11px; align-items:stretch; }
+    :scope .instrument-module-details { display:contents; }
+    :scope .instrument-module-details[hidden] { display:none; }
+    :scope .instrument-module-disclosure { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; border:0; padding:0; background:none; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+    :scope .instrument-module-disclosure svg { flex:none; width:12px; height:12px; }
+    :scope .instrument-module-disclosure[aria-expanded="true"] svg { rotate:180deg; }
     :scope [data-instrument-module] { min-width:0; min-height:0; display:flex; flex-direction:column; padding:15px 14px; background:var(--prism-bg); border:1px solid var(--prism-border); border-top:3px solid var(--prism-border); border-radius:var(--prism-radius-sm); box-shadow:inset 0 1px 0 var(--prism-surface-raised); }
     :scope [data-instrument-module][data-top] { border-color:var(--prism-accent); }
     :scope .instrument-module-index { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:25px; color:var(--prism-text-muted); font:9px/1.5 var(--prism-font-mono); }
@@ -269,6 +278,27 @@ export const instrument = defineTheme({
     }
     @container (max-width:360px) {
       :scope [data-instrument-chassis] { padding:22px 16px; }
+      :scope .prism-pick__root[data-instrument-chassis] { padding:12px; }
+      :scope .prism-pick__criteria { gap:2px; margin:8px 0; }
+      :scope .instrument-fader { display:grid; grid-template-columns:minmax(0,1fr) 92px; align-items:center; gap:10px; min-height:30px; }
+      :scope .instrument-fader input { margin:0; height:24px; background-size:100% 7px; }
+      :scope .instrument-fader input::-webkit-slider-thumb { height:20px; }
+      :scope .instrument-fader input::-moz-range-thumb { height:20px; }
+      :scope .instrument-fader > i { display:none; }
+      :scope [data-instrument-module] { display:grid; grid-template-columns:minmax(0,1fr) 52px; gap:4px 8px; padding:10px; }
+      :scope .instrument-module-index, :scope [data-instrument-module] .prism-pick__bars, :scope .instrument-notes, :scope .instrument-tag, :scope .instrument-module-actions { grid-column:1/-1; }
+      :scope .instrument-module-index { grid-column:1; margin:0 0 2px; }
+      :scope [data-instrument-module] .prism-pick__title { grid-column:1; font-size:14px; }
+      :scope [data-instrument-module] .prism-pick__subtitle { grid-column:1; min-height:0; margin:0; line-height:1.4; }
+      :scope .instrument-score { grid-column:2; grid-row:1/3; align-self:start; min-height:34px; padding:4px; margin:0; }
+      :scope .instrument-score svg { height:24px; }
+      :scope .instrument-rating { padding-block:2px; }
+      :scope .instrument-notes { margin:2px 0; line-height:1.4; }
+      :scope .instrument-tag { margin:0; }
+      :scope .instrument-module-actions { min-height:20px; margin:0; }
+      :scope .instrument-module-actions:empty { display:none; }
+      :scope .instrument-pick-footer { padding-top:10px; }
+      :scope .instrument-pick-footer p { margin-bottom:8px; line-height:1.4; }
       :scope .prism-mockup__header { flex-direction:row; }
       :scope .prism-mockup__toolbar { position:static; order:2; flex-wrap:wrap; justify-content:flex-end; }
       :scope .prism-mockup__tools { flex:1 1 auto; min-width:0; flex-wrap:wrap; justify-content:flex-end; }
@@ -294,7 +324,10 @@ export const instrument = defineTheme({
     :scope .prism-tabs__indicator { display:none; }
     :scope .prism-tab__body { padding:18px 0; }
     :scope .prism-badge__root { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text); }
-    :scope .prism-badge__root[data-variant="solid"] { background:var(--prism-accent); color:var(--prism-on-accent); }
+    :scope .prism-badge__root[data-tone="neutral"] { --prism-badge-color:var(--prism-text); }
+    :scope .prism-badge__root[data-variant="solid"] { background:var(--prism-badge-color); color:var(--prism-badge-on-accent,#fff); }
+    :scope .prism-badge__root[data-variant="solid"][data-tone="neutral"] { color:var(--prism-bg); }
+    :scope .prism-badge__root[data-variant="solid"][data-tone="accent"] { color:var(--prism-on-accent); }
     :scope .prism-grid__body { gap:20px; }
     :scope .prism-grid__body > .prism-card__root { margin:0; }
     :scope .prism-grid__body > .prism-card__root::before { display:none; }
@@ -314,7 +347,10 @@ export const instrument = defineTheme({
     :scope :is(.prism-card__title,.prism-callout__title,.prism-tabs__title,.prism-grid__title) { font:500 11px/1.5 var(--prism-font-mono); text-transform:uppercase; letter-spacing:.06em; }
     :scope .prism-callout__root { border-left:3px solid var(--prism-accent); }
     :scope .prism-callout__icon { color:var(--prism-accent-text); }
-    :scope .prism-tabs__list { gap:6px; padding:14px 0 4px; border:0; }
+    :scope .prism-tabs__list { gap:6px; padding:14px 0 4px; border:0; flex-wrap:nowrap; overflow-x:auto; }
+    :scope .prism-tabs__root .prism-tabs__list .prism-tabs__tab { flex:0 0 auto; white-space:nowrap; overflow-wrap:normal; word-break:normal; }
+    :scope .prism-tabs__title { overflow-wrap:normal; word-break:normal; }
+    @container (max-width:360px) { :scope .prism-tabs__root { padding:10px; } :scope .prism-tabs__tab { padding:10px 9px; } }
     :scope .prism-tabs__tab { border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:0 3px 0 var(--prism-frame-key-shadow); }
     :scope .prism-tabs__tab[aria-selected="true"] { background:var(--prism-bg); color:var(--prism-text); box-shadow:inset 0 2px 3px var(--prism-frame-key-shadow); transform:translateY(2px); border-top:2px solid var(--prism-accent); }
     :scope .prism-runbook__check { border:1px solid var(--prism-border-strong); border-radius:3px; background:var(--prism-surface-raised); color:var(--prism-text); box-shadow:0 2px 0 var(--prism-frame-key-shadow); }
@@ -323,7 +359,7 @@ export const instrument = defineTheme({
     :scope .prism-runbook__check[data-state="done"] { color:var(--prism-text); background:var(--prism-bg); border-color:var(--prism-border-strong); box-shadow:inset 0 1px 2px var(--prism-frame-key-shadow); }
     :scope .prism-runbook__check[data-state="done"]::after { background:var(--prism-accent); box-shadow:0 0 5px var(--prism-accent); }
     :scope .prism-badge__root { border:1px solid var(--prism-border-strong); border-radius:2px; padding:3px 8px; background:var(--prism-bg); box-shadow:inset 0 1px 2px var(--prism-frame-key-shadow); }
-    :scope .prism-badge__dot { background:var(--prism-accent); }
+    :scope .prism-badge__dot { background:var(--prism-badge-color); }
     :scope .prism-troubleshoot__position { color:var(--prism-accent); background:var(--prism-frame-display); border:1px solid var(--prism-border-strong); border-radius:2px; padding:5px 8px; }
     :scope :is(.prism-summary__send,.prism-troubleshoot__primary) { border-radius:3px; box-shadow:0 3px 0 var(--prism-frame-key-shadow); }
     :scope .prism-summary__quote { background:var(--prism-bg); border-color:var(--prism-accent); }

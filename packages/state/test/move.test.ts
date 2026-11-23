@@ -37,3 +37,25 @@ test('moves fill missing destination fields, prune ancestors, and reject unsafe 
   expect(store.snapshot()).toEqual({ final: { value: 9, fresh: true } });
   expect(store.canUndo()).toBe(false);
 });
+
+test.each(['007', 'group.007', '7'])('record moves preserve numeric key %s through serialization and both history stacks', id => {
+  const store = createStore({ initial: { old: { overall: 'Initial', items: [] } } });
+  store.set('old.overall', 'Edited'); store.set('old.overall', 'Future'); store.undo();
+  const path = `__prism.feedback.${id}`;
+  store.move('old', path, { record: true });
+  const restored = () => createStore({ initial: JSON.parse(JSON.stringify(store.snapshot())) });
+  expect(Array.isArray(store.get('__prism.feedback'))).toBe(false);
+  expect(restored().get(`${path}.overall`)).toBe('Edited');
+  expect(store.get('old')).toBeUndefined();
+  store.undo(path); expect(restored().get(`${path}.overall`)).toBe('Initial');
+  store.redo(path); store.redo(path); expect(restored().get(`${path}.overall`)).toBe('Future');
+  store.undo(); expect(restored().get(`${path}.overall`)).toBe('Edited');
+});
+
+test('record moves normalize array ancestors even when the destination value already matches', () => {
+  const values = Object.assign([], { '007': 5 });
+  const store = createStore({ initial: { old: 5, __prism: { feedback: values } } });
+  store.move('old', '__prism.feedback.007', { record: true });
+  expect(store.snapshot()).toEqual({ __prism: { feedback: { '007': 5 } } });
+  expect(store.canUndo()).toBe(false);
+});

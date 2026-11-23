@@ -22,7 +22,7 @@ export type FrameMessage =
   | { type: 'task-toggle'; revision: number; task: string; checked: boolean }
   | { type: 'exitFullscreen' };
 
-function installArtifact(id: string, strings: typeof artifactStrings, exported?: Standalone) {
+function installArtifact(id: string, strings: typeof artifactStrings, library: (specifier: string) => Promise<any>, exported?: Standalone) {
   const standalone = parent === window;
   const values: Record<string, unknown> = Object.create(null);
   const subscriptions = new Map<string, Set<(value: unknown) => void>>();
@@ -119,9 +119,8 @@ function installArtifact(id: string, strings: typeof artifactStrings, exported?:
   const frame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
   const loadModule = async (source: string) => {
     const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
-    try { return await import(url); } finally { URL.revokeObjectURL(url); }
+    try { return await library(url); } finally { URL.revokeObjectURL(url); }
   };
-  const library = (specifier: string) => import(specifier);
   const runScript = async (original: HTMLScriptElement) => {
     if (!['', 'module', 'text/javascript', 'application/javascript'].includes(original.type)) return;
     const script = document.createElement('script');
@@ -226,6 +225,6 @@ export function artifactDocument(id: string, imports: Record<string, string>, ex
   const csp = `default-src 'none'; script-src 'nonce-${nonce}' blob: ${scriptSources}; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'`;
   const head = `<style>html{background:transparent;color:var(--prism-text,#242832);font-family:var(--prism-font-body,system-ui,sans-serif);container-type:inline-size}body{margin:0;min-width:0}*,*::before,*::after{box-sizing:border-box}html[data-prism-artifact-fit]{overflow:hidden}img,svg,canvas,video{max-width:100%;height:auto}button,input,select,textarea{font:inherit}html[data-reduced-motion] *,html[data-reduced-motion] *::before,html[data-reduced-motion] *::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}</style><script nonce="${nonce}" type="importmap">${json({ imports })}</script>`;
   const srcdoc = buildSrcdoc({ id, csp, head, runtimeOptions: { interactive: true } }).replace('<script>', `<script nonce="${nonce}">`);
-  const runtime = `(${installArtifact.toString()})(${json(id)},${json(artifactStrings)}${exported ? ',' + json(exported) : ''})`.replace(/<\/script/gi, '<\\/script');
+  const runtime = `(${installArtifact.toString()})(${json(id)},${json(artifactStrings)},specifier => import(specifier)${exported ? ',' + json(exported) : ''})`.replace(/<\/script/gi, '<\\/script');
   return srcdoc.replace('</head>', () => `<script nonce="${nonce}">${runtime}</script></head>`);
 }

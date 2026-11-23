@@ -6,6 +6,10 @@
 .prism-inline-feedback[data-feedback-open] > .prism-inline-feedback__trigger { opacity: 1; translate: 0 0; pointer-events: auto; }
 .prism-inline-feedback__trigger:active { transition-duration: var(--prism-motion-instant); }
 .prism-inline-feedback__trigger:focus-visible { outline: 2px solid var(--prism-focus); outline-offset: 2px; }
+.prism-inline-feedback[data-inline]:has([data-prism="num"]) { padding-inline-end: 26px; pointer-events: none; }
+.prism-inline-feedback[data-inline]:has([data-prism="num"]) > .prism-inline-feedback__trigger { inset: auto; inset-inline-end: 0; inset-block-start: 2px; width: 22px; height: 22px; padding: 3px; transform: none; pointer-events: auto; }
+.prism-inline-feedback[data-inline]:has([data-prism="num"]) > .prism-inline-feedback__target { display: inline-block; pointer-events: auto; }
+.prism-inline-feedback[data-inline]:has([data-prism="num"]) > .prism-inline-feedback__editor { pointer-events: auto; }
 .prism-inline-feedback__editor { border-top: 1px solid var(--prism-border); padding-block: var(--prism-space-3); display: grid; gap: var(--prism-space-2); }
 .prism-inline-feedback__editor[hidden] { display: none; }
 .prism-inline-feedback :is(.prism-inline-feedback__target,[data-feedback-target]) > .prism-mockup__canvas { z-index: 6; background: color-mix(in srgb,var(--prism-accent,#525252) 3%,transparent); }

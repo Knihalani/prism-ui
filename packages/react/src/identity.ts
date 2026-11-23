@@ -8,7 +8,10 @@ let nextStoreKey = 0;
 
 export function migrateComponentState(store: Store, from: string, to: string) {
   if (!store.hydrated) { void store.ready.then(() => migrateComponentState(store, from, to)); return; }
-  store.move(from, to);
+  store.batch(() => {
+    store.move(from, to);
+    store.move(`__prism.feedback.${from}`, `__prism.feedback.${to}`, { record: true });
+  }, { history: false });
 }
 
 export function useComponentId(node: Node, requested: unknown, store: Store, scope: string, requiresFinalId = false) {
@@ -31,7 +34,7 @@ export function useComponentId(node: Node, requested: unknown, store: Store, sco
   if (!store.hydrated) awaiting.current = store;
   const current = useRef({ store, from: provisional, to: target });
   current.current = { store, from: provisional, to: target };
-  const needsPreparation = awaiting.current === store || target !== provisional && store.get(provisional) !== undefined;
+  const needsPreparation = awaiting.current === store || target !== provisional && (store.get(provisional) !== undefined || store.get(`__prism.feedback.${provisional}`) !== undefined);
   const preparedForTarget = prepared?.store === store && prepared.from === provisional && prepared.to === target;
   const preparing = needsPreparation && !preparedForTarget;
   useEffect(() => {

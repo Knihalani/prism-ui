@@ -1,5 +1,6 @@
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
 import { ComponentContext, useStoreValue, useSent, useFlash, usePrism, useTheme, useStrings, useEmit, type PrismContextValue } from '@prism-ui/react';
+import { setRecordPath } from '../store-record';
 import { createFeedback, createFrameController, previousAsResolved, sanitizeSvg, toMessage, wireframeDocument, feedbackMessageStrings, type FeedbackPayload, type FeedbackState, type FeedbackPoint, type FrameController, type HitRect } from './engine';
 import { regionDimensions } from './outline';
 import { placeComposer } from './placement';
@@ -15,6 +16,14 @@ export interface MockupOptions { createController?: () => FrameController; enabl
 const widths = { desktop: 1280, tablet: 834, mobile: 390 };
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
 
+function isFeedbackDraft(value: unknown): value is FeedbackState & { submitted?: boolean } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const draft = value as Partial<FeedbackState & { submitted?: boolean }>;
+  return typeof draft.overall === 'string' && (draft.submitted === undefined || typeof draft.submitted === 'boolean') && Array.isArray(draft.items) && draft.items.every(item =>
+    item && typeof item === 'object' && typeof item.id === 'string' && typeof item.comment === 'string' &&
+    ['pin', 'region', 'drawing'].includes(item.kind) && Number.isFinite(item.x) && Number.isFinite(item.y) && Number.isFinite(item.n) && Number.isFinite(item.createdAt));
+}
+
 export function useMockupStrings(props: MockupProps): typeof mockupLabels {
   const defaults = useStrings('mockup', mockupLabels, {}), theme = useTheme().theme.components.mockup?.strings;
   return { ...defaults, ...props.labels, title: props.title ?? props.labels?.title ?? defaults.title, ...theme } as typeof mockupLabels;
@@ -24,8 +33,18 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const enabled = options.enabled !== false;
   const complete = component?.node.complete !== false, kind = props.kind ?? 'html', framed = kind === 'html' || kind === 'wire';
   const labels = useMockupStrings(props), title = labels.title, source = props.source ?? '';
-  const path = `${component!.id}.feedback`;
-  const draft = useStoreValue<(FeedbackState & { submitted?: boolean }) | undefined>(path);
+  const legacyPath = `${component!.id}.feedback`, separate = options.inline && component!.def?.inline;
+  const path = separate ? `__prism.feedback.${component!.id}` : legacyPath;
+  const stored = useStoreValue<(FeedbackState & { submitted?: boolean }) | undefined>(path);
+  const legacyValue = useStoreValue<unknown>(legacyPath), legacy = isFeedbackDraft(legacyValue) ? legacyValue : undefined;
+  const draft = stored ?? legacy;
+  useLayoutEffect(() => {
+    if (!separate || stored !== undefined || legacy === undefined) return;
+    ctx.store.batch(() => {
+      ctx.store.move(legacyPath, path, { record: true });
+      setRecordPath(ctx.store, '__prism.feedback', component!.id, ctx.store.get(path) ?? legacy, { history: false });
+    }, { history: false });
+  }, [ctx.store, separate, stored, legacy, legacyPath, path]);
   const savedSubmitted = useStoreValue<boolean | undefined>(options.inline ? `${path}.submitted` : `${component!.id}.submitted`);
   const [localDevice, writeDevice] = useState<MockupDevice>(props.device ?? 'desktop'), [localZoom, writeZoom] = useState(1), [editSubmitted, setEditSubmitted] = useState(false);
   const submitted = !!(draft?.submitted ?? savedSubmitted) && !editSubmitted, setSubmitted = (value: boolean) => setEditSubmitted(!value);
@@ -86,12 +105,13 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const resolved = props.previous ? previousAsResolved(props.previous) : [];
   function open(id: string, fresh = false) { focusReturn.current = (!fresh && Array.from(root.current?.querySelectorAll<HTMLElement>('[data-feedback-id]') ?? []).find(node => node.dataset.feedbackId === id)) || canvas.current; const item = feedback.getState().items.find(item => item.id === id); if (!item) return; if (pending.current && pending.current.id !== id) { feedback.remove(pending.current.id); pending.current = null; } setEditing({ id, fresh, text: item.comment }); setComment(item.comment); setActive(id); }
   function commit(change: (value: FeedbackState) => FeedbackState, sent = false) {
-    let result!: FeedbackState;
-    ctx.store.update(path, (saved: (FeedbackState & { submitted?: boolean }) | undefined) => {
-      result = createFeedback(change(createFeedback({ ...saved, mockup: title, variant: props.variant, device }).toJSON())).toJSON();
-      const next = { ...result, submitted: sent };
-      return JSON.stringify(saved) === JSON.stringify(next) ? saved : next;
-    });
+    const saved = ctx.store.get(path) ?? draft;
+    const result = createFeedback(change(createFeedback({ ...saved, mockup: title, variant: props.variant, device }).toJSON())).toJSON();
+    const next = { ...result, submitted: sent };
+    if (JSON.stringify(saved) !== JSON.stringify(next)) {
+      if (separate) setRecordPath(ctx.store, '__prism.feedback', component!.id, next);
+      else ctx.store.set(path, next);
+    }
     return result;
   }
   function withItem(value: FeedbackState, id: string, text: string) {
