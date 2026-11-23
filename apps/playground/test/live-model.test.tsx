@@ -125,6 +125,39 @@ test('popover storage failure shows only safe feedback without enabling live mod
   } finally { restore(); }
 });
 
+test('Forget removes only the selected key without saving or discarding unrelated drafts', () => {
+  saveAgentConfig({ provider: 'openrouter', keys: { openrouter: 'router-key' } });
+  saveAgentConfig({ provider: 'openai', model: 'saved-model', keys: { openai: 'active-key' } });
+  const view = render(<App />);
+  fireEvent.click(view.getByRole('button', { name: /Live · saved-model/ }));
+  fireEvent.change(view.getByLabelText('API key'), { target: { value: 'unsaved-a' } });
+  fireEvent.click(view.getByRole('button', { name: 'OpenRouter' }));
+  fireEvent.change(view.getByLabelText('API key'), { target: { value: 'unsaved-router' } });
+  fireEvent.change(view.getByLabelText('Model preset'), { target: { value: 'custom' } });
+  fireEvent.change(view.getByLabelText('Model'), { target: { value: 'unsaved-model' } });
+  fireEvent.click(view.getByRole('button', { name: 'Forget key' }));
+  expect(loadAgentConfig()).toEqual({ provider: 'openai', model: 'saved-model', apiKey: 'active-key', keys: { openai: 'active-key' } });
+  expect(view.getByRole('dialog')).toBeDefined();
+  expect((view.getByLabelText('Model') as HTMLInputElement).value).toBe('unsaved-model');
+  expect((view.getByLabelText('API key') as HTMLInputElement).value).toBe('');
+  fireEvent.click(view.getByRole('button', { name: 'OpenAI' }));
+  expect((view.getByLabelText('API key') as HTMLInputElement).value).toBe('unsaved-a');
+});
+
+test('failed Forget leaves the key and drafts unchanged and reports only safe feedback', () => {
+  saveAgentConfig({ provider: 'openai', keys: { openai: 'stored-key' } });
+  const view = render(<App />);
+  fireEvent.click(view.getByRole('button', { name: /Live ·/ }));
+  const restore = blockStorage('private-storage-error');
+  try {
+    fireEvent.click(view.getByRole('button', { name: 'Forget key' }));
+    expect(view.getByRole('status').textContent).toContain('Browser storage is unavailable');
+    expect((view.getByLabelText('API key') as HTMLInputElement).value).toBe('stored-key');
+    expect(view.container.textContent).not.toContain('private-storage-error');
+  } finally { restore(); }
+  expect(loadAgentConfig().apiKey).toBe('stored-key');
+});
+
 test('a live action reaches the next request and a ui:state reply updates the shared store', async () => {
   let requests = 0, actionBody = '';
   const patchReply = '```ui:state\n{"set":{"planning.room":"north"}}\n```';

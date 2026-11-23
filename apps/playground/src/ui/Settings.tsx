@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { AgentConfig } from '../agent/config';
 import { modelPresets, type Provider } from '../agent/policy';
 
-export function Settings({ config, anchor, onSave, onClose }: { config: AgentConfig; anchor: RefObject<HTMLButtonElement | null>; onSave(config: AgentConfig): boolean; onClose(): void }) {
+export function Settings({ config, anchor, onSave, onForget, onClose }: { config: AgentConfig; anchor: RefObject<HTMLButtonElement | null>; onSave(config: AgentConfig): boolean; onForget(provider: Provider): boolean; onClose(): void }) {
   const [provider, setProvider] = useState(config.provider ?? 'openai');
   const presets: readonly string[] = provider === 'scripted' ? [] : modelPresets[provider];
   const [keys, setKeys] = useState(config.keys ?? {});
@@ -55,7 +55,11 @@ export function Settings({ config, anchor, onSave, onClose }: { config: AgentCon
       {custom && <input aria-label="Model" value={model} placeholder="Model ID" onChange={event => setModel(event.target.value)} />}</>}
       <p className="model-notice">localStorage only · Browser → provider directly</p>
       {error && <p role="status" className="model-storage-error">{error}</p>}
-      <footer><button type="button" className="forget-key" disabled={!apiKey} onClick={() => { if (provider !== 'scripted') { const next = { ...keys }; delete next[provider as Provider]; save(next); } }}>Forget key</button><button className="save-model" type="submit">Save changes</button></footer>
+      <footer><button type="button" className="forget-key" disabled={!apiKey} onClick={() => {
+        if (provider === 'scripted') return;
+        if (onForget(provider)) { const next = { ...keys }; delete next[provider]; setKeys(next); setError(''); }
+        else setError('Browser storage is unavailable. Nothing was saved.');
+      }}>Forget key</button><button className="save-model" type="submit">Save changes</button></footer>
     </form>
   </div>, target);
 }

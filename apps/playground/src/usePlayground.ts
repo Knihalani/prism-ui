@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import { type Action } from '@prism-ui/react';
 import { makeStore } from './store';
-import { createAgent, loadAgentConfig, saveAgentConfig, type AgentConfig } from './agent/config';
+import { createAgent, forgetAgentKey, loadAgentConfig, saveAgentConfig, type AgentConfig } from './agent/config';
 import { createScriptedAgent, routeMessage } from './agent/scripted';
 import { realistic, type Pace } from './agent/pace';
 import { scenarios } from './agent/scenarios';
 import type { Agent, AgentInput, Turn } from './agent/types';
 import { describeInteraction } from './agent/interaction';
-import { boundedSnapshot } from './agent/policy';
+import { boundedSnapshot, type Provider } from './agent/policy';
 
 type Request = { text: string; demoId?: string } | { action: Action };
 type Message = { id: string; role: 'user' | 'assistant'; text: string; streaming?: boolean; error?: string; aborted?: boolean; input?: AgentInput; gallery?: boolean };
@@ -162,7 +162,8 @@ export function usePlaygroundController({ pace = realistic, agentFactory }: AppP
   const providerName = config.current.provider === 'anthropic' ? 'Anthropic' : config.current.provider === 'openrouter' ? 'OpenRouter' : 'OpenAI';
   function chooseMode(value: 'light' | 'dark' | 'system') { setThemeChoice(value); try { localStorage.setItem('prism-theme', value); } catch {} }
   function saveSettings(value: AgentConfig) { if (!saveAgentConfig(value)) return false; config.current = loadAgentConfig(); revision.current++; closeOverlay(); notify(); return true; }
-  return { current, currentId, ownChats, earlierScenarios, busy, empty, lastAssistant, live, providerName, scroll, textarea, sidebarRef, sidebarToggle, sidebar, setSidebar, drawer, setDrawer, overlay, openOverlay, closeOverlay, themeChoice, setThemeChoice, chooseMode, mode: theme, reduced, mobile, notify, send, stop, onAction, switchTo, newChat, openScenario, regenerate, config: config.current, saveSettings };
+  function forgetKey(provider: Provider) { if (!forgetAgentKey(provider)) return false; config.current = loadAgentConfig(); revision.current++; notify(); return true; }
+  return { current, currentId, ownChats, earlierScenarios, busy, empty, lastAssistant, live, providerName, scroll, textarea, sidebarRef, sidebarToggle, sidebar, setSidebar, drawer, setDrawer, overlay, openOverlay, closeOverlay, themeChoice, setThemeChoice, chooseMode, mode: theme, reduced, mobile, notify, send, stop, onAction, switchTo, newChat, openScenario, regenerate, config: config.current, saveSettings, forgetKey };
 }
 export type PlaygroundController = ReturnType<typeof usePlaygroundController>;
 export function readModePreference(): 'light' | 'dark' | 'system' { try { const saved = localStorage.getItem('prism-theme'); return saved === 'light' || saved === 'dark' ? saved : 'system'; } catch { return 'system'; } }

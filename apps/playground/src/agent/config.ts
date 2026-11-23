@@ -26,7 +26,9 @@ export function createAgent(config: AgentConfig = loadAgentConfig()): Agent {
   const apiKey = provider === 'scripted' ? '' : config.keys ? config.keys[provider] : config.apiKey;
   return provider !== 'scripted' && apiKey?.trim() ? createLlmAgent({ provider, apiKey: apiKey.trim(), model: config.model }) : createScriptedAgent();
 }
-export function saveAgentConfig(config: AgentConfig): boolean {
+export function saveAgentConfig(config: AgentConfig): boolean { return updateAgentConfig(config); }
+export function forgetAgentKey(provider: Provider): boolean { return updateAgentConfig(undefined, provider); }
+function updateAgentConfig(config?: AgentConfig, forgotten?: Provider): boolean {
   try {
     let stored: AgentConfig = {};
     const raw = globalThis.localStorage.getItem('prism-agent');
@@ -37,13 +39,14 @@ export function saveAgentConfig(config: AgentConfig): boolean {
     }
     const previous = stored.provider ?? 'openai';
     if (!stored.keys && previous !== 'scripted' && Object.hasOwn(modelPresets, previous) && typeof stored.apiKey === 'string') keys[previous] = stored.apiKey;
-    const provider = config.provider ?? 'openai';
-    if (provider !== 'scripted') {
+    const provider = config ? config.provider ?? 'openai' : previous === forgotten ? 'scripted' : previous;
+    if (forgotten) delete keys[forgotten];
+    else if (config && provider !== 'scripted') {
       const key = config.keys ? config.keys[provider] : config.apiKey;
       if (key) keys[provider] = key;
       else delete keys[provider];
     }
-    globalThis.localStorage.setItem('prism-agent', JSON.stringify({ provider, keys, model: config.model }));
+    globalThis.localStorage.setItem('prism-agent', JSON.stringify({ provider, keys, model: config ? config.model : stored.model }));
     return true;
   } catch { return false; }
 }
