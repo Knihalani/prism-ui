@@ -84,7 +84,7 @@ try {
         await page.mouse.up();
         await page.getByPlaceholder('Add a comment…').fill('Preference check region');
         await page.evaluate(() => window.motionProbe.sample('feedback/region-enter'));
-        await page.getByRole('button', { name: 'Submit feedback', exact: true }).click();
+        await page.getByRole('button', { name: /^Send \d+ comments?$/ }).click();
         await page.evaluate(() => window.motionProbe.sample('feedback/sent'));
         await page.waitForFunction(() => !document.querySelector('[data-closing]'));
         const result = await page.evaluate(() => { const result = window.motionProbe.result(); window.motionProbe.close(); return result; });

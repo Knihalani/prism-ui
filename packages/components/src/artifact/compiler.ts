@@ -48,7 +48,7 @@ export async function compileArtifact(source: string, compilerUrl = defaultCompi
   const url = new URL(compilerUrl, document.baseURI).href;
   let entry = workers.get(url);
   if (!entry) {
-    const blob = URL.createObjectURL(new Blob([`(${compilerRuntime.toString()})(${JSON.stringify(url)},specifier=>import(specifier))`], { type: 'text/javascript' }));
+    const blob = URL.createObjectURL(new Blob([`(${compilerRuntime.toString()})(${JSON.stringify(url)},specifier => import(specifier))`], { type: 'text/javascript' }));
     let worker: Worker;
     try { worker = new Worker(blob, { type: 'module', name: 'prism-artifact' }); }
     finally { URL.revokeObjectURL(blob); }

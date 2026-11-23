@@ -21,7 +21,7 @@ test('preview documents inherit language, default to English, and safely name th
     const artifact = artifactDocument('test', {}, undefined, { title: 'Quarterly report', lang: 'de' });
     expect(artifact).toContain('<html lang="de">');
     expect(artifact).toContain('<title>Quarterly report</title>');
-    expect(artifact).toContain('specifier=>import(specifier)');
+    expect(artifact).toContain('specifier => import(specifier)');
     expect(artifact).not.toContain('__vite__injectQuery');
     expect(buildSrcdoc({ id: 'escaped', lang: '\"><script>bad</script>' })).not.toContain('lang=""><script>');
   } finally { document.documentElement.lang = previous; }

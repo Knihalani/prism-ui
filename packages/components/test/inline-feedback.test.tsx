@@ -201,7 +201,10 @@ for (const rootWidth of [500, 0]) test(`opening a list comment with a hidden pre
   change(view.getByPlaceholderText('Add a comment…'), 'Keep this editable');
   fireEvent.click(view.getByRole('button', { name: 'Save' }));
   preview.hidden = true;
-  fireEvent.click(view.getByRole('button', { name: 'Open comment 1' }));
+  const row = view.getByRole('button', { name: /Keep this editable/ });
+  expect(row.getAttribute('aria-description')).toBe('Open comment 1');
+  expect(row.hasAttribute('aria-label')).toBe(false);
+  fireEvent.click(row);
   const layer = document.querySelector('.prism-inline-feedback__popover-layer') as HTMLElement;
   expect(parseFloat(layer.style.width)).toBeGreaterThanOrEqual(200);
   expect(view.getByPlaceholderText('Add a comment…').getAttribute('aria-label')).toBe('Add a comment…');
