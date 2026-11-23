@@ -4,6 +4,10 @@
 .prism-inline-feedback__trigger { position: absolute; z-index: 8; inset: 4px 4px auto auto; width: 30px; height: 30px; padding: 6px; border: 1px solid var(--prism-border); border-radius: var(--prism-radius-pill); background: var(--prism-surface-raised); color: var(--prism-text); box-shadow: var(--prism-elevation-1); cursor: pointer; opacity: 0; transform: translateY(-4px); transition: opacity var(--prism-motion-fast) var(--prism-motion-ease), transform var(--prism-motion-base) var(--prism-motion-ease); }
 .prism-inline-feedback:is(:hover,:focus-within,[data-feedback-open]) > .prism-inline-feedback__trigger { opacity: 1; transform: none; }
 .prism-inline-feedback__trigger:focus-visible { outline: 2px solid var(--prism-focus); outline-offset: 2px; }
+.prism-inline-feedback[data-inline]:has([data-prism="num"]) { padding-inline-end: 26px; pointer-events: none; }
+.prism-inline-feedback[data-inline]:has([data-prism="num"]) > .prism-inline-feedback__trigger { inset: auto; inset-inline-end: 0; inset-block-start: 2px; width: 22px; height: 22px; padding: 3px; transform: none; pointer-events: auto; }
+.prism-inline-feedback[data-inline]:has([data-prism="num"]) > .prism-inline-feedback__target { display: inline-block; pointer-events: auto; }
+.prism-inline-feedback[data-inline]:has([data-prism="num"]) > .prism-inline-feedback__editor { pointer-events: auto; }
 .prism-inline-feedback__editor { border-top: 1px solid var(--prism-border); padding-block: var(--prism-space-3); display: grid; gap: var(--prism-space-2); }
 .prism-inline-feedback__editor[hidden] { display: none; }
 .prism-inline-feedback :is(.prism-inline-feedback__target,[data-feedback-target]) > .prism-mockup__canvas { z-index: 6; background: color-mix(in srgb,var(--prism-accent,#525252) 3%,transparent); }

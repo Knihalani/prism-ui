@@ -8,6 +8,17 @@ import '../src/feedback';
 import '../src/num';
 
 afterEach(cleanup);
+test('inline numeric feedback is a sibling control in a reserved end gutter', async () => {
+  const view = render(<Prism feedback source={':num[1200]{id=budget}'} animate={false} />);
+  const slider = view.getByRole('slider'), bubble = view.getByRole('button', { name: 'Give feedback' });
+  expect(slider.contains(bubble)).toBe(false);
+  expect(bubble.parentElement?.hasAttribute('data-inline')).toBe(true);
+  fireEvent.click(slider);
+  expect(view.getByRole('spinbutton')).toBeTruthy();
+  const css = await Bun.file(new URL('../src/feedback.css', import.meta.url)).text();
+  expect(css).toContain('[data-inline]:has([data-prism="num"]) { padding-inline-end: 26px; pointer-events: none; }');
+  expect(css).toContain('width: 22px; height: 22px;');
+});
 const source = '```ui:feedback-test\n{"id":"target"}\n```';
 const View = () => <button>Actual input</button>;
 function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.focus(element); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); }
