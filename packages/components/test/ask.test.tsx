@@ -48,7 +48,7 @@ test('submit emits exact typed values including nulls, shows formatted summary, 
   fireEvent.click(view.getByRole('button', { name: 'Book table' }));
   const values = { party: 4, date: '2026-12-12', name: null, notes: 'window seat', outside: false, area: null, time: null };
   expect(actions).toEqual([{ type: 'submit', component: 'ask', id: 'book', payload: { values }, context: { component: 'ask', props, state: { values, touched: { party: true, date: true, name: true, notes: true, outside: true, area: true, time: true }, submitted: true } }, message: 'Here are the details for "Book a table": Party size: 4 guests, Date: 12 Dec 2026, Name: Not provided, Notes: window seat, Outside: No, Area: Not provided, Time: Not provided.' }]);
-  expect(view.getByRole('group').dataset.state).toBe('submitted'); expect(view.queryByRole('spinbutton')).toBeNull(); expect(view.getByText('12 Dec 2026')).toBeDefined();
+  expect(view.getByRole('group').dataset.state).toBe('sent'); expect(view.queryByRole('spinbutton')).toBeNull(); expect(view.getByText('12 Dec 2026')).toBeDefined();
   fireEvent.click(view.getByRole('button', { name: 'Edit' }));
   change(view.getByRole('textbox', { name: 'Name' }), 'Ada');
   fireEvent.click(view.getByRole('button', { name: 'Book table' }));
@@ -121,7 +121,7 @@ test('streaming empty rows, label skeleton and last-field control skeleton remai
 });
 
 test('unstyled mode, slots, labels, localized summaries and prompt docs', () => {
-  const view = render(<Prism source={source({ id: 'local', fields: [{ id: 'n', label: 'Total', type: 'number', value: 1234.5 }], labels: { title: 'Détails', send: 'Envoyer', suggested: 'Proposé', edit: 'Modifier' } })} registry={registry} unstyled locale="de-DE" slots={{ ask: { title: ({ children }) => <h2>{children}</h2>, actions: input => <footer {...input} data-custom="actions" />, field: ({ field, index, vm }) => <article data-custom="field"><span>{field.label}</span><button type="button" onClick={() => vm.change(field.id, 2000)}>Change {index}</button></article> } }} />);
+  const view = render(<Prism source={source({ id: 'local', fields: [{ id: 'n', label: 'Total', type: 'number', value: 1234.5 }], labels: { title: 'Détails', send: 'Envoyer', suggested: 'Proposé', edit: 'Modifier' } })} registry={registry} onAction={() => {}} unstyled locale="de-DE" slots={{ ask: { title: ({ children }) => <h2>{children}</h2>, actions: input => <footer {...input} data-custom="actions" />, field: ({ field, index, vm }) => <article data-custom="field"><span>{field.label}</span>{vm.submitted ? <span>{vm.display(field)}</span> : <button type="button" onClick={() => vm.change(field.id, 2000)}>Change {index}</button>}</article> } }} />);
   expect(view.container.querySelector('[class*="prism-ask"]')).toBeNull(); expect(view.container.querySelector('[data-custom="field"]')).not.toBeNull(); expect(view.getByRole('heading', { level: 2 }).textContent).toBe('Détails');
   fireEvent.click(view.getByRole('button', { name: 'Envoyer' })); expect(view.getByText('1.234,5')).toBeDefined(); expect(view.getByRole('button', { name: 'Modifier' })).toBeDefined();
   expect(registry.docs()).toContain('```ui:ask'); expect(registry.docs()).toContain('"title":"Book a table"'); expect(registry.docs()).toContain('Only the missing details');
@@ -129,10 +129,24 @@ test('unstyled mode, slots, labels, localized summaries and prompt docs', () => 
 
 test('bound prefill updates until edited, undo restores edits, and false is a valid required answer', () => {
   const store = createStore({ initial: { guests: 4 } }), input = { id: 'bound', fields: [{ id: 'n', label: 'Guests', type: 'number', value: { $ref: 'guests' } }, { id: 'consent', label: 'Updates', type: 'toggle', required: true, value: false }] };
-  const view = render(<Prism source={source(input)} registry={registry} store={store} />);
+  const view = render(<Prism source={source(input)} registry={registry} store={store} onAction={() => {}} />);
   expect((view.getByRole('spinbutton', { name: /Guests/ }) as HTMLInputElement).value).toBe('4');
   act(() => store.set('guests', 6)); expect((view.getByRole('spinbutton', { name: /Guests/ }) as HTMLInputElement).value).toBe('6');
   change(view.getByRole('spinbutton', { name: /Guests/ }), '8');
   fireEvent.keyDown(view.getByRole('group'), { key: 'z', ctrlKey: true }); expect((view.getByRole('spinbutton', { name: /Guests/ }) as HTMLInputElement).value).toBe('6');
-  fireEvent.click(view.getByRole('button', { name: 'Send' })); expect(view.getByRole('group').dataset.state).toBe('submitted');
+  fireEvent.click(view.getByRole('button', { name: 'Send' })); expect(view.getByRole('group').dataset.state).toBe('sent');
+});
+
+test('Undo of submission clears its receipt even when default answers are unchanged', () => {
+  const store = createStore(), actions: Action[] = [];
+  const view = render(<Prism source={source({ id: 'undo', fields: [{ id: 'name', label: 'Name', type: 'text', value: 'Ada' }] })} registry={registry} store={store} animate={false} onAction={action => actions.push(action)} />);
+  fireEvent.click(view.getByRole('button', { name: 'Send' }));
+  expect(store.get('undo.submitted')).toBe(true);
+  expect(view.getByRole('button', { name: 'Sent' })).toBeDefined();
+  fireEvent.click(view.getByRole('button', { name: 'Undo' }));
+  expect(store.get('undo.submitted')).toBe(false);
+  expect(view.queryByRole('button', { name: 'Sent' })).toBeNull();
+  expect((view.getByRole('textbox', { name: /Name/ }) as HTMLInputElement).value).toBe('Ada');
+  fireEvent.click(view.getByRole('button', { name: 'Send' }));
+  expect(actions).toHaveLength(2);
 });

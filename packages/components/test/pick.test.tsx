@@ -77,7 +77,7 @@ test('static cards rank in order, explain the top pick and expose docs', () => {
   expect(view.getByText('Top pick')).toBeDefined();
   expect(view.container.querySelector('[data-part="value"]')?.textContent).toBe('100%');
   expect(view.container.querySelectorAll('[data-part="pip"][data-state="on"]').length).toBe(2);
-  expect(view.getByText('Low cost').querySelector('svg')).not.toBeNull(); expect(view.getByText('– Basic features')).toBeDefined(); expect(view.getByText('Value')).toBeDefined();
+  expect(view.getByText('Low cost').querySelector('svg')).not.toBeNull(); expect(view.getByText('Basic features').querySelector('svg')).not.toBeNull(); expect(view.getByText('Value')).toBeDefined();
   expect(view.container.querySelector('[data-part="live"]')?.textContent).toBe('Top pick: Budget');
   expect(view.getByRole('group', { name: 'Which plan?' })).toBeDefined();
   const docs = createRegistry([pick]).docs(); expect(docs).toContain('```ui:pick'); expect(docs).toContain('"scores"');
@@ -133,4 +133,15 @@ test('empty, invalid scores and all-zero ties are safe and external weights re-r
   expect(view.container.querySelector('[data-option="bad"]')?.getAttribute('data-state')).toBe('loading');
   view.rerender(<Prism source={source({ options: [], criteria: [] })} animate={false} />);
   expect(view.getByText('Options will appear here')).toBeDefined();
+});
+
+test('Undo after choosing clears the sent receipt and permits choosing again', () => {
+  const view = setup();
+  fireEvent.click(within(view.container.querySelector('[data-option="budget"]') as HTMLElement).getByRole('button', { name: 'Choose' }));
+  expect(view.getByRole('button', { name: 'Sent' }).hasAttribute('disabled')).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Undo' }));
+  expect(view.store.get('plans.chosen')).toBeUndefined();
+  expect(view.queryByRole('button', { name: 'Sent' })).toBeNull();
+  fireEvent.click(within(view.container.querySelector('[data-option="budget"]') as HTMLElement).getByRole('button', { name: 'Choose' }));
+  expect(view.actions.filter(action => action.type === 'choose')).toHaveLength(2);
 });

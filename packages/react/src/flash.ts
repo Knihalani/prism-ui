@@ -21,25 +21,27 @@ export function useLocalWrite() {
   }, [store, origin]);
 }
 
-/** A path briefly highlights when another component or the host changes it. */
-export function useFlash(path: string): boolean {
+/** Subscribed paths briefly highlight when another component or the host changes them. */
+export function useFlash(path: string | readonly string[]): boolean {
   const store = useStore(), component = useContext(ComponentContext);
   const origin = component?.receipt ?? component?.id;
-  const target = useMemo(() => ({ store, path, origin }), [store, path, origin]);
+  const key = JSON.stringify(typeof path === 'string' ? [path] : path);
+  const target = useMemo(() => ({ store, paths: JSON.parse(key) as string[], origin }), [store, key, origin]);
   const [flashing, setFlashing] = useState<typeof target>();
   useEffect(() => {
-    let previous = target.store.get(target.path);
+    let previous = target.paths.map(path => target.store.get(path));
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const unsubscribe = target.store.subscribe(target.path, () => {
-      const value = target.store.get(target.path);
-      if (Object.is(value, previous)) return;
+    const update = () => {
+      const value = target.paths.map(path => target.store.get(path));
+      if (value.every((item, index) => Object.is(item, previous[index]))) return;
       previous = value;
       if (!target.store.hydrated || (target.origin !== undefined && origins.get(target.store) === target.origin)) return;
       clearTimeout(timer);
       setFlashing(target);
       timer = setTimeout(() => setFlashing(undefined), 600);
-    });
-    return () => { unsubscribe(); clearTimeout(timer); };
+    };
+    const unsubscribe = target.paths.map(path => target.store.subscribe(path, update));
+    return () => { unsubscribe.forEach(off => off()); clearTimeout(timer); };
   }, [target]);
   return flashing === target;
 }
