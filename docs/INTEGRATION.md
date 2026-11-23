@@ -66,7 +66,8 @@ bun add ai@5.0.60 @ai-sdk/react@2.0.60 @ai-sdk/openai@2.0.41 zod@3.25.76
 Mount POST at `/api/chat`. The optional tool returns a validated patch, not a
 server-side store mutation. Its result reaches the client as a typed tool part.
 Remove the tool and its client effect if using only automatic `ui:state` fences.
-Incoming history is reduced to text parts before conversion, so remote file URLs cannot trigger server-side SDK downloads.
+Incoming history keeps text and validated applyState tool parts (including input/output),
+but strips file and source parts before conversion to prevent server-side SDK downloads.
 
 <!-- snippet: ai-route -->
 ```ts
@@ -85,16 +86,16 @@ export const tools = {
   }),
 };
 export type ChatMessage = UIMessage<unknown, never, InferUITools<typeof tools>>;
-export async function textOnlyMessages(input: unknown) {
+export async function safeChatMessages(input: unknown) {
   const messages = await validateUIMessages<ChatMessage>({ messages: input, tools });
   return messages.filter(message => message.role !== 'system').map(message => ({
     id: message.id, role: message.role,
-    parts: message.parts.filter(part => part.type === 'text').map(part => ({ type: 'text' as const, text: part.text })),
+    parts: message.parts.filter(part => part.type === 'text' || part.type === 'tool-applyState'),
   })).filter(message => message.parts.length > 0);
 }
 export async function POST(request: Request): Promise<Response> {
   const body = await request.json() as { messages: unknown };
-  const messages = await textOnlyMessages(body.messages);
+  const messages = await safeChatMessages(body.messages);
   return streamText({
     model: openai('gpt-4o-mini'),
     system: createSystemPrompt({ artifacts: { statePaths: ['planning'] } }),

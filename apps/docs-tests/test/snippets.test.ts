@@ -43,16 +43,16 @@ async function* events<T>(values: T[]) { yield* values; }
 async function collect(stream: AsyncIterable<string>) { let text = ''; for await (const delta of stream) text += delta; return text; }
 
 test('AI route removes remote file parts before model conversion', async () => {
-  const { textOnlyMessages } = await import(pathToFileURL(directory + '/ai-route.ts').href);
+  const { safeChatMessages } = await import(pathToFileURL(directory + '/ai-route.ts').href);
   const file = { type: 'file', mediaType: 'application/pdf', url: 'https://example.test/private.pdf' };
   const text = { type: 'text', text: 'Explain this' };
-  expect(await textOnlyMessages([
+  expect(await safeChatMessages([
     { id: 'mixed', role: 'user', parts: [file, text] },
     { id: 'file-only', role: 'user', parts: [file] },
     { id: 'system', role: 'system', parts: [text] },
   ])).toEqual([{ id: 'mixed', role: 'user', parts: [text] }]);
-  expect(await textOnlyMessages([])).toEqual([]);
-  await expect(textOnlyMessages([{ id: 'invalid', role: 'user', parts: [{ type: 'text', text: 42 }] }])).rejects.toThrow();
+  expect(await safeChatMessages([])).toEqual([]);
+  await expect(safeChatMessages([{ id: 'invalid', role: 'user', parts: [{ type: 'text', text: 42 }] }])).rejects.toThrow();
 });
 
 test('Anthropic history excludes failed and whitespace-only assistant replies', async () => {
@@ -63,6 +63,33 @@ test('Anthropic history excludes failed and whitespace-only assistant replies', 
   ], text: 'Continue' }).history).toEqual([user, assistant]);
   expect(anthropicBodySchema.parse({ history: [], text: 'Hello' }).history).toEqual([]);
   expect(() => anthropicBodySchema.parse({ history: [{ role: 'assistant', content: null }], text: 'Hello' })).toThrow();
+});
+
+test('AI history retains applyState calls and results but removes file and source parts', async () => {
+  const { safeChatMessages } = await import(pathToFileURL(directory + '/ai-route.ts').href);
+  const { convertToModelMessages } = await import('ai');
+  const patch = { set: { 'planning.room': 'north' } };
+  const tool = { type: 'tool-applyState', toolCallId: 'apply-1', state: 'output-available', input: patch, output: patch };
+  const text = { type: 'text', text: 'Updated the room.' };
+  const messages = await safeChatMessages([{ id: 'assistant', role: 'assistant', parts: [
+    tool, text,
+    { type: 'file', mediaType: 'application/pdf', url: 'https://example.test/private.pdf' },
+    { type: 'source-url', sourceId: 'link', url: 'https://example.test/source' },
+    { type: 'source-document', sourceId: 'document', mediaType: 'application/pdf', title: 'Document' },
+  ] }]);
+  expect(messages).toEqual([{ id: 'assistant', role: 'assistant', parts: [tool, text] }]);
+  const converted = convertToModelMessages(messages);
+  expect(converted).toEqual(expect.arrayContaining([
+    expect.objectContaining({ role: 'assistant', content: expect.arrayContaining([
+      expect.objectContaining({ type: 'tool-call', toolName: 'applyState', input: patch }),
+    ]) }),
+    expect.objectContaining({ role: 'tool', content: expect.arrayContaining([
+      expect.objectContaining({ type: 'tool-result', toolName: 'applyState', output: { type: 'json', value: patch } }),
+    ]) }),
+  ]));
+  const pending = { type: 'tool-applyState', toolCallId: 'apply-2', state: 'input-available', input: patch };
+  expect(await safeChatMessages([{ id: 'pending', role: 'assistant', parts: [pending] }]))
+    .toEqual([{ id: 'pending', role: 'assistant', parts: [pending] }]);
 });
 
 test('documented SDK adapters yield text, ignore non-text deltas and propagate errors', async () => {
