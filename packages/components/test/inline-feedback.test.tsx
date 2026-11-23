@@ -6,10 +6,28 @@ import { createStore } from '@prism-ui/state';
 import { createFeedback } from '../src/mockup/engine';
 import '../src/feedback';
 import '../src/num';
+import { useFeedbackTarget } from '../src/feedback';
 
 afterEach(cleanup);
 const source = '```ui:feedback-test\n{"id":"target"}\n```';
 const View = () => <button>Actual input</button>;
+for (const rootWidth of [500, 0]) test(`opening a list comment with a hidden preview uses visible feedback bounds (${rootWidth})`, () => {
+  function Target() { const ref = useFeedbackTarget(); return <div ref={ref} data-test-preview="">Preview</div>; }
+  const view = render(<Prism feedback animate={false} source={source} renderers={{ 'feedback-test': Target }} />);
+  const preview = view.container.querySelector('[data-test-preview]') as HTMLElement;
+  preview.getBoundingClientRect = () => preview.hidden ? new DOMRect() : new DOMRect(20, 20, 500, 300);
+  const root = view.container.querySelector('.prism-inline-feedback') as HTMLElement;
+  root.getBoundingClientRect = () => new DOMRect(20, 20, rootWidth, 600);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+  change(view.getByPlaceholderText('Add a comment…'), 'Keep this editable');
+  fireEvent.click(view.getByRole('button', { name: 'Save' }));
+  preview.hidden = true;
+  fireEvent.click(view.getByRole('button', { name: 'Open comment 1' }));
+  const layer = document.querySelector('.prism-inline-feedback__popover-layer') as HTMLElement;
+  expect(parseFloat(layer.style.width)).toBeGreaterThanOrEqual(200);
+  expect(view.getByPlaceholderText('Add a comment…').getAttribute('aria-label')).toBe('Add a comment…');
+});
 test('the feedback trigger retains its hit region while reveal chrome is transparent', async () => {
   const css = await Bun.file(new URL('../src/feedback.css', import.meta.url)).text();
   expect(css).toContain('.prism-inline-feedback > .prism-inline-feedback__trigger { pointer-events: auto !important; }');

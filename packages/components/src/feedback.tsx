@@ -68,9 +68,11 @@ function FeedbackPopover({ vm, surface, open }: { vm: MockupModel; surface: NonN
   }, [surface, theme]);
   useLayoutEffect(() => {
     const place = () => {
-      const bounds = surface.viewport.current?.getBoundingClientRect(), item = vm.state.items.find(item => item.id === vm.editing?.id);
+      const item = vm.state.items.find(item => item.id === vm.editing?.id);
       if (!item) return;
-      const placement = placeComposer(bounds ?? { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight }, { x: (bounds?.left ?? 0) + item.x / 100 * (bounds?.width ?? 0), y: (bounds?.top ?? 0) + item.y / 100 * (bounds?.height ?? 0) }, { width: document.documentElement.clientWidth || window.innerWidth, height: window.innerHeight }, layer.current?.getBoundingClientRect().height || 210, surface.root.current?.querySelector('[data-feedback-submit]')?.getBoundingClientRect());
+      const viewport = { width: document.documentElement.clientWidth || window.innerWidth, height: window.innerHeight };
+      const bounds = [surface.viewport.current?.getBoundingClientRect(), surface.root.current?.getBoundingClientRect()].find(rect => rect && rect.width > 0 && rect.height > 0) ?? { left: 0, top: 0, ...viewport };
+      const placement = placeComposer(bounds, { x: bounds.left + item.x / 100 * bounds.width, y: bounds.top + item.y / 100 * bounds.height }, viewport, layer.current?.getBoundingClientRect().height || 210, surface.root.current?.querySelector('[data-feedback-submit]')?.getBoundingClientRect());
       const position = { left: placement.left, top: placement.top, width: placement.width, transformOrigin: placement.transformOrigin, '--prism-mockup-caret-x': placement.caretX + 'px', '--prism-mockup-caret-y': placement.caretY + 'px', '--prism-mockup-caret-side': placement.side };
       setPosition(old => JSON.stringify(old) === JSON.stringify(position) ? old : position);
     };
@@ -78,6 +80,7 @@ function FeedbackPopover({ vm, surface, open }: { vm: MockupModel; surface: NonN
     const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(place);
     if (layer.current) observer?.observe(layer.current);
     if (surface.viewport.current) observer?.observe(surface.viewport.current);
+    if (surface.root.current) observer?.observe(surface.root.current);
     return () => { observer?.disconnect(); window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
   }, [surface, vm.editing?.id, vm.state]);
   return createPortal(<span ref={layer} className="prism-root prism-inline-feedback__popover-layer" data-animate={usePrism().animate ? undefined : 'false'} data-prism-theme-name={appearance.name} data-prism-theme={appearance.mode} style={{ ...appearance.style, ...position, padding: 0, margin: 0, border: 0, boxShadow: 'none', background: 'transparent', minWidth: 0, minHeight: 0, containerType: 'normal', position: 'fixed', display: 'block', pointerEvents: 'none', zIndex: 1000, maxHeight: 'calc(100dvh - 24px)', overflow: 'visible' }}><MockupComment vm={vm} open={open} style={{ ...position, position: 'relative', display: 'block', left: 0, top: 0, width: '100%', transformOrigin: position.transformOrigin, maxHeight: 'calc(100dvh - 24px)', overflow: 'auto' }} /></span>, portal);
