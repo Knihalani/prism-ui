@@ -39,9 +39,11 @@ function Root({ as, model, children, ...props }: { as: ElementType; model: Markd
 }
 export function Heading(props: MarkdownProps) { const model = useMarkdown(props); return <Root as={model.heading} model={model}>{props.children}</Root>; }
 export function Paragraph(props: MarkdownProps) { const model = useMarkdown(props); return <Root as="p" model={model}>{props.children}</Root>; }
-function SettlingText({ value }: { value: string }) {
+function SettlingText({ model }: { model: MarkdownModel }) {
+ const value = model.node.value ?? '';
  const { resolvedTheme } = usePrism();
  const state = useRef<FreshTextState>({ value: '', settled: 0, tail: 0, segments: [] });
+ const spans = useRef(new Map<number, { start: number; end: number; first: boolean; element: ReactNode }>());
  const fresh = useRef<HTMLSpanElement>(null), lifetime = useRef(400);
  useLayoutEffect(() => {
   if (!fresh.current) return;
@@ -49,12 +51,23 @@ function SettlingText({ value }: { value: string }) {
   lifetime.current = motionDuration(style.getPropertyValue('--prism-motion-base'), 240) + motionDuration(style.getPropertyValue('--prism-motion-fast'), 160);
  }, [resolvedTheme]);
  const text = settleText(state.current, value, performance.now(), lifetime.current);
- return <>{value.slice(0, text.settled)}{text.segments.map((segment, index) => <span ref={index === 0 ? fresh : undefined} data-prism-fresh="" key={segment.key}>{value.slice(segment.start, text.segments[index + 1]?.start)}</span>)}</>;
+ const next = new Map<number, { start: number; end: number; first: boolean; element: ReactNode }>();
+ const children = text.segments.map((segment, index) => {
+  const start = segment.start, end = text.segments[index + 1]?.start ?? value.length, first = index === 0;
+  const cached = spans.current.get(segment.key);
+  const span = cached?.start === start && cached.end === end && cached.first === first ? cached : {
+   start, end, first, element: <span ref={first ? fresh : undefined} data-prism-fresh="" key={segment.key}>{value.slice(start, end)}</span>,
+  };
+  next.set(segment.key, span);
+  return span.element;
+ });
+ spans.current = next;
+ return <PrismPart as="span" {...model.rootProps} slotProps={{ markdown: model } satisfies MarkdownSlotProps}>{value.slice(0, text.settled)}{children}</PrismPart>;
 }
 export function Text(props: MarkdownProps) {
  const model = useMarkdown(props), prism = usePrism();
- return <Root as="span" model={model}>{!Object.isFrozen(props.node) && prism.animate && !prism.unstyled
-  ? <SettlingText value={props.node.value ?? ''} /> : props.node.value}</Root>;
+ return !Object.isFrozen(props.node) && prism.animate && !prism.unstyled
+  ? <SettlingText model={model} /> : <Root as="span" model={model}>{props.node.value}</Root>;
 }
 export function List(props: MarkdownProps) { const model = useMarkdown(props); return <Root as={props.node.ordered ? 'ol' : 'ul'} model={model} start={props.node.ordered ? props.node.start : undefined}>{props.children}</Root>; }
 export function ListItem(props: MarkdownProps) {

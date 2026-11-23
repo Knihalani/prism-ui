@@ -2,23 +2,23 @@ export interface FreshSegment { start: number; time: number; key: number }
 export interface FreshTextState { value: string; settled: number; tail: number; segments: FreshSegment[] }
 
 export function settleText(state: FreshTextState, value: string, now: number, lifetime: number) {
-  const previous = state.value;
-  if (!value.startsWith(previous)) {
+  const previous = state.value, appended = value.startsWith(previous), suffix = value.slice(previous.length);
+  const boundarySpace = !previous || /\s/.test(previous[previous.length - 1]);
+  if (!appended) {
     state.segments = []; state.settled = value.length;
   } else if (value.length > previous.length) {
-    const suffix = value.slice(previous.length), last = state.segments.at(-1);
-    const boundary = /\s$/.test(previous) || !previous ? suffix.search(/\S/) : suffix.search(/(?<=\s)\S/);
+    const last = state.segments.at(-1);
+    const boundary = boundarySpace ? suffix.search(/\S/) : suffix.search(/(?<=\s)\S/);
     const start = boundary < 0 ? -1 : previous.length + boundary;
     if (!last) {
-      const from = /\s$/.test(previous) ? previous.length : state.tail;
+      const from = boundarySpace ? previous.length : state.tail;
       state.settled = from;
       state.segments.push({ start: from, time: now, key: from });
     } else if (start >= 0 && Math.floor(last.time / 16) !== Math.floor(now / 16) && state.segments.length < 8) {
       state.segments.push({ start, time: now, key: start });
     }
   }
-  const suffix = value.slice(previous.length);
-  if (!value.startsWith(previous)) {
+  if (!appended) {
     const tail = value.search(/\S+$/);
     state.tail = tail < 0 ? value.length : tail;
   }

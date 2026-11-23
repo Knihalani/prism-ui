@@ -93,10 +93,11 @@ test('reduced motion renders plain text', () => {
 
 test('200KB paragraph in four-character source pushes keeps a bounded DOM', () => {
   const text = 'word '.repeat(40960), start = performance.now();
-  const view = render(<Prism source="" done={false} />);
+  const animate = process.env.PRISM_PERF_MOTION !== 'off';
+  const view = render(<Prism source="" done={false} animate={animate} />);
   let maximum = 0;
   for (let end = 4; end <= text.length; end += 4) {
-    view.rerender(<Prism source={text.slice(0, end)} done={false} />);
+    view.rerender(<Prism source={text.slice(0, end)} done={false} animate={animate} />);
     maximum = Math.max(maximum, view.container.querySelectorAll('span').length);
   }
   console.log(`reply text: ${text.length} bytes, 4-character source pushes, ${(performance.now() - start).toFixed(0)}ms, ${maximum} spans maximum`);
