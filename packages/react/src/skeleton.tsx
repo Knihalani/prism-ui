@@ -54,8 +54,14 @@ function flush() {
     const index = frames.findIndex(frame => frame.source.isConnected && (!svg || frame.source.namespaceURI !== element.namespaceURI));
     const last = index < 0 ? frames.length - 1 : index - 1;
     const parent = index < 0 ? scope : frames[index].source, root = frames[last], ghost = root.ghost;
-    restore(ghost);
-    for (let child = 0; child < last; child++) {
+    const existing = exits.get(root.source);
+    let branch = last;
+    if (existing) {
+      while (--branch >= 0 && existing.has(frames[branch].source)) {}
+      if (branch < 0) continue;
+    }
+    restore(frames[branch].ghost);
+    for (let child = 0; child < last && child <= branch; child++) {
       const frame = frames[child], ancestor = frames[child + 1];
       if (frame.source.namespaceURI === 'http://www.w3.org/2000/svg') continue;
       const sx = ancestor.source instanceof HTMLElement && ancestor.source.offsetWidth ? ancestor.rect.width / ancestor.source.offsetWidth : 1;
@@ -64,14 +70,9 @@ function flush() {
       frame.ghost.style.left = `${(frame.rect.left - ancestor.rect.left) / sx - ancestor.source.clientLeft + ancestor.source.scrollLeft}px`;
       frame.ghost.style.top = `${(frame.rect.top - ancestor.rect.top) / sy - ancestor.source.clientTop + ancestor.source.scrollTop}px`;
     }
-    const existing = exits.get(root.source);
     if (existing) {
-      for (let child = last - 1; child >= 0; child--) {
-        if (existing.has(frames[child].source)) continue;
-        existing.get(frames[child + 1].source)!.append(frames[child].ghost);
-        for (let inner = child; inner >= 0; inner--) existing.set(frames[inner].source, frames[inner].ghost);
-        break;
-      }
+      existing.get(frames[branch + 1].source)!.append(frames[branch].ghost);
+      for (let inner = branch; inner >= 0; inner--) existing.set(frames[inner].source, frames[inner].ghost);
       continue;
     }
     exits.set(root.source, new Map(frames.slice(0, last + 1).map(frame => [frame.source, frame.ghost])));

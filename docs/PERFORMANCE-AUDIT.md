@@ -315,3 +315,151 @@ production/proof configs, capture/analyzer helpers, per-task source-mapped
 `after-{1,2,3}.stacks.json`, `comparison-final.json`, proof data and check logs.
 Raw traces/audits/summaries: `~/shots/perf/kitchen-followup-{before,after}-{1,2,3}.*`.
 Screenshots: `~/shots/perf/followup-skeleton-mid-{old,new,diff}.png`.
+
+## Final bounded residual round
+
+Starting point: `843dc62`. This round stops with the measurements below; the
+zero-long-task goal remains unmet. No size work is included in this round.
+
+### Accepted change: merge before restoring
+
+Sibling captures can share a removed ancestor. Although the previous change
+avoided styling connected ancestors, `flush` still restored each sibling's
+entire provisional chain *before* discovering which ancestor shells the merge
+would discard. It now finds the first missing branch in the existing exit map,
+then restores and positions only that branch. The retained tree, frozen values,
+source-node ownership and timing of attachment are unchanged.
+
+In the instrumented Pick-item deletion, four captures each removed **one span**;
+they additionally snapshotted 7, 3, 1 and 1 uncached ancestors (16 source elements
+total, 8,940 source declarations enumerated; parent comparison reads are extra).
+This was not a whole-reply or huge-panel deletion. Restoration fell from **19
+provisional elements / 9,198 declarations** to **12 retained elements / 5,824
+declarations**. Restore time in those two diagnostic observations was
+55.9 → 37.7ms; these are instrumented single observations, not an isolated speedup
+estimate.
+
+Three uninstrumented production replays, with unchanged fixed chunks and settle:
+
+| Run | Previous tasks >50ms | Previous max ms | This round tasks >50ms | This round max ms |
+|---|---:|---:|---:|---:|
+| 1 | 4 | 76.331 | 3 | 64.523 |
+| 2 | 3 | 77.161 | 1 | 56.256 |
+| 3 | 3 | 76.693 | 6 | 60.876 |
+
+Counts remain variable and do not improve monotonically. All residuals are on
+the host renderer; artifact-renderer maxima were 19.427, 19.102 and 31.905ms,
+with zero tasks >50ms.
+
+### Exact residual work
+
+All final uninstrumented tasks, with source-mapped paths (C = React deletion
+cleanup → `capture`/`copy` → computed-style reads; R = microtask `flush` →
+`restore` → style writes; G = `capture`/`flush` bounds reads and placement):
+
+| Run | Task ms | Work sampled |
+|---|---:|---|
+| 1 | 64.523 | C + R + G; bounds/layout dominates |
+| 1 | 63.402 | C + R + G; bounds/layout dominates |
+| 1 | 55.426 | C + R + G; restoration dominates |
+| 2 | 56.256 | C + R + G; restoration dominates |
+| 3 | 60.876 | React render → `Prism` children map → `BlockVector` proxy `has`/index conversion |
+| 3 | 59.771 | C + R + G; restoration dominates |
+| 3 | 56.361 | C + R + G; restoration dominates |
+| 3 | 54.738 | C + R + G; restoration dominates |
+| 3 | 54.237 | C + R + G plus Artifact `readTheme` (9.670ms sampled) |
+| 3 | 50.415 | C + R + G; bounds/layout dominates |
+
+The 60.876ms render outlier has only one sample carrying a 58.616ms delta at
+`packages/core/src/vector.ts`'s index helper, reached through proxy `has` from
+`Prism`'s array map. The helper has no traversal loop for an ordinary numeric
+index. This sparse sample does **not** establish 58ms of expensive index
+conversion; the underlying stall is unresolved. React must finish constructing
+the children for that render before committing, but this observation is not
+evidence that its latency is irreducible. No core change was guessed from it.
+
+The 54.237ms task also samples host-side
+`packages/components/src/artifact/use-artifact.tsx:readTheme`: enumeration of
+the container's computed `--prism-*` tokens/font/colour-scheme for iframe theme
+synchronization. It is not a separate iframe-renderer long task. Current-scope
+theme values are required, but the profile does not prove this enumeration
+must remain in this particular task; no scheduling/cache equivalence proof was
+attempted after the time box. It is not claimed irreducible either.
+
+A separate instrumented final replay had two host long tasks. Instrumentation
+adds work and timing variance: its 104.999ms maximum must not replace the
+uninstrumented table above. Capture includes copying and capture-time geometry;
+G below is the remaining flush geometry/attachment/merge work, excluding restore
+and visibility diagnostics. Bounds-read time is a subset, not additive.
+
+| Task ms | Captures; deep elements each; new ancestors each | Restored elements / declaration writes | Capture ms | Restore ms | G ms | Visibility audit ms | Other task ms |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 104.999 | 4; 1,1,1,1; 7,3,1,1 | 4 / 1,956 | 28.6 | 17.4 | 52.2 | 0.5 | 6.3 |
+| 64.275 | 4; 1,1,1,1; 7,3,1,1 | 12 / 5,824 | 16.7 | 37.7 | 6.8 | 0.1 | 3.0 |
+
+The first task removes Pick match/value spans and produces four separate,
+opaque exit roots. All four intersect the viewport and their overflow-clipping
+ancestors: x=260..1280, y=68..816. Their roots occupy x=473.93..1085,
+y=492.71..515.11 and x=1058.84..1093 at y=629.30..650.10,
+658.10..678.90 and 686.90..707.70. Bounds reads consume 47.1ms of this
+instrumented task (including capture reads).
+
+The second task merges those spans into one Pick item (x=771..1105,
+y=366.52..770.07), with a clipping box x=260..1280, y=68..764.06. Its
+resolved ghost opacity is zero **after restoration**. That exit is invisible at
+the observed point, but most of its cost has already occurred. No early skip
+was adopted: captured source opacity alone does not establish the eventual
+exit cascade under host selectors/important rules, and no equivalent cheap
+pre-restoration guard was proved in this round. No offscreen skip ships.
+
+The source reads must occur while React's source/context are still connected;
+restoration must precede first paint to avoid an unstylized or missing ghost;
+placement must resolve the actual attached containing block and scale before
+paint to prevent a jump. These are ordering requirements, **not** proof that
+each current implementation cost is unavoidable. In particular, batching the
+remaining layout reads/writes would need another implementation/proof round,
+which is intentionally not started here.
+
+### Rejected shortcuts and proof
+
+A Chromium counterexample for default-element diffing gives a transparent
+source and default probe, but the inserted ghost becomes `:last-child` under a
+host rule. Full copying stays `rgba(0, 0, 0, 0)`; omitting the default-valued
+background yields `rgb(255, 0, 0)`. Thus equality to a same-tag, same-scope
+baseline is insufficient. It also still requires reading each source property
+to identify differences. A native-input counterexample shows later cleanup
+changing a reused source's value from `edited` to `later cleanup`, while a
+snapshot remains `edited`. Those schemes and depth/element caps were not shipped.
+Regression tests preserve both context freezing and independence from later
+source/form mutations, as well as zero writes to merged-away ancestor shells.
+
+Same-live-DOM kitchen proof after this change: **50 old/new ghost pairs,
+126 paired elements, 70,524 computed-property values, zero missing/unmatched
+elements and zero differences**. No ghosts were skipped. Mid-exit pixel diff:
+**0 / 1,280,000 (0%)**, at
+`~/shots/perf/round2-skeleton-mid-{old,new,diff}.png`.
+
+Evidence: `~/conformance/perf-audit/followup-round2/` holds temporary
+instrumentation/build configs, `residuals.json` (before),
+`after-instrumented.residuals.json` (after), counterexamples, `comparison.json`,
+per-run source-mapped stacks and check logs. Uninstrumented traces are
+`~/shots/perf/kitchen-followup-round2-after-{1,2,3}.*`; instrumented traces have
+`round2-instrumented` and `round2-after-instrumented` suffixes. Temporary counters
+and probes are not included in the runtime or commit.
+
+Final checks: presentation **26 pass / 0 fail** (1.55s), TypeScript exit 0,
+size exit 0; React runtime JS gzip **22,284 → 22,301B**, below its unchanged
+23,331B cap. Full **`bun test --timeout 15000`**: **1,305 pass / 2 skip / 0
+fail**, 1,307 tests across 144 files (150.34s). No source or test timeout was
+changed to obtain this result; the extended timeout is a command-line option.
+
+Default-timeout `bun test` is **not reliably green**: the first final run hit
+the core scaling ratio **2.6104231843935612 > 2.6** and Chart malformed replay
+**5,086.66ms > 5,000ms**; a default retry hit the Mockup conditional-fixtures
+test **7,130.57ms > 5,000ms**. The latter also took 6,149.71ms when rerun in its
+own file. Chart and Mockup tests explicitly pass `animate={false}`;
+`ThemeScope` emits `data-animate="false"`, so `capture` returns before the
+modified `flush` path. Core scaling does not execute React. Thus these timing
+failures do not reach the changed path; their time limits/implementations were
+left unchanged. The two skips remain built-deployment HTML and the absent live
+recording.
