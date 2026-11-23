@@ -85,6 +85,7 @@ test('custom compatible bases work, and prompt grants match runtime grants', asy
 });
 
 test('popover switches isolated keys, supports show/hide, Escape, outside click and forgetting', () => {
+  saveAgentConfig({ provider: 'openrouter', keys: { openrouter: 'private-b' } });
   saveAgentConfig({ provider: 'openai', keys: { openai: 'private-a', openrouter: 'private-b' } });
   const view = render(<App />);
   const chip = view.getByRole('button', { name: /Live ·/ });

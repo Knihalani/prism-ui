@@ -28,7 +28,22 @@ export function createAgent(config: AgentConfig = loadAgentConfig()): Agent {
 }
 export function saveAgentConfig(config: AgentConfig): boolean {
   try {
-    globalThis.localStorage.setItem('prism-agent', JSON.stringify({ provider: config.provider, keys: config.keys ?? {}, model: config.model }));
+    let stored: AgentConfig = {};
+    const raw = globalThis.localStorage.getItem('prism-agent');
+    try { stored = JSON.parse(raw ?? '{}') ?? {}; } catch {}
+    const keys: Partial<Record<Provider, string>> = {};
+    for (const name of Object.keys(modelPresets) as Provider[]) {
+      if (typeof stored.keys?.[name] === 'string') keys[name] = stored.keys[name];
+    }
+    const previous = stored.provider ?? 'openai';
+    if (!stored.keys && previous !== 'scripted' && Object.hasOwn(modelPresets, previous) && typeof stored.apiKey === 'string') keys[previous] = stored.apiKey;
+    const provider = config.provider ?? 'openai';
+    if (provider !== 'scripted') {
+      const key = config.keys ? config.keys[provider] : config.apiKey;
+      if (key) keys[provider] = key;
+      else delete keys[provider];
+    }
+    globalThis.localStorage.setItem('prism-agent', JSON.stringify({ provider, keys, model: config.model }));
     return true;
   } catch { return false; }
 }
