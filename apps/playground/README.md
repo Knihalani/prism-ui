@@ -14,6 +14,8 @@ Live replies share the renderer’s `planning` artifact-state grant. UI actions 
 
 `src/agent/evals.ts` defines ten prompts and acceptable registry names. To record fresh outputs, run `bun scripts/record-evals.ts` from this directory with `EVAL_PROVIDER` (`openai`, `anthropic` or `openrouter`), `EVAL_MODEL`, the corresponding `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY`, and optionally `EVAL_BASE_URL` (an OpenAI-compatible base such as `https://openrouter.ai/api/v1`). These are recorder-only environment variables, never browser build inputs. The script makes one request per prompt, with no follow-up turns, and writes raw outputs plus provenance to `test/fixtures/live-evals.json`. Never commit keys, request headers or credential-bearing URLs.
 
+The recorder stops after the first failed, empty or timed-out request, preserving its partial recording and printing only the HTTP status (if available) and a sanitized message. It never retries a failing key.
+
 `test/live-evals.test.tsx` replays the recording through Prism at streaming prefixes and checks expected nodes and artifact capabilities. Missing recordings are skipped; malformed or incomplete recordings fail. The harness also tests a temporary, explicitly hand-made fixture; it is not represented as recorded model output. DOM replay does not execute sandboxed iframe JavaScript or replace browser visual checks.
 
 Conversations and drafts remain in memory for the current session, each with its own agent and namespaced state store. New chat starts with fresh state; switching conversations preserves the previous thread. Light, dark and system themes, reduced motion, keyboard navigation and a mobile conversation drawer are supported.
