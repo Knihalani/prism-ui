@@ -32,6 +32,13 @@ full JS is 74,873B versus upstream's 79,431B. The additional React snapshot
 logic remains charged to the runtime. Measurements, source-isolated upstream
 comparison and test logs are in `~/conformance/perf-audit/ci-{main,merge}-*`.
 
+CodeBlock's token-colour stylesheet is attributed to CodeBlock's own CSS, not
+discarded at the shared boundary: its own CSS grows from 2,345B to the honest
+2,572B, still below the unchanged 4,096B CSS cap. The shared JS entry still owns the eager
+highlighter/grammar code. A regression test compares CodeBlock's reported CSS
+with the complete compiled stylesheet (including `.prism-tok-keyword`) and
+verifies that a one-byte CSS budget overrun fails.
+
 ## Original audit checkpoint
 
 Baseline: `ba8a0ae` (before Step B); after: Step D on the perf-audit branch.

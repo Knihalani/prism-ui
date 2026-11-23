@@ -1,9 +1,22 @@
 import { expect, test } from 'bun:test';
 import { resolve } from 'node:path';
+import { gzipSync } from 'node:zlib';
 import { fixtureCompatibility, measured, sharedPath, table, violations, type Budgets, type SizeRow } from './size';
 
 const budgets: Budgets = { defaults: { js: 4096, css: 4096 }, entries: {} };
 const row: SizeRow = { name: 'widget', kind: 'component', js: 4096, css: 4096, initial: 4096, deferred: 0, fullJs: 9000, fullCss: 9000 };
+test('CodeBlock owns and budgets its imported token-colour stylesheet', async () => {
+  const path = resolve(import.meta.dir, '../packages/components/src/codeblock');
+  const row = await measured('codeblock', resolve(path, 'index.tsx'), 'component', [resolve(path, 'codeblock.css')]);
+  const result = await Bun.build({ entrypoints: [resolve(path, 'codeblock.css')], target: 'browser', format: 'esm', minify: true });
+  expect(result.success).toBe(true);
+  const styles = result.outputs.filter(output => output.path.endsWith('.css'));
+  expect(styles).toHaveLength(1);
+  const css = await styles[0].text();
+  expect(css).toContain('.prism-tok-keyword');
+  expect(row.css).toBe(gzipSync(css, { level: 9 }).length);
+  expect(violations([row], { defaults: { js: row.js, css: row.css - 1 }, entries: {} })).toEqual([`codeblock css: ${row.css} > ${row.css - 1}B`]);
+});
 test('companion CSS is counted once when already imported and added when absent', async () => {
   for (const name of ['artifact', 'chart']) {
     const path = resolve(import.meta.dir, '../packages/components/src', name);
@@ -40,5 +53,5 @@ test('empty measurements and invalid or unexplained budgets', () => {
 });
 test('shared cost boundary excludes component implementations', () => {
   for (const path of ['frame/index.ts', 'shared/controls.tsx', 'lib/chart/path.ts', 'strings.ts', 'interpolate.ts', 'styles/base.css']) expect(sharedPath(path)).toBe(true);
-  for (const path of ['chart/index.tsx', 'datatable/use-datatable.ts', 'artifact/runtime.ts', '../react/src/strings.ts']) expect(sharedPath(path)).toBe(false);
+  for (const path of ['chart/index.tsx', 'datatable/use-datatable.ts', 'artifact/runtime.ts', '../react/src/strings.ts', 'lib/highlight/highlight.css']) expect(sharedPath(path)).toBe(false);
 });

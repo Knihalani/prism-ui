@@ -10,7 +10,7 @@ export interface Limits { js: number; css: number; reason?: string }
 export interface Budgets { defaults: Limits; entries: Record<string, Limits> }
 
 export function sharedPath(path: string) {
-  return /^(?:frame|shared|lib|icons|styles)(?:\/|$)/.test(path) || /^(?:strings|interpolate)(?:\.|$)/.test(path);
+  return path !== 'lib/highlight/highlight.css' && (/^(?:frame|shared|lib|icons|styles)(?:\/|$)/.test(path) || /^(?:strings|interpolate)(?:\.|$)/.test(path));
 }
 export function violations(rows: SizeRow[], budgets: Budgets) {
   return rows.flatMap(row => {
