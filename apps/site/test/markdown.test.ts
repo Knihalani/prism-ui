@@ -19,3 +19,8 @@ test('empty docs and unknown fenced languages remain readable without unsafe mar
   expect(markdownDocument('', '/', '/repo/docs')).toEqual({ html: '', toc: [] });
   expect(markdownDocument('```unknown\n<script>bad()</script>\n```', '/', '/repo/docs').html).toContain('&lt;script&gt;');
 });
+test('source extraction markers stay hidden without consuming code examples or malformed comments', () => {
+  expect(markdownDocument('<!-- snippet: patches -->', '/', '/repo/docs').html).toBe('');
+  expect(markdownDocument('```\n<!-- literal -->\n```', '/', '/repo/docs').html).toContain('&lt;!-- literal --&gt;');
+  expect(markdownDocument('<!-- unfinished', '/', '/repo/docs').html).toContain('&lt;!-- unfinished');
+});

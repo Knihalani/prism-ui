@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "bun run scripts/dev.ts",
     "build": "tsc --noEmit && vite build && bun run scripts/prerender.tsx",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "integrate-playground": "bun run scripts/integrate-playground.ts"
   },
   "dependencies": {
     "@prism-ui/core": "workspace:*",

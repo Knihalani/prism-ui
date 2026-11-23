@@ -23,6 +23,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: SITE_BASE=/prism-ui/ bun run --cwd apps/site build
       - run: bun run --cwd apps/playground build --base /prism-ui/playground/ --outDir ../site/dist/playground --emptyOutDir
+      - run: bun run --cwd apps/site integrate-playground
       - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/site/dist

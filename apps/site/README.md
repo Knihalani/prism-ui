@@ -12,6 +12,10 @@ The build writes a real HTML document per route into `dist`, including `404.html
 No SPA fallback or server runtime is required. The Pages workflow builds the
 playground into `dist/playground` to enable the theme-editor link. When previewing
 a project-path build, pass the same `SITE_BASE` to the preview command.
+After the playground build, run `bun run --cwd apps/site integrate-playground`.
+This adds a query-only redirect to generated `playground/themes.html`: `editor=1`
+opens the main playground's editor, while the normal comparison remains unchanged.
+The playground sources are not modified.
 
 `src/routes.ts` imports the actual component registry on the server. Top-level
 `docs/*.md` files become documentation routes; Markdown and syntax highlighting run

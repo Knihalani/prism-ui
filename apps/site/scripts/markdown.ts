@@ -6,6 +6,12 @@ import type { Heading } from '../src/docs';
 
 export function markdownDocument(source: string, base: string, directory: string) {
   const md = new MarkdownIt({ highlight: (code, language) => language && hljs.getLanguage(language) ? hljs.highlight(code, { language }).value : '' });
+  md.block.ruler.before('paragraph', 'source-comment', (state, start, _, silent) => {
+    const line = state.src.slice(state.bMarks[start] + state.tShift[start], state.eMarks[start]);
+    if (!/^<!--.*-->\s*$/.test(line)) return false;
+    if (!silent) state.line = start + 1;
+    return true;
+  }, { alt: ['paragraph'] });
   const toc: Heading[] = [], used = new Map<string, number>(), headingIds: string[] = [];
   const link = md.renderer.rules.link_open ?? ((tokens, index, options, _, self) => self.renderToken(tokens, index, options));
   md.renderer.rules.link_open = (tokens, index, options, env, self) => {
@@ -27,9 +33,10 @@ export function markdownDocument(source: string, base: string, directory: string
   };
   md.renderer.rules.heading_close = (tokens, index, options, _, self) => `<a class="heading-anchor" href="#${headingIds.pop()}" aria-label="Link to section">#</a>${self.renderToken(tokens, index, options)}`;
   const fence = md.renderer.rules.fence!; let codeIndex = 0;
+  md.renderer.rules.table_open = (tokens, index, options, _, self) => { tokens[index].attrSet('tabindex', '0'); return self.renderToken(tokens, index, options); };
   md.renderer.rules.fence = (tokens, index, options, env, self) => {
     const id = `doc-code-${codeIndex++}`, language = md.utils.escapeHtml(tokens[index].info.split(/\s/)[0] || 'Code');
-    return `<div class="doc-code"><div class="code-heading"><span>${language}</span><button class="text-button" type="button" data-copy="${id}" hidden>Copy</button></div>${fence(tokens, index, options, env, self).replace('<code', `<code id="${id}"`)}</div>`;
+    return `<div class="doc-code"><div class="code-heading"><span>${language}</span><button class="text-button" type="button" data-copy="${id}" hidden>Copy</button></div>${fence(tokens, index, options, env, self).replace('<pre', '<pre tabindex="0"').replace('<code', `<code id="${id}"`)}</div>`;
   };
   const image = md.renderer.rules.image!;
   md.renderer.rules.image = (tokens, index, options, env, self) => {

@@ -25,9 +25,10 @@
 .gallery-preview .prism-grid__body { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .gallery-preview .prism-grid__body > * { padding: 8px; background: var(--page); border-radius: 4px; }
 .gallery-preview .prism-root { zoom: .8; }
-.hero-reply .prism-root .prism-ask__segments { font-style: normal; flex: none; width: auto; gap: 8px; }
+.gallery-preview:has(.prism-ask__root, .prism-estimate__root, .prism-pick__root, .prism-summary__root, .prism-runbook__root, .prism-troubleshoot__root, .prism-view__root) .prism-root { zoom: .55; }
+.hero-reply .prism-root .prism-ask__field[data-suggested] .prism-ask__segments { font-style: normal; flex: none; width: auto; gap: 8px; }
 .hero-reply .prism-root .prism-ask__segment { flex: none; border: 1px solid var(--line); padding: 6px 14px; color: var(--ink); }
-.hero-reply .prism-root .prism-ask__segment[aria-checked="true"] { color: var(--page); background: var(--ink); border-color: var(--ink); }
+.hero-reply .prism-root .prism-ask__field .prism-ask__segment[aria-checked="true"], .hero-reply .prism-root .prism-ask__field[data-suggested] .prism-ask__segment[aria-checked="true"] { color: var(--page); background: var(--ink); border-color: var(--ink); }
 .hero-reply .prism-root .prism-ask__suggested { margin-inline-start: 4px; }
 .hero-reply .prism-root .prism-ask__actions { justify-content: flex-start; }
 .gallery-preview .prism-paragraph__root { margin-block: 0 12px; }
@@ -54,6 +55,7 @@
 .live-example .prism-root[data-prism-presentation] { --prism-prose-measure: 100%; --prism-prose-measure-wide: 100%; }
 .live-example .prism-root[data-prism-presentation] > [data-prism-flow] > .prism-frame__root[data-variant="card"] { border: 0; border-radius: 0; padding: 0; background: transparent; box-shadow: none; }
 .live-example > .prism-root[data-prism-presentation] > .prism-frame__root[data-variant="card"] { border: 0; border-radius: 0; padding: 0; background: transparent; box-shadow: none; }
+.live-example .prism-root[data-prism-presentation] :is(.prism-pick__root, .prism-ask__root) { border: 0; border-radius: 0; padding: 0; background: transparent; box-shadow: none; }
 .live-example .prism-datatable__table:not([data-virtual]) .prism-datatable__spacer-row { display: none; }
 .reference-section { border-top: 1px solid var(--line); padding-top: 32px; margin-block: 44px; }
 .reference-section > h2 { font-size: 24px; margin-bottom: 12px; }

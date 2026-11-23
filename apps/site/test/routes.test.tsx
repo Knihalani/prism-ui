@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { SiteRoute } from '../src/routes';
 import { normalizeBase, sitePath } from '../src/paths';
@@ -66,10 +66,11 @@ test('every registered component and top-level Markdown document has a unique pr
 });
 
 test.skipIf(!existsSync(resolve(dist, 'index.html')))('every internal link and asset in built HTML resolves under its deployment base', () => {
-  for (const route of routes) {
-    const file = route.path.endsWith('.html') ? route.path.slice(1) : route.path.slice(1) + 'index.html';
+  function htmlFiles(directory: string): string[] { return readdirSync(directory, { withFileTypes: true }).flatMap(entry => entry.isDirectory() ? htmlFiles(resolve(directory, entry.name)) : entry.name.endsWith('.html') ? [resolve(directory, entry.name)] : []); }
+  const deploymentBase = readFileSync(resolve(dist, 'index.html'), 'utf8').match(/<meta name="site-base" content="([^"]+)"/)?.[1] ?? '/';
+  for (const file of htmlFiles(dist).map(path => relative(dist, path))) {
     const html = readFileSync(resolve(dist, file), 'utf8');
-    const base = html.match(/<meta name="site-base" content="([^"]+)"/)?.[1] ?? '/';
+    const base = html.match(/<meta name="site-base" content="([^"]+)"/)?.[1] ?? deploymentBase;
     for (const match of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
       const url = new URL(match[1].replaceAll('&amp;', '&'), `https://site.example${base}${file}`);
       if (url.origin !== 'https://site.example') continue;
