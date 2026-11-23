@@ -53,6 +53,28 @@ test('P/R/D select explicit tools, announce them and leave text fields and modif
   expect(x.view.container.querySelector('[data-part="tool"][title="Draw (D)"]')).toBeTruthy();
 });
 
+for (const tool of ['draw', 'region'] as const) test(`overflow Escape closes the menu before changing the ${tool} tool`, () => {
+  const x = setup(); act(() => x.model.setTool(tool));
+  const trigger = x.view.getByRole('button', { name: 'More tools' });
+  fireEvent.click(trigger);
+  const control = x.view.getByRole('button', { name: 'View source' });
+  act(() => control.focus());
+  expect(trigger.getAttribute('aria-expanded')).toBe('true');
+  fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+  expect(trigger.getAttribute('aria-expanded')).toBe('false');
+  expect(x.model.tool).toBe(tool);
+  expect(document.activeElement === trigger).toBe(true);
+  act(() => x.canvas.focus());
+  x.pointer('pointerdown', 100, 50); x.pointer('pointermove', 400, 200);
+  fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+  expect(x.model.rubber).toHaveLength(0);
+  expect(x.model.tool).toBe(tool);
+  expect(document.activeElement === x.canvas).toBe(true);
+  fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+  expect(x.model.tool).toBe('pin');
+  expect(document.activeElement === x.canvas).toBe(true);
+});
+
 test('Escape cancels the gesture, then composer, then returns to pin without writing a draft', () => {
   const x = setup(); act(() => x.model.setTool('draw'));
   act(() => x.canvas.focus());
