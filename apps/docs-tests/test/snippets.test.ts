@@ -42,6 +42,19 @@ test('every README, INTEGRATION and PROMPTING TS/TSX module compiles against rea
 async function* events<T>(values: T[]) { yield* values; }
 async function collect(stream: AsyncIterable<string>) { let text = ''; for await (const delta of stream) text += delta; return text; }
 
+test('AI route removes remote file parts before model conversion', async () => {
+  const { textOnlyMessages } = await import(pathToFileURL(directory + '/ai-route.ts').href);
+  const file = { type: 'file', mediaType: 'application/pdf', url: 'https://example.test/private.pdf' };
+  const text = { type: 'text', text: 'Explain this' };
+  expect(await textOnlyMessages([
+    { id: 'mixed', role: 'user', parts: [file, text] },
+    { id: 'file-only', role: 'user', parts: [file] },
+    { id: 'system', role: 'system', parts: [text] },
+  ])).toEqual([{ id: 'mixed', role: 'user', parts: [text] }]);
+  expect(await textOnlyMessages([])).toEqual([]);
+  await expect(textOnlyMessages([{ id: 'invalid', role: 'user', parts: [{ type: 'text', text: 42 }] }])).rejects.toThrow();
+});
+
 test('documented SDK adapters yield text, ignore non-text deltas and propagate errors', async () => {
   const { openAIText } = await import(pathToFileURL(directory + '/openai-server.ts').href);
   const { anthropicText } = await import(pathToFileURL(directory + '/anthropic-server.ts').href);
