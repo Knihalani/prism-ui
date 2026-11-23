@@ -113,6 +113,7 @@ export function useFollowScroll(scrollRef: RefObject<HTMLElement | null>, { thre
     node.addEventListener('scroll', scroll); node.addEventListener('wheel', wheel, { passive: true });
     node.addEventListener('touchstart', touchStart, { passive: true }); node.addEventListener('touchmove', touchMove, { passive: true });
     node.addEventListener('keydown', key);
+    node.addEventListener('load', schedule, true); node.addEventListener('error', schedule, true);
     node.addEventListener('pointerdown', pointerDown);
     node.ownerDocument.addEventListener('pointerup', pointerUp); node.ownerDocument.addEventListener('pointercancel', pointerUp);
     state.current.schedule = schedule;
@@ -122,6 +123,7 @@ export function useFollowScroll(scrollRef: RefObject<HTMLElement | null>, { thre
       observer?.disconnect(); mutations.disconnect(); node.style.overflowAnchor = anchor; node.style.scrollbarGutter = gutter;
       node.removeEventListener('scroll', scroll); node.removeEventListener('wheel', wheel);
       node.removeEventListener('touchstart', touchStart); node.removeEventListener('touchmove', touchMove); node.removeEventListener('keydown', key);
+      node.removeEventListener('load', schedule, true); node.removeEventListener('error', schedule, true);
       node.removeEventListener('pointerdown', pointerDown);
       node.ownerDocument.removeEventListener('pointerup', pointerUp); node.ownerDocument.removeEventListener('pointercancel', pointerUp);
     };

@@ -161,6 +161,14 @@ test('mutations restart one bounded settle loop without observing content elemen
     height = 400; tick(); expect(top).toBe(300);
     for (let i = 0; i < 24; i++) tick();
     expect(frame).toBeUndefined();
+    const image = document.createElement('img'); node.append(image);
+    for (const type of ['load', 'error']) {
+      height += 100;
+      act(() => image.dispatchEvent(new Event(type)));
+      expect(frame).toBeDefined(); tick(); expect(top).toBe(height - 100);
+      for (let i = 0; i < 24; i++) tick();
+      expect(frame).toBeUndefined();
+    }
     const child = document.createElement('span'); node.append(child);
     act(() => notify('childList', node)); tick();
     expect(observe).not.toHaveBeenCalled(); expect(disconnect).not.toHaveBeenCalled();
@@ -170,7 +178,13 @@ test('mutations restart one bounded settle loop without observing content elemen
     child.style.height = '600px'; height = 600;
     act(() => notify('attributes', child)); tick(); expect(top).toBe(500);
     expect(observe).not.toHaveBeenCalled(); expect(disconnect).not.toHaveBeenCalled();
+    act(() => node.dispatchEvent(new WheelEvent('wheel', { deltaY: -20 })));
+    act(() => { image.dispatchEvent(new Event('load')); image.dispatchEvent(new Event('error')); });
+    expect(frame).toBeUndefined();
+    const remove = mock(node.removeEventListener.bind(node)); node.removeEventListener = remove;
     view.unmount();
+    expect(remove).toHaveBeenCalledWith('load', expect.any(Function), true);
+    expect(remove).toHaveBeenCalledWith('error', expect.any(Function), true);
   } finally {
     globalThis.ResizeObserver = original.observer; globalThis.MutationObserver = original.mutations;
     globalThis.requestAnimationFrame = original.raf; globalThis.cancelAnimationFrame = original.cancel;
