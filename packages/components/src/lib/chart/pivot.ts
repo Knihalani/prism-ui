@@ -1,5 +1,8 @@
 export type DataRow = Record<string, unknown>;
 export type AggregateOp = 'sum' | 'avg' | 'min' | 'max' | 'count';
+function write(target: DataRow, key: string, value: unknown) {
+  Object.defineProperty(target, key, { value, enumerable: true, configurable: true, writable: true });
+}
 export interface AggregateOptions { x: string; series?: string; value: string; op?: AggregateOp }
 export function aggregate(rows: readonly DataRow[], { x, series, value, op = 'sum' }: AggregateOptions): DataRow[] {
   interface Group { x: unknown; series: unknown; sum: number; valid: number; count: number; min: number; max: number }
@@ -17,9 +20,9 @@ export function aggregate(rows: readonly DataRow[], { x, series, value, op = 'su
   }
   return ordered.map(group => {
     const result: DataRow = { [x]: group.x };
-    if (series) Object.defineProperty(result, series, { value: group.series, enumerable: true, writable: true, configurable: true });
+    if (series) write(result, series, group.series);
     const number = op === 'count' ? group.count : op === 'sum' ? group.sum : !group.valid ? null : op === 'avg' ? group.sum / group.valid : op === 'min' ? group.min : group.max;
-    Object.defineProperty(result, value, { value: number, enumerable: true, writable: true, configurable: true });
+    write(result, value, number);
     return result;
   });
 }
@@ -31,7 +34,7 @@ export function pivotLongToWide(rows: readonly DataRow[], { x, series, value, ag
     if (!target) { target = { [x]: row[x] }; result.set(row[x], target); }
     const key = String(row[series]);
     if (key === x) throw new Error('Series key collides with the x field');
-    Object.defineProperty(target, key, { value: row[value], enumerable: true, configurable: true, writable: true });
+    write(target, key, row[value]);
   }
   return [...result.values()];
 }

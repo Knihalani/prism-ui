@@ -2,15 +2,20 @@ import '../../../react/test/setup';
 import { afterEach, expect, test } from 'bun:test';
 import { Prism, defaultRegistry, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
-import '../index';
+import { viewFixtures as rootFixtures, viewGallery as rootGallery } from '../index';
 const { act, cleanup, fireEvent, render } = await import('@testing-library/react');
-import { ViewConfigContext, type PrimitiveProps } from './index';
+import { ViewConfigContext, viewFixtures, viewGallery, type PrimitiveProps } from './index';
 import { gallery, views } from './fixtures';
 
 afterEach(cleanup);
 // keyUp lets React's input polyfill notice the change when react-dom loaded before happy-dom in a full run.
 function type(el: HTMLElement, value: string) { act(() => el.focus()); fireEvent.change(el, { target: { value } }); fireEvent.keyUp(el); }
 const fence = (value: unknown) => '```ui:view\n' + JSON.stringify(value) + '\n```';
+
+test('root and view fixture aliases remain backward compatible', () => {
+  expect(rootFixtures).toBe(views); expect(viewFixtures).toBe(views);
+  expect(rootGallery).toBe(gallery); expect(viewGallery).toBe(gallery);
+});
 
 test('checkbox draw state toggles without replacing the native input or tick', () => {
   const view = render(<Prism source={gallery.todos} />);

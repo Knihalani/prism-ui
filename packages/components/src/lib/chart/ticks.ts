@@ -59,42 +59,26 @@ export function timeInterval(min: Date | number, max: Date | number, count = 5):
   }
   return { unit: 'year', step: niceNum(target / 31557600000, false) || 1 };
 }
+type DateField = 'Milliseconds' | 'Seconds' | 'Minutes' | 'Hours' | 'Date' | 'Day' | 'Month' | 'FullYear';
 export function floorTime(value: Date | number, interval: TimeInterval, utc = true): Date {
   const date = new Date(+value);
   const { unit, step } = interval;
   if (unit === 'millisecond') { date.setTime(Math.floor(+date / step) * step); return date; }
-  if (utc) {
-    date.setUTCMilliseconds(0);
-    if (unit === 'second') date.setUTCSeconds(Math.floor(date.getUTCSeconds() / step) * step);
+  const get = (field: DateField) => date[`get${utc ? 'UTC' : ''}${field}` as const]();
+  const set = (field: Exclude<DateField, 'Day'>, value: number) => date[`set${utc ? 'UTC' : ''}${field}` as const](value);
+  set('Milliseconds', 0);
+  if (unit === 'second') set('Seconds', Math.floor(get('Seconds') / step) * step);
+  else {
+    set('Seconds', 0);
+    if (unit === 'minute') set('Minutes', Math.floor(get('Minutes') / step) * step);
     else {
-      date.setUTCSeconds(0);
-      if (unit === 'minute') date.setUTCMinutes(Math.floor(date.getUTCMinutes() / step) * step);
+      set('Minutes', 0);
+      if (unit === 'hour') set('Hours', Math.floor(get('Hours') / step) * step);
       else {
-        date.setUTCMinutes(0);
-        if (unit === 'hour') date.setUTCHours(Math.floor(date.getUTCHours() / step) * step);
-        else {
-          date.setUTCHours(0);
-          if (unit === 'week') date.setUTCDate(date.getUTCDate() - date.getUTCDay());
-          else if (unit === 'day') date.setUTCDate(Math.floor((date.getUTCDate() - 1) / step) * step + 1);
-          else { date.setUTCDate(1); date.setUTCMonth(unit === 'year' ? 0 : Math.floor(date.getUTCMonth() / step) * step); if (unit === 'year') date.setUTCFullYear(Math.floor(date.getUTCFullYear() / step) * step); }
-        }
-      }
-    }
-  } else {
-    date.setMilliseconds(0);
-    if (unit === 'second') date.setSeconds(Math.floor(date.getSeconds() / step) * step);
-    else {
-      date.setSeconds(0);
-      if (unit === 'minute') date.setMinutes(Math.floor(date.getMinutes() / step) * step);
-      else {
-        date.setMinutes(0);
-        if (unit === 'hour') date.setHours(Math.floor(date.getHours() / step) * step);
-        else {
-          date.setHours(0);
-          if (unit === 'week') date.setDate(date.getDate() - date.getDay());
-          else if (unit === 'day') date.setDate(Math.floor((date.getDate() - 1) / step) * step + 1);
-          else { date.setDate(1); date.setMonth(unit === 'year' ? 0 : Math.floor(date.getMonth() / step) * step); if (unit === 'year') date.setFullYear(Math.floor(date.getFullYear() / step) * step); }
-        }
+        set('Hours', 0);
+        if (unit === 'week') set('Date', get('Date') - get('Day'));
+        else if (unit === 'day') set('Date', Math.floor((get('Date') - 1) / step) * step + 1);
+        else { set('Date', 1); set('Month', unit === 'year' ? 0 : Math.floor(get('Month') / step) * step); if (unit === 'year') set('FullYear', Math.floor(get('FullYear') / step) * step); }
       }
     }
   }
@@ -106,14 +90,10 @@ export function offsetTime(value: Date | number, { unit, step }: TimeInterval, u
   else if (unit === 'second') date.setTime(+date + step * 1000);
   else if (unit === 'minute') date.setTime(+date + step * 60000);
   else if (unit === 'hour') { if (utc) date.setTime(+date + step * 3600000); else date.setHours(date.getHours() + step); }
-  else if (utc) {
-    if (unit === 'day' || unit === 'week') date.setUTCDate(date.getUTCDate() + step * (unit === 'week' ? 7 : 1));
-    else if (unit === 'month') date.setUTCMonth(date.getUTCMonth() + step);
-    else date.setUTCFullYear(date.getUTCFullYear() + step);
-  } else {
-    if (unit === 'day' || unit === 'week') date.setDate(date.getDate() + step * (unit === 'week' ? 7 : 1));
-    else if (unit === 'month') date.setMonth(date.getMonth() + step);
-    else date.setFullYear(date.getFullYear() + step);
+  else {
+    const field = unit === 'day' || unit === 'week' ? 'Date' : unit === 'month' ? 'Month' : 'FullYear';
+    const current = date[`get${utc ? 'UTC' : ''}${field}` as const]();
+    date[`set${utc ? 'UTC' : ''}${field}` as const](current + step * (unit === 'week' ? 7 : 1));
   }
   return date;
 }

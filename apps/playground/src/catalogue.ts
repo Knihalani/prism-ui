@@ -1,6 +1,6 @@
 import { defaultRegistry } from '@prism-ui/react';
 import { examples } from './fixtures';
-import { viewFixtures } from '@prism-ui/components/view';
+import { views as viewFixtures } from '@prism-ui/components/view/fixtures';
 
 export const groups = ['Basics', 'Decide', 'Do', 'Create'] as const;
 export type Demo = { id: string; label: string; group: typeof groups[number]; prompt: string; source: string; components: string[]; keywords: string[] };

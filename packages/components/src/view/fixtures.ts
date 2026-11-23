@@ -116,4 +116,4 @@ export const comparison = {
   actions: [{ type: 'button', label: 'Go with this one', variant: 'primary', disabled: "pick == ''", onClick: { action: 'pick', payload: { pick: { $ref: 'pick' } } } }],
 };
 export const views = { dashboard, settings, pricing, booking, todos, comparison };
-export const gallery = Object.fromEntries(Object.entries(views).map(([name, value]) => [name, fence(value)])) as Record<keyof typeof views, string>;
+export const gallery = /* @__PURE__ */ (() => Object.fromEntries(Object.entries(views).map(([name, value]) => [name, fence(value)])))() as Record<keyof typeof views, string>;

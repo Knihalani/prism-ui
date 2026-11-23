@@ -121,4 +121,4 @@ genUI v1:
 - No component re-renders unless its node reference or its subscribed store paths change (`useSyncExternalStore` per path).
 - Charts compute scales in a memo, render with plain SVG paths; no chart library.
 - Highlighter is a single-pass scanner; tokenisation is cached per (lang, code) and incremental for open code blocks.
-- Bundle budget (min+gz): core ≤ 12 KB, state ≤ 3 KB, schema ≤ 2 KB, react ≤ 5 KB, each component ≤ 4 KB. Tracked by `bun run size`.
+- Bundle budget (min+gzip-9): each component's own JS defaults to 4 KiB; shared internals and CSS are charged separately. Runtime caps and documented heavy-component exceptions live in `size-budgets.json`, enforced by `bun run size` in CI. See `scripts/README.md` for accounting and Markdown output.

@@ -4,21 +4,28 @@ import { motionDuration } from './motion';
 type StyledElement = HTMLElement | SVGElement;
 type Frame = { source: StyledElement; ghost: StyledElement; rect: DOMRect };
 const pending = new Map<Element, { frames: Frame[]; scope: Element; duration: number; easing: string }>();
+const ancestors = new Map<Element, Frame>();
+const inherited = new Set(('color color-scheme cursor direction font-family font-feature-settings font-kerning font-language-override font-optical-sizing font-palette font-size font-size-adjust font-stretch font-style font-synthesis font-synthesis-position font-synthesis-small-caps font-synthesis-style font-synthesis-weight font-variant font-variant-alternates font-variant-caps font-variant-east-asian font-variant-emoji font-variant-ligatures font-variant-numeric font-variant-position font-variation-settings font-weight line-height letter-spacing word-spacing text-align text-align-last text-combine-upright text-emphasis-color text-emphasis-position text-emphasis-style text-indent text-justify text-orientation text-rendering text-shadow text-transform text-underline-position white-space white-space-collapse visibility quotes list-style-image list-style-position list-style-type caption-side border-collapse border-spacing empty-cells tab-size hyphens overflow-wrap word-break writing-mode paint-order fill fill-opacity fill-rule stroke stroke-dasharray stroke-dashoffset stroke-linecap stroke-linejoin stroke-miterlimit stroke-opacity stroke-width clip-rule color-interpolation color-interpolation-filters dominant-baseline marker-end marker-mid marker-start shape-rendering').split(' '));
+const omitted = new WeakMap<StyledElement, [string, string][]>();
 
 function copy(source: StyledElement, deep: boolean) {
   const ghost = source.cloneNode(deep) as StyledElement;
   const originals = [source, ...(deep ? Array.from(source.querySelectorAll<StyledElement>('*')) : [])];
   const clones = [ghost, ...(deep ? Array.from(ghost.querySelectorAll<StyledElement>('*')) : [])];
   originals.forEach((original, index) => {
-    const clone = clones[index], style = getComputedStyle(original);
-    let css = original.style.cssText;
+    const clone = clones[index], style = getComputedStyle(original), parent = original.parentElement;
+    const parentStyle = parent ? getComputedStyle(parent) : null, values: [string, string][] = [];
     for (let property = 0; property < style.length; property++) {
       const name = style.item(property);
-      if (name.startsWith('--')) continue;
-      css += `${name}:${style.getPropertyValue(name)};`;
+      const value = style.getPropertyValue(name);
+      if (inherited.has(name) && !original.style.getPropertyValue(name) && value === parentStyle?.getPropertyValue(name)) {
+        if (!index) values.push([name, value]);
+        continue;
+      }
+      clone.style.setProperty(name, value);
     }
-    clone.style.cssText = css;
     clone.removeAttribute('id'); clone.removeAttribute('autofocus');
+    if (!index) omitted.set(clone, values);
   });
   return ghost;
 }
@@ -58,6 +65,7 @@ function flush() {
       continue;
     }
     exits.set(root.source, new Map(frames.slice(0, last + 1).map(frame => [frame.source, frame.ghost])));
+    for (const [name, value] of omitted.get(ghost) ?? []) ghost.style.setProperty(name, value);
     ghost.setAttribute('aria-hidden', 'true'); ghost.setAttribute('inert', '');
     if (ghost instanceof HTMLElement) ghost.inert = true;
     ghost.setAttribute('data-prism-skeleton-exit', '');
@@ -76,6 +84,7 @@ function flush() {
     setTimeout(() => ghost.remove(), duration);
   }
   pending.clear();
+  ancestors.clear();
 }
 
 function capture(element: StyledElement | null) {
@@ -89,8 +98,15 @@ function capture(element: StyledElement | null) {
   if (!duration || !rect.width || !rect.height) return;
   const frames: Frame[] = [{ source: element, ghost: copy(element, true), rect }];
   for (let ancestor = element.parentElement; ancestor && ancestor !== scope; ancestor = ancestor.parentElement) {
-    const ghost = copy(ancestor, false); ghost.append(frames.at(-1)!.ghost);
-    frames.push({ source: ancestor, ghost, rect: ancestor.getBoundingClientRect() });
+    let snapshot = ancestors.get(ancestor);
+    if (!snapshot) {
+      snapshot = { source: ancestor, ghost: copy(ancestor, false), rect: ancestor.getBoundingClientRect() };
+      ancestors.set(ancestor, snapshot);
+    }
+    const ghost = snapshot.ghost.cloneNode(false) as StyledElement;
+    omitted.set(ghost, omitted.get(snapshot.ghost) ?? []);
+    ghost.append(frames.at(-1)!.ghost);
+    frames.push({ source: ancestor, ghost, rect: snapshot.rect });
   }
   if (!pending.size) queueMicrotask(flush);
   pending.set(element, { frames, scope, duration, easing: style.getPropertyValue('--prism-motion-ease-exit') });
