@@ -1,11 +1,12 @@
 import '../../react/test/setup';
-import { afterEach, expect, test } from 'bun:test';
+import { beforeAll, afterEach, expect, test } from 'bun:test';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { Prism, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { createFeedback } from '../src/mockup/engine';
-import '../src/feedback';
+import { preloadFeedback } from '../src/feedback';
 
+beforeAll(() => preloadFeedback());
 afterEach(cleanup);
 const source = '```ui:feedback-review\n{"id":"target"}\n```';
 const View = () => <button>Target</button>;

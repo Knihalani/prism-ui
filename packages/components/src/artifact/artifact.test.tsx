@@ -1,15 +1,17 @@
 import '../../../react/test/setup';
-import { afterEach, expect, spyOn, test } from 'bun:test';
+import { beforeAll, afterEach, expect, spyOn, test } from 'bun:test';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createRegistry, createSystemPrompt, defineTheme, Prism, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
+import { preloadFeedback } from '../feedback';
 import { ArtifactProvider, artifact, artifactPlugin } from './index';
 import { fence } from './fixtures';
 import { allowedPath, importMap } from './policy';
 import { sourceDiff } from './model';
 import { markdownTaskPath, renderArtifactMarkdown } from './markdown';
 
+beforeAll(() => preloadFeedback());
 afterEach(cleanup);
 const plugins = [artifactPlugin], registry = createRegistry([artifact]);
 const html = '<p>First version</p>';
