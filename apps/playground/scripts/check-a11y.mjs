@@ -25,9 +25,13 @@ async function auditFrames(page) {
 
 async function settle(page) {
   await page.evaluate(() => document.fonts.ready);
-  await page.locator('[data-artifact-shell], .prism-mockup__viewport').evaluateAll(nodes => {
-    for (const node of nodes) if (node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden') node.scrollIntoView({ block: 'center', behavior: 'instant' });
-  });
+  const previews = page.locator('[data-artifact-shell], .prism-mockup__viewport');
+  for (let index = 0; index < await previews.count(); index++) {
+    const target = previews.nth(index);
+    if (!await target.isVisible()) continue;
+    await target.evaluate(node => node.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  }
   await page.waitForFunction(() => !document.querySelector('[data-artifact-shell] [aria-busy="true"]'), undefined, { timeout: 15000 });
   await page.waitForFunction(() => document.getAnimations().every(a => a.effect?.getTiming().iterations === Infinity || a.playState === 'finished'), undefined, { timeout: 10000 });
   for (const frame of page.frames()) await frame.evaluate(() => document.fonts.ready).catch(() => {});
