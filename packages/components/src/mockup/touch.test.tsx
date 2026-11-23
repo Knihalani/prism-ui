@@ -40,6 +40,22 @@ test('two-finger translation pans even when the final distance and zoom do not c
   expect(x.model.zoom).toBe(2); expect(x.viewport.scrollLeft).toBeGreaterThan(scroll);
   x.pointer('pointercancel', 1, 80); x.pointer('pointerup', 2, 280); expect(x.model.state.items).toHaveLength(0);
 });
+for (const tool of ['pin', 'region', 'draw'] as const) for (const origin of ['marker', 'canvas', 'two markers']) test(`${tool}: pinching from ${origin} shares canvas tracking without opening or adding annotations`, () => {
+  const x = setup();
+  act(() => x.model.setTool(tool));
+  act(() => { x.model.feedback.addPin({ x: 30, y: 30, comment: 'Saved' }); x.model.feedback.addPin({ x: 60, y: 30, comment: 'Other' }); });
+  const markers = Array.from(x.view.container.querySelectorAll<HTMLElement>('button[data-feedback-id]'));
+  const event = (target: HTMLElement, type: string, id: number, clientX: number) => fireEvent(target, new window.PointerEvent(type, { bubbles: true, button: 0, pointerType: 'touch', pointerId: id, clientX, clientY: 180 }));
+  const first = origin === 'canvas' ? x.canvas : markers[0], second = origin === 'two markers' ? markers[1] : origin === 'canvas' ? markers[0] : x.canvas;
+  event(first, 'pointerdown', 1, 100); event(second, 'pointerdown', 2, 200); event(second, 'pointermove', 2, 250);
+  expect(x.model.zoom).toBeCloseTo(1.5); expect(x.viewport.scrollLeft).toBeCloseTo(50);
+  event(first, 'pointerup', 1, 100); event(second, 'pointerup', 2, 250); fireEvent.click(markers[0], { detail: 1 });
+  expect(x.model.editing).toBeNull(); expect(x.model.state.items).toHaveLength(2);
+  fireEvent.click(markers[0], { detail: 0 }); expect(x.model.editing?.id).toBe(x.model.state.items[0].id);
+  act(() => x.model.close());
+  event(markers[0], 'pointerdown', 3, 100); event(markers[0], 'pointerup', 3, 100); fireEvent.click(markers[0], { detail: 1 });
+  expect(x.model.editing?.id).toBe(x.model.state.items[0].id); expect(x.model.state.items).toHaveLength(2);
+});
 test('touch/palm events do not cancel or contaminate an active pressure-aware pen stroke', () => {
   const x = setup(); act(() => x.model.setTool('draw'));
   x.pointer('pointerdown', 10, 80, 180, 'pen', .2);

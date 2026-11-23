@@ -1,19 +1,20 @@
-import { useLayoutEffect, useRef, useState, type PointerEvent, type RefObject } from 'react';
+import { useLayoutEffect, useRef, useState, type MouseEvent, type PointerEvent, type RefObject } from 'react';
 
 type Point = { x: number; y: number };
 type Handlers = {
-  onPointerDown(event: PointerEvent<HTMLDivElement>): void;
-  onPointerMove(event: PointerEvent<HTMLDivElement>): void;
-  onPointerUp(event: PointerEvent<HTMLDivElement>): void;
-  onPointerCancel(event: PointerEvent<HTMLDivElement>): void;
-  onLostPointerCapture(event: PointerEvent<HTMLDivElement>): void;
+  onPointerDown(event: PointerEvent<HTMLElement>): void;
+  onPointerMove(event: PointerEvent<HTMLElement>): void;
+  onPointerUp(event: PointerEvent<HTMLElement>): void;
+  onPointerCancel(event: PointerEvent<HTMLElement>): void;
+  onLostPointerCapture(event: PointerEvent<HTMLElement>): void;
   onPointerLeave(): void;
 };
 export function useTouchFeedback({ canvas, viewport, zoom, setZoom, enabled, inline, cancel, pointer }: {
   canvas: RefObject<HTMLElement | null>; viewport: RefObject<HTMLElement | null>;
   zoom: number; setZoom(value: number): void; enabled: boolean; inline: boolean; cancel(): void; pointer: Handlers;
-}): Handlers {
+}) {
   const touches = useRef(new Map<number, Point>()), pen = useRef<number | null>(null);
+  const suppressMarkerClick = useRef(false);
   const pinch = useRef<{ distance: number; zoom: number; anchor: Point; center: Point; ended: boolean } | null>(null);
   const [revision, update] = useState(0);
   useLayoutEffect(() => {
@@ -38,7 +39,7 @@ export function useTouchFeedback({ canvas, viewport, zoom, setZoom, enabled, inl
     return () => { element.style.maxHeight = previous; };
   }, [enabled, inline, viewport, zoom]);
   useLayoutEffect(() => {
-    const element = canvas.current;
+    const element = canvas.current?.parentElement;
     if (!enabled || !element) return;
     const block = (event: TouchEvent) => { if (event.touches.length > 1 || pen.current !== null) event.preventDefault(); };
     element.addEventListener('touchstart', block, { passive: false });
@@ -74,21 +75,27 @@ export function useTouchFeedback({ canvas, viewport, zoom, setZoom, enabled, inl
     const [a, b] = [...touches.current.values()];
     return { distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), center: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
   };
-  return {
+  const handlers: Handlers = {
     ...pointer,
     onPointerDown(event) {
+      if (!enabled) return;
+      const marker = event.currentTarget !== canvas.current;
+      if (!touches.current.size && !pinch.current) suppressMarkerClick.current = false;
+      if (marker && event.pointerType !== 'touch') return;
       if (event.pointerType === 'pen') { cancel(); touches.current.clear(); pinch.current = null; pen.current = event.pointerId; }
       if (event.pointerType === 'touch') {
-        if (pen.current !== null || touches.current.size >= 2 || pinch.current?.ended) return;
+        if (pen.current !== null || touches.current.size >= 2 || pinch.current?.ended) { suppressMarkerClick.current = true; return; }
         touches.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
         if (touches.current.size === 2) {
-          const { distance, center } = measure(), box = event.currentTarget.getBoundingClientRect();
+          const { distance, center } = measure(), capture = canvas.current ?? event.currentTarget, box = capture.getBoundingClientRect();
           pinch.current = { distance, zoom, center, anchor: { x: (center.x - box.left) / (box.width || 1), y: (center.y - box.top) / (box.height || 1) }, ended: false };
+          suppressMarkerClick.current = true;
           cancel();
-          for (const id of touches.current.keys()) event.currentTarget.setPointerCapture?.(id);
+          for (const id of touches.current.keys()) capture.setPointerCapture?.(id);
           return;
         }
       }
+      if (marker) return;
       pointer.onPointerDown(event);
     },
     onPointerMove(event) {
@@ -101,20 +108,25 @@ export function useTouchFeedback({ canvas, viewport, zoom, setZoom, enabled, inl
         update(value => value + 1); return;
       }
       if (touches.current.has(event.pointerId)) touches.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      pointer.onPointerMove(event);
+      if (event.currentTarget === canvas.current) pointer.onPointerMove(event);
     },
     onPointerUp(event) {
       if (event.pointerType === 'touch' && pen.current !== null) return;
       if (event.pointerId === pen.current) pen.current = null;
       if (pinch.current) { if (!touches.current.delete(event.pointerId)) return; pinch.current.ended = true; if (!touches.current.size) pinch.current = null; return; }
-      touches.current.delete(event.pointerId); pointer.onPointerUp(event);
+      touches.current.delete(event.pointerId); if (event.currentTarget === canvas.current) pointer.onPointerUp(event);
     },
     onPointerCancel(event) {
       if (event.pointerType === 'touch' && pen.current !== null) return;
       if (event.pointerId === pen.current) pen.current = null;
       if (touches.current.has(event.pointerId)) { touches.current.clear(); pinch.current = null; cancel(); }
-      pointer.onPointerCancel(event);
+      if (event.currentTarget === canvas.current) pointer.onPointerCancel(event);
     },
-    onLostPointerCapture(event) { if (event.pointerId === pen.current) pen.current = null; if (!pinch.current) { touches.current.delete(event.pointerId); pointer.onLostPointerCapture(event); } },
+    onLostPointerCapture(event) { if (event.pointerId === pen.current) pen.current = null; if (!pinch.current) { touches.current.delete(event.pointerId); if (event.currentTarget === canvas.current) pointer.onLostPointerCapture(event); } },
   };
+  return { pointer: handlers, markerPointer: {
+    onPointerDown: handlers.onPointerDown, onPointerMove: handlers.onPointerMove, onPointerUp: handlers.onPointerUp,
+    onPointerCancel: handlers.onPointerCancel, onLostPointerCapture: handlers.onLostPointerCapture,
+    onClickCapture(event: MouseEvent<HTMLElement>) { if (event.detail && suppressMarkerClick.current) { event.preventDefault(); event.stopPropagation(); } },
+  } };
 }

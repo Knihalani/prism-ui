@@ -58,7 +58,7 @@ export function MockupComment({ vm, style, open = true }: { vm: MockupModel; sty
   return active || present ? <Comment {...part} ref={ref} model={active ? vm : cached.current} role="dialog" aria-hidden={!active || undefined} inert={!active || undefined} data-closing={!active ? '' : undefined} data-submitted={vm.submitted ? '' : undefined} style={{ ...part.style, ...style }} /> : null;
 }
 function Marker({ item, vm, size }: { item: FeedbackItem; vm: MockupModel; size: { width: number; height: number } }) {
-  const marker = usePart('mockup', 'marker'), stroke = usePart('mockup', 'stroke'), path = usePart('mockup', 'strokePath'), ripple = usePart('mockup', 'ripple');
+  const marker = { ...usePart('mockup', 'marker'), ...vm.markerPointer }, stroke = usePart('mockup', 'stroke'), path = usePart('mockup', 'strokePath'), ripple = usePart('mockup', 'ripple');
   const submitted = vm.submitted && !item.resolved;
   const [created, setCreated] = useState(() => vm.created.current.has(item.id));
   useLayoutEffect(() => { vm.created.current.delete(item.id); }, [item.id]);

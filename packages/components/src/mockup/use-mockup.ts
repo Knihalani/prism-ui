@@ -157,7 +157,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     } else void target(item.id, rect, client);
   }
   function point(event: { clientX: number; clientY: number }, box: DOMRect): FeedbackPoint { return [Number(clamp((event.clientX - box.left) / (box.width || 1) * 100).toFixed(2)), Number(clamp((event.clientY - box.top) / (box.height || 1) * 100).toFixed(2))]; }
-  function collect(event: PointerEvent<HTMLDivElement>) {
+  function collect(event: PointerEvent<HTMLElement>) {
     const g = gesture.current; if (!g || event.pointerId !== g.pointerId) return;
     const samples = event.nativeEvent.getCoalescedEvents?.();
     for (const sample of samples?.length ? [...samples, event.nativeEvent] : [event.nativeEvent]) {
@@ -166,10 +166,10 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
       live.current.points.push(p); live.current.pressure.push(live.current.realPressure ? Math.max(0, Math.min(1, sample.pressure || 0)) : .5);
     }
   }
-  const pointer = useTouchFeedback({ canvas, viewport, zoom, setZoom, enabled, inline: !!options.inline, cancel: cancelGesture, pointer: {
-    onPointerDown(event: PointerEvent<HTMLDivElement>) { if (event.button !== 0 || submitted || gesture.current) return; if (event.pointerType !== 'touch' || tool !== 'pin') { event.preventDefault(); event.currentTarget.focus({ preventScroll: true }); } event.currentTarget.setPointerCapture?.(event.pointerId); const box = event.currentTarget.getBoundingClientRect(), p = point(event, box); gesture.current = { clientX: event.clientX, clientY: event.clientY, box, element: event.currentTarget, pointerId: event.pointerId, pointerType: event.pointerType, moved: false }; live.current = { points: [p], pressure: [event.pointerType === 'pen' ? event.pressure : .5], realPressure: event.pointerType === 'pen', hover: null, tool }; livePaint.current?.(); },
-    onPointerMove(event: PointerEvent<HTMLDivElement>) { if (submitted) return; const g = gesture.current; if (g?.pointerType === 'touch' && live.current.tool === 'pin') { g.moved ||= Math.hypot(event.clientX - g.clientX, event.clientY - g.clientY) >= 5; return; } if (g) collect(event); else live.current.hover = point(event, event.currentTarget.getBoundingClientRect()); livePaint.current?.(); },
-    onPointerUp(event: PointerEvent<HTMLDivElement>) {
+  const { pointer, markerPointer } = useTouchFeedback({ canvas, viewport, zoom, setZoom, enabled, inline: !!options.inline, cancel: cancelGesture, pointer: {
+    onPointerDown(event: PointerEvent<HTMLElement>) { if (event.button !== 0 || submitted || gesture.current) return; if (event.pointerType !== 'touch' || tool !== 'pin') { event.preventDefault(); event.currentTarget.focus({ preventScroll: true }); } event.currentTarget.setPointerCapture?.(event.pointerId); const box = event.currentTarget.getBoundingClientRect(), p = point(event, box); gesture.current = { clientX: event.clientX, clientY: event.clientY, box, element: event.currentTarget, pointerId: event.pointerId, pointerType: event.pointerType, moved: false }; live.current = { points: [p], pressure: [event.pointerType === 'pen' ? event.pressure : .5], realPressure: event.pointerType === 'pen', hover: null, tool }; livePaint.current?.(); },
+    onPointerMove(event: PointerEvent<HTMLElement>) { if (submitted) return; const g = gesture.current; if (g?.pointerType === 'touch' && live.current.tool === 'pin') { g.moved ||= Math.hypot(event.clientX - g.clientX, event.clientY - g.clientY) >= 5; return; } if (g) collect(event); else live.current.hover = point(event, event.currentTarget.getBoundingClientRect()); livePaint.current?.(); },
+    onPointerUp(event: PointerEvent<HTMLElement>) {
       const g = gesture.current; if (!g || event.pointerId !== g.pointerId) return; collect(event);
       const { points, pressure, realPressure, tool: selected } = live.current, p = points.at(-1)!, first = points[0]; cancelGesture();
       if (g.pointerType === 'touch' && selected === 'pin' && (g.moved || Math.hypot(event.clientX - g.clientX, event.clientY - g.clientY) >= 5)) return;
@@ -177,7 +177,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
       else if (selected === 'pin' && Math.hypot(event.clientX - g.clientX, event.clientY - g.clientY) < 5) add({ x: p[0], y: p[1] }, undefined, [event.clientX, event.clientY]);
       else { add({ x: Math.min(first[0], p[0]), y: Math.min(first[1], p[1]), w: Math.abs(first[0] - p[0]), h: Math.abs(first[1] - p[1]) }, undefined, [event.clientX, event.clientY]); announce(labels.regionAdded.replace('{size}', regionDimensions(first, p, g.box.width, g.box.height, scale))); }
     },
-    onPointerCancel(event: PointerEvent<HTMLDivElement>) { if (gesture.current?.pointerId === event.pointerId) cancelGesture(); }, onLostPointerCapture(event: PointerEvent<HTMLDivElement>) { if (gesture.current?.pointerId === event.pointerId) cancelGesture(); }, onPointerLeave() { live.current.hover = null; livePaint.current?.(); },
+    onPointerCancel(event: PointerEvent<HTMLElement>) { if (gesture.current?.pointerId === event.pointerId) cancelGesture(); }, onLostPointerCapture(event: PointerEvent<HTMLElement>) { if (gesture.current?.pointerId === event.pointerId) cancelGesture(); }, onPointerLeave() { live.current.hover = null; livePaint.current?.(); },
   } });
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.defaultPrevented || event.nativeEvent.isComposing) return;
@@ -193,7 +193,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     if (pill) for (const node of Array.from(root.current?.querySelectorAll<HTMLElement>('[data-part="marker"],[data-part="stroke"]') ?? [])) { const bounds = node.getBoundingClientRect(); node.style.setProperty('--prism-mockup-exit-x', `${(pill.left + pill.width / 2 - bounds.left - bounds.width / 2) / scale}px`); node.style.setProperty('--prism-mockup-exit-y', `${(pill.top + pill.height / 2 - bounds.top - bounds.height / 2) / scale}px`); }
     cancelGesture(); close(); const saved = commit(() => candidate.toJSON(), true); const payload = createFeedback(saved).toPayload(), message = toMessage(payload, { strings: labels }); if (options.inline) emit('feedback', { ...payload, target: { name: component!.name, id: component!.id }, coordinates: 'percent' }, message); else receipt.send('feedback', payload, message); setEditing(null); }
   return { flash, created, listRef, highlight, props, kind, framed, complete, labels, title, source, svg, root, viewport, canvas, iframe, graphic, visible: visible && enabled, width, scale, contentHeight, device, setDevice, zoom, setZoom, expanded, showSource, setShowSource, tool, setTool, pen: tool === 'draw', setPen: setPenValue, color: colorValue, setColor: setColorValue, active, setActive, editing, comment, setComment, announcement, reticle, focused, setFocused, live, livePaint, get hover() { return live.current.hover; }, get rubber() { return live.current.points; }, pointer, onKeyDown, canvasKey, feedback: { ...feedback, canUndo, canRedo, undo, redo }, state, resolved, submitted, setSubmitted, open, remove, save, saveOverall, move, cancel, close, popoverPosition, locale: ctx.format.locale, canSubmit: submission().canSubmit, imageError, setImageError,
-    imageSrc: /^(https:|data:image\/)/i.test((props.src ?? source).trim()) ? (props.src ?? source).trim() : undefined,
+    markerPointer, imageSrc: /^(https:|data:image\/)/i.test((props.src ?? source).trim()) ? (props.src ?? source).trim() : undefined,
     imageLoaded(width: number, height: number) { setNaturalWidth(width || 800); grow(height || 400); },
     async fullscreen() { try { if (document.fullscreenElement) await document.exitFullscreen(); else if (root.current?.requestFullscreen) await root.current.requestFullscreen(); else setExpanded(old => !old); } catch { setExpanded(old => !old); } },
     async copy() { try { await navigator.clipboard?.writeText(source); } catch {} },
