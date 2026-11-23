@@ -2,6 +2,7 @@
 .prism-inline-feedback[data-inline] { display: inline-block; container-type: normal; vertical-align: baseline; }
 .prism-inline-feedback__target { display: block; position: relative; min-width: 0; z-index: 0; }
 .prism-inline-feedback__trigger { position: absolute; z-index: 8; inset: 4px 4px auto auto; width: 30px; height: 30px; padding: 6px; border: 1px solid var(--prism-border); border-radius: var(--prism-radius-pill); background: var(--prism-surface-raised); color: var(--prism-text); box-shadow: var(--prism-elevation-1); cursor: pointer; transition: opacity var(--prism-motion-fast) var(--prism-motion-ease), translate var(--prism-motion-fast) var(--prism-motion-ease), scale var(--prism-motion-spring-duration) var(--prism-motion-spring); }
+.prism-inline-feedback > .prism-inline-feedback__trigger { pointer-events: auto !important; }
 .prism-inline-feedback[data-feedback-open] > .prism-inline-feedback__trigger { opacity: 1; translate: 0 0; pointer-events: auto; }
 .prism-inline-feedback__trigger:active { transition-duration: var(--prism-motion-instant); }
 .prism-inline-feedback__trigger:focus-visible { outline: 2px solid var(--prism-focus); outline-offset: 2px; }

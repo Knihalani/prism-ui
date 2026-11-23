@@ -196,3 +196,15 @@
 .prism-root .prism-mockup__toolbar { flex-wrap: wrap; min-inline-size: 0; }
 .prism-mockup__member:not(:hover, :focus-within) .prism-mockup__headerActions { opacity: 1; }
 .prism-mockup__stage { overflow: clip; }
+.prism-mockup__secondaryTools { display: flex; align-items: center; gap: var(--prism-space-1); }
+.prism-mockup__secondaryTools[data-location="overflow"] { display: none; }
+@container (max-width: 360px) {
+  .prism-root[data-prism-theme-name] .prism-mockup__member .prism-mockup__header { flex-direction: column; align-items: stretch; }
+  .prism-root[data-prism-theme-name] .prism-mockup__header > .prism-mockup__toolbar { position: static; flex-wrap: nowrap; align-self: flex-end; }
+  .prism-root[data-prism-theme-name] .prism-mockup__header .prism-mockup__tools { flex: none; flex-wrap: nowrap; }
+  .prism-root[data-prism-theme-name] .prism-mockup__headerActions { flex-wrap: nowrap; }
+  .prism-mockup__toolLabel { display: none; }
+  .prism-mockup__tool { min-inline-size: var(--prism-space-8); padding-inline: var(--prism-space-1); }
+  .prism-mockup__secondaryTools[data-location="toolbar"] { display: none; }
+  .prism-mockup__secondaryTools[data-location="overflow"] { display: flex; flex-wrap: wrap; }
+}

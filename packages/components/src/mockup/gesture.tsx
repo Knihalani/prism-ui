@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { PrismPart, usePart } from '@prism-ui/react';
 import { MockupIcon as Icon } from './icon';
 import { regionDimensions, strokeOutline } from './outline';
+import { placeReadout } from './placement';
 import type { MockupModel } from './use-mockup';
 
 export function useCanvasSize(vm: MockupModel) {
@@ -36,9 +37,9 @@ export function GestureOverlay({ vm, size }: { vm: MockupModel; size: { width: n
         dimension.current.hidden = !region;
         if (region && last) {
           dimension.current.textContent = regionDimensions(first, last, width, height, vm.scale);
-          const contentWidth = width / vm.scale, contentHeight = height / vm.scale, x = last[0] / 100 * contentWidth, y = last[1] / 100 * contentHeight;
-          const w = dimension.current.offsetWidth, h = dimension.current.offsetHeight, gap = 6 / vm.scale;
-          Object.assign(dimension.current.style, { left: `${Math.max(0, Math.min(contentWidth - w, x + w + gap > contentWidth ? x - w - gap : x + gap))}px`, top: `${Math.max(0, Math.min(contentHeight - h, y + h + gap > contentHeight ? y - h - gap : y + gap))}px` });
+          const contentWidth = vm.canvas.current?.clientWidth || width / vm.scale, contentHeight = vm.canvas.current?.clientHeight || height / vm.scale;
+          const position = placeReadout(contentWidth, contentHeight, last[0] / 100 * contentWidth, last[1] / 100 * contentHeight, dimension.current.offsetWidth, dimension.current.offsetHeight, 6 * contentWidth / width);
+          Object.assign(dimension.current.style, { left: `${position.left}px`, top: `${position.top}px` });
         }
       }
       if (hint.current) { hint.current.hidden = !hover || !!first || !!vm.state.items.length || vm.submitted; if (hover) Object.assign(hint.current.style, { left: `${Math.min(65, hover[0])}%`, top: `${hover[1]}%` }); }

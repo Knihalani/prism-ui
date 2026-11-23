@@ -1,4 +1,8 @@
 export interface SurfaceRect { left: number; top: number; width: number; height: number }
+export function placeReadout(width: number, height: number, x: number, y: number, labelWidth: number, labelHeight: number, gap = 6) {
+  const fit = (corner: number, size: number, limit: number) => Math.max(0, Math.min(limit - size - gap, corner + size + gap > limit ? corner - size - gap : corner + gap));
+  return { left: fit(x, labelWidth, width), top: fit(y, labelHeight, height) };
+}
 const overlap = (a: SurfaceRect, b: SurfaceRect) => Math.max(0, Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.top + a.height, b.top + b.height) - Math.max(a.top, b.top));
 
 export function placeComposer(surface: SurfaceRect, anchor: { x: number; y: number }, viewport: { width: number; height: number }, height = 210, avoid?: SurfaceRect) {

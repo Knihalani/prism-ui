@@ -10,6 +10,16 @@ import '../src/num';
 afterEach(cleanup);
 const source = '```ui:feedback-test\n{"id":"target"}\n```';
 const View = () => <button>Actual input</button>;
+test('the feedback trigger retains its hit region while reveal chrome is transparent', async () => {
+  const css = await Bun.file(new URL('../src/feedback.css', import.meta.url)).text();
+  expect(css).toContain('.prism-inline-feedback > .prism-inline-feedback__trigger { pointer-events: auto !important; }');
+  const view = render(<Prism feedback source={source} renderers={{ 'feedback-test': View }} />);
+  const trigger = view.getByRole('button', { name: 'Give feedback' });
+  fireEvent.mouseMove(trigger);
+  fireEvent.click(trigger);
+  expect(trigger.getAttribute('aria-expanded')).toBe('true');
+  expect(view.getByRole('application')).toBeDefined();
+});
 function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.focus(element); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); }
 
 test('saved feedback is store-owned through revisions, local cancellation, finalization, history and explicit commits', () => {
