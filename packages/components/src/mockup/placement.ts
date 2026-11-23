@@ -5,10 +5,12 @@ export function placeReadout(width: number, height: number, x: number, y: number
 }
 const overlap = (a: SurfaceRect, b: SurfaceRect) => Math.max(0, Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.top + a.height, b.top + b.height) - Math.max(a.top, b.top));
 
-export function placeComposer(surface: SurfaceRect, anchor: { x: number; y: number }, viewport: { width: number; height: number }, height = 210, avoid?: SurfaceRect) {
-  const minX = Math.max(12, surface.left + 12), maxX = Math.min(viewport.width - 12, surface.left + surface.width - 12);
-  const width = Math.max(0, Math.min(260, maxX - minX)), constrainY = surface.height >= height + 24;
-  const minY = Math.max(12, constrainY ? surface.top + 12 : 12), maxY = Math.max(minY, Math.min(viewport.height - height - 12, constrainY ? surface.top + surface.height - height - 12 : Infinity));
+export function placeComposer(surface: SurfaceRect, anchor: { x: number; y: number }, viewport: { width: number; height: number; left?: number; top?: number }, height = 210, avoid?: SurfaceRect) {
+  const left = viewport.left ?? 0, top = viewport.top ?? 0, available = Math.max(0, viewport.height - 24);
+  height = Math.min(height, available);
+  const minX = Math.max(left + 12, Math.min(left + viewport.width - 12, surface.left + 12)), maxX = Math.max(minX, Math.min(left + viewport.width - 12, surface.left + surface.width - 12));
+  const width = Math.max(0, Math.min(260, maxX - minX)), constrainY = surface.height >= height + 24 && surface.top < top + viewport.height - height - 12 && surface.top + surface.height > top + height + 12;
+  const minY = Math.min(top + viewport.height - height - 12, Math.max(top + 12, constrainY ? surface.top + 12 : top + 12)), maxY = Math.max(minY, Math.min(top + viewport.height - height - 12, constrainY ? surface.top + surface.height - height - 12 : Infinity));
   const pin = { left: anchor.x - 17, top: anchor.y - 17, width: 34, height: 34 };
   const candidates = [
     { left: anchor.x - 24, top: anchor.y + 24 }, { left: anchor.x - 24, top: anchor.y - height - 24 },
