@@ -1,6 +1,6 @@
 import '../../react/test/setup';
 import { expect, test } from 'bun:test';
-import { createRef, type ElementType, type ReactNode } from 'react';
+import { createRef, type CSSProperties, type ElementType, type ReactNode } from 'react';
 import { act, fireEvent, render, within } from '@testing-library/react';
 import { Prism, ThemeScope, host } from '@prism-ui/react';
 import { createStore } from '../../state/src';
@@ -40,7 +40,7 @@ test('Print solid badges preserve six distinct semantic inks in light and dark',
 
 test('Instrument narrow Pick keeps weights and scores compact without dropping evidence', () => {
   expect(instrument.css).toContain('.instrument-fader { display:grid; grid-template-columns:minmax(0,1fr) 92px;');
-  expect(instrument.css).toContain('.instrument-score { grid-column:2; grid-row:2/4;');
+  expect(instrument.css).toContain('.instrument-score { grid-column:2; grid-row:1/3;');
   expect(instrument.css).toContain('.instrument-notes { margin:2px 0; line-height:1.4; }');
   expect(instrument.css).toContain('.instrument-module-actions:empty { display:none; }');
 });
@@ -251,6 +251,30 @@ test('Instrument shares its segmented geometry between Estimate and module score
   fireEvent.click(ui.getByRole('button', { name: 'Choose Concierge ↗' }));
   expect(actions.at(-1)).toMatchObject({ type: 'choose', payload: { option: 'concierge', weights: { learning: 3, cost: 0 } } });
   expect(view.container.querySelector('[data-instrument-module][data-top] [role="status"]')?.textContent).toBe('Chosen');
+});
+
+test('compact Instrument modules disclose runner-up evidence while retaining weights and choices', () => {
+  const theme = { ...instrument, components: { ...instrument.components, pick: { ...instrument.components?.pick, styles: { list: { '--prism-pick-compact': '1' } as CSSProperties } } } };
+  const source = (options: object[]) => '```ui:pick\n' + JSON.stringify({ id: 'compact-modules', criteria: [{ id: 'cost', label: 'Cost' }], options }) + '\n```';
+  const actions: { type: string; payload: unknown }[] = [];
+  const view = render(<Prism source={source([{ id: 'alpha', title: 'Alpha', scores: { cost: .9 }, pros: ['Leader evidence'] }, { id: 'beta', title: 'Beta', subtitle: 'Alternative', scores: { cost: .5 }, pros: ['Runner-up evidence'], cons: ['Trade-off'] }])} theme={theme} animate={false} onAction={action => actions.push(action)} />);
+  const ui = within(view.container), toggle = ui.getByRole('button', { name: 'Beta' });
+  const details = view.container.querySelector<HTMLElement>(`[id="${toggle.getAttribute('aria-controls')}"]`)!;
+  expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  expect(details.hidden).toBe(true);
+  expect(details.textContent).toContain('Runner-up evidence');
+  expect(details.textContent).toContain('Trade-off');
+  expect(ui.getByText('Leader evidence')).toBeTruthy();
+  fireEvent.click(toggle);
+  expect(details.hidden).toBe(false);
+  expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  fireEvent.input(ui.getByRole('slider', { name: 'Cost weight' }), { target: { value: '2' } });
+  fireEvent.click(ui.getByRole('button', { name: 'Choose Beta ↗' }));
+  expect(actions.at(-1)).toMatchObject({ type: 'choose', payload: { option: 'beta', weights: { cost: 2 } } });
+  view.rerender(<Prism source={source([{ id: 'pending', title: 'Pending' }])} theme={theme} animate={false} />);
+  expect(view.container.querySelector('[data-instrument-module]')?.getAttribute('aria-busy')).toBe('true');
+  view.rerender(<Prism source={source([])} theme={theme} animate={false} />);
+  expect(view.container.querySelector('[data-instrument-module]')).toBeNull();
 });
 
 test('Instrument keeps Estimate Undo, switch, submit and sent behavior in dark mode', () => {
