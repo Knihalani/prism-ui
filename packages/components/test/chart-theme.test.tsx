@@ -88,3 +88,18 @@ test('moving axes stay canvas-clipped and grids plot-clipped without dangling em
     expect(view.container.querySelectorAll('[clip-path]')).toHaveLength(0);
   }
 });
+
+test('custom plot point and layer slots receive current active selection on keyboard and hover', () => {
+  const Point = forwardRef<any, any>(function Point({ as, chart, series, point, ...props }, ref) { return <circle {...props} ref={ref} data-active-point={chart.active?.index ?? 'none'} />; });
+  const Layer = forwardRef<any, any>(function Layer({ as, chart, series, point, ...props }, ref) { return <g {...props} ref={ref} data-active-layer={chart.active?.index ?? 'none'} />; });
+  const view = render(<Prism registry={registry} source={source({ ...base, annotations: [], insight: undefined })} animate={false} slots={{ chart: { point: Point, layer: Layer } }} />);
+  const active = () => view.container.querySelector('[data-active-point]')?.getAttribute('data-active-point');
+  expect(active()).toBe('none');
+  fireEvent.keyDown(view.getByRole('img'), { key: 'End' });
+  expect(active()).toBe('2');
+  expect(view.container.querySelector('[data-active-layer]')?.getAttribute('data-active-layer')).toBe('2');
+  fireEvent.pointerLeave(view.getByRole('img'));
+  expect(active()).toBe('none');
+  fireEvent.pointerMove(view.container.querySelector('[data-index="0"][data-series="0"]')!);
+  expect(active()).toBe('0');
+});

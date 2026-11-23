@@ -39,7 +39,7 @@ const Plot = memo(function Plot({ chart, geometry: g }: { chart: ChartModel; geo
       <Part part="annotation-label" as="text" chart={chart} x={annotation.x + 8} y={annotation.y + 15}>{annotation.label}</Part>
     </Part>)}
   </Part>;
-}, (a, b) => a.geometry === b.geometry && a.chart.id === b.chart.id && a.chart.pivot === b.chart.pivot && JSON.stringify(a.chart.strings) === JSON.stringify(b.chart.strings));
+}, (a, b) => a.geometry === b.geometry && a.chart.id === b.chart.id && a.chart.pivot === b.chart.pivot && a.chart.interaction === b.chart.interaction && a.chart.active?.index === b.chart.active?.index && a.chart.active?.series === b.chart.active?.series && JSON.stringify(a.chart.strings) === JSON.stringify(b.chart.strings));
 function ActiveMark({ chart }: { chart: ChartModel }) {
   const g = chart.geometry, active = chart.active;
   if (!active || active.index < 0 || !chart.shown.length) return null;
