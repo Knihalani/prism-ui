@@ -1,0 +1,115 @@
+import { expect, test } from 'bun:test';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import type { SiteRoute } from '../src/routes';
+import { normalizeBase, sitePath } from '../src/paths';
+import { exampleLoaders } from '../src/islands/loaders';
+
+const dist = fileURLToPath(new URL('../dist/', import.meta.url));
+const docsDirectory = fileURLToPath(new URL('../../../docs/', import.meta.url));
+const result = Bun.spawnSync(['bun', '-e', `
+  import { defaultRegistry } from '@prism-ui/react';
+  import { getRoutes } from './src/routes';
+  import { renderPage } from './scripts/render';
+  const routes = getRoutes();
+  const names = defaultRegistry.list().map(def => def.name);
+  const template = '<html lang="en"><head><title>Prism</title></head><body><!--site--></body></html>';
+  const pages = routes.map(route => renderPage(route, template, '/prism-ui/'));
+  defaultRegistry.register({ name: 'empty-fixture', component: () => null, docs: 'Literal $& replacement text', examples: [], parts: [], strings: {} });
+  const emptyPage = renderPage({ kind: 'component', path: '/components/empty-fixture/', name: 'empty-fixture', title: 'Empty' }, template, '/');
+  const artifact = defaultRegistry.get('artifact');
+  const artifactFallbacks = ['\u0060\u0060\u0060artifact:react\\nexport default () => null\\n\u0060\u0060\u0060', ''].map(source => {
+    defaultRegistry.register({ ...artifact, examples: source ? [source] : [] });
+    return renderPage(routes.find(route => route.name === 'artifact'), template, '/');
+  });
+  console.log(JSON.stringify({ routes, names, pages, emptyPage, artifactFallbacks }));
+`], { cwd: fileURLToPath(new URL('../', import.meta.url)) });
+if (result.exitCode !== 0) throw new Error(result.stderr.toString());
+const { routes, names, pages, emptyPage, artifactFallbacks } = JSON.parse(result.stdout.toString()) as { routes: SiteRoute[]; names: string[]; pages: string[]; emptyPage: string; artifactFallbacks: string[] };
+
+test('empty references render readable fallbacks and literal replacement characters', () => {
+  expect(emptyPage).toContain('Literal $&amp; replacement text');
+  expect(emptyPage).not.toContain('<!--site-->');
+  expect(emptyPage).toContain('No authoring example is registered.');
+  expect(emptyPage).toContain('No declared props.');
+  expect(emptyPage).toContain('No replaceable parts declared.');
+  expect(emptyPage).toContain('No registered string defaults.');
+});
+
+test('Artifact reference has a script-disabled static preview instead of a permanent loading state', () => {
+  const html = pages[routes.findIndex(route => route.name === 'artifact')].split('<section class="example-section"')[1].split('</section>')[0];
+  expect(html).not.toContain('aria-label="Preparing preview"');
+  expect(html).toContain('title="Static artifact preview"');
+  expect(html).toContain('sandbox=""');
+  expect(html).toContain('Shipping checklist');
+  expect(html).not.toContain('allow-scripts');
+});
+
+test('non-static and empty Artifact examples link to readable source rather than loading forever', () => {
+  for (const page of artifactFallbacks) {
+    const html = page.split('<section class="example-section"')[1].split('</section>')[0];
+    expect(html).toContain('The live preview requires JavaScript.');
+    expect(html).toContain('href="#source"');
+    expect(html).not.toContain('aria-label="Preparing preview"');
+  }
+});
+
+test('every registered component and top-level Markdown document has a unique prerendered route', () => {
+  const paths = routes.map(route => route.path);
+  expect(new Set(paths).size).toBe(paths.length);
+  for (const name of names) expect(paths).toContain(`/components/${name}/`);
+  for (const file of readdirSync(docsDirectory).filter(file => file.endsWith('.md'))) expect(paths).toContain(`/docs/${file.slice(0, -3).toLowerCase()}/`);
+  for (const html of pages) {
+    expect(html).toContain('id="main"');
+    expect(html).toContain('<h1');
+    expect(html).not.toContain('<!--site-->');
+    expect(html).toContain('href="/prism-ui/components/"');
+  }
+  for (const [index, route] of routes.entries()) if (route.kind === 'component') {
+    expect(pages[index]).toContain('data-props-table=""');
+    expect(pages[index]).toContain('data-parts-list=""');
+    expect(pages[index]).toContain(`data-component="${route.name}"`);
+    expect(Object.keys(exampleLoaders)).toContain(route.name!);
+  }
+  const gallery = pages[routes.findIndex(route => route.kind === 'gallery')];
+  for (const name of names) expect(gallery.replaceAll('<!-- -->', '')).toContain(`Open ${name} reference`);
+  expect(gallery.match(/class="gallery-preview/g)?.length).toBe(names.length);
+  expect(gallery).not.toContain('data-island=');
+  for (const [index, route] of routes.entries()) if (route.kind === 'doc') {
+    expect(pages[index]).toContain('class="prose"');
+    expect(pages[index]).toContain('class="doc-toc"');
+    expect(pages[index]).toContain('class="heading-anchor"');
+    if (readFileSync(resolve(docsDirectory, route.file!), 'utf8').includes('```')) expect(pages[index]).toContain('data-copy="doc-code-0"');
+    else expect(pages[index]).not.toContain('data-copy="doc-code-0"');
+  }
+  const themes = pages[routes.findIndex(route => route.kind === 'themes')];
+  expect(themes.match(/class="theme-column"/g)?.length).toBe(5);
+  expect(themes).toContain('playground/themes.html?editor=1');
+});
+
+test.skipIf(!existsSync(resolve(dist, 'index.html')))('every internal link and asset in built HTML resolves under its deployment base', () => {
+  function htmlFiles(directory: string): string[] { return readdirSync(directory, { withFileTypes: true }).flatMap(entry => entry.isDirectory() ? htmlFiles(resolve(directory, entry.name)) : entry.name.endsWith('.html') ? [resolve(directory, entry.name)] : []); }
+  const deploymentBase = readFileSync(resolve(dist, 'index.html'), 'utf8').match(/<meta name="site-base" content="([^"]+)"/)?.[1] ?? '/';
+  for (const file of htmlFiles(dist).map(path => relative(dist, path))) {
+    const html = readFileSync(resolve(dist, file), 'utf8');
+    const base = html.match(/<meta name="site-base" content="([^"]+)"/)?.[1] ?? deploymentBase;
+    for (const match of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
+      const url = new URL(match[1].replaceAll('&amp;', '&'), `https://site.example${base}${file}`);
+      if (url.origin !== 'https://site.example') continue;
+      expect(url.pathname.startsWith(base)).toBe(true);
+      const path = decodeURIComponent(url.pathname.slice(base.length));
+      if (path === 'playground/themes.html' && !existsSync(resolve(dist, path))) continue;
+      const target = resolve(dist, path.endsWith('/') || !path ? path + 'index.html' : path);
+      expect(existsSync(target), `${file} → ${match[1]}`).toBe(true);
+      if (url.hash && target.endsWith('.html')) expect(readFileSync(target, 'utf8'), `${file} → ${match[1]}`).toContain(`id="${decodeURIComponent(url.hash.slice(1))}"`);
+    }
+  }
+});
+
+test('deployment paths normalize slashes and reject non-path bases', () => {
+  expect(normalizeBase()).toBe('/');
+  expect(normalizeBase('/prism-ui')).toBe('/prism-ui/');
+  expect(sitePath('/prism-ui/', '/components/num/')).toBe('/prism-ui/components/num/');
+  for (const base of ['https://example.com/', '//example.com/', '../docs', '/a/../', '/a?b', '/a#b', '/a\\b', '/<script>', '/a"b', '/a b']) expect(() => normalizeBase(base)).toThrow();
+});
