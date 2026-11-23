@@ -2,10 +2,13 @@ import { useContext, useId, useLayoutEffect, useMemo, useRef, useState, type Key
 import { createFlip, ComponentContext, useComponentState, useEmit, useFlash, useSent, useStrings, useTheme, type PrismContextValue } from '@prism-ui/react';
 import { s } from '@prism-ui/schema';
 import { filter, prepare } from '../lib/fuzzy';
-import { format } from '../lib/format';
+import { numericCell, numeric, scalar } from '../lib/format/cell';
 import { componentStrings } from '../strings';
 import { interpolate } from '../interpolate';
 import { useFrame } from '../frame';
+import { tableColumns, tableEntries } from '../lib/table';
+
+export { formatCell, inferType, numericCell } from '../lib/format/cell';
 
 export interface DataTableColumn {
   key: string; label?: string; type?: 'text' | 'number' | 'currency' | 'date';
@@ -59,30 +62,6 @@ export const dataTableSchema = s.object({
 });
 
 const emptyRows: DataTableRow[] = [];
-export function inferType(values: unknown[]): DataTableColumn['type'] {
-  const present = values.filter(value => value != null && value !== '');
-  if (!present.length) return 'text';
-  if (present.every(value => typeof value === 'number' || /^-?(?:\d[\d,]*)(?:\.\d+)?%?$/.test(String(value)))) return 'number';
-  if (present.every(value => /^[$€£¥]-?[\d,]+(?:\.\d+)?$/.test(String(value)))) return 'currency';
-  if (present.every(value => /^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(String(value)) && Number.isFinite(Date.parse(String(value))))) return 'date';
-  return 'text';
-}
-function numeric(value: unknown) { return typeof value === 'number' ? value : Number(String(value).replace(/[$€£¥,%\s]/g, '')); }
-function scalar(value: unknown) { return value == null || ['string', 'number', 'boolean'].includes(typeof value) ? value : undefined; }
-function inferCurrency(value: unknown) { return ({ '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY' } as Record<string, string>)[String(value)[0]]; }
-export function numericCell(input: unknown, column: DataTableColumn): number | undefined {
-  const value = scalar(input);
-  const kind = column.format ?? column.type ?? 'text';
-  if (!['number', 'currency', 'compact', 'percent'].includes(kind) || value == null || value === '') return;
-  return numeric(value);
-}
-export function formatCell(input: unknown, column: DataTableColumn, context: PrismContextValue['format'], intermediate?: number) {
-  const value = scalar(input);
-  return format(intermediate ?? numericCell(value, column) ?? value, column.format ?? column.type ?? 'text', {
-    locale: context.locale, currency: column.currency ?? (column.type === 'currency' ? inferCurrency(value) : undefined) ?? context.currencyCode,
-    fallback: value == null ? '' : String(value),
-  });
-}
 function useDataTableState(props: DataTableProps, ctx: PrismContextValue) {
   const defaults = { ...dataTableStrings, ...ctx.registry.get('dataTable')?.strings };
   const canonical = useStrings('dataTable', defaults), theme = useTheme().theme, component = useContext(ComponentContext);
@@ -91,30 +70,14 @@ function useDataTableState(props: DataTableProps, ctx: PrismContextValue) {
   const strings = { ...canonical, ...labels, ...Object.fromEntries(Object.entries(delegated).filter(([, value]) => typeof value === 'string')), ...theme.components.datatable?.strings, ...theme.components.table?.strings, ...theme.components.dataTable?.strings } as Record<string, string>;
 
   const rows = Array.isArray(props.rows) ? props.rows : emptyRows, complete = props.complete !== false;
-  const columns = useMemo(() => {
-    const first = rows.find(row => row && typeof row === 'object' && !Array.isArray(row));
-    return (Array.isArray(props.columns) ? props.columns.filter(column => column && typeof column.key === 'string' && column.key) : Object.keys(first ?? {}).map(key => ({ key } as DataTableColumn))).map(column => {
-      const type = ['text', 'number', 'currency', 'date'].includes(column.type!) ? column.type : inferType(rows.map(row => scalar(row?.[column.key])));
-      const format = ['text', 'number', 'currency', 'percent', 'compact', 'date', 'datetime'].includes(column.format!) ? column.format : undefined;
-      const numericFormat = ['number', 'currency', 'percent', 'compact'].includes(format ?? type ?? '');
-      return { key: column.key, type, label: typeof column.label === 'string' ? column.label : column.key,
-        align: ['left', 'center', 'right'].includes(column.align!) ? column.align : numericFormat ? 'right' : 'left',
-        format,
-        currency: typeof column.currency === 'string' ? column.currency : undefined,
-        magnitude: column.magnitude === true, badge: column.badge === true, detail: column.detail === true };
-    });
-  }, [rows, props.columns]);
+  const columns = useMemo(() => tableColumns(rows, props.columns), [rows, props.columns]);
   const [sort, setSort] = useComponentState<{ key: string; direction: 'asc' | 'desc' } | null>('sort', null);
   const [query, setQuery] = useComponentState('filter', '');
   const [page, setPage] = useComponentState('page', 0);
   const [selection, setSelection] = useComponentState<number[]>('selection', []);
   const [scrollTop, setScrollTop] = useState(0), [focusIndex, setFocusIndex] = useState<number | null>(null);
   const { sent, send, reset } = useSent(), mode = props.select ?? (props.selectable ? 'multiple' : undefined);
-  const entries = useMemo(() => rows.flatMap((row, index) => {
-    if (!row || typeof row !== 'object' || Array.isArray(row)) return [];
-    const cells = columns.map(column => formatCell(row[column.key], column, ctx.format));
-    return [{ row, index, cells }];
-  }), [rows, columns, ctx.format]);
+  const entries = useMemo(() => tableEntries(rows, columns, ctx.format), [rows, columns, ctx.format]);
   const search = useMemo(() => prepare(entries, entry => entry.cells.join(' ')), [entries]);
   const ordered = useMemo(() => {
     let result = entries;
