@@ -288,7 +288,10 @@ export const instrument = defineTheme({
     :scope .prism-tabs__indicator { display:none; }
     :scope .prism-tab__body { padding:18px 0; }
     :scope .prism-badge__root { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text); }
-    :scope .prism-badge__root[data-variant="solid"] { background:var(--prism-accent); color:var(--prism-on-accent); }
+    :scope .prism-badge__root[data-tone="neutral"] { --prism-badge-color:var(--prism-text); }
+    :scope .prism-badge__root[data-variant="solid"] { background:var(--prism-badge-color); color:var(--prism-badge-on-accent,#fff); }
+    :scope .prism-badge__root[data-variant="solid"][data-tone="neutral"] { color:var(--prism-bg); }
+    :scope .prism-badge__root[data-variant="solid"][data-tone="accent"] { color:var(--prism-on-accent); }
     :scope .prism-grid__body { gap:20px; }
     :scope .prism-grid__body > .prism-card__root { margin:0; }
     :scope .prism-grid__body > .prism-card__root::before { display:none; }
@@ -320,7 +323,7 @@ export const instrument = defineTheme({
     :scope .prism-runbook__check[data-state="done"] { color:var(--prism-text); background:var(--prism-bg); border-color:var(--prism-border-strong); box-shadow:inset 0 1px 2px var(--prism-frame-key-shadow); }
     :scope .prism-runbook__check[data-state="done"]::after { background:var(--prism-accent); box-shadow:0 0 5px var(--prism-accent); }
     :scope .prism-badge__root { border:1px solid var(--prism-border-strong); border-radius:2px; padding:3px 8px; background:var(--prism-bg); box-shadow:inset 0 1px 2px var(--prism-frame-key-shadow); }
-    :scope .prism-badge__dot { background:var(--prism-accent); }
+    :scope .prism-badge__dot { background:var(--prism-badge-color); }
     :scope .prism-troubleshoot__position { color:var(--prism-accent); background:var(--prism-frame-display); border:1px solid var(--prism-border-strong); border-radius:2px; padding:5px 8px; }
     :scope :is(.prism-summary__send,.prism-troubleshoot__primary) { border-radius:3px; box-shadow:0 3px 0 var(--prism-frame-key-shadow); }
     :scope .prism-summary__quote { background:var(--prism-bg); border-color:var(--prism-accent); }

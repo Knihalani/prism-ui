@@ -45,6 +45,15 @@ test('Instrument narrow Pick keeps weights and scores compact without dropping e
   expect(instrument.css).toContain('.instrument-module-actions:empty { display:none; }');
 });
 
+test('Instrument and Objects solid badges retain semantic fills and contrasting foregrounds', () => {
+  for (const theme of [instrument, objects]) {
+    expect(theme.css).toContain('background:var(--prism-badge-color); color:var(--prism-badge-on-accent,#fff);');
+    expect(theme.css).toContain('[data-variant="solid"][data-tone="neutral"] { color:var(--prism-bg); }');
+    expect(theme.css).toContain('[data-variant="solid"][data-tone="accent"] { color:var(--prism-on-accent); }');
+  }
+  expect(instrument.css).toContain('.prism-badge__dot { background:var(--prism-badge-color); }');
+});
+
 test('Instrument tabs keep whole labels in a scrollable strip with narrow chassis padding', () => {
   const view = render(<Prism theme={instrument} source={'::::tabs{title="Be available"}\n:::tab{label="Before"}\nFirst\n:::\n:::tab{label="During"}\nSecond\n:::\n::::'} animate={false} />);
   expect(within(view.container).getByRole('tab', { name: 'Before' }).textContent).toBe('Before');
