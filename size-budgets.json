@@ -60,9 +60,9 @@
       "reason": "All frame/controls, utilities, eager grammars, strings, tokens and common styles, once."
     },
     "react": {
-      "js": 23331,
+      "js": 24536,
       "css": 4096,
-      "reason": "Shared React renderer, reply motion, themes, markdown and integration prompt API; merged-main JS plus 5%."
+      "reason": "Shared React renderer, themes and synchronous exit snapshots; PR #47 merge build measured 23367B plus 5%, rounded up."
     },
     "core": {
       "js": 12288,

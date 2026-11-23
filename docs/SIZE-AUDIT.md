@@ -1,5 +1,27 @@
 # Component size audit
 
+## PR #47 CI merge-build checkpoint
+
+GitHub Actions checked out merge commit `20c7a3f`, combining branch `31de9eb`
+with main `953ae94`, rather than building the standalone branch measured below.
+Local reproduction of that exact merge with Bun 1.4.4 matches CI. This is a
+source-integration difference, not a Bun-version or nondeterministic size issue.
+
+| Own JS gzip, bytes | Standalone branch | Main | PR merge build |
+|---|---:|---:|---:|
+| React | 22301 | 23297 | 23367 |
+| Chart | 9604 | 9671 | 9667 |
+| DataTable | 8502 | 8554 | 8536 |
+| Shared | 24923 | 25011 | 25011 |
+
+Only React exceeds its inherited 23,331B cap: main has 34B of headroom and the
+PR's retained-snapshot work adds 70B to the merged runtime. The React source
+diff against main is confined to `skeleton.tsx`. Rebase only that JS cap to
+**24,536B = ceil(23,367 × 1.05)**. CSS and every other cap remain unchanged.
+This budget-only CI fix does not alter runtime behavior or test timeouts.
+The original CI run passed TypeScript and all tests (**1,342 pass, 2 skip,
+0 fail**) before failing `react js: 23367 > 23331B` in the size step.
+
 ## Synchronous Chart/DataTable follow-up
 
 Fresh comparison: `origin/main` **953ae94**, versus this follow-up after
