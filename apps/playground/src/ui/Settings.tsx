@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import type { AgentConfig } from '../agent/config';
-import { modelPresets, type Provider } from '../agent/policy';
+import { modelPresets, resolveModel, type Provider } from '../agent/policy';
 
 export function Settings({ config, anchor, onSave, onForget, onClose }: { config: AgentConfig; anchor: RefObject<HTMLButtonElement | null>; onSave(config: AgentConfig, baseline: AgentConfig): boolean; onForget(provider: Provider): boolean; onClose(): void }) {
-  const baseline = useRef<AgentConfig>({ ...config, keys: { ...config.keys }, models: Object.fromEntries((Object.keys(modelPresets) as Provider[]).map(name => [name, config.models?.[name] || (name === config.provider ? config.model : undefined) || modelPresets[name][0]])) });
+  const baseline = useRef<AgentConfig>({ ...config, keys: { ...config.keys }, models: Object.fromEntries((Object.keys(modelPresets) as Provider[]).map(name => [name, resolveModel(name, config.models?.[name] ?? (name === config.provider ? config.model : undefined))])) });
   const [provider, setProvider] = useState(config.provider ?? 'openai');
   const presets: readonly string[] = provider === 'scripted' ? [] : modelPresets[provider];
   const [keys, setKeys] = useState(baseline.current.keys ?? {});
@@ -46,7 +46,7 @@ export function Settings({ config, anchor, onSave, onForget, onClose }: { config
   }, [anchor, onClose]);
   function save(nextKeys = keys) {
     setError('');
-    if (!onSave({ provider, keys: nextKeys, apiKey: provider === 'scripted' ? '' : nextKeys[provider] ?? '', model: model.trim(), models }, baseline.current)) setError('Browser storage is unavailable. Nothing was saved.');
+    if (!onSave({ provider, keys: nextKeys, apiKey: provider === 'scripted' ? '' : nextKeys[provider] ?? '', model, models }, baseline.current)) setError('Browser storage is unavailable. Nothing was saved.');
   }
   const target = anchor.current?.closest('.chat-app') ?? document.body;
   return createPortal(<div ref={ref} id="model-settings" className="model-popover" role="dialog" aria-label="Connect a model" style={position}>

@@ -6,6 +6,10 @@ export const modelPresets = {
 } as const;
 export type Provider = keyof typeof modelPresets;
 
+export function resolveModel(provider: Provider | 'scripted', model?: string): string {
+  return (typeof model === 'string' ? model.trim() : '') || (provider === 'scripted' ? '' : modelPresets[provider][0]);
+}
+
 export function boundedSnapshot(value: unknown): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   if (!value || typeof value !== 'object') return result;

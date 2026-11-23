@@ -1,7 +1,7 @@
 import { createLlmAgent, type LlmOptions } from './llm';
 import { createScriptedAgent } from './scripted';
 import type { Agent } from './types';
-import { modelPresets, type Provider } from './policy';
+import { modelPresets, resolveModel, type Provider } from './policy';
 
 export type AgentConfig = { provider?: LlmOptions['provider'] | 'scripted'; apiKey?: string; model?: string; keys?: Partial<Record<Provider, string>>; models?: Partial<Record<Provider, string>> };
 export function loadAgentConfig(): AgentConfig {
@@ -15,14 +15,15 @@ export function loadAgentConfig(): AgentConfig {
   const models: Partial<Record<Provider, string>> = {};
   for (const name of Object.keys(modelPresets) as Provider[]) {
     if (typeof stored.keys?.[name] === 'string') keys[name] = stored.keys[name];
-    if (typeof stored.models?.[name] === 'string') models[name] = stored.models[name];
+    if (typeof stored.models?.[name] === 'string') models[name] = resolveModel(name, stored.models[name]);
   }
-  if (provider !== 'scripted' && models[provider] === undefined && typeof stored.model === 'string' && stored.model) models[provider] = stored.model;
+  if (provider !== 'scripted' && models[provider] === undefined && typeof stored.model === 'string') models[provider] = resolveModel(provider, stored.model);
   if (!stored.keys && provider !== 'scripted' && typeof stored.apiKey === 'string') {
     keys[provider] = stored.apiKey;
-    saveAgentConfig({ provider, keys, model: stored.model });
+    models[provider] = resolveModel(provider, models[provider]);
+    saveAgentConfig({ provider, keys, models, model: models[provider] });
   }
-  return { provider, keys, models, apiKey: provider === 'scripted' ? '' : keys[provider] ?? '', model: provider === 'scripted' ? typeof stored.model === 'string' ? stored.model : '' : models[provider] ?? '' };
+  return { provider, keys, models, apiKey: provider === 'scripted' ? '' : keys[provider] ?? '', model: resolveModel(provider, provider === 'scripted' ? stored.model : models[provider]) };
 }
 export function createAgent(config: AgentConfig = loadAgentConfig()): Agent {
   const provider = config.provider ?? 'openai';
@@ -40,11 +41,11 @@ function updateAgentConfig(config?: AgentConfig, forgotten?: Provider, baseline?
     const models: Partial<Record<Provider, string>> = {};
     for (const name of Object.keys(modelPresets) as Provider[]) {
       if (typeof stored.keys?.[name] === 'string') keys[name] = stored.keys[name];
-      if (typeof stored.models?.[name] === 'string') models[name] = stored.models[name];
+      if (typeof stored.models?.[name] === 'string') models[name] = resolveModel(name, stored.models[name]);
     }
     const previous = stored.provider ?? 'openai';
     if (!stored.keys && previous !== 'scripted' && Object.hasOwn(modelPresets, previous) && typeof stored.apiKey === 'string') keys[previous] = stored.apiKey;
-    if (previous !== 'scripted' && Object.hasOwn(modelPresets, previous) && models[previous] === undefined && typeof stored.model === 'string' && stored.model) models[previous] = stored.model;
+    if (previous !== 'scripted' && Object.hasOwn(modelPresets, previous) && models[previous] === undefined && typeof stored.model === 'string') models[previous] = resolveModel(previous, stored.model);
     const provider = config ? config.provider ?? 'openai' : previous === forgotten ? 'scripted' : previous;
     if (forgotten) delete keys[forgotten];
     else if (config) {
@@ -56,11 +57,10 @@ function updateAgentConfig(config?: AgentConfig, forgotten?: Provider, baseline?
         }
         const model = config.models?.[name] ?? (name === provider ? config.model : undefined);
         const before = baseline?.models?.[name] ?? (name === baseline?.provider ? baseline.model : undefined);
-        const nextModel = model?.trim();
-        if ((baseline ? model !== before : name === provider) && nextModel) models[name] = nextModel;
+        if ((baseline ? model !== before : name === provider) && model?.trim()) models[name] = resolveModel(name, model);
       }
     }
-    const model = config ? provider === 'scripted' ? config.model : models[provider] : stored.model;
+    const model = provider === 'scripted' ? resolveModel(provider, config ? config.model : stored.model) : models[provider];
     globalThis.localStorage.setItem('prism-agent', JSON.stringify({ provider, keys, models, model }));
     return true;
   } catch { return false; }

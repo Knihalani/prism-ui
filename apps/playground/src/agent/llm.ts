@@ -2,7 +2,7 @@ import '@prism-ui/components';
 import { createSystemPrompt } from '@prism-ui/react';
 import type { Agent, AgentEvent } from './types';
 import { describeActionTurn } from './interaction';
-import { artifactStatePaths, modelPresets, type Provider } from './policy';
+import { artifactStatePaths, resolveModel, type Provider } from './policy';
 
 export interface LlmOptions { provider: Provider; apiKey: string; model?: string; baseUrl?: string; referer?: string; title?: string; fetch?: typeof globalThis.fetch }
 class ProviderRequestError extends Error {
@@ -55,7 +55,7 @@ export function createLlmAgent(options: LlmOptions): Agent {
         const base = options.baseUrl ?? (anthropic ? 'https://api.anthropic.com/v1' : options.provider === 'openrouter' ? 'https://openrouter.ai/api/v1' : 'https://api.openai.com/v1');
         const response = await (options.fetch ?? globalThis.fetch)(base.replace(/\/$/, '') + (anthropic ? '/messages' : '/chat/completions'), {
           method: 'POST', signal, headers,
-          body: JSON.stringify({ model: options.model || modelPresets[options.provider][0], stream: true, ...(anthropic ? { system: systemPrompt(), max_tokens: 8192, messages } : { ...(options.provider === 'openrouter' ? { max_tokens: 8192 } : {}), messages: [{ role: 'system', content: systemPrompt() }, ...messages] }) }),
+          body: JSON.stringify({ model: resolveModel(options.provider, options.model), stream: true, ...(anthropic ? { system: systemPrompt(), max_tokens: 8192, messages } : { ...(options.provider === 'openrouter' ? { max_tokens: 8192 } : {}), messages: [{ role: 'system', content: systemPrompt() }, ...messages] }) }),
         });
         if (!response.ok) throw new ProviderRequestError(response.status);
         for await (const event of sse(response, signal)) {

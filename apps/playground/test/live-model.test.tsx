@@ -44,6 +44,32 @@ test('legacy credentials migrate to one provider and never follow provider chang
   expect(loadAgentConfig().keys?.openai).toBe('private-openai');
 });
 
+test.each(['openai', 'anthropic', 'openrouter'] as const)('%s legacy model migration normalizes blanks and surrounding whitespace', provider => {
+  for (const model of [undefined, '', ' \n\t ', ' custom-model ']) {
+    const expected = model === ' custom-model ' ? 'custom-model' : modelPresets[provider][0];
+    localStorage.setItem('prism-agent', JSON.stringify({ provider, apiKey: 'legacy-test-key', model }));
+    const config = loadAgentConfig();
+    expect(config.model).toBe(expected);
+    expect(config.models?.[provider]).toBe(expected);
+    const saved = JSON.parse(localStorage.getItem('prism-agent')!);
+    expect(saved.model).toBe(expected);
+    expect(saved.models[provider]).toBe(expected);
+    expect(saved).not.toHaveProperty('apiKey');
+  }
+});
+
+test.each(['openai', 'anthropic', 'openrouter'] as const)('%s requests never send blank or untrimmed model IDs', async provider => {
+  for (const model of [undefined, '', ' \n\t ', ' custom-model ']) {
+    let requestedModel: unknown;
+    const agent = createLlmAgent({ provider, apiKey: 'test-only', model, fetch: (async (_url, init) => {
+      requestedModel = JSON.parse(String(init?.body)).model;
+      return new Response('data: [DONE]\n\n');
+    }) as typeof fetch });
+    await collect(agent.respond({ kind: 'message', text: 'Hello', history: [] }, signal()));
+    expect(requestedModel).toBe(model === ' custom-model ' ? 'custom-model' : modelPresets[provider][0]);
+  }
+});
+
 test('storage errors stay quiet and never put a key in errors or URL state', async () => {
   const key = 'private-credential-canary';
   const restore = blockStorage(key);
@@ -227,7 +253,7 @@ test.each(['saved-model-a', undefined])('a blank active model draft keeps the sa
   if (!savedModel) fireEvent.change(view.getByLabelText('Model preset'), { target: { value: 'custom' } });
   change(view.getByLabelText('Model'), ' \t ');
   fireEvent.click(view.getByRole('button', { name: 'Save changes' }));
-  expect(loadAgentConfig().model).toBe(savedModel ?? '');
+  expect(loadAgentConfig().model).toBe(savedModel ?? modelPresets.openai[0]);
   expect(view.getByRole('button', { name: `Live · ${savedModel ?? modelPresets.openai[0]}` })).toBeDefined();
 });
 

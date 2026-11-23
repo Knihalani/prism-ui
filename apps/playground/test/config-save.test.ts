@@ -1,6 +1,7 @@
 import '../../../packages/react/test/setup';
 import { afterEach, expect, test } from 'bun:test';
 import { forgetAgentKey, loadAgentConfig, saveAgentConfig } from '../src/agent/config';
+import { modelPresets } from '../src/agent/policy';
 
 afterEach(() => localStorage.clear());
 
@@ -80,5 +81,5 @@ test.each(['openai', 'anthropic'] as const)('blank model drafts preserve the new
   saveAgentConfig({ ...baseline, model: 'newer-model', models: { openai: 'newer-model' } });
   expect(saveAgentConfig({ ...baseline, provider, model: ' \t\n ', models: { ...baseline.models, openai: ' \t\n ' } }, baseline)).toBe(true);
   expect(loadAgentConfig().models).toEqual({ openai: 'newer-model' });
-  expect(loadAgentConfig().model).toBe(provider === 'openai' ? 'newer-model' : '');
+  expect(loadAgentConfig().model).toBe(provider === 'openai' ? 'newer-model' : modelPresets.anthropic[0]);
 });

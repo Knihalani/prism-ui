@@ -2,7 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { createLlmAgent, systemPrompt } from '../src/agent/llm';
 import { evals, type EvalRecording } from '../src/agent/evals';
-import { modelPresets, type Provider } from '../src/agent/policy';
+import { modelPresets, resolveModel, type Provider } from '../src/agent/policy';
 import type { Agent } from '../src/agent/types';
 
 async function main() {
@@ -11,7 +11,7 @@ async function main() {
   const keyNames = { openai: 'OPENAI_API_KEY', anthropic: 'ANTHROPIC_API_KEY', openrouter: 'OPENROUTER_API_KEY' };
   const apiKey = process.env[keyNames[provider as Provider]];
   if (!apiKey) throw Error('The selected provider key is not configured.');
-  const model = process.env.EVAL_MODEL || modelPresets[provider as Provider][0];
+  const model = resolveModel(provider as Provider, process.env.EVAL_MODEL);
   const baseUrl = process.env.EVAL_BASE_URL;
   if (baseUrl) {
     const url = new URL(baseUrl);
