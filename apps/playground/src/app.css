@@ -54,6 +54,28 @@ button, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .send-btn:disabled { background: var(--prism-border-strong, var(--app-line)); color: var(--prism-text-muted, var(--app-muted)) !important; }
 .model-status { display: block; width: fit-content; max-width: 100%; margin: 10px auto 0; padding: 0 4px; background: transparent; border: 0; color: var(--app-muted) !important; font-size: 11px; line-height: 20px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
 .model-status:hover { color: var(--app-text) !important; }
+.model-dot { display: inline-block; width: 5px; height: 5px; margin-right: 6px; border-radius: 50%; background: var(--app-muted); vertical-align: 1px; }
+.model-dot[data-live="true"] { background: var(--prism-success, #39866b); box-shadow: 0 0 0 3px color-mix(in srgb, var(--prism-success, #39866b) 12%, transparent); }
+.model-popover { position: fixed; z-index: 80; max-height: calc(100dvh - 16px); overflow-y: auto; padding: 18px; border: 1px solid var(--app-line); border-radius: var(--prism-radius-lg, 14px); background: var(--app-bg); color: var(--app-text); box-shadow: 0 16px 48px #0002, 0 2px 8px #0001; font: 12px/1.5 var(--prism-font-body, sans-serif); }
+.model-popover header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.model-popover header strong { display: block; font-size: 14px; font-weight: 550; letter-spacing: -.02em; }
+.model-popover header span { display: block; color: var(--app-muted); font-size: 11px; margin-top: 2px; }
+.provider-segments { display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: var(--app-hover, color-mix(in srgb, var(--app-text) 5%, transparent)); margin-bottom: 16px; }
+.provider-segments button { flex: 1 0 auto; min-width: 0; padding: 5px 1px; border: 0; border-radius: 5px; background: transparent; color: var(--app-muted); font-size: 11px; cursor: pointer; }
+.provider-segments button[aria-pressed="true"] { background: var(--app-bg); color: var(--app-text); box-shadow: 0 1px 4px #0001; }
+.model-popover label { display: block; margin-top: 12px; font-size: 11px; font-weight: 500; }
+.model-popover input, .model-popover select { width: 100%; min-width: 0; margin-top: 5px; padding: 8px 10px; border: 1px solid var(--app-line); border-radius: 7px; color: var(--app-text); background: var(--app-bg); font: inherit; }
+.model-key { position: relative; }
+.model-key input { padding-right: 50px; }
+.model-key button { position: absolute; right: 8px; top: 12px; padding: 0; border: 0; background: transparent; color: var(--app-muted); font-size: 10px; cursor: pointer; }
+.model-popover .model-notice { color: var(--app-muted); font-size: 10px; margin: 14px 0; white-space: nowrap; }
+.model-popover footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.model-popover footer button { border: 0; border-radius: 7px; padding: 7px 10px; font: inherit; cursor: pointer; }
+.forget-key { background: transparent; color: var(--app-muted); }
+.forget-key:disabled { opacity: .45; cursor: default; }
+.model-popover .save-model { background: var(--prism-accent, var(--app-accent)); color: var(--prism-on-accent, var(--app-bg)); }
+.model-storage-error { font-size: 11px; color: var(--app-muted); }
+.model-popover :focus-visible { outline: 2px solid var(--prism-accent, var(--app-accent)); outline-offset: 2px; }
 .suggestions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; margin-top: 31px; }
 .suggestion { position: relative; display: grid; grid-template-columns: 20px 1fr; gap: 3px 10px; text-align: left; padding: 14px; border: 1px solid transparent; border-radius: var(--prism-radius-lg, 12px); background: var(--prism-surface, var(--app-fill)); transition: transform var(--prism-motion-base, 180ms) var(--prism-motion-spring, cubic-bezier(.2,.8,.2,1)), background var(--prism-motion-base, 180ms); }
 .suggestion > svg { margin-top: 4px; color: var(--app-muted); }

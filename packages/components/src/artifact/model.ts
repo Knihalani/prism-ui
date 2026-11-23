@@ -9,7 +9,7 @@ export const artifactSchema = s.object({
   height: s.union(s.enum(['auto']), s.number({ min: 80, max: 4096 })).default('auto').describe('Auto-size to content, or reserve a fixed height in pixels.'),
   variant: s.enum(['inline', 'panel', 'minimal']).default('inline'),
   size: s.enum(['sm', 'md', 'lg']).default('md').describe('Initial preview size when height is auto.'),
-  kind: s.enum(kinds).describe('Selected by the artifact:html|react|svg|js|markdown fence language.'),
+  kind: s.enum(kinds).describe('Selected by the fence language, not JSON metadata.'),
   source: s.string().describe('Source goes inside the fence, not in the metadata.'),
 });
 export type ArtifactProps = Infer<typeof artifactSchema>;

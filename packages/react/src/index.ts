@@ -6,6 +6,8 @@ export { usePrismStream } from './stream';
 export type { PrismStream, StreamOptions } from './stream';
 export { createRegistry, defineComponent, defaultRegistry, registerComponent, toPromptDocs } from './registry';
 export type { ComponentDef, PrismComponentProps, Registry } from './registry';
+export { createSystemPrompt, actionToMessage } from './prompt';
+export type { SystemPromptOptions } from './prompt';
 export { PrismContext, ComponentContext, PrismPart, usePrism, usePart, useSlot, useStrings, cx, useStore, useFormat, message } from './context';
 export type { Action, Middleware, PrismContextValue, Components, Slots, ClassNames, Styles } from './context';
 export { useStoreValue, useComponentState, useFormula, useEmit } from './hooks';

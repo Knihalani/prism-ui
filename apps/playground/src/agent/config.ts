@@ -1,19 +1,67 @@
 import { createLlmAgent, type LlmOptions } from './llm';
 import { createScriptedAgent } from './scripted';
 import type { Agent } from './types';
+import { modelPresets, resolveModel, type Provider } from './policy';
 
-export type AgentConfig = { provider?: LlmOptions['provider'] | 'scripted'; apiKey?: string; model?: string };
+export type AgentConfig = { provider?: LlmOptions['provider'] | 'scripted'; apiKey?: string; model?: string; keys?: Partial<Record<Provider, string>>; models?: Partial<Record<Provider, string>> };
 export function loadAgentConfig(): AgentConfig {
-  const env = (import.meta as ImportMeta & { env?: Record<string, string> }).env ?? {};
   let stored: AgentConfig = {};
   try {
     const value = JSON.parse(globalThis.localStorage?.getItem('prism-agent') ?? '{}');
     if (value && typeof value === 'object') stored = value;
   } catch {}
-  const provider = stored.provider === 'scripted' || stored.provider === 'anthropic' || stored.provider === 'openai' ? stored.provider : env.VITE_PRISM_PROVIDER === 'anthropic' ? 'anthropic' : 'openai';
-  return { provider, apiKey: typeof stored.apiKey === 'string' ? stored.apiKey : (provider === 'anthropic' ? env.VITE_ANTHROPIC_API_KEY : env.VITE_OPENAI_API_KEY), model: typeof stored.model === 'string' ? stored.model : env.VITE_PRISM_MODEL };
+  const provider = stored.provider === 'scripted' || Object.hasOwn(modelPresets, stored.provider ?? '') ? stored.provider! : 'openai';
+  const keys: Partial<Record<Provider, string>> = {};
+  const models: Partial<Record<Provider, string>> = {};
+  for (const name of Object.keys(modelPresets) as Provider[]) {
+    if (typeof stored.keys?.[name] === 'string') keys[name] = stored.keys[name];
+    if (typeof stored.models?.[name] === 'string') models[name] = resolveModel(name, stored.models[name]);
+  }
+  if (provider !== 'scripted' && models[provider] === undefined && typeof stored.model === 'string') models[provider] = resolveModel(provider, stored.model);
+  if (!stored.keys && provider !== 'scripted' && typeof stored.apiKey === 'string') {
+    keys[provider] = stored.apiKey;
+    models[provider] = resolveModel(provider, models[provider]);
+    saveAgentConfig({ provider, keys, models, model: models[provider] });
+  }
+  return { provider, keys, models, apiKey: provider === 'scripted' ? '' : keys[provider] ?? '', model: resolveModel(provider, provider === 'scripted' ? stored.model : models[provider]) };
 }
 export function createAgent(config: AgentConfig = loadAgentConfig()): Agent {
-  return config.provider !== 'scripted' && config.apiKey?.trim() ? createLlmAgent({ ...config, provider: config.provider ?? 'openai', apiKey: config.apiKey }) : createScriptedAgent();
+  const provider = config.provider ?? 'openai';
+  const apiKey = provider === 'scripted' ? '' : config.keys ? config.keys[provider] : config.apiKey;
+  return provider !== 'scripted' && apiKey?.trim() ? createLlmAgent({ provider, apiKey: apiKey.trim(), model: config.model }) : createScriptedAgent();
 }
-export function saveAgentConfig(config: AgentConfig) { globalThis.localStorage.setItem('prism-agent', JSON.stringify(config)); }
+export function saveAgentConfig(config: AgentConfig, baseline?: AgentConfig): boolean { return updateAgentConfig(config, undefined, baseline); }
+export function forgetAgentKey(provider: Provider): boolean { return updateAgentConfig(undefined, provider); }
+function updateAgentConfig(config?: AgentConfig, forgotten?: Provider, baseline?: AgentConfig): boolean {
+  try {
+    let stored: AgentConfig = {};
+    const raw = globalThis.localStorage.getItem('prism-agent');
+    try { stored = JSON.parse(raw ?? '{}') ?? {}; } catch {}
+    const keys: Partial<Record<Provider, string>> = {};
+    const models: Partial<Record<Provider, string>> = {};
+    for (const name of Object.keys(modelPresets) as Provider[]) {
+      if (typeof stored.keys?.[name] === 'string') keys[name] = stored.keys[name];
+      if (typeof stored.models?.[name] === 'string') models[name] = resolveModel(name, stored.models[name]);
+    }
+    const previous = stored.provider ?? 'openai';
+    if (!stored.keys && previous !== 'scripted' && Object.hasOwn(modelPresets, previous) && typeof stored.apiKey === 'string') keys[previous] = stored.apiKey;
+    if (previous !== 'scripted' && Object.hasOwn(modelPresets, previous) && models[previous] === undefined && typeof stored.model === 'string') models[previous] = resolveModel(previous, stored.model);
+    const provider = config ? config.provider ?? 'openai' : previous === forgotten ? 'scripted' : previous;
+    if (forgotten) delete keys[forgotten];
+    else if (config) {
+      for (const name of Object.keys(modelPresets) as Provider[]) {
+        const key = config.keys ? config.keys[name] : name === provider ? config.apiKey : undefined;
+        if (baseline ? (key ?? '') !== (baseline.keys?.[name] ?? '') : name === provider) {
+          if (key) keys[name] = key;
+          else delete keys[name];
+        }
+        const model = config.models?.[name] ?? (name === provider ? config.model : undefined);
+        const before = baseline?.models?.[name] ?? (name === baseline?.provider ? baseline.model : undefined);
+        if ((baseline ? model !== before : name === provider) && model?.trim()) models[name] = resolveModel(name, model);
+      }
+    }
+    const model = provider === 'scripted' ? resolveModel(provider, config ? config.model : stored.model) : models[provider];
+    globalThis.localStorage.setItem('prism-agent', JSON.stringify({ provider, keys, models, model }));
+    return true;
+  } catch { return false; }
+}
