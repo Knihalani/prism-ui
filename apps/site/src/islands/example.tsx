@@ -32,6 +32,7 @@ export function Example({ data, bundle, snapshot }: { data: ExampleData; bundle:
   const [ready, setReady] = useState(false), [playing, setPlaying] = useState(false);
   const [theme, setTheme] = useState<Theme | undefined>(), [themeName, setThemeName] = useState('host');
   const [mode, setMode] = useState<'auto' | 'light' | 'dark'>('auto'), [error, setError] = useState('');
+  const [actionMessage, setActionMessage] = useState('');
   const current = useRef<ReturnType<typeof createReplay> | null>(null), request = useRef(0);
   useEffect(() => {
     setReady(true);
@@ -46,7 +47,7 @@ export function Example({ data, bundle, snapshot }: { data: ExampleData; bundle:
     return () => { container?.removeAttribute('data-live'); request.current++; };
   }, []);
   function select(next: number) {
-    current.current?.stop(); setPlaying(false); setIndex(next); setSource(data.sources[next] ?? ''); setStore(createStore({ initial: { rent: 1200 } }));
+    current.current?.stop(); setPlaying(false); setActionMessage(''); setIndex(next); setSource(data.sources[next] ?? ''); setStore(createStore({ initial: { rent: 1200 } }));
     const root = document.querySelector('[data-component-page]');
     root?.querySelectorAll<HTMLElement>('[data-source-index]').forEach(element => { element.hidden = Number(element.dataset.sourceIndex) !== next; });
   }
@@ -73,8 +74,8 @@ export function Example({ data, bundle, snapshot }: { data: ExampleData; bundle:
       <label>Mode <select aria-label="Example color mode" disabled={!ready} value={mode} onChange={event => setMode(event.target.value as typeof mode)}><option value="auto">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
       <button className="text-button" type="button" disabled={!ready} onClick={() => void replay()}>{playing ? 'Restart stream' : 'Replay stream'}</button>
     </div>
-    <p role="status" className={error ? 'example-error' : 'sr-only'}>{error || (playing ? 'Example streaming' : 'Example ready')}</p>
-    <div className="live-example" aria-busy={playing} {...(!enhanced && snapshot !== undefined ? { dangerouslySetInnerHTML: { __html: snapshot } } : { children: source ? <Prism key={index} source={source} registry={bundle.registry} plugins={bundle.plugins} store={store} scope={`example-${data.name}`} done={!playing} animate={false} theme={theme} mode={mode} /> : <p className="empty-example">{playing ? 'Reply starting…' : 'No authoring example is registered.'}</p> })} />
+    <p role="status" className={error ? 'example-error' : 'sr-only'}>{error || (playing ? 'Example streaming' : actionMessage || 'Example ready')}</p>
+    <div className="live-example" aria-busy={playing} {...(!enhanced && snapshot !== undefined ? { dangerouslySetInnerHTML: { __html: snapshot } } : { children: source ? <Prism key={index} source={source} registry={bundle.registry} plugins={bundle.plugins} store={store} scope={`example-${data.name}`} done={!playing} animate={false} theme={theme} mode={mode} onAction={action => setActionMessage(action.message)} /> : <p className="empty-example">{playing ? 'Reply starting…' : 'No authoring example is registered.'}</p> })} />
   </>;
 }
 

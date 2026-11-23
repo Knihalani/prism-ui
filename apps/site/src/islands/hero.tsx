@@ -15,7 +15,8 @@ import '@prism-ui/components/ask.css';
 const registry = createRegistry([num, calc, chartDefinition, askDefinition]);
 
 export function Hero() {
-  const [store] = useState(() => createStore({ initial: heroInitial }));
+  const [store, setStore] = useState(() => createStore({ initial: heroInitial }));
+  const [actionMessage, setActionMessage] = useState('');
   const [source, setSource] = useState(heroSource), [playing, setPlaying] = useState(false);
   const [ready, setReady] = useState(false), [mode, setMode] = useState<'auto' | 'light' | 'dark'>('auto');
   const current = useRef<ReturnType<typeof createReplay> | null>(null), reply = useRef<HTMLDivElement>(null);
@@ -33,7 +34,7 @@ export function Hero() {
   }, []);
   async function replay() {
     current.current?.stop();
-    store.set('seats', heroInitial.seats, { history: false });
+    setStore(createStore({ initial: heroInitial })); setActionMessage('');
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) { setSource(heroSource); setPlaying(false); return; }
     if (reply.current) reply.current.style.minHeight = `${reply.current.getBoundingClientRect().height}px`;
     const next = createReplay(heroSource); current.current = next;
@@ -45,11 +46,11 @@ export function Hero() {
     <h2 className="sr-only">A team plan, in an assistant reply</h2>
     <p className="user-prompt">What would it cost to bring my team on board?</p>
     <div className="hero-reply" ref={reply} aria-label="Interactive assistant reply" aria-busy={playing}>
-      <Prism registry={registry} store={store} scope="site-hero" source={source} done={!playing} animate={false} mode={mode} />
+      <Prism registry={registry} store={store} scope="site-hero" source={source} done={!playing} animate={false} mode={mode} onAction={action => setActionMessage(action.message)} />
     </div>
     <button className="text-button replay" type="button" onClick={replay} disabled={!ready} aria-label={playing ? 'Restart reply' : 'Replay reply'}><span aria-hidden="true">↻</span> {playing ? 'Restart' : 'Replay'}</button>
     <div className="reply-note"><span aria-hidden="true">↔</span> Try changing the underlined number. Everything stays connected.</div>
-    <span className="sr-only" role="status">{playing ? 'Reply streaming. Replay again to restart.' : 'Reply ready to explore.'}</span>
+    <span className="sr-only" role="status">{playing ? 'Reply streaming. Replay again to restart.' : actionMessage || 'Reply ready to explore.'}</span>
   </>;
 }
 
