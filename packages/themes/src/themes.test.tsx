@@ -33,7 +33,7 @@ test('Print and Objects expose named themes and dark tokens', () => {
 test('Print solid badges preserve six distinct semantic inks in light and dark', () => {
   const tones = ['neutral', 'accent', 'info', 'success', 'warning', 'danger'];
   const view = render(<Prism theme={print} source={tones.map(tone => `:badge[${tone}]{tone=${tone} variant=solid}`).join(' ')} animate={false} />);
-  expect([...view.container.querySelectorAll('[data-variant="solid"]')].map(el => el.getAttribute('data-tone'))).toEqual(tones);
+  expect(Array.from(view.container.querySelectorAll('[data-variant="solid"]')).map(el => el.getAttribute('data-tone'))).toEqual(tones);
   for (const palette of [print.tokens!, { ...print.tokens, ...print.dark }]) expect(new Set([palette.text, palette.accent, palette.info, palette.positive, palette.warning, palette.danger]).size).toBe(6);
   expect(print.css).toContain('background:var(--prism-badge-color); color:var(--prism-bg);');
 });
