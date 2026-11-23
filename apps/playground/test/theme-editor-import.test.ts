@@ -113,3 +113,41 @@ test('empty and garbage input return an empty import and unrelated selectors are
   }
   expect(importCssVariables(':root{--unknown:ok}').unmapped).toEqual(['--unknown']);
 });
+
+test.each(['.theme-dark', '[data-mode=dark]', '[data-mode="dark"]', "[data-mode='dark']", ':root:not(.light).dark'])('%s positively selects a dark scope', selector => {
+  const result = importCssVariables(selector + '{--background:#111}');
+  expect(result.tokens).toEqual({});
+  expect(result.dark).toEqual({ bg: '#111' });
+});
+
+test.each([':root:not(.dark)', ':root:not(.theme-dark)', ':root:not([data-theme="dark"])', ':root:not([data-mode=dark])', ':root:not(:is(.dark, .theme-dark, [data-theme=dark]))'])('%s does not positively select dark', selector => {
+  const result = importCssVariables(selector + '{--background:#fff}');
+  expect(result.tokens).toEqual({ bg: '#fff' });
+  expect(result.dark).toEqual({});
+});
+
+test('colour-scheme media queries separate light and dark root declarations', () => {
+  const result = importCssVariables(`
+    @media (prefers-color-scheme: light) { :root { --background: #fff; } }
+    @media (prefers-color-scheme: dark) { :root { --background: #111; } }
+  `);
+  expect(result.tokens).toEqual({ bg: '#fff' });
+  expect(result.dark).toEqual({ bg: '#111' });
+});
+
+test('nested media and layer blocks retain dark context through root and theme blocks', () => {
+  const result = importCssVariables(`
+    @layer base {
+      :root:not(.dark) { --background: #fff; }
+      @media screen and (prefers-color-scheme: dark) {
+        @media (min-width: 600px) {
+          @layer palette { :root { --background: #111; } }
+          @theme inline { --color-primary: #abc; }
+        }
+      }
+      @media (prefers-color-scheme: light) { @layer palette { :root { --primary: #123; } } }
+    }
+  `);
+  expect(result.tokens).toEqual({ bg: '#fff', accent: '#123', accentText: '#123' });
+  expect(result.dark).toEqual({ bg: '#111', accent: '#abc', accentText: '#abc' });
+});

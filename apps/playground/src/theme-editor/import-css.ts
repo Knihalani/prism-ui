@@ -2,6 +2,8 @@ import type { Tokens } from '@prism-ui/react';
 
 export type CssImport = { tokens: Partial<Tokens>; dark: Partial<Tokens>; mapped: string[]; unmapped: string[] };
 type Variables = { values: Map<string, string>; candidates: Map<string, string> };
+type Mode = 'light' | 'dark';
+type Context = { modes: Mode[]; media?: Mode };
 const variables = (): Variables => ({ values: new Map(), candidates: new Map() });
 
 function withoutComments(css: string): string {
@@ -21,22 +23,46 @@ function withoutComments(css: string): string {
   return result;
 }
 
-function targets(header: string, inherited: ('light' | 'dark')[]): ('light' | 'dark')[] {
-  if (/^@theme(?:\s+inline)?\s*$/i.test(header)) return inherited.length ? inherited : ['light'];
-  if (header.startsWith('@')) return inherited;
-  const result = new Set<'light' | 'dark'>();
-  for (const selector of header.split(',')) {
-    if (/\.dark(?![\w-])|\[data-theme\s*=\s*(?:"dark"|'dark'|dark)\s*\]/i.test(selector)) result.add('dark');
-    else if (/:root(?![\w-])/.test(selector)) result.add('light');
+function withoutNegation(selector: string): string {
+  let result = '', quote = '';
+  for (let i = 0; i < selector.length; i++) {
+    const c = selector[i];
+    if (quote) {
+      result += c;
+      if (c === '\\') result += selector[++i] ?? '';
+      else if (c === quote) quote = '';
+    } else if (c === '"' || c === "'") { quote = c; result += c; }
+    else if (selector.slice(i, i + 5).toLowerCase() === ':not(') {
+      const end = closingParen(selector, i + 5);
+      if (end < 0) break;
+      i = end;
+    } else result += c;
   }
-  return [...result];
+  return result;
+}
+
+function targets(header: string, inherited: Context): Context {
+  if (/^@media\b/i.test(header)) {
+    const preference = /\(\s*prefers-color-scheme\s*:\s*(dark|light)\s*\)/i.exec(header)?.[1].toLowerCase() as Mode | undefined;
+    const media = inherited.media === 'dark' ? 'dark' : preference ?? inherited.media;
+    return { modes: media ? [media] : inherited.modes, media };
+  }
+  if (/^@theme(?:\s+inline)?\s*$/i.test(header)) return { ...inherited, modes: inherited.modes.length ? inherited.modes : ['light'] };
+  if (header.startsWith('@') || inherited.media) return inherited;
+  const result = new Set<Mode>();
+  for (const selector of withoutNegation(header).split(',')) {
+    const classes = selector.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, '""').replace(/\[[^\]]*\]/g, '');
+    if (/\.(?:dark|theme-dark)(?![\w-])/i.test(classes) || /\[data-(?:theme|mode)\s*=\s*(?:"dark"|'dark'|dark)\s*\]/i.test(selector)) result.add('dark');
+    else if (/:root(?![\w-])/.test(classes)) result.add('light');
+  }
+  return { ...inherited, modes: [...result] };
 }
 
 function parse(css: string) {
   css = withoutComments(css);
   const light = variables(), dark = variables(), names = new Set<string>();
   let i = 0;
-  function declaration(text: string, modes: ('light' | 'dark')[]) {
+  function declaration(text: string, modes: Mode[]) {
     const match = /^\s*(--[\w-]+)\s*:\s*([\s\S]+)$/.exec(text);
     if (!match || !modes.length) return;
     const [, name, raw] = match, value = raw.replace(/\s*!important\s*$/i, '').trim();
@@ -48,7 +74,7 @@ function parse(css: string) {
       map.candidates.set(name.slice(2).replace(/^color-/, ''), name);
     }
   }
-  function block(modes: ('light' | 'dark')[]) {
+  function block(context: Context) {
     let start = i, quote = '', parens = 0;
     while (i < css.length) {
       const c = css[i];
@@ -59,18 +85,18 @@ function parse(css: string) {
       else if (c === '(' || c === '[') parens++;
       else if (c === ')' || c === ']') parens--;
       else if (!parens && c === '{') {
-        const nested = targets(css.slice(start, i).trim(), modes);
+        const nested = targets(css.slice(start, i).trim(), context);
         i++; block(nested); start = i; continue;
       } else if (!parens && (c === ';' || c === '}')) {
-        declaration(css.slice(start, i), modes); i++; start = i;
+        declaration(css.slice(start, i), context.modes); i++; start = i;
         if (c === '}') return;
         continue;
       }
       i++;
     }
-    declaration(css.slice(start, i), modes);
+    declaration(css.slice(start, i), context.modes);
   }
-  block([]);
+  block({ modes: [] });
   return { light, dark, names };
 }
 
