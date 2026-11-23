@@ -128,9 +128,9 @@ export type NumModel = ReturnType<typeof useNum>;
 export type CalcModel = ReturnType<typeof useCalc>;
 export type NumSlotProps = { [Part in 'root' | 'value' | 'input' | 'readout' | 'readout-value' | 'readout-hint' | 'icon']: { num: NumModel } };
 export type CalcSlotProps = { [Part in 'root' | 'value']: { calc: CalcModel } };
-function numberAnnouncement(props: Pick<NumProps, 'format' | 'currency' | 'decimals' | 'label'> & { id?: string }, read: () => number, format: ReturnType<typeof useFormat>) {
+function numberAnnouncement(props: Pick<NumProps, 'format' | 'currency' | 'decimals' | 'label'> & { id?: string; errorLabel?: string }, read: () => number, format: ReturnType<typeof useFormat>) {
   let value = NaN; try { value = read(); } catch {}
-  const label = props.label ?? props.id, text = Number.isFinite(value) ? numberFormatter(props, format)(value) : calcStrings.errorLabel;
+  const label = props.label ?? props.id, text = Number.isFinite(value) ? numberFormatter(props, format)(value) : props.errorLabel ?? calcStrings.errorLabel;
   return label ? `${label}: ${text}` : text;
 }
 export const num = defineComponent({ name: 'num', parts: ['input', 'root', 'value', 'readout', 'readout-value', 'readout-hint', 'icon'], strings: numStrings, schema: numSchema, syntax: 'inline', inline: true, component: Num, announcement: (props, node, { store, format }) => numberAnnouncement(props, () => Number((props.id == null ? undefined : store.get(props.id)) ?? props.value ?? rawText(node)), format), docs: 'Editable shared-store number. Drag, click to type, or use arrow keys; percent values are fractions.', examples: [':num[1200]{id=rent min=0 max=5000 step=50 format=currency}'] });

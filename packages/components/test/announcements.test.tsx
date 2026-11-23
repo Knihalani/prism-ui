@@ -103,6 +103,7 @@ test('built-in summaries provide title/value, computed View stats, chart insight
     [':num[42]{label="Completed"}', 'Completed: 42'],
     [':num[7]{id=""}', '7'],
     [':calc[1 +]{label="Total"}', 'Total: —'],
+    [':calc[1 +]{label="Total" errorLabel="Unavailable"}', 'Total: Unavailable'],
     [fence('chart', { title: 'Revenue', insight: 'Sales increased', data: [{ x: 'Jan', y: 10 }] }), 'Revenue. Sales increased. 1 data points'],
     [fence('view', { id: 'metrics', title: 'Progress', state: { count: 42 }, children: [{ type: 'stat', label: 'Completed', value: { $bind: 'count' } }] }), 'Progress. Completed 42'],
   ];
