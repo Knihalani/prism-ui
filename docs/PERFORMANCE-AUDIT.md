@@ -238,3 +238,80 @@ The first final test run flaked the unchanged core scaling test:
 DataTable, Chart, Artifact and Artifact feedback screenshots are all **0%**
 different from the original reference pairs; paths are in SIZE-AUDIT.md.
 Final sizes, checks and proof logs are in `~/conformance/perf-audit/step-d/`.
+
+## Post-merge capture follow-up
+
+Base: `cfd0bd5` (merged main). Three baseline captures preceded source edits.
+The same production host-shell/host-theme replay emits 16 characters per frame
+and records send through done plus five seconds of settle, including artifact
+renderer processes. The analyzer resolves the audited frame IDs to renderer
+processes rather than counting unrelated tabs. No benchmark workload was reduced.
+
+| Run | Baseline tasks >50ms | Baseline max ms | Follow-up tasks >50ms | Follow-up max ms |
+|---|---:|---:|---:|---:|
+| 1 | 21 | 108.990 | 4 | 76.331 |
+| 2 | 21 | 135.625 | 3 | 77.161 |
+| 3 | 17 | 155.416 | 3 | 76.693 |
+
+**The zero-long-task goal is not met.** This is a reduction in the repeated
+observations, not evidence that the remaining work is intrinsically irreducible.
+Every remaining long task is on the host renderer. Artifact-renderer maxima in
+the three final runs were 14.409, 12.538 and 16.803ms, with no long tasks.
+
+`SkeletonPart.copy` still snapshots every computed declaration synchronously
+while its source is connected. It now records name/value pairs instead of
+writing them into every provisional clone. `flush` restores declarations only
+for the retained root and its subtree, before geometry freezing and attachment.
+Connected/discarded ancestor wrappers are never styled. Cached ancestor clones
+share the captured arrays without mutating them. No captures are skipped, no
+classes are substituted for frozen styles, and no rendering is deferred to a
+later frame.
+
+Source-mapped final stacks:
+
+- React `commitDeletionEffectsOnFiber` → `commitHookEffectListUnmount` →
+  `SkeletonPart` cleanup → `capture` → `copy` → `getPropertyValue`/layout reads.
+- Queued `flush` → `restore` → `CSSStyleDeclaration.setProperty`; `flush` also
+  measures the attached root with `getBoundingClientRect`.
+- Run 1's 63.983ms task also samples Mockup `useCanvasSize`'s layout-effect
+  `getBoundingClientRect` (`packages/components/src/mockup/gesture.tsx:10`).
+  The same task contains skeleton reads/writes; this is not evidence of a
+  separate 63.983ms Mockup operation.
+
+All residual durations (ms), largest first:
+
+| Run | Residual tasks |
+|---|---|
+| 1 | 76.331, 63.983, 53.315, 51.583 |
+| 2 | 77.161, 63.035, 60.293 |
+| 3 | 76.693, 52.277, 51.464 |
+
+The retained synchronous work preserves connected-source styles and an attached,
+fully frozen ghost before the next paint. Splitting restoration across frames
+would expose missing or incompletely styled ghosts. Simply dropping ancestor
+reads would lose snapshots if React removes those ancestors later in the same
+commit. These constrain this implementation; they do **not** prove that a new
+snapshot architecture cannot eliminate the remaining tasks. No safe solution
+to those residuals is claimed here. Offscreen/clipping skips were not adopted
+without an ink/clipping proof. A cssText experiment regressed to 13 long tasks
+(122.437ms max) and was dropped. Frozen-template reuse was also dropped after
+a native form-state regression; no cross-capture cache ships.
+
+Final old/new comparison, captured against the same live source DOM and compared
+while attached: **41 ghosts each, 105 paired elements, 58,700 computed-property
+values, zero missing/unmatched elements and zero differences** (including
+offscreen ghosts). Mid-exit screenshot: **0 / 1,280,000 pixels different (0%)**.
+The regression test verifies that a surviving ancestor can change colour in
+the commit without styling its discarded snapshot or recolouring the exit.
+The declaration test additionally exercises important shorthand declarations.
+
+Checks: targeted presentation **23 pass, 0 fail**; full `bun test` **1,302 pass,
+2 skip, 0 fail** (109.77s); `bunx tsc --noEmit` and `bun run size` exit 0.
+Skips: deployment HTML requires a built deployment; no real live-model recording.
+No timing retry was needed for the final suite.
+
+Evidence: `~/conformance/perf-audit/followup/` contains baseline source,
+production/proof configs, capture/analyzer helpers, per-task source-mapped
+`after-{1,2,3}.stacks.json`, `comparison-final.json`, proof data and check logs.
+Raw traces/audits/summaries: `~/shots/perf/kitchen-followup-{before,after}-{1,2,3}.*`.
+Screenshots: `~/shots/perf/followup-skeleton-mid-{old,new,diff}.png`.

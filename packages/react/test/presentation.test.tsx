@@ -59,6 +59,9 @@ test('skeleton snapshots preserve computed declarations with quotes, semicolons 
     <svg><rect style={{ fill: 'red', strokeWidth: '2px' }} /></svg>
   </StreamSkeleton>));
   measured(view.container.querySelector('[data-prism-skeleton]')!);
+  const label = view.container.querySelector('span')!;
+  label.style.setProperty('font', 'italic 14px serif', 'important');
+  label.style.setProperty('padding', '2px 4px', 'important');
   const expected = ['span', 'rect'].map(selector => {
     const style = getComputedStyle(view.container.querySelector(selector)!);
     return Array.from({ length: style.length }, (_, index) => {
@@ -100,6 +103,28 @@ test('cached ancestor templates keep siblings separate and expire after each flu
   expect(ghost.tagName).toBe('SECTION'); expect(ghost.style.width).toBe('140px');
   expect(ghost.style.getPropertyValue('--snapshot')).toBe('second');
   expect(ghost.querySelectorAll('[data-part="skeleton"]')).toHaveLength(2);
+});
+
+test('connected ancestor snapshots are read without styling discarded clones', async () => {
+  const children = (loading: boolean, color: string) => skeletonHost(<section style={{ color, backgroundColor: 'skyblue' }}>
+    {loading ? <PrismPart data-part="skeleton"><span>Loading</span></PrismPart> : <p>Ready</p>}
+  </section>);
+  const view = render(children(true, 'purple'));
+  const section = view.container.querySelector('section')!, source = view.container.querySelector('[data-part="skeleton"]')!;
+  measured(section, 200, 60); measured(source);
+  const color = getComputedStyle(source).color, clone = section.cloneNode.bind(section);
+  let writes = 0;
+  section.cloneNode = (deep?: boolean) => {
+    const snapshot = clone(deep) as HTMLElement, set = snapshot.style.setProperty.bind(snapshot.style);
+    snapshot.style.setProperty = (...args) => { writes++; return set(...args); };
+    return snapshot;
+  };
+  await act(async () => { view.rerender(children(false, 'green')); });
+  const ghost = view.container.querySelector<HTMLElement>('[data-prism-skeleton-exit]')!;
+  expect(writes).toBe(0);
+  expect(ghost.parentElement).toBe(section);
+  expect(getComputedStyle(ghost).color).toBe(color);
+  expect(ghost.textContent).toBe('Loading');
 });
 
 test('inherited values remain frozen at an exit root and explicit child styles survive', async () => {
