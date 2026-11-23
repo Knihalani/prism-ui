@@ -98,7 +98,7 @@ test('coercion and incomplete fallback switch to the registered component on com
   const view = render(<Prism source={prefix} done={false} registry={registry} />);
   expect(view.container.textContent).toBe('Loading title');
   view.rerender(<Prism source={prefix + ',"title":"Ready"}\n```\n'} registry={registry} />);
-  expect(view.container.textContent).toBe('Ready:3'); expect(seen?.props.count).toBe(3); expect(seen?.complete).toBe(true); expect(seen?.partial).toBe(false);
+  expect(view.container.querySelector('[data-prism-flow]')!.textContent).toBe('Ready:3'); expect(seen?.props.count).toBe(3); expect(seen?.complete).toBe(true); expect(seen?.partial).toBe(false);
 });
 
 test('$ref bindings resolve recursively and only their directive rerenders', () => {

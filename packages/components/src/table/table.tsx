@@ -152,7 +152,7 @@ export function MarkdownTable({ props, ...ctx }: PrismComponentProps<TableProps>
       <Part part="body" as="tbody">{model.order.map(index => renderRow(index + 1))}</Part>
     </Part></Part>
     {model.paginated && <Part part="pagination" as="nav" aria-label={model.strings.tablePagination}><Part part="pageButton" as="button" type="button" aria-label={model.strings.previousPage} disabled={model.streaming || model.page === 0} onClick={() => model.setPage(model.page - 1)}><Part part="icon" as={Icon} name="chevron-left" /></Part><Part part="page-status" as="span" aria-live="polite">{model.pageStatus}</Part><Part part="pageButton" as="button" type="button" aria-label={model.strings.nextPage} disabled={model.streaming || model.page + 1 >= model.pages} onClick={() => model.setPage(model.page + 1)}><Part part="icon" as={Icon} name="chevron-right" /></Part></Part>}
-    <Part part="status" role="status" aria-live="polite">{model.announcement}</Part>
+    <Part part="status" role="status" aria-live={model.streaming ? 'off' : 'polite'}>{model.announcement}</Part>
   </Part></PrismContext.Provider></TableContext.Provider>;
 }
 export function TableDispatcher(input: PrismComponentProps<TableProps>) {

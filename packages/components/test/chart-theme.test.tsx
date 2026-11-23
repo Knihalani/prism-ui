@@ -52,7 +52,7 @@ test('theme strings, icon overrides and typed series/point slots preserve keyboa
   const view = render(<Prism registry={registry} source={source(base)} theme={theme} animate={false} onAction={action => actions.push(action)} />);
   expect(models.length).toBeGreaterThan(0); expect(view.getByRole('img').getAttribute('aria-label')).toBe('Explorez Carte'); expect(view.getByRole('table').textContent).toContain('Données Carte'); expect(view.container.querySelector('[data-icon="custom"]')).not.toBeNull();
   expect(view.getByRole('group', { name: 'Vues' })).toBeTruthy(); expect(view.getByRole('group', { name: 'Series' })).toBeTruthy(); expect(view.queryByRole('tooltip')).toBeNull();
-  fireEvent.keyDown(view.getByRole('img'), { key: 'Home' }); expect(view.getByRole('tooltip').getAttribute('aria-label')).toBe('Valeurs Jan'); expect(view.getByRole('status').textContent).toBe('Jan / Revenue = 10 ; Cost = 4');
+  fireEvent.keyDown(view.getByRole('img'), { key: 'Home' }); expect(view.getByRole('tooltip').getAttribute('aria-label')).toBe('Valeurs Jan'); expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('Jan / Revenue = 10 ; Cost = 4');
   fireEvent.keyDown(view.getByRole('img'), { key: 'Enter' }); expect(actions.at(-1)?.payload).toEqual({ x: 'Jan', series: 'revenue', value: 10 }); expect(actions.at(-1)?.message).toStartWith('Choix ');
   fireEvent.click(view.getByRole('button', { name: 'Afficher Cost' })); expect(view.getByRole('button', { name: 'Afficher Cost' }).getAttribute('aria-pressed')).toBe('false');
   fireEvent.click(view.getByRole('button', { name: 'Annuler' })); expect(view.getByRole('button', { name: 'Afficher Cost' }).getAttribute('aria-pressed')).toBe('true');

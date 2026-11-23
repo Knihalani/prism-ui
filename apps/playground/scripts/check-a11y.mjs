@@ -2,6 +2,7 @@ import { chromium } from 'playwright-core';
 import axe from 'axe-core';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { checkAnnouncements } from './check-announcements.mjs';
 
 const base = process.env.BASE_URL || 'http://localhost:5173';
 const output = process.env.A11Y_OUTPUT || '/home/ubuntu/shots/a11y-audit';
@@ -153,8 +154,14 @@ async function tabInventory(page, label, preserveFocus = false) {
     if (label.profile !== 'normal' && !state.border && !state.parentBorder && !state.outline && !state.ancestorOutline) issues.push(`${label.profile}-no-border-or-outline`);
     return issues.map(issue => ({ issue, ...control, focused: state }));
   });
-  const unreachedSequential = expected.filter(item => item.tabIndex >= 0 && item.tag !== 'iframe' && !seen.has(item.key));
-  keyboard.push({ ...label, controls: expected, visits, findings, unreachedSequential, negativeTabIndex: expected.filter(item => item.tabIndex < 0), suspectedTrap: repeated >= 10 && unreachedSequential.length > 0 });
+  const connected = new Set();
+  for (const frame of frames) {
+    try { for (const key of await frame.locator('[data-a11y-key]').evaluateAll(nodes => nodes.map(node => node.dataset.a11yKey))) connected.add(key); }
+    catch (error) { errors.push({ ...label, stage: 'keyboard-completion', error: error.message }); }
+  }
+  const removedDuringWalk = expected.filter(item => !connected.has(item.key));
+  const unreachedSequential = expected.filter(item => item.tabIndex >= 0 && item.tag !== 'iframe' && !seen.has(item.key) && connected.has(item.key));
+  keyboard.push({ ...label, controls: expected, visits, findings, unreachedSequential, removedDuringWalk, negativeTabIndex: expected.filter(item => item.tabIndex < 0), suspectedTrap: repeated >= 10 && unreachedSequential.length > 0 });
 }
 
 async function feedbackOpen(page) {
@@ -298,6 +305,8 @@ async function shell(page, config, name) {
 }
 
 try {
+  try { await checkAnnouncements(browser, { base, output }); }
+  catch (error) { errors.push({ stage: 'announcements', error: error.message }); }
   for (const theme of themes) for (const mode of ['light', 'dark']) for (const profile of profiles) {
     const config = { theme, mode, profile };
     const context = await browser.newContext({ viewport: { width: 760, height: 1100 }, colorScheme: mode, reducedMotion: profile === 'reduced' ? 'reduce' : 'no-preference', forcedColors: profile === 'forced-colors' ? 'active' : 'none' });

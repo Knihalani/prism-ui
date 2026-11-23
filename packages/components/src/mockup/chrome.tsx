@@ -41,7 +41,7 @@ export function MockupFooter(vm: MockupFooterModel) {
   const countPart = usePart('mockup', 'count');
   const footer = usePart('mockup', 'feedbackFooter'), button = usePart('mockup', 'button'), primary = usePart('mockup', 'primary');
   const Primary = useSlot('mockup', 'primary', FeedbackPill);
-  return <PrismPart slotProps={{ model }} as="span" {...footer} role={submitted ? 'status' : undefined}>
+  return <PrismPart slotProps={{ model }} as="span" {...footer}>
     <PrismPart slotProps={{ model }} as="button" {...button} hidden={submitted} data-secondary="" data-prism-reveal="" disabled={!canUndo} onClick={undo}><Icon name="undo" />{labels.undo}</PrismPart>
     <PrismPart slotProps={{ model }} as="button" {...button} hidden={submitted} data-secondary="" data-prism-reveal="" disabled={!canRedo} onClick={redo}><Icon name="redo" />{labels.redo}</PrismPart>
     <PrismPart slotProps={{ model }} as="span" {...countPart} hidden={submitted}>{commentCount(labels, locale, count)}</PrismPart>

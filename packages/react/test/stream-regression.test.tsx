@@ -41,6 +41,7 @@ for (let size = 1; size <= 7; size++) {
       await act(async () => { controller.close(); });
       const normalize = (html: string) => {
         const element = document.createElement('div'); element.innerHTML = html;
+        element.querySelectorAll('[data-prism-announcer]').forEach(node => node.remove());
         element.querySelectorAll('*').forEach(node => {
           for (const name of ['data-prism-enter', 'data-prism-entered', 'data-entering']) node.removeAttribute(name);
           (node as HTMLElement).style.removeProperty('--prism-motion-index');

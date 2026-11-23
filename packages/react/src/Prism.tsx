@@ -13,6 +13,7 @@ import { createReceipt } from './presentation';
 import './presentation.css';
 import { ReplyEntryContext } from './reply-entry';
 import { useSmoothHeight } from './reply-motion';
+import { AnnouncementBoundary } from './announcements';
 
 const empty = {};
 function equal(a: any, b: any, depth: number): boolean {
@@ -95,11 +96,11 @@ export interface PrismProps {
   source?: string; done?: boolean; stream?: PrismStream; components?: Components; plugins?: Plugin[];
   store?: Store; persist?: Adapter; namespace?: string; registry?: Registry; scope?: string;
   onAction?(action: Action): void; middleware?: Middleware[];
-  theme?: Theme; mode?: Mode; density?: Density; animate?: boolean; unstyled?: boolean;
+  theme?: Theme; mode?: Mode; density?: Density; animate?: boolean; announce?: boolean; unstyled?: boolean;
   locale?: string; currency?: string; slots?: Slots; classNames?: ClassNames; styles?: Styles;
   className?: string; style?: CSSProperties;
 }
-export function Prism({ renderers = empty, feedback, scope: providedScope, source = '', done = true, stream, plugins, store: provided, persist, namespace, registry: providedRegistry = defaultRegistry, components = empty, onAction, middleware, theme, mode, density = 'comfortable', animate = true, unstyled = false, locale, currency = 'USD', slots = empty, classNames = empty, styles = empty, className, style }: PrismProps) {
+export function Prism({ renderers = empty, feedback, scope: providedScope, source = '', done = true, stream, plugins, store: provided, persist, namespace, registry: providedRegistry = defaultRegistry, components = empty, onAction, middleware, theme, mode, density = 'comfortable', animate = true, announce = true, unstyled = false, locale, currency = 'USD', slots = empty, classNames = empty, styles = empty, className, style }: PrismProps) {
   const instance = useId(), scope = providedScope ?? instance;
   components = useStable(components); slots = useStable(slots, 1); classNames = useStable(classNames, 1);
   renderers = useStable(renderers);
@@ -158,6 +159,8 @@ export function Prism({ renderers = empty, feedback, scope: providedScope, sourc
   return <PrismContext.Provider value={context}><ThemeScope theme={theme} mode={mode} density={density} animate={animate}
     className={cx('prism-root', className)} style={style} data-state={streaming ? 'streaming' : 'ready'}
     data-prism-presentation={unstyled ? undefined : ''}>
-    {!unstyled ? <div data-prism-flow="" ref={flow}>{children}</div> : children}
+    <AnnouncementBoundary nodes={root.children} done={!streaming} identity={stream ?? state.parser} enabled={announce} registry={registry} store={store}>
+      {!unstyled ? <div data-prism-flow="" ref={flow}>{children}</div> : children}
+    </AnnouncementBoundary>
   </ThemeScope></PrismContext.Provider>;
 }

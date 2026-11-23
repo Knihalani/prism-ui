@@ -70,8 +70,8 @@ test('copy emits exact structured payload and announces success', async () => {
     expect(actions[0]).toEqual({ type: 'copy', component: 'code', id: 'test:code:0', payload: { lang: 'js', lines: 2 },
       context: { component: 'code', props: {}, state: { wrap: false, expanded: false } },
       message: 'User copy in code: {"lang":"js","lines":2}' });
-    expect(view.getByRole('status').textContent).toBe('Copied');
-    await waitFor(() => expect(view.getByRole('status').textContent).toBe(''), { timeout: 2000 });
+    expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('Copied');
+    await waitFor(() => expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe(''), { timeout: 2000 });
   } finally { if (previous) Object.defineProperty(navigator, 'clipboard', previous); else Reflect.deleteProperty(navigator, 'clipboard'); }
 });
 
@@ -132,7 +132,7 @@ test('clipboard fallback cleans up and reports failure without action', async ()
     document.execCommand = () => false;
     const view = render(<Prism registry={registry} source={fence('x')} onAction={a => actions.push(a)} />);
     fireEvent.click(view.getByRole('button', { name: 'Copy code' }));
-    await waitFor(() => expect(view.getByRole('status').textContent).toBe('Copy failed'));
+    await waitFor(() => expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('Copy failed'));
     expect(document.querySelector('textarea')).toBeNull(); expect(actions).toEqual([]);
     document.execCommand = () => true;
     fireEvent.click(view.getByRole('button', { name: 'Copy code' }));

@@ -47,7 +47,7 @@ test('Objects receipt preserves increase, Undo, switch and sent state without fe
   expect(view.container.querySelector('[data-objects-receipt]')?.getAttribute('data-state')).toBe('sent');
   expect(ui.getByRole('button', { name: 'Sent · estimate ✓' }).hasAttribute('disabled')).toBe(true);
   expect(view.container.querySelector('[data-printing]')).toBeNull();
-  expect(ui.getByRole('status').textContent).toBe('DELIVERED / READY FOR REVIEW');
+  expect(ui.getByText('DELIVERED / READY FOR REVIEW').hasAttribute('role')).toBe(false);
 });
 
 test('Objects sticky sliders update the stamped leader and choose action', () => {
@@ -137,7 +137,7 @@ test('Print criteria sliders change the winner and choose emits the selected opt
   expect(view.container.querySelector('[data-print-winner]')?.textContent).toContain('Concierge');
   fireEvent.click(within(view.container).getByRole('button', { name: 'Choose Concierge ↗' }));
   expect(actions.at(-1)).toMatchObject({ type: 'choose', payload: { option: 'concierge', weights: { learning: 3, cost: 0 } } });
-  expect(view.container.querySelector('[data-print-winner] [role="status"]')?.textContent).toBe('Chosen');
+  expect(within(view.container.querySelector<HTMLElement>('[data-print-winner]')!).getByText('Chosen').hasAttribute('role')).toBe(false);
 });
 
 test('Print keeps empty Estimate and Pick states accessible without inventing actions', () => {
@@ -197,7 +197,7 @@ test('Instrument shares its segmented geometry between Estimate and module score
   expect(view.container.querySelector('[data-instrument-module][data-top]')?.textContent).toContain('Concierge');
   fireEvent.click(ui.getByRole('button', { name: 'Choose Concierge ↗' }));
   expect(actions.at(-1)).toMatchObject({ type: 'choose', payload: { option: 'concierge', weights: { learning: 3, cost: 0 } } });
-  expect(view.container.querySelector('[data-instrument-module][data-top] [role="status"]')?.textContent).toBe('Chosen');
+  expect(within(view.container.querySelector<HTMLElement>('[data-instrument-module][data-top]')!).getByText('Chosen').hasAttribute('role')).toBe(false);
 });
 
 test('Instrument keeps Estimate Undo, switch, submit and sent behavior in dark mode', () => {

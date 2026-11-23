@@ -1,6 +1,6 @@
 import { componentStrings, formatComponentMessage } from '../strings';
 import { useLayoutEffect, useRef } from 'react';
-import { useStrings, Icon, PrismPart, cx, StreamSkeleton, usePart, useSent, type PrismComponentProps } from '@prism-ui/react';
+import { useStrings, Icon, PrismPart, cx, StreamSkeleton, usePart, useSent, useSentAnnouncement, type PrismComponentProps } from '@prism-ui/react';
 import { Badge } from '../badge/badge';
 import { useFrame } from '../frame';
 import { CheckMark } from '../shared/controls';
@@ -39,8 +39,9 @@ export interface CardSlotProps { card: CardModel }
 export function Card({ props, children, ...ctx }: PrismComponentProps<CardProps>) {
   const model = useCard(props, { ...ctx, children }), { parts, strings: themeStrings } = model;
   const sent = model.sent !== undefined;
+  const announcement = useSentAnnouncement(sent, themeStrings.sent);
   return <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="article" {...model.rootProps} role="article" className={cx(model.rootProps.className, !model.unstyled && 'prism-materialise') || undefined} data-variant={model.variant} data-size={model.size} data-linked={model.href ? '' : undefined}>
-    {props.image && <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="img" {...parts.image} src={props.image} alt="" />}
+    {announcement}{props.image && <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="img" {...parts.image} src={props.image} alt="" />}
     <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="header" {...parts.header} data-utility-only={!model.title && !model.subtitle && !model.badge ? '' : undefined}>
       {model.badge && <Badge {...ctx} props={{ tone: 'success', dot: true }}>{model.badge}</Badge>}
       <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="div" {...parts.toolbar}>

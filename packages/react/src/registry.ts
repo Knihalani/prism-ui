@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import type { Node } from '@prism-ui/core';
 import { toPromptDocs as docs, s, type Schema, type Infer, type Issue, type Definition } from '@prism-ui/schema';
-import type { Action } from './context';
+import type { Action, PrismContextValue } from './context';
 
 export interface PrismComponentProps<P = Record<string, unknown>> {
   node: Node; props: P; children: ReactNode; id: string; complete: boolean; partial: boolean; issues: Issue[];
@@ -16,6 +16,7 @@ export interface ComponentDef<S extends Schema<any> = Schema<any>> {
   strings?: Record<string, string>;
   docs?: string; examples?: string[]; inline?: boolean; syntax?: Definition['syntax'];
   message?(action: Action): string;
+  announcement?(props: Infer<S>, node: Node, context: Pick<PrismContextValue, 'store' | 'format'>): string;
 }
 export function defineComponent<S extends Schema<any>>(def: ComponentDef<S>): ComponentDef<S> {
   const defaults = def.schema?.coerce({}).value;

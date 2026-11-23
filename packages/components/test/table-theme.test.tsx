@@ -37,14 +37,14 @@ test('localized strings, central icons and typed slots preserve sorting and pagi
   const theme = defineTheme({ name: 'translated-table', icons: { 'arrow-up': () => <svg data-sort-override="" /> }, components: { table: { slots: { cell: Cell }, strings: { tableLabel: 'Comparaison', sortBy: 'Trier {column}', sorted: '{column} : {direction}', ascending: 'croissant', descending: 'décroissant', originalOrder: 'Ordre initial', loading: 'Chargement', previousPage: 'Avant', nextPage: 'Après', tablePagination: 'Pages', pageStatus: '{page} / {pages}' } } } });
   for (const value of [markdown, source(props)]) {
     const view = render(<Prism registry={registry} source={value} theme={theme} />);
-    expect(view.getByRole('table', { name: 'Comparaison' })).toBeDefined(); expect(view.getByRole('status').textContent).toBe('Ordre initial');
+    expect(view.getByRole('table', { name: 'Comparaison' })).toBeDefined(); expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('Ordre initial');
     fireEvent.keyDown(view.getByRole('button', { name: 'Trier Hire' }), { key: 'Enter' });
     expect(view.getByRole('button', { name: 'Trier Hire' }).closest('th')?.getAttribute('aria-sort')).toBe('ascending');
-    expect(view.getByRole('status').textContent).toBe('Hire : croissant'); expect(view.container.querySelector('[data-sort-override]')).not.toBeNull();
+    expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('Hire : croissant'); expect(view.container.querySelector('[data-sort-override]')).not.toBeNull();
     expect(view.container.querySelector('tbody tr')?.textContent).toContain('Foundry');
     if (value !== markdown) { expect(view.getByRole('navigation', { name: 'Pages' })).toBeDefined(); fireEvent.click(view.getByRole('button', { name: 'Après' })); expect(view.getByText('2 / 2')).toBeDefined(); expect(view.container.querySelector('tbody')?.textContent).toContain('Aster'); }
-    fireEvent.click(view.getByRole('button', { name: 'Trier Hire' })); expect(view.getByRole('status').textContent).toBe('Hire : décroissant');
-    fireEvent.click(view.getByRole('button', { name: 'Trier Hire' })); expect(view.getByRole('status').textContent).toBe('Ordre initial'); cleanup();
+    fireEvent.click(view.getByRole('button', { name: 'Trier Hire' })); expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('Hire : décroissant');
+    fireEvent.click(view.getByRole('button', { name: 'Trier Hire' })); expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('Ordre initial'); cleanup();
   }
 });
 
@@ -54,7 +54,7 @@ test('streaming, empty, definition/prop precedence and dataTable delegation rema
   view.rerender(<Prism registry={custom} source={source({ ...props, label: 'Prop' })} />); expect(view.getByRole('table', { name: 'Prop' })).toBeDefined();
   view.rerender(<Prism registry={custom} theme={defineTheme({ name: 'label', components: { table: { strings: { label: 'Theme' } } } })} source={source({ ...props, label: 'Prop' })} />); expect(view.getByRole('table', { name: 'Theme' })).toBeDefined();
   view.rerender(<Prism registry={registry} source={markdown.slice(0, -8)} done={false} />);
-  expect(view.getByRole('table').getAttribute('aria-busy')).toBe('true'); expect(view.getByRole('status').textContent).toBe('Loading rows.');
+  expect(view.getByRole('table').getAttribute('aria-busy')).toBe('true'); expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('Loading rows.');
   for (const button of Array.from(view.container.querySelectorAll('thead button'))) expect((button as HTMLButtonElement).disabled).toBe(true);
   view.rerender(<Prism registry={createRegistry([tableDef, dataTableDefinition])} source={source(props)} />); expect(view.container.querySelector('[data-prism="datatable"]')).not.toBeNull();
 });

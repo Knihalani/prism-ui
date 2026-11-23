@@ -49,7 +49,10 @@ test('landing has seven natural suggestions and clicking one renders a streamed 
   expect(view.getByText('Help me pick a laptop')).toBeDefined();
   expect(view.container.querySelector('[data-prism="pick"]')).not.toBeNull();
   expect(view.getAllByRole('button', { name: 'Your next laptop' })).toHaveLength(1);
-  expect(view.getByRole('log').getAttribute('aria-busy')).toBe('false');
+  const thread = view.container.querySelector('.thread')!;
+  expect(thread.getAttribute('aria-busy')).toBe('false');
+  expect(thread.hasAttribute('aria-live')).toBe(false);
+  expect(thread.hasAttribute('role')).toBe(false);
 });
 
 test('live history keeps component submissions in order without adding visible user turns', async () => {
