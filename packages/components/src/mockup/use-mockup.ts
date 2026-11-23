@@ -3,6 +3,8 @@ import { ComponentContext, useStoreValue, useSent, useFlash, usePrism, useTheme,
 import { createFeedback, createFrameController, previousAsResolved, sanitizeSvg, toMessage, wireframeDocument, feedbackMessageStrings, type FeedbackPayload, type FeedbackState, type FeedbackPoint, type FrameController, type HitRect } from './engine';
 import { regionDimensions } from './outline';
 import { placeComposer } from './placement';
+import { composerViewport } from './viewport';
+import { useTouchFeedback } from './touch';
 
 export type MockupDevice = 'desktop' | 'tablet' | 'mobile';
 export type MockupTool = 'pin' | 'region' | 'draw';
@@ -39,7 +41,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const tool = options.controls?.tool ?? (options.controls?.pen ? 'draw' : options.controls && localTool === 'draw' ? 'pin' : localTool), colorValue = options.controls?.color ?? color;
   const setColorValue = options.controls?.setColor ?? setColor;
   const live = useRef<LiveGesture>({ points: [], pressure: [], realPressure: false, hover: null, tool: 'pin' }), livePaint = useRef<(() => void) | null>(null);
-  const gesture = useRef<{ clientX: number; clientY: number; box: DOMRect; element: HTMLElement; pointerId: number } | null>(null);
+  const gesture = useRef<{ clientX: number; clientY: number; box: DOMRect; element: HTMLElement; pointerId: number; pointerType: string; moved: boolean } | null>(null);
   function cancelGesture() { const g = gesture.current; gesture.current = null; live.current.points = []; live.current.pressure = []; if (g?.element.hasPointerCapture?.(g.pointerId)) g.element.releasePointerCapture(g.pointerId); livePaint.current?.(); }
   function setTool(next: MockupTool) { cancelGesture(); if (options.controls?.setTool) options.controls.setTool(next); else { writeTool(next); options.controls?.setPen(next === 'draw'); } announce(labels.toolChanged.replace('{tool}', labels[next])); }
   const setPenValue = (value: boolean) => setTool(value ? 'draw' : 'pin');
@@ -82,7 +84,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const svg = useMemo(() => kind === 'svg' ? sanitizeSvg(source) : '', [source, kind]);
   useEffect(() => { setImageError(false); }, [props.src, source]);
   useEffect(() => { const element = graphic.current?.querySelector('svg'); if (!element) return; const box = element.getAttribute('viewBox')?.split(/[\s,]+/).map(Number); setNaturalWidth(box?.[2] || Number(element.getAttribute('width')) || 800); grow(box?.[3] || Number(element.getAttribute('height')) || 400); }, [svg, visible, enabled]);
-  const width = options.inline ? containerWidth : framed ? widths[device] : naturalWidth, scale = options.inline ? 1 : (framed ? Math.min(1, containerWidth / width) : containerWidth / width) * zoom;
+  const width = options.inline ? containerWidth : framed ? widths[device] : naturalWidth, scale = (options.inline ? 1 : framed ? Math.min(1, containerWidth / width) : containerWidth / width) * zoom;
   const resolved = props.previous ? previousAsResolved(props.previous) : [];
   function open(id: string, fresh = false) { focusReturn.current = (!fresh && Array.from(root.current?.querySelectorAll<HTMLElement>('[data-feedback-id]') ?? []).find(node => node.dataset.feedbackId === id)) || canvas.current; const item = feedback.getState().items.find(item => item.id === id); if (!item) return; if (pending.current && pending.current.id !== id) { feedback.remove(pending.current.id); pending.current = null; } setEditing({ id, fresh, text: item.comment }); setComment(item.comment); setActive(id); }
   function commit(change: (value: FeedbackState) => FeedbackState, sent = false) {
@@ -108,11 +110,11 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const restoreTarget = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => { if (!editing && restoreTarget.current) { const node = restoreTarget.current; restoreTarget.current = null; (node.isConnected ? node : canvas.current)?.focus({ preventScroll: true }); } }, [editing]);
   function close(restoreFocus = false) { pending.current = null; if (restoreFocus) restoreTarget.current = focusReturn.current ?? canvas.current; setEditing(null); }
-  function popoverPosition(x: number, y: number, height = 210) {
+  function popoverPosition(x: number, y: number, height = 210, visible = composerViewport()) {
     const bounds = root.current?.getBoundingClientRect(), artboard = canvas.current?.getBoundingClientRect();
     const surface = bounds?.width ? bounds : { left: 0, top: 0, width: containerWidth, height: contentHeight };
     const anchor = { x: (artboard?.left ?? surface.left) + x / 100 * (artboard?.width || width * scale), y: (artboard?.top ?? surface.top) + y / 100 * (artboard?.height || contentHeight * scale) };
-    const placement = placeComposer(surface, anchor, { width: document.documentElement.clientWidth || window.innerWidth, height: window.innerHeight }, height, root.current?.querySelector('[data-feedback-submit]')?.getBoundingClientRect());
+    const placement = placeComposer(surface, anchor, visible, height, root.current?.querySelector('[data-feedback-submit]')?.getBoundingClientRect());
     return { left: placement.left - surface.left, top: placement.top - surface.top, width: placement.width, transformOrigin: placement.transformOrigin, '--prism-mockup-caret-x': placement.caretX + 'px', '--prism-mockup-caret-y': placement.caretY + 'px', '--prism-mockup-caret-side': placement.side };
   }
   function save(restoreFocus = false) { const edit = editing; close(restoreFocus); if (edit) { feedback.edit(edit.id, { comment }); commit(value => withItem(value, edit.id, comment)); } }
@@ -164,18 +166,19 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
       live.current.points.push(p); live.current.pressure.push(live.current.realPressure ? Math.max(0, Math.min(1, sample.pressure || 0)) : .5);
     }
   }
-  const pointer = {
-    onPointerDown(event: PointerEvent<HTMLDivElement>) { if (event.button !== 0 || submitted || gesture.current) return; event.preventDefault(); event.currentTarget.focus({ preventScroll: true }); event.currentTarget.setPointerCapture?.(event.pointerId); const box = event.currentTarget.getBoundingClientRect(), p = point(event, box); gesture.current = { clientX: event.clientX, clientY: event.clientY, box, element: event.currentTarget, pointerId: event.pointerId }; live.current = { points: [p], pressure: [event.pointerType === 'pen' ? event.pressure : .5], realPressure: event.pointerType === 'pen', hover: null, tool }; livePaint.current?.(); },
-    onPointerMove(event: PointerEvent<HTMLDivElement>) { if (submitted) return; const g = gesture.current; if (g) collect(event); else live.current.hover = point(event, event.currentTarget.getBoundingClientRect()); livePaint.current?.(); },
+  const pointer = useTouchFeedback({ canvas, viewport, zoom, setZoom, inline: !!options.inline, cancel: cancelGesture, pointer: {
+    onPointerDown(event: PointerEvent<HTMLDivElement>) { if (event.button !== 0 || submitted || gesture.current) return; if (event.pointerType !== 'touch' || tool !== 'pin') { event.preventDefault(); event.currentTarget.focus({ preventScroll: true }); } event.currentTarget.setPointerCapture?.(event.pointerId); const box = event.currentTarget.getBoundingClientRect(), p = point(event, box); gesture.current = { clientX: event.clientX, clientY: event.clientY, box, element: event.currentTarget, pointerId: event.pointerId, pointerType: event.pointerType, moved: false }; live.current = { points: [p], pressure: [event.pointerType === 'pen' ? event.pressure : .5], realPressure: event.pointerType === 'pen', hover: null, tool }; livePaint.current?.(); },
+    onPointerMove(event: PointerEvent<HTMLDivElement>) { if (submitted) return; const g = gesture.current; if (g?.pointerType === 'touch' && live.current.tool === 'pin') { g.moved ||= Math.hypot(event.clientX - g.clientX, event.clientY - g.clientY) >= 5; return; } if (g) collect(event); else live.current.hover = point(event, event.currentTarget.getBoundingClientRect()); livePaint.current?.(); },
     onPointerUp(event: PointerEvent<HTMLDivElement>) {
       const g = gesture.current; if (!g || event.pointerId !== g.pointerId) return; collect(event);
       const { points, pressure, realPressure, tool: selected } = live.current, p = points.at(-1)!, first = points[0]; cancelGesture();
+      if (g.pointerType === 'touch' && selected === 'pin' && (g.moved || Math.hypot(event.clientX - g.clientX, event.clientY - g.clientY) >= 5)) return;
       if (selected === 'draw') add({ x: first[0], y: first[1] }, points, undefined, realPressure ? pressure : undefined);
       else if (selected === 'pin' && Math.hypot(event.clientX - g.clientX, event.clientY - g.clientY) < 5) add({ x: p[0], y: p[1] }, undefined, [event.clientX, event.clientY]);
       else { add({ x: Math.min(first[0], p[0]), y: Math.min(first[1], p[1]), w: Math.abs(first[0] - p[0]), h: Math.abs(first[1] - p[1]) }, undefined, [event.clientX, event.clientY]); announce(labels.regionAdded.replace('{size}', regionDimensions(first, p, g.box.width, g.box.height, scale))); }
     },
-    onPointerCancel(event: PointerEvent<HTMLDivElement>) { if (gesture.current?.pointerId === event.pointerId) cancelGesture(); }, onLostPointerCapture() { if (gesture.current) cancelGesture(); }, onPointerLeave() { live.current.hover = null; livePaint.current?.(); },
-  };
+    onPointerCancel(event: PointerEvent<HTMLDivElement>) { if (gesture.current?.pointerId === event.pointerId) cancelGesture(); }, onLostPointerCapture(event: PointerEvent<HTMLDivElement>) { if (gesture.current?.pointerId === event.pointerId) cancelGesture(); }, onPointerLeave() { live.current.hover = null; livePaint.current?.(); },
+  } });
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.defaultPrevented || event.nativeEvent.isComposing) return;
     const field = event.target instanceof Element && event.target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])');

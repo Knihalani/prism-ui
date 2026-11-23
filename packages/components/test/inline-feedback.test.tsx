@@ -9,6 +9,25 @@ import '../src/num';
 import { useFeedbackTarget } from '../src/feedback';
 
 afterEach(cleanup);
+test('portal composer clamps to visualViewport bounds and updates when the keyboard opens', () => {
+  const previous = Object.getOwnPropertyDescriptor(window, 'visualViewport');
+  const vv = Object.assign(new window.EventTarget(), { width: 320, height: 600, offsetLeft: 20, offsetTop: 40 });
+  Object.defineProperty(window, 'visualViewport', { configurable: true, value: vv });
+  try {
+    function Target() { const ref = useFeedbackTarget(); return <div ref={ref}>Preview</div>; }
+    const view = render(<Prism feedback animate={false} source={'```ui:feedback-test\n{"id":"keyboard"}\n```'} renderers={{ 'feedback-test': Target }} />);
+    const root = view.container.querySelector('.prism-inline-feedback') as HTMLElement;
+    root.getBoundingClientRect = () => new DOMRect(0, 0, 375, 812);
+    fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+    fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+    act(() => { vv.height = 320; vv.dispatchEvent(new window.Event('resize')); });
+    const layer = document.querySelector('.prism-inline-feedback__popover-layer') as HTMLElement;
+    expect(parseFloat(layer.style.left)).toBeGreaterThanOrEqual(32);
+    expect(parseFloat(layer.style.top)).toBeGreaterThanOrEqual(52);
+    expect(parseFloat(layer.style.top) + 210).toBeLessThanOrEqual(348);
+    expect((view.getByRole('dialog') as HTMLElement).style.maxHeight).toBe('296px');
+  } finally { cleanup(); if (previous) Object.defineProperty(window, 'visualViewport', previous); else delete (window as any).visualViewport; }
+});
 const source = '```ui:feedback-test\n{"id":"target"}\n```';
 const View = () => <button>Actual input</button>;
 for (const rootWidth of [500, 0]) test(`opening a list comment with a hidden preview uses visible feedback bounds (${rootWidth})`, () => {

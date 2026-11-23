@@ -25,6 +25,8 @@
 .prism-mockup__media > svg { display: block; width: 100%; height: 100%; }
 .prism-mockup__canvas, .prism-mockup__stroke { position: absolute; inset: 0; width: 100%; height: 100%; }
 .prism-mockup__canvas { cursor: crosshair; touch-action: none; }
+.prism-mockup__canvas[data-tool="pin"] { touch-action: pan-y; }
+@media (pointer: coarse) { [data-feedback-scroll="pin"] { overflow-y: hidden !important; } }
 .prism-mockup__canvas[data-disabled="true"] { pointer-events: none; }
 .prism-mockup__stroke { pointer-events: none; overflow: visible; }
 .prism-mockup__hint, .prism-mockup__reticle { position: absolute; pointer-events: none; color: var(--prism-mockup-accent-text, var(--prism-accent-text, var(--prism-mockup-accent, var(--prism-accent-text)))); }

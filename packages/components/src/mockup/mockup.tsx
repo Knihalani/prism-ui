@@ -10,6 +10,7 @@ import { mockupLabels, useMockup, type MockupModel, type MockupProps } from './u
 import { GestureOverlay, useCanvasSize } from './gesture';
 import { drawingOutline } from './outline';
 import { MockupList } from './annotation-list';
+import { revealComposerInput, useComposerViewport } from './viewport';
 
 export type MockupSlotProps<T extends ElementType = 'div'> = ComponentPropsWithRef<T> & { as?: T; model: MockupModel; vm?: MockupModel; item?: FeedbackItem };
 function motionTime(value: string, fallback: number) {
@@ -20,11 +21,13 @@ function Popover({ model: vm, ...attributes }: MockupSlotProps<'span'>) {
   const part = usePart('mockup', 'popover'), input = usePart('mockup', 'input'), primary = usePart('mockup', 'primary'), button = usePart('mockup', 'button');
   const header = usePart('mockup', 'composerHeader'), footer = usePart('mockup', 'composerFooter'), badge = usePart('mockup', 'badge'), kind = usePart('mockup', 'kindIcon'), hints = usePart('mockup', 'keyboardHints'), key = usePart('mockup', 'hintKey');
   const element = useRef<HTMLSpanElement>(null), [height, setHeight] = useState(210), enter = usePresentation();
+  const viewport = useComposerViewport();
+  useLayoutEffect(() => { revealComposerInput(element.current); }, [viewport]);
   const [, reposition] = useState(0);
   useLayoutEffect(() => { const update = () => reposition(n => n + 1); window.addEventListener('resize', update); window.addEventListener('scroll', update, true); return () => { window.removeEventListener('resize', update); window.removeEventListener('scroll', update, true); }; }, []);
   useLayoutEffect(() => { const node = element.current; if (!node) return; const measure = () => setHeight(node.getBoundingClientRect().height || 210); measure(); const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure); observer?.observe(node); return () => observer?.disconnect(); }, []);
   const item = vm.state.items.find(item => item.id === vm.editing?.id); if (!item) return null;
-  const position = { ...vm.popoverPosition(item.x, item.y, height), ...attributes.style }, mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+  const position = { ...vm.popoverPosition(item.x, item.y, height, viewport), ...attributes.style, maxHeight: Math.max(0, viewport.height - 24), overflowY: 'auto' as const, boxSizing: 'border-box' as const }, mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
   return <span {...part} {...attributes} ref={node => { element.current = node; const ref = attributes.ref; if (typeof ref === 'function') ref(node); else if (ref) ref.current = node; }} role="dialog" aria-label={vm.labels.comment.replace('{n}', String(item.n)).replace('{text}', item.comment)} data-side={position['--prism-mockup-caret-side']} data-prism-enter={enter['data-prism-enter']} style={{ ...part.style, ...position }} onKeyDown={event => {
     if (event.key !== 'Tab') return;
     const fields = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('textarea,button:not(:disabled),[tabindex="0"]'));
@@ -72,7 +75,7 @@ function Marker({ item, vm, size }: { item: FeedbackItem; vm: MockupModel; size:
 export function MockupAnnotations({ vm, popover = true }: { vm: MockupModel; popover?: boolean }) {
   const canvas = usePart('mockup', 'canvas'), reticle = usePart('mockup', 'reticle'), size = useCanvasSize(vm);
   return <>
-    <PrismPart slotProps={{ model: vm }} as="span" {...canvas} {...vm.pointer} ref={vm.canvas} tabIndex={0} role="application" aria-label={vm.labels.canvas} onKeyDown={vm.canvasKey} onFocus={() => vm.setFocused(true)} onBlur={() => vm.setFocused(false)} data-disabled={vm.submitted || undefined}>
+    <PrismPart slotProps={{ model: vm }} as="span" {...canvas} {...vm.pointer} ref={vm.canvas} tabIndex={0} role="application" aria-label={vm.labels.canvas} onKeyDown={vm.canvasKey} onFocus={() => vm.setFocused(true)} onBlur={() => vm.setFocused(false)} data-tool={vm.tool} data-disabled={vm.submitted || undefined}>
       {vm.focused && <PrismPart slotProps={{ model: vm }} as="span" {...reticle} style={{ ...reticle.style, left: `${vm.reticle[0]}%`, top: `${vm.reticle[1]}%` }}><Icon name="plus" /></PrismPart>}
       <GestureOverlay vm={vm} size={size} />
     </PrismPart>

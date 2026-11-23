@@ -6,6 +6,7 @@ import { MockupFooter, MockupPenTools } from './mockup/chrome';
 import { useMockup } from './mockup/use-mockup';
 import { MockupList } from './mockup/annotation-list';
 import { placeComposer } from './mockup/placement';
+import { useComposerViewport } from './mockup/viewport';
 import type { MockupModel } from './mockup/use-mockup';
 import './mockup/mockup.css';
 import './feedback.css';
@@ -23,9 +24,9 @@ export function InlineFeedback({ children, targetKey }: FeedbackSurfaceProps) {
   const close = () => { setOpen(false); trigger.current?.focus(); };
   return <PrismPart as="span" className="prism-inline-feedback" data-prism-reveal-host="" data-prism-theme-name={prism.unstyled ? prism.resolvedTheme.name : undefined} data-animate={prism.unstyled || !prism.animate ? 'false' : undefined} ref={root} style={{ '--prism-mockup-scale': 1, '--prism-mockup-inverse-scale': 1 } as CSSProperties} data-inline={inline || undefined} data-feedback-open={open || undefined}>
     <button ref={trigger} type="button" className="prism-inline-feedback__trigger" data-prism-reveal="" data-prism-press="" aria-label={open ? labels.close : labels.open} title={labels.open} aria-expanded={open} onKeyDown={event => { if (event.key === 'Escape') close(); }} onClick={() => { setActivated(true); open ? close() : setOpen(true); }}><Icon name={open ? 'close' : 'ask'} /></button>
-    <PrismPart as="span" className="prism-inline-feedback__target" ref={fallback}>
+    <span className="prism-inline-feedback__viewport"><PrismPart as="span" className="prism-inline-feedback__target" ref={fallback}>
       <FeedbackTarget.Provider value={setTarget}>{children}</FeedbackTarget.Provider>
-    </PrismPart>
+    </PrismPart></span>
     {activated && <FeedbackEditor key={targetKey} open={open} close={close} surface={{ root, viewport }} />}
   </PrismPart>;
 }
@@ -45,6 +46,7 @@ function FeedbackEditor({ open, close, surface }: { open: boolean; close(): void
 }
 function FeedbackPopover({ vm, surface, open }: { vm: MockupModel; surface: NonNullable<import('./mockup/use-mockup').MockupOptions['surface']>; open: boolean }) {
   const theme = useTheme(), prism = usePrism();
+  const viewport = useComposerViewport();
   const [portal, setPortal] = useState<Element>(document.body);
   useLayoutEffect(() => {
     const sync = () => { const full = document.fullscreenElement, target = surface.viewport.current; setPortal(full && target && full.contains(target) ? full : document.body); };
@@ -70,8 +72,7 @@ function FeedbackPopover({ vm, surface, open }: { vm: MockupModel; surface: NonN
     const place = () => {
       const item = vm.state.items.find(item => item.id === vm.editing?.id);
       if (!item) return;
-      const viewport = { width: document.documentElement.clientWidth || window.innerWidth, height: window.innerHeight };
-      const bounds = [surface.viewport.current?.getBoundingClientRect(), surface.root.current?.getBoundingClientRect()].find(rect => rect && rect.width > 0 && rect.height > 0) ?? { left: 0, top: 0, ...viewport };
+      const bounds = [surface.viewport.current?.getBoundingClientRect(), surface.root.current?.getBoundingClientRect()].find(rect => rect && rect.width > 0 && rect.height > 0) ?? viewport;
       const placement = placeComposer(bounds, { x: bounds.left + item.x / 100 * bounds.width, y: bounds.top + item.y / 100 * bounds.height }, viewport, layer.current?.getBoundingClientRect().height || 210, surface.root.current?.querySelector('[data-feedback-submit]')?.getBoundingClientRect());
       const position = { left: placement.left, top: placement.top, width: placement.width, transformOrigin: placement.transformOrigin, '--prism-mockup-caret-x': placement.caretX + 'px', '--prism-mockup-caret-y': placement.caretY + 'px', '--prism-mockup-caret-side': placement.side };
       setPosition(old => JSON.stringify(old) === JSON.stringify(position) ? old : position);
@@ -82,7 +83,7 @@ function FeedbackPopover({ vm, surface, open }: { vm: MockupModel; surface: NonN
     if (surface.viewport.current) observer?.observe(surface.viewport.current);
     if (surface.root.current) observer?.observe(surface.root.current);
     return () => { observer?.disconnect(); window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
-  }, [surface, vm.editing?.id, vm.state]);
-  return createPortal(<span ref={layer} className="prism-root prism-inline-feedback__popover-layer" data-animate={prism.animate && !prism.unstyled ? undefined : 'false'} data-prism-theme-name={appearance.name} data-prism-theme={appearance.mode} style={{ ...appearance.style, ...position, padding: 0, margin: 0, border: 0, boxShadow: 'none', background: 'transparent', minWidth: 0, minHeight: 0, containerType: 'normal', position: 'fixed', display: 'block', pointerEvents: 'none', zIndex: 1000, maxHeight: 'calc(100dvh - 24px)', overflow: 'visible' }}><MockupComment vm={vm} open={open} style={{ ...position, position: 'relative', display: 'block', left: 0, top: 0, width: '100%', transformOrigin: position.transformOrigin, maxHeight: 'calc(100dvh - 24px)', overflow: 'auto' }} /></span>, portal);
+  }, [surface, vm.editing?.id, vm.state, viewport]);
+  return createPortal(<span ref={layer} className="prism-root prism-inline-feedback__popover-layer" data-animate={prism.animate && !prism.unstyled ? undefined : 'false'} data-prism-theme-name={appearance.name} data-prism-theme={appearance.mode} style={{ ...appearance.style, ...position, padding: 0, margin: 0, border: 0, boxShadow: 'none', background: 'transparent', minWidth: 0, minHeight: 0, containerType: 'normal', position: 'fixed', display: 'block', pointerEvents: 'none', zIndex: 1000, maxHeight: Math.max(0, viewport.height - 24), overflow: 'visible' }}><MockupComment vm={vm} open={open} style={{ ...position, position: 'relative', display: 'block', left: 0, top: 0, width: '100%', transformOrigin: position.transformOrigin, maxHeight: Math.max(0, viewport.height - 24), overflow: 'auto' }} /></span>, portal);
 }
 registerFeedbackSurface(InlineFeedback);
