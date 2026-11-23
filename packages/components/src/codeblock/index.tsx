@@ -97,7 +97,7 @@ export function useCodeBlock(props: CodeBlockProps, ctx: PrismContextValue) {
     observer.observe(element);
     return () => observer.disconnect();
   }, [code, html, threshold, wrap]);
-  const collapse = useCollapse(!collapsed, previewHeight);
+  const collapse = useCollapse(!collapsed, previewHeight, 'auto');
   const language = !ctx.unstyled && Object.hasOwn(languageLabels, lang) ? strings[languageLabels[lang]] : lang;
   return { code, lang, html, rawLines, highlights, count, threshold, collapsed, collapsible, expanded, wrap, copyState, strings, parts, rows, pre,
     complete, animate: ctx.animate, unstyled: ctx.unstyled, label, lines: props.lines ?? !!meta.lines,

@@ -1,4 +1,4 @@
-import { useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { MotionContext, ThemeContext } from './theme';
 import { PrismContext } from './context';
 export { spring } from './spring';
@@ -57,7 +57,7 @@ export function motionDuration(value: string, fallback: number) {
 }
 
 const useClientLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
-export function useCollapse<T extends HTMLElement = HTMLDivElement>(open: boolean, collapsedHeight = 0) {
+export function useCollapse<T extends HTMLElement = HTMLDivElement>(open: boolean, collapsedHeight = 0, overflowX?: CSSProperties['overflowX']) {
   const ref = useRef<T>(null), animation = useRef<Animation | null>(null), initialized = useRef(false);
   const initialHeight = useRef(open ? 'auto' : `${collapsedHeight}px`);
   const reduced = useReducedMotion();
@@ -67,7 +67,8 @@ export function useCollapse<T extends HTMLElement = HTMLDivElement>(open: boolea
     const from = element.getBoundingClientRect().height;
     element.inert = !open && !collapsedHeight;
     animation.current?.cancel(); animation.current = null;
-    element.style.overflow = open ? '' : 'hidden';
+    const overflow = (clip: boolean) => { element.style.overflowY = clip ? 'hidden' : ''; element.style.overflowX = overflowX ?? (clip ? 'hidden' : ''); };
+    overflow(!open);
     const style = element.ownerDocument.defaultView!.getComputedStyle(element);
     const duration = motionDuration(style.getPropertyValue(open ? '--prism-motion-base' : '--prism-motion-fast'), open ? 240 : 160);
     const easing = style.getPropertyValue(open ? '--prism-motion-ease' : '--prism-motion-ease-exit').trim() || (open ? 'cubic-bezier(.23,1,.32,1)' : 'cubic-bezier(.4,0,1,1)');
@@ -75,14 +76,14 @@ export function useCollapse<T extends HTMLElement = HTMLDivElement>(open: boolea
     element.style.height = height;
     const to = open ? element.getBoundingClientRect().height : collapsedHeight;
     if (initialized.current && !reduced && duration && from !== to && element.animate) {
-      element.style.overflow = 'hidden';
+      overflow(true);
       const current = element.animate([{ height: `${from}px`, opacity: from === 0 ? 0 : 1 }, { height: `${to}px`, opacity: open || collapsedHeight ? 1 : 0 }], { duration, easing });
       current.finished?.catch(() => {});
       animation.current = current;
-      current.onfinish = () => { if (animation.current === current) { animation.current = null; current.cancel(); element.style.height = height; if (open) element.style.overflow = ''; } };
+      current.onfinish = () => { if (animation.current === current) { animation.current = null; current.cancel(); element.style.height = height; if (open) overflow(false); } };
     }
     initialized.current = true;
-  }, [open, collapsedHeight, reduced]);
+  }, [open, collapsedHeight, reduced, overflowX]);
   useEffect(() => () => { animation.current?.cancel(); }, []);
-  return { ref, style: { overflow: open ? undefined : 'hidden' as const, height: initialHeight.current }, 'aria-hidden': !open && !collapsedHeight };
+  return { ref, style: { overflowY: open ? undefined : 'hidden' as const, overflowX: overflowX ?? (open ? undefined : 'hidden' as const), height: initialHeight.current }, 'aria-hidden': !open && !collapsedHeight };
 }
