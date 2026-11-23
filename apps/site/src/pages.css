@@ -1,5 +1,4 @@
 .theme-links { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; margin-block: 28px 48px; font-size: 13px; }
-.wrap.themes-page { width: calc(100% - 40px); max-width: 1900px; }
 .theme-controls { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; padding-block: 20px; border-top: 1px solid var(--line); margin-bottom: 24px; font-size: 13px; color: var(--muted); }
 .theme-controls label { display: flex; align-items: center; gap: 12px; }
 .theme-controls select { font: inherit; color: var(--ink); background: var(--page); border: 1px solid var(--line); padding: 6px; border-radius: 4px; }
@@ -31,4 +30,4 @@
 .doc-pagination { max-width: 720px; display: flex; justify-content: space-between; gap: 20px; text-transform: capitalize; border-top: 1px solid var(--line); padding-top: 24px; margin-top: 56px; font-size: 14px; }
 @media (min-width: 760px) { .theme-comparison { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1100px) { .theme-comparison { grid-template-columns: repeat(3, minmax(0, 1fr)); } .doc-layout { grid-template-columns: minmax(0, 720px) minmax(180px, 240px); gap: 64px; } .doc-toc { display: none; } .doc-toc-wide { display: block; grid-column: 2; grid-row: 1; position: sticky; top: 24px; max-height: calc(100vh - 48px); overflow: auto; } .doc-layout .prose { grid-column: 1; grid-row: 1; } }
-@media (min-width: 1600px) { .theme-comparison { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (min-width: 1600px) { .theme-comparison { grid-template-columns: repeat(5, minmax(0, 1fr)); width: min(1900px, calc(100vw - 96px)); margin-inline: calc((100% - min(1900px, calc(100vw - 96px))) / 2); } }

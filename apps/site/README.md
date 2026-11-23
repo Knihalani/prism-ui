@@ -49,6 +49,9 @@ live content in an effect; its prerendered shell and authoring source stay reada
 with JavaScript off. Other component islands hydrate their Prism tree directly.
 The index uses script-disabled sandbox frames for static HTML/SVG media previews,
 derived through the real fence plugins; neither media preview runs JavaScript.
+For full-page browser captures, scroll the media previews into view first.
+Chromium may leave offscreen iframe surfaces unpainted even after their content
+has loaded; a network-idle wait alone does not produce a complete screenshot.
 
 Component references derive props, nested types, parts, strings and examples from
 the registry. JSON authoring payloads are formatted without changing their values.
