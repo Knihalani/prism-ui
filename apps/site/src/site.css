@@ -46,7 +46,7 @@ svg { flex: none; }
 .mode-toggle { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; padding: 0; background: transparent; }
 main.wrap { container: site / inline-size; }
 .hero-grid { display: grid; gap: 64px; padding-block: 76px 80px; align-items: start; }
-.eyebrow, .index-label { font-size: 10px; letter-spacing: .1em; font-weight: 550; color: var(--muted); }
+.eyebrow, .index-label { font-size: 11px; letter-spacing: .1em; font-weight: 550; color: var(--muted); }
 .hero-intro .eyebrow { display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: .025em; }
 .status-dot { display: inline-block; flex: none; width: 5px; height: 5px; background: var(--accent); border-radius: 50%; }
 .hero-intro h1 { margin-block: 25px 24px; font-size: 64px; line-height: 1.02; }
@@ -58,19 +58,28 @@ main.wrap { container: site / inline-size; }
 .quiet-link { text-decoration: none; font-size: 13px; font-weight: 500; }
 .fine-print { margin-top: 30px; font-size: 11px; color: var(--muted); }
 .hero-demo { min-width: 0; padding-top: 1px; }
-.demo-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; padding-bottom: 18px; border-bottom: 1px solid var(--line); font-size: 9px; letter-spacing: .08em; color: var(--muted); }
-.live-label { display: flex; gap: 5px; align-items: center; letter-spacing: 0; font-size: 10px; }
+.demo-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding-bottom: 18px; border-bottom: 1px solid var(--line); font-size: 10px; letter-spacing: .08em; color: var(--muted); }
+.demo-heading h2 { font: inherit; letter-spacing: inherit; text-transform: uppercase; }
+.live-label { display: flex; gap: 5px; align-items: center; letter-spacing: 0; font-size: 11px; }
 .reply-context { display: flex; align-items: center; gap: 9px; margin-top: 22px; margin-bottom: 16px; font-size: 12px; font-weight: 550; }
 .reply-avatar { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 7px; font-size: 11px; color: var(--accent); }
-.reply-role { margin-left: 4px; color: var(--muted); font-size: 10px; font-weight: 400; }
-.text-button { background: none; border: 0; padding: 4px; font-size: 11px; color: var(--muted); }
+.reply-role { margin-left: 4px; color: var(--muted); font-size: 11px; font-weight: 400; }
+.text-button { background: none; border: 0; padding: 4px; font-size: 12px; color: var(--muted); }
 .replay { margin-left: auto; white-space: nowrap; }
 .replay span { display: inline-block; margin-right: 4px; font-size: 16px; vertical-align: -1px; }
 .hero-reply { font-size: 15px; line-height: 1.75; }
 .hero-reply .prism-root { font-family: inherit; }
+.hero-reply strong { white-space: nowrap; }
+.hero-reply .prism-num__root { text-decoration-color: var(--accent); }
 .hero-reply .prism-paragraph__root { margin-block: 0 18px; }
 .hero-reply .prism-chart__root { margin-block: 24px; }
-.reply-note { display: flex; gap: 7px; color: var(--muted); font-size: 10px; line-height: 1.6; padding-top: 16px; margin-top: 12px; border-top: 1px solid var(--line); }
+[data-island="hero"]:not([data-live]) .prism-chart__viewport,
+[data-island="hero"]:not([data-live]) .prism-chart__legend { display: none; }
+[data-island="hero"]:not([data-live]) .prism-chart__summary { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; margin-block: 16px; }
+[data-island="hero"]:not([data-live]) table { width: 100%; border-collapse: collapse; font-size: 12px; }
+[data-island="hero"]:not([data-live]) :is(th, td) { padding: 5px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+[data-island="hero"]:not([data-live]) caption { padding-block: 8px; color: var(--muted); text-align: left; }
+.reply-note { display: flex; gap: 7px; color: var(--muted); font-size: 12px; line-height: 1.6; padding-top: 16px; margin-top: 12px; border-top: 1px solid var(--line); }
 .reply-note > span { color: var(--accent); }
 .principles { border-top: 1px solid var(--line); padding-block: 60px 64px; }
 .section-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: start; gap: 20px; }
@@ -85,11 +94,12 @@ main.wrap { container: site / inline-size; }
 .get-started p:not(.eyebrow) { color: var(--muted); font-size: 13px; }
 .get-started .quiet-link { display: inline-block; margin-top: 20px; }
 .install { min-width: 0; border: 1px solid var(--line); border-radius: 7px; padding: 16px 20px; background: var(--soft); }
-.install-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 28px; font-size: 9px; letter-spacing: .07em; color: var(--muted); }
+.install-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 28px; font-size: 10px; letter-spacing: .07em; color: var(--muted); }
 pre { max-width: 100%; overflow: auto; padding: 16px; border: 1px solid var(--line); border-radius: 5px; background: var(--soft); font-size: 12px; line-height: 1.8; tab-size: 2; }
 code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .install pre { white-space: pre-wrap; overflow-wrap: anywhere; margin-block: 15px 20px; padding: 0; background: transparent; border: 0; font-size: 12px; }
-.install p { font-size: 10px !important; }
+.command-token { white-space: nowrap; }
+.install p { font-size: 11px !important; }
 .site-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; padding-block: 24px 36px; border-top: 1px solid var(--line); font-size: 11px; }
 .site-footer nav { display: flex; flex-wrap: wrap; gap: 24px; }
 .site-footer a { color: var(--muted); text-decoration: none; }
@@ -138,8 +148,7 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
   .hero-intro h1 { font-size: clamp(36px, 10cqi, 44px); margin-block: 23px 20px; }
   .lede { font-size: 16px; }
   .hero-links { gap: 18px; margin-top: 24px; }
-  .fine-print { margin-top: 22px; font-size: 10px; }
-  .demo-heading { font-size: 8px; }
+  .fine-print { margin-top: 22px; font-size: 11px; }
   .reply-role { display: none; }
   .hero-reply { font-size: 14px; }
   .principles, .get-started { padding-block: 40px; }
@@ -155,6 +164,6 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
   .site-header nav a { font-size: 12px; }
   .mode-toggle { margin-left: auto; }
   .wordmark { font-size: 22px; }
-  .site-footer { font-size: 10px; gap: 20px; }
+  .site-footer { font-size: 11px; gap: 20px; }
   .site-footer nav { width: 100%; justify-content: space-between; gap: 10px; }
 }

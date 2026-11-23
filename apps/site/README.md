@@ -22,6 +22,8 @@ mode and copy controls; it dynamically imports only the islands found in the
 document. The landing island is independently server-rendered and hydrated with
 the same identifier prefix, source, registry and initial store. Its CSS is linked
 in the prerendered head, so the complete final reply is styled with JavaScript off.
+Without JavaScript, the chart exposes its native semantic data table instead of
+an unmeasured SVG. The values stay readable at narrow widths without hydration.
 Only Num, Calc and Chart are included in the landing island's registry. Other
 routes do not download the landing island or its component styles.
 

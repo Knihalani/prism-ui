@@ -19,6 +19,7 @@ export function Hero() {
   const current = useRef<ReturnType<typeof createReplay> | null>(null), reply = useRef<HTMLDivElement>(null);
   useEffect(() => {
     setReady(true);
+    const island = reply.current?.closest('[data-island]'); island?.setAttribute('data-live', '');
     const updateMode = () => { const value = document.documentElement.dataset.mode; setMode(value === 'light' || value === 'dark' ? value : 'auto'); };
     updateMode();
     const observer = new MutationObserver(updateMode); observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-mode'] });
@@ -26,13 +27,13 @@ export function Hero() {
     const finish = () => { if (media.matches) { current.current?.stop(); setSource(heroSource); setPlaying(false); } };
     media.addEventListener('change', finish);
     void replay();
-    return () => { current.current?.stop(); observer.disconnect(); media.removeEventListener('change', finish); };
+    return () => { current.current?.stop(); observer.disconnect(); media.removeEventListener('change', finish); island?.removeAttribute('data-live'); };
   }, []);
   async function replay() {
     current.current?.stop();
+    store.set('seats', heroInitial.seats, { history: false });
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) { setSource(heroSource); setPlaying(false); return; }
     if (reply.current) reply.current.style.minHeight = `${reply.current.getBoundingClientRect().height}px`;
-    store.set('seats', heroInitial.seats, { history: false });
     const next = createReplay(heroSource); current.current = next;
     setSource(''); setPlaying(true);
     for await (const text of next.stream) { if (current.current !== next) return; setSource(text); }
