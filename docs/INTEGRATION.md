@@ -233,6 +233,8 @@ bun add @anthropic-ai/sdk@0.65.0 zod@3.25.76
 
 Mount at `/api/anthropic`; keep ANTHROPIC_API_KEY on the server. SDK stream events
 include non-text deltas, which must not enter the Markdown stream.
+Empty assistant entries from failed or text-free replies are omitted from history;
+the conversation client below displays transport errors and empty-reply errors.
 
 <!-- snippet: anthropic-server -->
 ```ts
@@ -245,11 +247,11 @@ export async function* anthropicText(events: AsyncIterable<Anthropic.RawMessageS
   for await (const event of events)
     if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') yield event.delta.text;
 }
-const bodySchema = z.object({ history: z.array(z.object({
+export const anthropicBodySchema = z.object({ history: z.array(z.object({
   role: z.enum(['user', 'assistant']), content: z.string(),
-})), text: z.string() });
+})).transform(history => history.filter(message => message.role !== 'assistant' || message.content.trim().length > 0)), text: z.string() });
 export async function POST(request: Request): Promise<Response> {
-  const { history, text } = bodySchema.parse(await request.json());
+  const { history, text } = anthropicBodySchema.parse(await request.json());
   const events = new Anthropic().messages.stream({
     model: 'claude-sonnet-4-20250514', max_tokens: 4096,
     system: createSystemPrompt(), messages: [...history, { role: 'user', content: text }],
@@ -302,7 +304,8 @@ export function Conversations({ endpoint = '/api/openai' }: { endpoint?: string 
   const current = chats.find(chat => chat.id === selected)!;
   function send(chat: Conversation, text: string) {
     chat.queue = chat.queue.then(async () => {
-      const history = chat.messages.map(message => ({ role: message.role, content: message.text }));
+      const history = chat.messages.filter(message => message.role !== 'assistant' || message.text.trim().length > 0)
+        .map(message => ({ role: message.role, content: message.text }));
       chat.messages.push({ id: crypto.randomUUID(), role: 'user', text, done: true });
       const reply: Message = { id: crypto.randomUUID(), role: 'assistant', text: '', done: false };
       chat.messages.push(reply); chat.error = ''; redraw();
@@ -316,7 +319,11 @@ export function Conversations({ endpoint = '/api/openai' }: { endpoint?: string 
           try {
             while (true) {
               const chunk = await reader.read();
-              if (chunk.done) { const tail = decoder.decode(); reply.text += tail; if (tail) yield tail; break; }
+              if (chunk.done) {
+                const tail = decoder.decode(); reply.text += tail; if (tail) yield tail;
+                if (!reply.text.trim()) throw Error('The model returned an empty reply.');
+                break;
+              }
               const delta = decoder.decode(chunk.value, { stream: true }); reply.text += delta; yield delta;
             }
           } catch (error) { chat.error = String(error); throw error; }

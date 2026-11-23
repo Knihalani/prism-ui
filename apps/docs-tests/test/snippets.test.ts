@@ -55,6 +55,16 @@ test('AI route removes remote file parts before model conversion', async () => {
   await expect(textOnlyMessages([{ id: 'invalid', role: 'user', parts: [{ type: 'text', text: 42 }] }])).rejects.toThrow();
 });
 
+test('Anthropic history excludes failed and whitespace-only assistant replies', async () => {
+  const { anthropicBodySchema } = await import(pathToFileURL(directory + '/anthropic-server.ts').href);
+  const user = { role: 'user', content: 'Hello' }, assistant = { role: 'assistant', content: 'Hi' };
+  expect(anthropicBodySchema.parse({ history: [
+    user, { role: 'assistant', content: '' }, { role: 'assistant', content: '  \n' }, assistant,
+  ], text: 'Continue' }).history).toEqual([user, assistant]);
+  expect(anthropicBodySchema.parse({ history: [], text: 'Hello' }).history).toEqual([]);
+  expect(() => anthropicBodySchema.parse({ history: [{ role: 'assistant', content: null }], text: 'Hello' })).toThrow();
+});
+
 test('documented SDK adapters yield text, ignore non-text deltas and propagate errors', async () => {
   const { openAIText } = await import(pathToFileURL(directory + '/openai-server.ts').href);
   const { anthropicText } = await import(pathToFileURL(directory + '/anthropic-server.ts').href);
