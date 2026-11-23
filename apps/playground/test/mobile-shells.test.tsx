@@ -45,6 +45,11 @@ test.each(['chat', 'editor', 'workspace'])('%s navigation closes from its backdr
   expect(document.activeElement).toBe(trigger);
 });
 
+test('selected mobile editor panes strengthen accent contrast against the filled background', async () => {
+  const css = await Bun.file(new URL('../src/shells.css', import.meta.url)).text();
+  expect(css).toMatch(/\.mobile-pane-switch button\[aria-pressed="true"\] \{[^}]*color: color-mix\(in srgb, var\(--app-accent\) 97%, var\(--app-text\)\)/);
+});
+
 test('Editor offers a mobile code preview without inventing file actions', () => {
   window.location.href = 'http://localhost/?shell=editor';
   const view = render(<App />), code = view.getByRole('button', { name: 'Code' }), assistant = view.getByRole('button', { name: 'Assistant' });

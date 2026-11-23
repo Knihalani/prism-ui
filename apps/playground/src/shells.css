@@ -239,7 +239,7 @@
   .ide-titlebar .window-dots, .ide-branch { display: none; }
   .mobile-pane-switch { display: flex; margin-left: auto; }
   .mobile-pane-switch button { border: 0; padding: 4px 8px; border-radius: 6px; background: transparent; }
-  .mobile-pane-switch button[aria-pressed="true"] { background: var(--app-fill); color: var(--app-accent); }
+  .mobile-pane-switch button[aria-pressed="true"] { background: var(--app-fill); color: color-mix(in srgb, var(--app-accent) 97%, var(--app-text)); }
   .ide-body[data-mobile-pane="code"] .code-pane { display: flex; flex: 1; }
   .shell .ide-assistant[hidden], .shell .code-pane[hidden] { display: none; }
   .workspace-breadcrumb { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; }
