@@ -19,6 +19,7 @@ function ShellFrame({ 'data-prism-theme-name': theme, 'data-theme-base': base, .
 
 export function App(props: AppProps) {
   const [selection, setSelection] = useState(() => parseLocation(window.location.search, availableThemes.map(theme => theme.name)));
+  const [importText, setImportText] = useState('');
   const c = usePlaygroundController(props, selection.mode, selection.shell);
   const selected = availableThemes.find(theme => theme.name === selection.theme) ?? availableThemes[0];
   const editor = useThemeEditor(selected.name, selection.editor);
@@ -39,7 +40,7 @@ export function App(props: AppProps) {
     </div>
     <ShellSwitcher shell={selection.shell} theme={editor.draft ? 'custom' : selected.name} customName={editor.draft?.name} editorOpen={editor.open} toggleRef={toggleRef} onEditor={() => { if (!editor.draft) editor.change(newDraft(selected.name)); editor.setOpen(!editor.open); }} mode={c.mode} inert={!!c.overlay || navigationOpen} onShell={shell => { c.setDrawer(false); setSelection(value => ({ ...value, shell })); }} onTheme={theme => { if (theme === 'custom') return; editor.change(editor.open ? newDraft(theme) : null); setSelection(value => ({ ...value, theme })); }} onMode={() => c.chooseMode(c.mode === 'dark' ? 'light' : 'dark')} />
     </div>
-    {editor.open && editor.draft && <ThemeEditor draft={editor.draft} mode={c.mode} onMode={c.chooseMode} onChange={editor.change} onClose={closeEditor} undo={editor.undo} redo={editor.redo} canUndo={editor.canUndo} canRedo={editor.canRedo} inert={!!c.overlay || navigationOpen} />}
+    {editor.open && editor.draft && <ThemeEditor draft={editor.draft} importText={importText} onImportTextChange={setImportText} mode={c.mode} onMode={c.chooseMode} onChange={editor.change} onClose={closeEditor} undo={editor.undo} redo={editor.redo} canUndo={editor.canUndo} canRedo={editor.canRedo} inert={!!c.overlay || navigationOpen} />}
     {c.overlay === 'palette' && <Palette onClose={c.closeOverlay} onChoose={(prompt, demoId) => { c.closeOverlay(); c.send(prompt, demoId); }} />}
   </ThemeScope>;
 }

@@ -87,3 +87,20 @@ test('Chat closes the theme editor sheet before navigation becomes modal', () =>
   expect(view.container.querySelector('#theme-editor')).toBeNull();
   expect(document.activeElement).toBe(view.getByRole('button', { name: 'Open sidebar' }));
 });
+
+for (const shell of ['chat', 'editor', 'workspace']) for (const text of [':root { --primary: #123456; }', ':root { --primary:', '']) test(`${shell} navigation preserves the unapplied CSS import ${JSON.stringify(text)}`, () => {
+  window.location.href = 'http://localhost/?shell=' + shell;
+  const view = render(<App />);
+  fireEvent.click(view.getByRole('button', { name: 'Customise theme' }));
+  const label = 'Paste shadcn / Tailwind CSS variables', input = view.getByLabelText(label) as HTMLTextAreaElement;
+  act(() => input.focus()); fireEvent.change(input, { target: { value: text } }); fireEvent.keyUp(input, { key: 'Unidentified' });
+  expect((view.getByRole('button', { name: 'Apply', hidden: true }) as HTMLButtonElement).disabled).toBe(!text.trim());
+  fireEvent.click(view.getByRole('button', { name: shell === 'chat' ? 'Open sidebar' : 'Open navigation' }));
+  expect(view.container.querySelector('#theme-editor')).toBeNull();
+  expect(view.container.querySelector('.shell-switcher')!.hasAttribute('inert')).toBe(true);
+  const dialog = view.getByRole('dialog'); expect(dialog.contains(document.activeElement)).toBe(true);
+  fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+  fireEvent.click(view.getByRole('button', { name: 'Customise theme' }));
+  expect((view.getByLabelText(label) as HTMLTextAreaElement).value).toBe(text);
+  expect((view.getByRole('button', { name: 'Apply', hidden: true }) as HTMLButtonElement).disabled).toBe(!text.trim());
+});
