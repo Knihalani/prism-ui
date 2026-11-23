@@ -33,7 +33,7 @@ export async function recordEvals(agent: Agent, recording: EvalRecording, path: 
         if (event.type === 'text') output += event.delta;
       }
       if (signal.aborted) error = 'HTTP unavailable: Provider request timed out.';
-      else if (!output) error = 'HTTP unavailable: No text returned.';
+      else if (!output.trim()) error = 'HTTP unavailable: No text returned.';
     } catch (cause) {
       const status = cause instanceof Error ? /^Provider request failed \((\d{3})\)$/.exec(cause.message)?.[1] : undefined;
       error = status ? `HTTP ${status}: Provider request failed. Check your key limits and permissions.` : 'HTTP unavailable: Provider request did not complete.';

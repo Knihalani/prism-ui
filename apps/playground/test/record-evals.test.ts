@@ -40,11 +40,12 @@ test('recorder stops at the first HTTP 403 and never prints the response body or
   expect(JSON.stringify(result)).not.toContain('Key limit exceeded');
 });
 
-test.each(['empty', 'error'] as const)('recorder stops on an %s response and preserves preceding successful outputs', async kind => {
+test.each(['empty', 'whitespace', 'error'] as const)('recorder stops on %s output and preserves preceding successful outputs', async kind => {
   let calls = 0;
   const result = await record({ id: 'test', label: 'Test', async *respond() {
     calls++;
     if (calls === 1) yield { type: 'text', delta: 'Completed output' };
+    else if (kind === 'whitespace') yield { type: 'text', delta: ' \n\t ' };
     else if (kind === 'error') throw Error('private-recorder-canary');
   } });
   expect(calls).toBe(2);
