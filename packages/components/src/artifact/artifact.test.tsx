@@ -15,6 +15,16 @@ const plugins = [artifactPlugin], registry = createRegistry([artifact]);
 const html = '<p>First version</p>';
 const snippet = fence('html', 'title="Read-only report" id=report height=180px', html);
 
+test('serialized worker and iframe imports stay native instead of capturing Vite host helpers', async () => {
+  for (const file of ['compiler.ts', 'runtime.ts']) {
+    const source = await Bun.file(new URL(file, import.meta.url)).text();
+    const start = source.indexOf('function '), runtime = source.slice(start, source.indexOf('\nexport ', start));
+    expect(runtime).toContain('function ');
+    expect(runtime).not.toMatch(/import\((url|specifier)\)/);
+    expect(source).toContain('specifier => import(specifier)');
+  }
+});
+
 test('artifacts default to inline, with adaptive runtime and model instructions', () => {
   expect(artifact.schema!.coerce({ kind: 'html', source: '' }).value?.variant).toBe('inline');
   expect(artifact.feedback).toBe(true);
