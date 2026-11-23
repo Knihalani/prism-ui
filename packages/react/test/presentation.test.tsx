@@ -46,7 +46,7 @@ test('removed parents preserve styled sibling skeletons in one inert snapshot', 
   const ghost = ghosts[0];
   expect(ghost.tagName).toBe('SECTION'); expect(ghost.querySelectorAll('span').length).toBe(2);
   expect(ghost.style.width).toBe('120px'); expect(ghost.style.height).toBe('60px');
-  expect(ghost.querySelector('span')!.style.color).toBe(color);
+  expect(getComputedStyle(ghost.querySelector('span')!).color).toBe(color);
   expect(ghost.querySelector('[id]')).toBeNull(); expect(ghost.hasAttribute('id')).toBe(false);
   expect(ghost.style.getPropertyValue('--prism-motion-fast')).toBe('20ms');
   expect(ghost.inert).toBe(true); expect(ghost.style.opacity).toBe('0');
@@ -68,7 +68,7 @@ test('skeleton snapshots preserve computed declarations with quotes, semicolons 
   await act(async () => { view.rerender(skeletonHost(<p>Ready</p>)); });
   const ghost = view.container.querySelector('[data-prism-skeleton-exit]')!;
   ['span', 'rect'].forEach((selector, index) => {
-    const style = (ghost.querySelector(selector)! as HTMLElement | SVGElement).style;
+    const style = getComputedStyle(ghost.querySelector(selector)!);
     for (const [name, value] of expected[index]) expect(style.getPropertyValue(name)).toBe(value);
   });
 });
@@ -79,6 +79,44 @@ test('nested raw skeletons do not duplicate a StreamSkeleton exit', async () => 
   measured(view.container.querySelector('i')!);
   await act(async () => { view.rerender(skeletonHost(<p>Ready</p>)); });
   expect(view.container.querySelectorAll('[data-prism-skeleton-exit]').length).toBe(1);
+});
+
+test('cached ancestor templates keep siblings separate and expire after each flush', async () => {
+  const children = (loading: boolean, value: string) => skeletonHost(<section style={{ '--snapshot': value } as CSSProperties}>
+    {loading ? [0, 1].map(index => <PrismPart key={index} data-part="skeleton" data-test={index} />) : <p>Ready</p>}
+  </section>);
+  const view = render(children(true, 'first'));
+  measured(view.container.querySelector('section')!, 120, 60);
+  view.container.querySelectorAll('[data-part="skeleton"]').forEach(element => measured(element));
+  await act(async () => { view.rerender(children(false, 'first')); });
+  const first = Array.from(view.container.querySelectorAll<HTMLElement>('[data-prism-skeleton-exit]'));
+  expect(first).toHaveLength(2); expect(first[0]).not.toBe(first[1]);
+  first.forEach(ghost => ghost.remove());
+  view.rerender(children(true, 'second'));
+  measured(view.container.querySelector('section')!, 140, 60);
+  view.container.querySelectorAll('[data-part="skeleton"]').forEach(element => measured(element));
+  await act(async () => { view.rerender(skeletonHost(<p>Ready</p>)); });
+  const ghost = view.container.querySelector<HTMLElement>('[data-prism-skeleton-exit]')!;
+  expect(ghost.tagName).toBe('SECTION'); expect(ghost.style.width).toBe('140px');
+  expect(ghost.style.getPropertyValue('--snapshot')).toBe('second');
+  expect(ghost.querySelectorAll('[data-part="skeleton"]')).toHaveLength(2);
+});
+
+test('inherited values remain frozen at an exit root and explicit child styles survive', async () => {
+  const view = render(skeletonHost(<div style={{ color: 'purple', fontSize: '18px', '--custom': 'one' } as CSSProperties}>
+    <StreamSkeleton><span style={{ color: 'red', fontWeight: 700 }}>Loading</span><svg><rect style={{ fill: 'blue' }} /></svg></StreamSkeleton>
+  </div>));
+  measured(view.container.querySelector('[data-prism-skeleton]')!);
+  const expected = ['span', 'rect'].map(selector => {
+    const style = getComputedStyle(view.container.querySelector(selector)!);
+    return { color: style.color, fontSize: style.fontSize, fill: style.fill, custom: style.getPropertyValue('--custom') };
+  });
+  await act(async () => { view.rerender(skeletonHost(<div style={{ color: 'green', fontSize: '24px', '--custom': 'two' } as CSSProperties}><p>Ready</p></div>)); });
+  const ghost = view.container.querySelector('[data-prism-skeleton-exit]')!;
+  ['span', 'rect'].forEach((selector, index) => {
+    const style = getComputedStyle(ghost.querySelector(selector)!);
+    expect({ color: style.color, fontSize: style.fontSize, fill: style.fill, custom: style.getPropertyValue('--custom') }).toEqual(expected[index]);
+  });
 });
 
 test('SVG skeletons retain their viewport, namespace and ancestor transforms on exit', async () => {

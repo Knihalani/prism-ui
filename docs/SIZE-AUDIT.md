@@ -1,13 +1,13 @@
 # Component size audit
 
-Baseline: `ba8a0ae` (before Step B); after: the B rework on the perf-audit branch.
+Baseline: `ba8a0ae` (before Step B); after: Step D on the perf-audit branch.
 Bun 1.4.4, minified browser ESM, gzip level 9. See [accounting](../scripts/README.md).
 All numbers are bytes. Full component JS is **own + the entire shared entry**,
 not a standalone consumer bundle. Runtime rows do not add shared.
 
 **Remaining limitations:** Chart/DataTable net trimming is only 68B, not a
-meaningful reduction of their own code. Public fixture compatibility is restored,
-but Bun still retains fixture payload through a root consumer import.
+meaningful reduction of their own code. Public fixture compatibility is preserved;
+root and subpath component consumers now retain zero fixture bytes.
 
 | Entry | Own JS before → after | Full JS before → after | Own CSS before → after |
 |---|---:|---:|---:|
@@ -31,7 +31,7 @@ but Bun still retains fixture payload through a root consumer import.
 | mockup | 32287 → 32574 | 57246 → 57465 | 3324 → 3324 |
 | view | 18126 → 18102 | 43085 → 42993 | 5231 → 5231 |
 | shared | 24959 → 24891 | 24959 → 24891 | 8923 → 8923 |
-| react | 19071 → 19071 | 19071 → 19071 | 2608 → 2608 |
+| react | 19071 → 19684 | 19071 → 19684 | 2608 → 2608 |
 | core | 11595 → 11595 | 11595 → 11595 | 0 → 0 |
 | state | 3422 → 3422 | 3422 → 3422 | 0 → 0 |
 | schema | 1825 → 1825 | 1825 → 1825 | 0 → 0 |
@@ -64,11 +64,19 @@ The explicit `@prism-ui/components/view/fixtures` subpath remains available.
 The gallery initializer is pure so a consumer importing only `View` from
 `./view` includes **0 fixture module bytes** in Bun's metafile.
 
-**Unresolved:** the same consumer importing `View` from the root retains
-**8,593 minified fixture bytes**, about **2,827B additional gzip** in this
-measurement. The cause of root-only retention was not isolated. This is not a
-claim that all root imports now tree-shake fixtures. The public-index own budget
-includes the legacy exported fixture data; there is no forced API migration.
+The root now re-exports fixture aliases directly from the fixture module and
+lists the existing shared exports explicitly. Under the size script's external
+shared boundary, the shared wildcard required a runtime namespace merge that
+retained otherwise-unused root bindings. Explicit exports preserve the same API
+without that merge. The root `View` consumer retains **0 fixture module bytes**
+and no fixture payload, down from the rework's 8,593B (8,640B during the direct
+fixture-export trial). Its gzip is **116,294B with or without fixture exports**;
+the `./view` consumer is 15,215 / 15,213B, with zero fixture bytes in both cases.
+`scripts/size.test.ts` enforces both paths. There is no forced API migration.
+
+Step D's ancestor snapshot cache and inherited-property handling add **613B**
+to the React runtime. Other own/full component and shared sizes are unchanged
+from the B rework. See the performance audit for the complete ghost-style proof.
 
 ## Artifact: chunk accounting and unused graph removal
 
@@ -143,18 +151,22 @@ include imported helpers and are **not additive**. The all-grammar entry is
 
 - `bun run size --json --fixtures --chunks`: exit 0, no violations.
 - `bunx tsc --noEmit`: exit 0.
-- `bun test`: **1,099 pass, 1 skip, 0 fail**, 1,100 tests / 123 files, 63.93s.
-  The skip is the absent real live-model recording. An earlier rework run flaked
+- `bun test`: **1,101 pass, 1 skip, 0 fail**, 1,102 tests / 123 files, 69.17s.
+  The skip is the absent real live-model recording. The first final run flaked
   `packages/core/test/scaling.test.ts` (`four-character streaming scales linearly
-  for long open blocks`, ratio 2.889 > 2.6); the final suite had no timing failure.
-- Playground production build: **built in 2.35s**, exit 0. Existing >500kB
+  for long open blocks`, ratio 3.242386206513411 > 2.6); the retry passed without
+  source or test changes. An earlier B rework run also observed ratio 2.889.
+- Playground production build: **built in 3.36s**, exit 0. Existing >500kB
   chunk warning remains. Dedicated production replay build also passed.
 - Captured and inspected DataTable, Chart, Artifact and Artifact feedback;
   exact RGBA differences against the original screenshots are **0% for all four**.
   Escape/reopen retains the feedback draft; 0 page errors.
-- No push, remote CI or live-provider calls were made for this rework.
+- Mid-exit old/new ghost screenshots have **0%** pixel difference; see
+  `~/shots/perf/skeleton-mid-{old,new,diff}.png` and PERFORMANCE-AUDIT.md.
+- No remote CI or live-provider calls were made during these local checks.
 
 Screenshots: `~/shots/perf/{datatable,chart,artifact,artifact-feedback}-{before,after}.png`.
 Raw sizes/metafiles, logs and helpers: `~/conformance/perf-audit/step-c/`.
+Final Step D sizes, proof and check logs: `~/conformance/perf-audit/step-d/`.
 See [production performance evidence](PERFORMANCE-AUDIT.md) for the benchmark
 and Chrome results, including the unresolved long-task target.

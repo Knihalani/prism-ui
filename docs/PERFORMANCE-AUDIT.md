@@ -1,8 +1,12 @@
 # Production streaming audit
 
-Comparison: main `a2ebe6c` versus the perf-audit branch after B rework.
+Comparison: main `a2ebe6c` versus the perf-audit branch after Step D.
 Bun 1.4.4, React 19.3.1; same machine. No live-provider requests.
 Sizes and remaining bundle limitations are in [SIZE-AUDIT.md](SIZE-AUDIT.md).
+Core and React tables retain the five-round Step C data: Step D changes the
+browser snapshot path bypassed by happy-dom's zero-size rectangles, and root
+export wiring, not the parser or the benchmark's rendered content. The Chrome
+table is the final, uninstrumented main/branch capture pair after Step D.
 
 **The Chrome 50ms target is not met.** Cold happy-dom warmup outliers also
 remain unattributed. The steady measured production React updates are below
@@ -78,22 +82,22 @@ and task analysis deliberately includes all renderer main threads.
 
 | Trace metric | Main | Branch |
 |---|---:|---:|
-| Send-through-settle interval, ms | 34791.317 | 34999.891 |
-| Renderer main tasks >50ms | 14 | 16 |
-| Largest task, ms | 194.803 | 148.076 |
-| Largest non-host renderer task, ms | 17.186 | 15.569 |
+| Send-through-settle interval, ms | 34829.442 | 33738.341 |
+| Renderer main tasks >50ms | 18 | 11 |
+| Largest task, ms | 152.914 | 111.147 |
+| Largest non-host renderer task, ms | 20.352 | 12.257 |
 
 All long tasks are in the host renderer. The in-page Long Tasks observer,
-filtered to the same marks, independently reports **14 / 16**. Its unfiltered
-branch lifetime count is 17 because it includes initial page loading.
-One capture per revision is not evidence that the lower maximum is a speedup.
+filtered to the same marks, reports **17 / 11**. The trace-based task count is
+authoritative here and includes a borderline **50.026ms** main task.
+One capture per revision is not evidence of an established speedup.
 
 ### Verified remaining cause
 
 The sampled stack in the worst task, source-mapped on both revisions, is:
 
 `React commitDeletionEffectsOnFiber → commitHookEffectListUnmount →
-SkeletonPart cleanup (skeleton.tsx:96) → capture (:78) → copy (:8/:12) →
+SkeletonPart cleanup → capture → copy →
 CSSStyleDeclaration.setProperty`.
 
 `PrismPart` installs SkeletonPart for raw skeleton parts. Cleanup captures
@@ -102,20 +106,101 @@ CSS declaration onto clones before React removes the originals. The stack
 proves that capture's animation, scope, duration and nonzero-rectangle gates
 are passed in this scenario. This is not inferred from merely possible code.
 
-In the worst main task, native `setProperty` accounts for **145.310ms** and
-`getPropertyValue` **21.236ms** of sampled time. In the worst branch task,
-they account for **91.478 / 23.927ms**, with **12.619ms** in the copying loop.
-`packages/react/src/skeleton.tsx` is unchanged from main. This is a preexisting
-browser exit-snapshot cost, not a confirmed effect of the size changes.
+In the worst main task, native `setProperty` accounts for **99.041ms** and
+`getPropertyValue` **27.160ms** of sampled time. In the worst branch task,
+they account for **55.739 / 15.695ms**. These are sampling estimates, not exact
+wall-time attribution. The remaining branch task durations, milliseconds, are:
+**111.147, 103.776, 95.781, 85.112, 85.068, 78.129, 71.720, 60.978, 59.101,
+57.702, 57.198**. All are on the host renderer. Full stacks and task offsets
+are retained in the trace summaries and final thread-proof log.
 
-Two attempted optimizations were rejected and reverted: bulk cssText copying
-still produced a 225.871ms task, and skipping captures nested beneath a pending
-ancestor did not eliminate the large tasks. Native style freezing remains the
-dominant path. Removing it, copying fewer declarations or deferring capture
-until after removal risks inherited/theme styles, SVG placement and the exit
-snapshot. No visual compromise or unsupported performance fix is shipped.
-The 0-long-task target requires a deeper snapshot-pipeline redesign and remains
-unfinished. A richer computed-style snapshot regression test was retained.
+### Shipped snapshot changes and equivalence proof
+
+- Reuse each ancestor's shallow snapshot and rect within a flush; clone its
+  template for each chain, retaining the existing exit-merge structure. Clear
+  the cache after every flush.
+- Omit a static set of inherited declarations only when equal to the parent's
+  computed value and not explicitly styled inline. Restore omitted values on
+  the actual exit root, so it does not depend on the live parent's later styles.
+  Custom properties are still copied conservatively, not omitted. No CSS
+  `@property` or `CSS.registerProperty` registrations were found in packages.
+- Offscreen/clipping skips were dropped when their independent-run visual
+  proof could not be completed quickly. The final implementation captures the
+  same ghosts as before. cssText assignment regressed instrumented write time
+  and was reverted. Nested-capture elision is also not shipped.
+
+The final temporary browser harness runs the original and optimized capture
+against the **same live DOM before each React removal**, avoiding independent
+run differences from async component loading, scrolling and focus transitions.
+Both flush implementations attach their ghosts; every computed property is
+recorded while attached. Stable source paths and stream chunk indices pair
+**43 ghosts per implementation, all 107 elements, 59,774 property values**:
+**0 unmatched elements, 0 computed-style differences**. The replay completes
+all 1,087 chunks with no page errors.
+
+At chunk 88, exit transitions are paused at 80ms. Counterpart ghosts are masked
+in turn with a temporary clip-path, leaving the same live body underneath.
+Unrelated animations are settled, skeleton shimmer is paused, and the composer
+blur transition is finished before both screenshots. Exact pixel diff:
+**0 / 1,280,000 pixels (0%)**. An earlier independent-run comparison was nonzero
+and was not accepted as proof; its composer-focus/timing mismatch is avoided
+by this same-DOM comparison. Instrumentation and masking are not shipped.
+
+Screenshots: `~/shots/perf/skeleton-mid-{old,new,diff,diff-visible}.png`.
+Proof: `~/conformance/perf-audit/step-d/{proof-dual,comparison-dual}.json`,
+`proof-dual-screenshot.json`, `dual.mjs`, `proof.config.ts`.
+
+The 0-long-task target remains unfinished; further optimization was explicitly
+out of scope for this final step. No visual compromise is claimed or required.
+
+### Temporary instrumentation (exploratory, not shipped)
+
+Instrumentation counts captures and clone subtree elements (including shallow
+ancestor templates/clones), declarations written, and time in computed-style
+acquisition/access versus setProperty. Proxy/counter overhead makes these
+timings unsuitable for comparison with the final uninstrumented trace.
+
+Baseline long tasks, in chronological order:
+
+| Task | Duration ms | Captures | Elements cloned | Declarations written | Style reads ms | Style writes ms |
+|---|---:|---:|---:|---:|---:|---:|
+| 1 | 127.236 | 3 | 21 | 11724 | 22.2 | 69.5 |
+| 2 | 116.524 | 3 | 21 | 11724 | 21.5 | 66.1 |
+| 3 | 121.871 | 3 | 21 | 11724 | 23.8 | 68.8 |
+| 4 | 215.868 | 4 | 31 | 17309 | 39.4 | 118.6 |
+| 5 | 188.589 | 4 | 31 | 17309 | 33.9 | 111.2 |
+| 6 | 190.275 | 4 | 31 | 17309 | 35.0 | 111.3 |
+| 7 | 66.219 | 4 | 10 | 5570 | 10.6 | 30.8 |
+| 8 | 61.944 | 4 | 10 | 5570 | 10.3 | 32.7 |
+| 9 | 53.052 | 1 | 7 | 3902 | 8.5 | 27.9 |
+| 10 | 94.157 | 6 | 16 | 8912 | 15.2 | 49.8 |
+| 11 | 81.852 | 1 | 7 | 3914 | 6.7 | 63.4 |
+| 12 | 105.357 | 2 | 16 | 8944 | 16.9 | 54.0 |
+| 13 | 97.703 | 2 | 16 | 8944 | 18.3 | 50.6 |
+| 14 | 98.120 | 1 | 13 | 7257 | 16.9 | 51.9 |
+| 15 | 134.130 | 3 | 24 | 13488 | 23.2 | 80.4 |
+| 16 | 160.611 | 3 | 24 | 13488 | 32.2 | 91.2 |
+| 17 | 151.756 | 3 | 24 | 13488 | 25.4 | 95.1 |
+| 18 | 136.381 | 3 | 24 | 13488 | 24.5 | 84.2 |
+
+The original ordered experiments measured:
+
+| Instrumented trial | Long tasks | Max ms | Declarations written | Reads ms | Writes ms |
+|---|---:|---:|---:|---:|---:|
+| Baseline | 18 | 215.868 | 276132 | 545.8 | 1727.9 |
+| Offscreen/clipping skips | 8 | 151.715 | 81151 | 174.9 | 508.9 |
+| Plus ancestor cache | 8 | 145.936 | 54301 | 131.5 | 338.5 |
+| Plus inherited omissions | 9 | 94.383 | 46856 | 145.9 | 335.4 |
+| Plus cssText trial | 9 | 113.799 | 42001 | 136.0 | 467.0 |
+
+These are single exploratory runs, not repeated performance evidence. All
+post-baseline trials above included clipping; clipping was subsequently dropped,
+so none represents the final shipped configuration. The final configuration's
+result is the uninstrumented 18 → 11 table above. Complete per-task counters for
+every trial, including capture-call counts, are in
+`~/conformance/perf-audit/step-d/summary.json`; capture records are in
+`d-*.captures.json`, alongside `instrument.ts` and `summarize.mjs`.
+
 
 ## Evidence and reproduction
 
@@ -138,7 +223,10 @@ The rejected cssText experiment is saved separately as
 `kitchen-branch-css-text-failed.trace.json`.
 
 Final source checks: size budgets exit 0, root TypeScript exit 0, full tests
-**1,099 pass / 1 skip / 0 fail** (63.93s), normal and dedicated production
+**1,101 pass / 1 skip / 0 fail** (69.17s), normal and dedicated production
 builds exit 0. The default build retains its existing >500kB chunk warning.
+The first final test run flaked the unchanged core scaling test:
+**3.242386206513411 > 2.6**. A full-suite retry passed without code changes.
 DataTable, Chart, Artifact and Artifact feedback screenshots are all **0%**
 different from the original reference pairs; paths are in SIZE-AUDIT.md.
+Final sizes, checks and proof logs are in `~/conformance/perf-audit/step-d/`.

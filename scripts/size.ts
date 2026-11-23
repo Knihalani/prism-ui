@@ -87,7 +87,7 @@ export async function fixtureCompatibility() {
     let stripped = 0;
     const without: BunPlugin = { name: 'without-fixture-export', setup(build) {
       build.onLoad({ filter: /index\.ts$/ }, async args => {
-        if (!args.path.replaceAll('\\', '/').endsWith('/view/index.ts')) return;
+        if (![resolve(components, 'index.ts'), resolve(components, 'view/index.ts')].includes(args.path)) return;
         stripped++;
         return {
         contents: (await Bun.file(args.path).text()).split('\n').filter(line => !line.includes('gallery as viewGallery, views as viewFixtures')).join('\n'),

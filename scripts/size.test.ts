@@ -3,13 +3,14 @@ import { fixtureCompatibility, sharedPath, table, violations, type Budgets, type
 
 const budgets: Budgets = { defaults: { js: 4096, css: 4096 }, entries: {} };
 const row: SizeRow = { name: 'widget', kind: 'component', js: 4096, css: 4096, initial: 4096, deferred: 0, fullJs: 9000, fullCss: 9000 };
-test('public view fixture aliases tree-shake from subpath runtime imports', async () => {
+test('public view fixture aliases tree-shake from root and subpath runtime imports', async () => {
   const rows = await fixtureCompatibility();
   expect(rows.map(row => row.entry)).toEqual(['view/index.ts', 'index.ts']);
-  const subpath = rows.find(row => row.entry === 'view/index.ts')!;
-  expect(subpath.withFixtureExports).toBeGreaterThan(0);
-  expect(subpath.fixtureBytes).toBe(0);
-  expect(subpath.fixturePayload).toBe(false);
+  for (const row of rows) {
+    expect(row.withFixtureExports).toBeGreaterThan(0);
+    expect(row.fixtureBytes).toBe(0);
+    expect(row.fixturePayload).toBe(false);
+  }
 });
 test('budgets enforce own cost, including CSS, not informational full cost', () => {
   expect(violations([row], budgets)).toEqual([]);
