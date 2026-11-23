@@ -62,6 +62,7 @@ export function useFollowScroll(scrollRef: RefObject<HTMLElement | null>, { thre
     state.current.cleanup(); state.current.schedule = () => {}; state.current.node = node;
     if (!node) return;
     let active = true, frame: number | undefined, dragging = false, touchY = 0, quiet = 0, height: number | undefined, lastTop = node.scrollTop;
+    let lastScrollHeight = node.scrollHeight, ownTop: number | undefined;
     const anchor = node.style.overflowAnchor, gutter = node.style.scrollbarGutter;
     const computedGutter = getComputedStyle(node).scrollbarGutter;
     if (!computedGutter || computedGutter === 'auto') node.style.scrollbarGutter = 'stable';
@@ -76,23 +77,25 @@ export function useFollowScroll(scrollRef: RefObject<HTMLElement | null>, { thre
       const next = node.scrollHeight;
       quiet = next === height ? quiet + 1 : 0; height = next;
       const top = Math.max(0, next - node.clientHeight);
-      if (Math.abs(node.scrollTop - top) > .5) node.scrollTop = top;
-      lastTop = node.scrollTop;
+      if (Math.abs(node.scrollTop - top) > .5) { node.scrollTop = top; ownTop = node.scrollTop; }
+      lastTop = node.scrollTop; lastScrollHeight = next;
       if (quiet < 24) frame = requestAnimationFrame(settle);
     };
     const schedule = () => {
       updateAnchor();
       if (!active) return;
-      if (!state.current.following) { lastTop = node.scrollTop; cancel(); return; }
+      if (!state.current.following) { lastTop = node.scrollTop; lastScrollHeight = node.scrollHeight; ownTop = undefined; cancel(); return; }
       quiet = 0;
       if (frame === undefined) frame = requestAnimationFrame(settle);
     };
-    const stop = () => { lastTop = node.scrollTop; change(false); cancel(); updateAnchor(); };
+    const stop = () => { lastTop = node.scrollTop; ownTop = undefined; change(false); cancel(); updateAnchor(); };
     const scroll = () => {
-      const distance = node.scrollHeight - node.clientHeight - node.scrollTop;
-      if (dragging && distance > threshold) stop();
+      const next = node.scrollHeight, top = node.scrollTop, distance = next - node.clientHeight - top;
+      const ours = ownTop !== undefined && Math.abs(top - ownTop) <= 1;
+      ownTop = undefined;
+      if ((dragging && distance > threshold) || (!ours && top < lastTop - 1 && next >= lastScrollHeight && distance > 2)) stop();
       else if (distance <= 2 || (node.scrollTop > lastTop && distance <= threshold)) { change(true); schedule(); }
-      lastTop = node.scrollTop;
+      lastTop = top; lastScrollHeight = next;
     };
     const pointerDown = (event: PointerEvent) => { dragging = event.target === node; };
     const pointerUp = () => { dragging = false; };

@@ -39,14 +39,15 @@ test('follow scroll observes height, coalesces writes, respects intent, resumes 
     expect(latest.following).toBe(false);
     act(() => latest.jumpToLatest()); tick(); expect(latest.following).toBe(true);
     act(() => { top = 200; node.dispatchEvent(new Event('scroll')); });
-    expect(latest.following).toBe(true);
-    tick(); expect(top).toBe(800);
+    expect(latest.following).toBe(false);
+    tick(); expect(top).toBe(200);
+    act(() => latest.jumpToLatest()); tick(); expect(top).toBe(800);
     act(() => node.dispatchEvent(new Event('pointerdown')));
     act(() => { top = 200; node.dispatchEvent(new Event('scroll')); });
     expect(latest.following).toBe(false); expect(frame).toBeUndefined();
     act(() => node.ownerDocument.dispatchEvent(new Event('pointerup')));
     act(() => latest.jumpToLatest()); tick();
-    act(() => { top = 200; node.dispatchEvent(new Event('scroll')); });
+    act(() => node.dispatchEvent(new Event('scroll')));
     expect(latest.following).toBe(true);
     act(() => node.firstElementChild!.dispatchEvent(new Event('pointerdown', { bubbles: true })));
     act(() => node.dispatchEvent(new Event('scroll')));
@@ -73,6 +74,34 @@ test('empty scroll refs are safe and attach when a scroller appears', () => {
   view.rerender(<Surface show />);
   expect(view.container.firstElementChild).not.toBeNull();
   view.rerender(<Surface show={false} />);
+});
+
+test('iframe-chain upward scrolling stops following, but shrink clamps and own writes do not', () => {
+  const original = { raf: globalThis.requestAnimationFrame, cancel: globalThis.cancelAnimationFrame };
+  let frame: FrameRequestCallback | undefined, latest!: ReturnType<typeof useFollowScroll>;
+  globalThis.requestAnimationFrame = callback => { frame = callback; return 1; };
+  globalThis.cancelAnimationFrame = () => { frame = undefined; };
+  function Surface() { const ref = useRef<HTMLDivElement>(null); latest = useFollowScroll(ref); return <div ref={ref}><iframe /></div>; }
+  const tick = () => act(() => { const callback = frame; frame = undefined; callback?.(0); });
+  try {
+    const view = render(<Surface />), node = view.container.firstElementChild as HTMLElement;
+    let height = 1000, viewport = 100;
+    Object.defineProperties(node, { scrollHeight: { get: () => height }, clientHeight: { get: () => viewport } });
+    tick(); expect(node.scrollTop).toBe(900);
+    act(() => { node.scrollTop = 740; node.dispatchEvent(new Event('scroll')); });
+    expect(latest.following).toBe(false); expect(frame).toBeUndefined(); expect(node.scrollTop).toBe(740);
+    act(() => latest.jumpToLatest()); tick();
+    act(() => { height = 940; node.scrollTop = 800; node.dispatchEvent(new Event('scroll')); });
+    expect(latest.following).toBe(true); tick(); expect(node.scrollTop).toBe(840);
+    viewport = 120; tick(); expect(node.scrollTop).toBe(820);
+    act(() => node.dispatchEvent(new Event('scroll')));
+    expect(latest.following).toBe(true);
+    act(() => { node.scrollTop = 819; node.dispatchEvent(new Event('scroll')); });
+    expect(latest.following).toBe(true);
+    act(() => { height = 1000; node.scrollTop = 700; node.dispatchEvent(new Event('scroll')); });
+    expect(latest.following).toBe(false); expect(frame).toBeUndefined();
+    view.unmount();
+  } finally { globalThis.requestAnimationFrame = original.raf; globalThis.cancelAnimationFrame = original.cancel; }
 });
 
 test('small upward gestures stay paused until moving downward near the bottom or reaching it', () => {
