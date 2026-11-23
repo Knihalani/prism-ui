@@ -8,7 +8,7 @@ import { importCssVariables, type CssImport } from './import-css';
 
 type Props = {
   draft: ThemeDraft; mode: EditTarget; onMode(mode: EditTarget): void; onChange(draft: ThemeDraft): void;
-  onClose(): void; undo(): void; redo(): void; canUndo: boolean; canRedo: boolean;
+  onClose(): void; undo(): void; redo(): void; canUndo: boolean; canRedo: boolean; inert?: boolean;
 };
 const fonts = [
   ['Inherit from host', 'inherit'], ['System sans', 'system-ui, sans-serif'], ['System serif', 'Georgia, serif'], ['System mono', 'ui-monospace, monospace'],
@@ -79,7 +79,7 @@ function SpringControl({ bouncy = false, easing, duration, onChange }: { bouncy?
   </div>;
 }
 
-export function ThemeEditor({ draft, mode, onMode, onChange, onClose, undo, redo, canUndo, canRedo }: Props) {
+export function ThemeEditor({ draft, mode, onMode, onChange, onClose, undo, redo, canUndo, canRedo, inert }: Props) {
   const nameRef = useRef<HTMLInputElement>(null);
   const [pendingBase, setPendingBase] = useState<string>(), [paste, setPaste] = useState(''), [report, setReport] = useState<CssImport>(), [copied, setCopied] = useState(false), [error, setError] = useState('');
   const theme = toTheme(draft, availableThemes), code = exportTheme(draft);
@@ -106,7 +106,7 @@ export function ThemeEditor({ draft, mode, onMode, onChange, onClose, undo, redo
   }
   const basePx = px(value('textBase'), 16), ratio = px(value('textLg'), 18) / basePx;
   const shared = <p className="te-note">Shared across light and dark.</p>;
-  return <aside id="theme-editor" className="theme-editor" aria-label="Theme editor" style={{ '--te-motion-base': value('motionBase'), '--te-motion-fast': value('motionFast'), '--te-motion-ease': value('motionEase') } as CSSProperties} onKeyDown={event => {
+  return <aside id="theme-editor" className="theme-editor" inert={inert || undefined} aria-label="Theme editor" style={{ '--te-motion-base': value('motionBase'), '--te-motion-fast': value('motionFast'), '--te-motion-ease': value('motionEase') } as CSSProperties} onKeyDown={event => {
     if (event.defaultPrevented || event.nativeEvent.isComposing) return;
     if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); }
     else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); }

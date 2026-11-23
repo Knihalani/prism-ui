@@ -7,6 +7,29 @@ import { editorStorageKey } from '../src/theme-editor/state';
 import { parseLocation, serialiseLocation } from '../src/url-state';
 import { radiusScale, springTokens, typeScale } from '../src/theme-editor/model';
 
+test('modal dialogs disable the nonmodal editor and restore it without closing the draft', () => {
+  const view = render(<App />);
+  const editor = open(view);
+  const panel = view.getByRole('complementary', { name: 'Theme editor' });
+  const name = editor.getByRole('textbox', { name: 'Theme name' });
+  act(() => name.focus());
+  fireEvent.keyDown(name, { key: 'k', ctrlKey: true });
+  expect(view.getByRole('dialog')).toBeTruthy();
+  expect(panel.hasAttribute('inert')).toBe(true);
+  fireEvent.keyDown(view.getByRole('combobox', { name: 'Search scenarios and components' }), { key: 'Escape' });
+  expect(view.queryByRole('dialog')).toBeNull();
+  expect(panel.hasAttribute('inert')).toBe(false);
+  expect(document.activeElement).toBe(name);
+});
+
+test('modal backdrops stack above the nonmodal theme editor', async () => {
+  const css = await Bun.file(new URL('../src/app.css', import.meta.url)).text();
+  const editorCss = await Bun.file(new URL('../src/theme-editor/editor.css', import.meta.url)).text();
+  const modalLayer = Number(css.match(/\.dialog-backdrop\s*\{[^}]*z-index:\s*(\d+)/)?.[1]);
+  const editorLayer = Number(editorCss.match(/\.theme-editor\s*\{[^}]*z-index:\s*(\d+)/)?.[1]);
+  expect(modalLayer).toBeGreaterThan(editorLayer);
+});
+
 const previousUrl = window.location.href;
 beforeEach(() => { localStorage.clear(); window.location.href = 'http://localhost/?mode=light'; });
 afterEach(() => { cleanup(); localStorage.clear(); window.location.href = previousUrl; });

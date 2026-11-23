@@ -38,7 +38,7 @@ export function App(props: AppProps) {
     </div>
     <ShellSwitcher shell={selection.shell} theme={editor.draft ? 'custom' : selected.name} customName={editor.draft?.name} editorOpen={editor.open} toggleRef={toggleRef} onEditor={() => { if (!editor.draft) editor.change(newDraft(selected.name)); editor.setOpen(!editor.open); }} mode={c.mode} inert={!!c.overlay} onShell={shell => { c.setDrawer(false); setSelection(value => ({ ...value, shell })); }} onTheme={theme => { if (theme === 'custom') return; editor.change(editor.open ? newDraft(theme) : null); setSelection(value => ({ ...value, theme })); }} onMode={() => c.chooseMode(c.mode === 'dark' ? 'light' : 'dark')} />
     </div>
-    {editor.open && editor.draft && <ThemeEditor draft={editor.draft} mode={c.mode} onMode={c.chooseMode} onChange={editor.change} onClose={closeEditor} undo={editor.undo} redo={editor.redo} canUndo={editor.canUndo} canRedo={editor.canRedo} />}
+    {editor.open && editor.draft && <ThemeEditor draft={editor.draft} mode={c.mode} onMode={c.chooseMode} onChange={editor.change} onClose={closeEditor} undo={editor.undo} redo={editor.redo} canUndo={editor.canUndo} canRedo={editor.canRedo} inert={!!c.overlay} />}
     {c.overlay === 'palette' && <Palette onClose={c.closeOverlay} onChoose={(prompt, demoId) => { c.closeOverlay(); c.send(prompt, demoId); }} />}
     {c.overlay === 'settings' && <Settings config={c.config} onClose={c.closeOverlay} onSave={c.saveSettings} />}
   </ThemeScope>;
