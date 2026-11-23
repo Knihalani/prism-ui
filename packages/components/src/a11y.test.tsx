@@ -17,6 +17,7 @@ test('preview documents inherit language, default to English, and safely name th
     document.documentElement.lang = '';
     expect(buildSrcdoc({ id: 'empty' })).toContain('<html lang="en">');
     expect(buildSrcdoc({ id: 'empty' })).toContain('<title>Preview</title>');
+    expect(buildSrcdoc({ id: 'empty' })).toContain('html{background:#fff;color:#000}');
     const artifact = artifactDocument('test', {}, undefined, { title: 'Quarterly report', lang: 'de' });
     expect(artifact).toContain('<html lang="de">');
     expect(artifact).toContain('<title>Quarterly report</title>');

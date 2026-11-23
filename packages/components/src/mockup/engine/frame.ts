@@ -19,7 +19,7 @@ export function buildSrcdoc(opts: SrcdocOptions): string {
   const runtime = buildRuntime({ ...opts.runtimeOptions, id: opts.id }).replace(/<\/script/gi, '<\\/script');
   const escape = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const lang = opts.lang || (typeof document !== 'undefined' && document.documentElement.lang) || 'en';
-  return `<!doctype html><html lang="${escape(lang)}"><head><meta charset="utf-8"><title>${escape(opts.title || 'Preview')}</title><meta http-equiv="Content-Security-Policy" content="${escaped}"><style data-prism="runtime">*,*::before,*::after{box-sizing:border-box}html,body{margin:0;min-height:0}body{overflow-wrap:break-word}img,svg{max-width:100%}</style>${opts.head ?? ''}<script>${runtime}</script></head><body></body></html>`;
+  return `<!doctype html><html lang="${escape(lang)}"><head><meta charset="utf-8"><title>${escape(opts.title || 'Preview')}</title><meta http-equiv="Content-Security-Policy" content="${escaped}"><style data-prism="runtime">*,*::before,*::after{box-sizing:border-box}html{background:#fff;color:#000}html,body{margin:0;min-height:0}body{overflow-wrap:break-word}img,svg{max-width:100%}</style>${opts.head ?? ''}<script>${runtime}</script></head><body></body></html>`;
 }
 
 export interface FrameControllerOptions extends Omit<SrcdocOptions, 'id'> {

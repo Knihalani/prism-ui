@@ -6,7 +6,7 @@ export const refraction = defineTheme({
   tokens: {
     bg: '#fbfaf7', surface: '#f3f1ec', surfaceRaised: '#fbfaf7', text: '#1a1916', textMuted: '#5e5b54', textSubtle: '#706d65',
     border: 'color-mix(in srgb, #1a1916 9%, transparent)', borderStrong: 'color-mix(in srgb, #1a1916 20%, transparent)',
-    accent: '#5141f2', accentText: '#5141f2', onAccent: '#fff', positive: '#0b7651', warning: '#9b5e08', danger: '#b83a30', info: '#387394', focus: '#5747ff',
+    accent: '#5141f2', accentText: '#5141f2', onAccent: '#fff', positive: '#0b7551', warning: '#9b5e08', danger: '#b83a30', info: '#387394', focus: '#5747ff',
     fontBody: 'Inter, ui-sans-serif, system-ui, sans-serif', fontDisplay: '"Instrument Serif", Georgia, serif',
     fontMono: '"JetBrains Mono", ui-monospace, monospace', fontNumeric: 'Inter, ui-sans-serif, system-ui, sans-serif',
     textXs: '11px', textSm: '13px', textBase: '15.5px', textLg: '18px', textXl: '22px', text2xl: '32px', text3xl: '44px',
