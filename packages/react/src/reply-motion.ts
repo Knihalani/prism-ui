@@ -60,28 +60,38 @@ export function useFollowScroll(scrollRef: RefObject<HTMLElement | null>, { thre
     if (node === state.current.node) return;
     state.current.cleanup(); state.current.schedule = () => {}; state.current.node = node;
     if (!node) return;
-    let active = true, frame: number | undefined, ownTop: number | undefined, lastTop = node.scrollTop, touchY = 0;
-    const anchor = node.style.overflowAnchor;
-    const updateAnchor = () => { node.style.overflowAnchor = state.current.following ? 'none' : anchor; };
+    let active = true, frame: number | undefined, dragging = false, touchY = 0, quiet = 0, height: number | undefined;
+    const anchor = node.style.overflowAnchor, gutter = node.style.scrollbarGutter;
+    const computedGutter = getComputedStyle(node).scrollbarGutter;
+    if (!computedGutter || computedGutter === 'auto') node.style.scrollbarGutter = 'stable';
+    const updateAnchor = () => {
+      const value = state.current.following ? 'none' : anchor;
+      if (node.style.overflowAnchor !== value) node.style.overflowAnchor = value;
+    };
+    const cancel = () => { if (frame !== undefined) cancelAnimationFrame(frame); frame = undefined; };
+    const settle = () => {
+      frame = undefined;
+      if (!active || !state.current.following) return;
+      const next = node.scrollHeight;
+      quiet = next === height ? quiet + 1 : 0; height = next;
+      const top = Math.max(0, next - node.clientHeight);
+      if (Math.abs(node.scrollTop - top) > .5) node.scrollTop = top;
+      if (quiet < 24) frame = requestAnimationFrame(settle);
+    };
     const schedule = () => {
       updateAnchor();
-      if (!active || frame !== undefined || !state.current.following) return;
-      frame = requestAnimationFrame(() => {
-        frame = undefined;
-        if (!state.current.following) return;
-        const top = Math.max(0, node.scrollHeight - node.clientHeight);
-        if (Math.abs(node.scrollTop - top) > .5) { ownTop = top; node.scrollTop = top; }
-        lastTop = node.scrollTop;
-      });
+      if (!active || !state.current.following) return;
+      quiet = 0;
+      if (frame === undefined) frame = requestAnimationFrame(settle);
     };
-    const stop = () => { change(false); updateAnchor(); };
+    const stop = () => { change(false); cancel(); updateAnchor(); };
     const scroll = () => {
       const distance = node.scrollHeight - node.clientHeight - node.scrollTop;
-      const ours = ownTop !== undefined && Math.abs(node.scrollTop - ownTop) < 1;
-      if (distance <= 1 || (distance <= threshold && node.scrollTop > lastTop)) change(true);
-      else if (!ours && (distance > threshold || node.scrollTop < lastTop)) stop();
-      ownTop = undefined; lastTop = node.scrollTop; updateAnchor();
+      if (dragging && distance > threshold) stop();
+      else if (distance <= threshold) { change(true); schedule(); }
     };
+    const pointerDown = (event: PointerEvent) => { dragging = event.target === node; };
+    const pointerUp = () => { dragging = false; };
     const wheel = (event: WheelEvent) => { if (event.deltaY < 0) stop(); };
     const touchStart = (event: TouchEvent) => { touchY = event.touches[0]?.clientY ?? 0; };
     const touchMove = (event: TouchEvent) => {
@@ -89,27 +99,27 @@ export function useFollowScroll(scrollRef: RefObject<HTMLElement | null>, { thre
       if (y > touchY) stop(); touchY = y;
     };
     const key = (event: KeyboardEvent) => {
-      if ((event.target as Element)?.closest('input,textarea,select,[contenteditable="true"]')) return;
+      if ((event.target as Element)?.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])')) return;
       if (['ArrowUp', 'PageUp', 'Home'].includes(event.key) || (event.key === ' ' && event.shiftKey)) stop();
     };
     const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(schedule);
-    const observe = () => { observer?.disconnect(); observer?.observe(node); for (const child of Array.from(node.children)) observer?.observe(child); schedule(); };
-    const mutations = new MutationObserver(records => {
-      if (records.some(record => record.type === 'childList' && record.target === node)) observe();
-      else schedule();
-    });
-    mutations.observe(node, { childList: true, characterData: true, subtree: true });
-    observe();
+    const mutations = new MutationObserver(schedule);
+    mutations.observe(node, { childList: true, characterData: true, attributes: true, subtree: true });
+    observer?.observe(node); schedule();
     node.addEventListener('scroll', scroll); node.addEventListener('wheel', wheel, { passive: true });
     node.addEventListener('touchstart', touchStart, { passive: true }); node.addEventListener('touchmove', touchMove, { passive: true });
     node.addEventListener('keydown', key);
+    node.addEventListener('pointerdown', pointerDown);
+    node.ownerDocument.addEventListener('pointerup', pointerUp); node.ownerDocument.addEventListener('pointercancel', pointerUp);
     state.current.schedule = schedule;
     state.current.cleanup = () => {
       active = false;
-      if (frame !== undefined) cancelAnimationFrame(frame);
-      observer?.disconnect(); mutations.disconnect(); node.style.overflowAnchor = anchor;
+      cancel();
+      observer?.disconnect(); mutations.disconnect(); node.style.overflowAnchor = anchor; node.style.scrollbarGutter = gutter;
       node.removeEventListener('scroll', scroll); node.removeEventListener('wheel', wheel);
       node.removeEventListener('touchstart', touchStart); node.removeEventListener('touchmove', touchMove); node.removeEventListener('keydown', key);
+      node.removeEventListener('pointerdown', pointerDown);
+      node.ownerDocument.removeEventListener('pointerup', pointerUp); node.ownerDocument.removeEventListener('pointercancel', pointerUp);
     };
   });
   useLayoutEffect(() => () => { state.current.cleanup(); state.current.node = null; }, []);

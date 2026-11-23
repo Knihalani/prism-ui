@@ -25,6 +25,7 @@ test.each(shells)('%s opens the adaptive artifact scenario from the palette', as
   const scroll = view.container.querySelector<HTMLElement>('.thread-scroll')!;
   Object.defineProperties(scroll, { scrollHeight: { configurable: true, value: 1200 }, clientHeight: { configurable: true, value: 400 } });
   scroll.scrollTop = 0;
+  fireEvent.wheel(scroll, { deltaY: -20 });
   fireEvent.scroll(scroll);
   expect(view.getByRole('button', { name: 'Jump to latest' })).toBeDefined();
   scroll.scrollTop = 760;

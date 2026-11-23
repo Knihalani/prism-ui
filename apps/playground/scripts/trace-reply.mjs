@@ -15,6 +15,10 @@ try {
       const page = await context.newPage(), errors = [];
       page.on('pageerror', error => errors.push(error.message));
       page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+      await page.exposeFunction('replyWindowError', message => errors.push(message));
+      await page.addInitScript(() => {
+        window.addEventListener('error', event => { window.replyWindowError({ message: event.message, phase: window.replyTrace?.phase ?? 'load', time: performance.now() }); });
+      });
       await page.goto(`${base}/?shell=chat&theme=host&mode=light`, { waitUntil: 'networkidle' });
       await page.evaluate(async () => {
         const { React, createRoot, flushSync } = await import('/scripts/replay-entry.ts');
@@ -97,6 +101,28 @@ try {
       const frame = await (await iframe.elementHandle()).contentFrame();
       await frame.locator('#reply-card').waitFor();
       await app.getByRole('button', { name: 'Send message', exact: true }).waitFor({ timeout: 30000 });
+      const scroll = app.locator('.thread-scroll');
+      await page.waitForFunction(() => {
+        const node = document.querySelector('[data-reply-trace] .thread-scroll');
+        return node && Math.abs(node.scrollHeight - node.clientHeight - node.scrollTop) <= 1;
+      });
+      await scroll.hover({ position: { x: 8, y: 100 } }); await page.mouse.wheel(0, -300);
+      const jump = app.getByRole('button', { name: 'Jump to latest' });
+      await jump.waitFor();
+      await page.waitForTimeout(100);
+      const stopped = await scroll.evaluate(node => node.scrollTop);
+      await page.waitForTimeout(450);
+      if (Math.abs(await scroll.evaluate(node => node.scrollTop) - stopped) > 1) throw Error('Following did not stop after scrolling up');
+      await page.screenshot({ path: join(directory, `reply-follow-stopped-${width}.png`) });
+      await jump.click();
+      await page.waitForFunction(() => {
+        const node = document.querySelector('[data-reply-trace] .thread-scroll');
+        return node && Math.abs(node.scrollHeight - node.clientHeight - node.scrollTop) <= 1;
+      });
+      await page.screenshot({ path: join(directory, `reply-follow-resumed-${width}.png`) });
+      console.log(`${width}px following: artifact loaded without manual scrolling, scroll-up stops, jump-to-latest resumes at bottom`);
+      await scroll.hover({ position: { x: 8, y: 100 } }); await page.mouse.wheel(0, -300);
+      await jump.waitFor();
       await artifact.scrollIntoViewIfNeeded();
       await page.waitForTimeout(600);
       await page.evaluate(() => {
@@ -141,6 +167,10 @@ try {
       reports.push(report);
       console.log(`${width}px light: ${metrics.frameCount} frames; p50 ${metrics.p50.toFixed(2)}ms, p95 ${metrics.p95.toFixed(2)}ms, max ${metrics.max.toFixed(2)}ms; >33ms ${metrics.over33}; long tasks >50ms ${metrics.longTasks.length}; LoAF >50ms ${metrics.loaf.length}; artifact height transitions ${metrics.heightTransitions}, resize root animations ${metrics.resizeRootAnimations}, max root gap ${metrics.maxRootGap.toFixed(2)}px, iframe top ${metrics.maxIframeTop.toFixed(2)}px; errors ${errors.length}`);
       if (!metrics.fresh || !metrics.skeleton || !metrics.ghost || !metrics.heightTransitions || metrics.resizeRootAnimations || metrics.maxRootGap > 1 || metrics.maxIframeTop > 1 || errors.length) process.exitCode = 1;
+    } catch (error) {
+      console.error(`${width}px trace failed:`, error);
+      for (const page of context.pages()) await page.screenshot({ path: join(directory, `reply-trace-failure-${width}.png`) });
+      throw error;
     } finally { await context.close(); }
   }
 } finally {
