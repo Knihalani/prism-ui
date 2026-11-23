@@ -22,7 +22,7 @@ export type FrameMessage =
   | { type: 'task-toggle'; revision: number; task: string; checked: boolean }
   | { type: 'exitFullscreen' };
 
-function installArtifact(id: string, strings: typeof artifactStrings, exported?: Standalone) {
+function installArtifact(id: string, strings: typeof artifactStrings, importModule: (specifier: string) => Promise<any>, exported?: Standalone) {
   const standalone = parent === window;
   const values: Record<string, unknown> = Object.create(null);
   const subscriptions = new Map<string, Set<(value: unknown) => void>>();
@@ -119,9 +119,9 @@ function installArtifact(id: string, strings: typeof artifactStrings, exported?:
   const frame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
   const loadModule = async (source: string) => {
     const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
-    try { return await import(/* @vite-ignore */ url); } finally { URL.revokeObjectURL(url); }
+    try { return await importModule(url); } finally { URL.revokeObjectURL(url); }
   };
-  const library = (specifier: string) => import(/* @vite-ignore */ specifier);
+  const library = importModule;
   const runScript = async (original: HTMLScriptElement) => {
     if (!['', 'module', 'text/javascript', 'application/javascript'].includes(original.type)) return;
     const script = document.createElement('script');
@@ -151,14 +151,14 @@ function installArtifact(id: string, strings: typeof artifactStrings, exported?:
         if (!entry.default) throw new Error(strings.missingExport);
         if (!reactRoot) {
           react = React;
-          const root = document.createElement('main');
+          const root = document.createElement('div');
           document.body.replaceChildren(root);
           reactRoot = client.createRoot(root, { onUncaughtError: (error: unknown) => report(error) });
         }
         dom.flushSync(() => reactRoot!.render(react!.createElement(entry.default)));
       } else if (kind === 'js') {
         if (!complete) return;
-        const root = document.createElement('main');
+        const root = document.createElement('div');
         root.id = 'app'; document.body.replaceChildren(root);
         await loadModule(source);
       } else {
@@ -220,12 +220,12 @@ function installArtifact(id: string, strings: typeof artifactStrings, exported?:
 export const markup = (kind: ArtifactKind) => kind !== 'react' && kind !== 'js';
 const json = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c');
 
-export function artifactDocument(id: string, imports: Record<string, string>, exported?: Standalone) {
+export function artifactDocument(id: string, imports: Record<string, string>, exported?: Standalone, metadata: { title?: string; lang?: string } = {}) {
   const nonce = id.replace(/[^\w-]/g, '');
   const scriptSources = [...new Set(Object.values(imports).map(value => value.split('?')[0]))].join(' ');
   const csp = `default-src 'none'; script-src 'nonce-${nonce}' blob: ${scriptSources}; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'`;
   const head = `<style>html{background:transparent;color:var(--prism-text,#242832);font-family:var(--prism-font-body,system-ui,sans-serif);container-type:inline-size}body{margin:0;min-width:0}*,*::before,*::after{box-sizing:border-box}html[data-prism-artifact-fit]{overflow:hidden}img,svg,canvas,video{max-width:100%;height:auto}button,input,select,textarea{font:inherit}html[data-reduced-motion] *,html[data-reduced-motion] *::before,html[data-reduced-motion] *::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}</style><script nonce="${nonce}" type="importmap">${json({ imports })}</script>`;
-  const srcdoc = buildSrcdoc({ id, csp, head, runtimeOptions: { interactive: true } }).replace('<script>', `<script nonce="${nonce}">`);
-  const runtime = `(${installArtifact.toString()})(${json(id)},${json(artifactStrings)}${exported ? ',' + json(exported) : ''})`.replace(/<\/script/gi, '<\\/script');
+  const srcdoc = buildSrcdoc({ ...metadata, id, csp, head, runtimeOptions: { interactive: true } }).replace('<script>', `<script nonce="${nonce}">`);
+  const runtime = `(${installArtifact.toString()})(${json(id)},${json(artifactStrings)},specifier=>import(specifier)${exported ? ',' + json(exported) : ''})`.replace(/<\/script/gi, '<\\/script');
   return srcdoc.replace('</head>', () => `<script nonce="${nonce}">${runtime}</script></head>`);
 }

@@ -114,6 +114,8 @@ export function installRuntime(win: Window, opts: RuntimeOptions): () => void {
     });
   };
   const configure = (config: MockupConfig): void => {
+    if (typeof config.title === 'string') doc.title = config.title || 'Preview';
+    if (typeof config.lang === 'string') doc.documentElement.lang = config.lang || 'en';
     if (typeof config.interactive === 'boolean') interactive = config.interactive;
     if (config.theme && typeof config.theme === 'object') {
       for (const key of Object.keys(theme)) if (!(key in config.theme)) doc.documentElement.style.removeProperty(key);

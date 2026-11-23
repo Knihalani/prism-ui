@@ -51,6 +51,40 @@ test('comment rows stagger, collapse inertly on removal, and restore the same ro
   expect(a.view.container.querySelector('[data-part=list] [data-part=empty]')).not.toBeNull();
 });
 const source = (props: MockupProps) => '```ui:mockup\n' + JSON.stringify({ id: 'review', ...props }) + '\n```';
+test('Draw keyboard creates bounded regions with Enter and Space; arrows move and Shift+arrows resize', () => {
+  const a = setup();
+  act(() => a.model.setPen(true));
+  fireEvent.keyDown(a.canvas(), { key: 'Enter' });
+  expect(a.model.state.items[0]).toMatchObject({ kind: 'region', w: 20, h: 20 });
+  a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'Keyboard region');
+  fireEvent.keyDown(a.view.getByRole('textbox', { name: 'Add a comment…' }), { key: 'Enter' });
+  const marker = a.view.getByRole('button', { name: 'Comment 1: Keyboard region' });
+  const before = a.model.state.items[0];
+  fireEvent.keyDown(marker, { key: 'ArrowRight' });
+  fireEvent.keyDown(marker, { key: 'ArrowDown', shiftKey: true });
+  expect(a.model.state.items[0]).toMatchObject({ x: before.x + 2, w: 20, h: 22 });
+  fireEvent.keyDown(a.canvas(), { key: ' ' });
+  expect(a.model.state.items[1].kind).toBe('region');
+  fireEvent.keyDown(a.view.getByRole('textbox', { name: 'Add a comment…' }), { key: 'Escape' });
+  act(() => a.model.setPen(false));
+  fireEvent.keyDown(a.canvas(), { key: 'Enter' });
+  expect(a.model.state.items.at(-1)?.kind).toBe('pin');
+});
+
+test('Draw keyboard ignores nested editor events and clamps region sizes', () => {
+  const a = setup();
+  act(() => a.model.setPen(true));
+  for (let i = 0; i < 12; i++) fireEvent.keyDown(a.canvas(), { key: 'ArrowRight', shiftKey: true });
+  fireEvent.keyDown(a.canvas(), { key: ' ' });
+  const item = a.model.state.items[0];
+  expect(item.x + item.w!).toBeLessThanOrEqual(100);
+  fireEvent.keyDown(a.view.getByRole('textbox', { name: 'Add a comment…' }), { key: ' ', bubbles: true });
+  expect(a.model.state.items).toHaveLength(1);
+  act(() => a.model.resize(item.id, 1000, -100));
+  expect(a.model.state.items[0]).toMatchObject({ w: 20, h: 2 });
+  act(() => a.model.move(item.id, 1000, 1000));
+  expect(a.model.state.items[0]).toMatchObject({ x: 80, y: 98, w: 20, h: 2 });
+});
 function setup(props: MockupProps = {}, done = true, store = createStore()) {
   const renders: [string, boolean | undefined][] = [], actions: Action[] = [];
   const listeners = new Set<(message: FrameMessage) => void>(), hits: HitRect[] = [];

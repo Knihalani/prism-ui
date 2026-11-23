@@ -29,7 +29,7 @@ test('card renders semantic parts and documented defaults', () => {
   element.querySelectorAll('[data-prism="card"]').forEach(part => expect(part.classList.contains('prism-card__' + part.getAttribute('data-part'))).toBe(true));
   expect(defaultRegistry.docs()).toContain('### card');
   expect(cardDef.syntax).toBe('container');
-  expect(view.getByRole('group', { name: 'Plan' })).toBe(element);
+  expect(view.getByRole('article', { name: 'Plan' })).toBe(element);
   expect(view.getByRole('link', { name: 'Plan' }).getAttribute('href')).toBe('/plan');
   expect(view.getByText('Details')).toBeDefined(); expect(element.dataset.size).toBe('md');
 });

@@ -62,11 +62,24 @@ export function useMockupGroup(members: readonly Member[]) {
   }
   function navigate(event: KeyboardEvent<HTMLButtonElement>, index: number) { const keys = [...members.map(m => m.key), 'compare']; let next: number | undefined; if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (index + 1) % keys.length; if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (index + keys.length - 1) % keys.length; if (event.key === 'Home') next = 0; if (event.key === 'End') next = keys.length - 1; if (next === undefined) return; event.preventDefault(); setTab(keys[next]); (event.currentTarget.parentElement?.children[next] as HTMLButtonElement)?.focus(); }
   const id = useId(), rootRef = useRef<HTMLDivElement>(null);
+  const fullscreenTrigger = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const doc = rootRef.current?.ownerDocument;
+    if (!doc) return;
+    const change = () => {
+      if (!doc.fullscreenElement && fullscreenTrigger.current) {
+        const trigger = fullscreenTrigger.current; fullscreenTrigger.current = null;
+        (trigger.isConnected && trigger.getClientRects().length ? trigger : rootRef.current?.querySelector<HTMLElement>('[data-part="overflowTrigger"]'))?.focus();
+      }
+    };
+    doc.addEventListener('fullscreenchange', change);
+    return () => doc.removeEventListener('fullscreenchange', change);
+  }, []);
   const [device, setDevice] = useComponentState<MockupDevice>('groupDevice', members[0].props.device ?? 'desktop'), [zoom, setZoom] = useComponentState('groupZoom', 1);
   const [pen, setPen] = useState(false), [color, setColor] = useState('var(--prism-mockup-accent, var(--prism-accent-text))'), [showSource, setShowSource] = useState(false), [expanded, setExpanded] = useState(false);
   const controls = { device, setDevice, zoom, setZoom, pen, setPen, color, setColor };
   useEffect(() => { const escape = (event: globalThis.KeyboardEvent) => { if (event.key === 'Escape') { setExpanded(false); setPen(false); } }; document.addEventListener('keydown', escape); return () => document.removeEventListener('keydown', escape); }, []);
-  async function fullscreen() { try { if (document.fullscreenElement) await document.exitFullscreen(); else if (rootRef.current?.requestFullscreen) await rootRef.current.requestFullscreen(); else setExpanded(value => !value); } catch { setExpanded(value => !value); } }
+  async function fullscreen() { try { if (document.fullscreenElement) await document.exitFullscreen(); else if (rootRef.current?.requestFullscreen) { fullscreenTrigger.current = document.activeElement as HTMLElement; await rootRef.current.requestFullscreen(); } else setExpanded(value => !value); } catch { setExpanded(value => !value); } }
   const source = active.props.source ?? '', chrome = { ...controls, labels, framed: members.some(member => ['html', 'wire'].includes(member.props.kind ?? 'html')), fullscreen, showSource, setShowSource };
   return { id, rootRef, controls, expanded, source, showSource, chrome, tab, setTab, active, compare, labels, overall, setOverall, preferred, setPreferred, submitted, setSubmitted, register, canSubmit, count, submit, navigate, refresh, locale: format.locale, model: models.current.get(active.key)?.current };
 }

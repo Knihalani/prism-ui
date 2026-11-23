@@ -3,10 +3,11 @@ const defaultCompiler = 'https://esm.sh/sucrase@3.35.0/es2022/sucrase.bundle.mjs
 const MAX_SOURCE = 1_000_000;
 type Request = { id: number; source: string };
 type Response = { id: number; code?: string; error?: string };
+type Transformer = { transform(source: string, options: object): { code: string } };
 
-function compilerRuntime(url: string) {
+function compilerRuntime(url: string, importModule: (specifier: string) => Promise<Transformer>) {
   const worker = self;
-  let transformer: Promise<{ transform(source: string, options: object): { code: string } }> | undefined;
+  let transformer: Promise<Transformer> | undefined;
   const cache = new Map<string, { source: string; code: string }>();
   const encoder = new TextEncoder();
   worker.addEventListener('message', async ({ data }: MessageEvent<Request>) => {
@@ -25,7 +26,7 @@ function compilerRuntime(url: string) {
         worker.postMessage({ id, code: existing.code } satisfies Response);
         return;
       }
-      transformer ??= import(url).catch(error => { transformer = undefined; throw error; });
+      transformer ??= importModule(url).catch(error => { transformer = undefined; throw error; });
       const { code } = (await transformer).transform(source, {
         transforms: ['typescript', 'jsx'], jsxRuntime: 'automatic', production: true,
       });
@@ -47,7 +48,7 @@ export async function compileArtifact(source: string, compilerUrl = defaultCompi
   const url = new URL(compilerUrl, document.baseURI).href;
   let entry = workers.get(url);
   if (!entry) {
-    const blob = URL.createObjectURL(new Blob([`(${compilerRuntime.toString()})(${JSON.stringify(url)})`], { type: 'text/javascript' }));
+    const blob = URL.createObjectURL(new Blob([`(${compilerRuntime.toString()})(${JSON.stringify(url)},specifier=>import(specifier))`], { type: 'text/javascript' }));
     let worker: Worker;
     try { worker = new Worker(blob, { type: 'module', name: 'prism-artifact' }); }
     finally { URL.revokeObjectURL(blob); }

@@ -102,11 +102,15 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
     return () => observer.disconnect();
   }, [container, visible, enabled]);
 
+  const fullscreenTrigger = useRef<HTMLElement | null>(null);
   const fullscreenTarget = useCallback(() => container?.closest('[data-artifact-shell]') ?? container, [container]);
   useEffect(() => {
     const doc = container?.ownerDocument;
     if (!doc) return;
-    const change = () => setFullscreen(doc.fullscreenElement === fullscreenTarget());
+    const change = () => {
+      const active = doc.fullscreenElement === fullscreenTarget(); setFullscreen(active);
+      if (!active && fullscreenTrigger.current) { fullscreenTrigger.current.focus(); fullscreenTrigger.current = null; }
+    };
     doc.addEventListener('fullscreenchange', change);
     return () => doc.removeEventListener('fullscreenchange', change);
   }, [container, fullscreenTarget]);
@@ -141,7 +145,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
         },
         send: (type, payload) => current.current.emit(type, payload),
         exitFullscreen: () => { if (container.ownerDocument.fullscreenElement === fullscreenTarget()) void container.ownerDocument.exitFullscreen(); },
-      }, iframe);
+      }, iframe, current.current.title);
       session.frame.title = current.current.title;
       sessionRef.current = session;
       session.sizeMode(current.current.autoMax);
@@ -187,7 +191,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
     return () => { observer.disconnect(); media?.removeEventListener('change', updateTheme); motion?.removeEventListener('change', updateTheme); container.ownerDocument.removeEventListener('transitionend', settled); container.ownerDocument.removeEventListener('animationend', settled); };
   }, [container, visible, updateTheme]);
 
-  useEffect(() => { if (sessionRef.current) sessionRef.current.frame.title = current.current.title; }, [title]);
+  useEffect(() => { if (sessionRef.current) { sessionRef.current.frame.title = title; sessionRef.current.metadata(title, sessionRef.current.frame.ownerDocument.documentElement.lang); } }, [title]);
   useEffect(() => { sessionRef.current?.sizeMode(autoMax); }, [autoMax]);
 
   async function copy() {
@@ -202,7 +206,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
         theme: readTheme(container ?? doc.documentElement),
         render: { kind, ...(kind === 'react' ? { source: await compileArtifact(source, options.compilerUrl) } : present(kind, source)),
           complete: true, revision: 1 },
-      }) : source;
+      }, { title, lang: doc.documentElement.lang }) : source;
       const url = URL.createObjectURL(new Blob([contents], { type: standalone ? 'text/html' : 'text/plain' }));
       const link = doc.createElement('a');
       link.href = url; link.download = filename + '.' + (standalone ? 'html' : suffix[kind]); link.click();
@@ -214,7 +218,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
     if (!target) return;
     try {
       if (target.ownerDocument.fullscreenElement === target) await target.ownerDocument.exitFullscreen();
-      else await target.requestFullscreen();
+      else { fullscreenTrigger.current = target.ownerDocument.activeElement as HTMLElement; await target.requestFullscreen(); }
     } catch { setNotice(strings.fullscreenUnavailable); }
   }
   return {

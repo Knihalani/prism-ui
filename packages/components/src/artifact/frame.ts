@@ -53,7 +53,7 @@ function jsonValue(input: unknown): boolean {
   return budget > 0;
 }
 
-export function mountArtifactFrame(container: HTMLElement, imports: Record<string, string>, store: Store, grants: readonly string[], taskPath: string, events: FrameEvents, existing?: HTMLIFrameElement) {
+export function mountArtifactFrame(container: HTMLElement, imports: Record<string, string>, store: Store, grants: readonly string[], taskPath: string, events: FrameEvents, existing?: HTMLIFrameElement, title = 'Artifact') {
   const { ownerDocument: doc } = container;
   const win = doc.defaultView!;
   const id = `artifact-${globalThis.crypto.randomUUID?.() ?? Array.from(globalThis.crypto.getRandomValues(new Uint32Array(4))).join('-')}`;
@@ -63,6 +63,7 @@ export function mountArtifactFrame(container: HTMLElement, imports: Record<strin
   let theme: Extract<HostMessage, { type: 'theme' }> | undefined;
   let maxHeight: number | undefined;
   let ready = false;
+  let metadata = { title, lang: doc.documentElement.lang || 'en' };
   let unsubscribeTasks: (() => void) | undefined;
   const post = (message: HostMessage) => frame.contentWindow?.postMessage({ ...message, ns: 'prism-artifact', id }, '*');
   const engine = (message: HostPayload) => frame.contentWindow?.postMessage({ ...message, ns: 'prism-mockup', id, v: 1 }, '*');
@@ -95,6 +96,7 @@ export function mountArtifactFrame(container: HTMLElement, imports: Record<strin
     if (data.ns === 'prism-mockup') {
       if (data.type === 'ready' && !ready) {
         ready = true;
+        engine({ type: 'config', ...metadata });
         for (const path of grants) watch(path);
         post({ type: 'size-mode', maxHeight });
         sendTheme(); sendRender();
@@ -119,10 +121,11 @@ export function mountArtifactFrame(container: HTMLElement, imports: Record<strin
     else if (data.type === 'exitFullscreen') events.exitFullscreen();
   };
   win.addEventListener('message', receive);
-  frame.srcdoc = artifactDocument(id, imports);
+  frame.srcdoc = artifactDocument(id, imports, undefined, { title, lang: doc.documentElement.lang });
   container.append(frame);
   return {
     frame,
+    metadata(title: string, lang: string) { metadata = { title, lang: lang || 'en' }; if (ready) engine({ type: 'config', ...metadata }); },
     taskPath(value: string) {
       if (value === taskPath) return;
       taskPath = value;

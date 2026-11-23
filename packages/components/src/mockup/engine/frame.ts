@@ -8,6 +8,8 @@ export interface SrcdocOptions {
   id: string;
   csp?: string;
   head?: string;
+  lang?: string;
+  title?: string;
   runtimeOptions?: Omit<RuntimeOptions, 'id'>;
 }
 
@@ -15,7 +17,9 @@ export function buildSrcdoc(opts: SrcdocOptions): string {
   const csp = opts.csp ?? "default-src 'none'; img-src data: https:; style-src 'unsafe-inline'; font-src data:; script-src 'unsafe-inline'; media-src data:";
   const escaped = csp.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   const runtime = buildRuntime({ ...opts.runtimeOptions, id: opts.id }).replace(/<\/script/gi, '<\\/script');
-  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${escaped}"><style data-prism="runtime">*,*::before,*::after{box-sizing:border-box}html,body{margin:0;min-height:0}body{overflow-wrap:break-word}img,svg{max-width:100%}</style>${opts.head ?? ''}<script>${runtime}</script></head><body></body></html>`;
+  const escape = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const lang = opts.lang || (typeof document !== 'undefined' && document.documentElement.lang) || 'en';
+  return `<!doctype html><html lang="${escape(lang)}"><head><meta charset="utf-8"><title>${escape(opts.title || 'Preview')}</title><meta http-equiv="Content-Security-Policy" content="${escaped}"><style data-prism="runtime">*,*::before,*::after{box-sizing:border-box}html,body{margin:0;min-height:0}body{overflow-wrap:break-word}img,svg{max-width:100%}</style>${opts.head ?? ''}<script>${runtime}</script></head><body></body></html>`;
 }
 
 export interface FrameControllerOptions extends Omit<SrcdocOptions, 'id'> {
@@ -41,7 +45,7 @@ export function createFrameController(opts: FrameControllerOptions = {}): FrameC
   const win = opts.win ?? globalThis.window;
   if (!win) throw new Error('createFrameController requires a host window');
   const id = opts.id ?? `prism-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
-  const srcdoc = buildSrcdoc({ ...opts, id });
+  const srcdoc = buildSrcdoc({ ...opts, lang: opts.lang || win.document.documentElement.lang, id });
   let iframe: HTMLIFrameElement | null = null, ready = false, destroyed = false, req = 0;
   let render: Extract<HostPayload, { type: 'render' }> | undefined;
   let anchors: Anchor[] | undefined;
@@ -109,6 +113,8 @@ export function createFrameController(opts: FrameControllerOptions = {}): FrameC
     },
     configure(value) {
       if (destroyed) return;
+      if (value.title !== undefined) config.title = value.title;
+      if (value.lang !== undefined) config.lang = value.lang;
       if (value.mode !== undefined) config.mode = value.mode;
       if (value.interactive !== undefined) config.interactive = value.interactive;
       if (value.theme !== undefined) config.theme = { ...value.theme };

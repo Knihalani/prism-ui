@@ -39,7 +39,7 @@ export interface CardSlotProps { card: CardModel }
 export function Card({ props, children, ...ctx }: PrismComponentProps<CardProps>) {
   const model = useCard(props, { ...ctx, children }), { parts, strings: themeStrings } = model;
   const sent = model.sent !== undefined;
-  return <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="article" {...model.rootProps} className={cx(model.rootProps.className, !model.unstyled && 'prism-materialise') || undefined} data-variant={model.variant} data-size={model.size} data-linked={model.href ? '' : undefined}>
+  return <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="article" {...model.rootProps} role="article" className={cx(model.rootProps.className, !model.unstyled && 'prism-materialise') || undefined} data-variant={model.variant} data-size={model.size} data-linked={model.href ? '' : undefined}>
     {props.image && <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="img" {...parts.image} src={props.image} alt="" />}
     <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="header" {...parts.header} data-utility-only={!model.title && !model.subtitle && !model.badge ? '' : undefined}>
       {model.badge && <Badge {...ctx} props={{ tone: 'success', dot: true }}>{model.badge}</Badge>}
