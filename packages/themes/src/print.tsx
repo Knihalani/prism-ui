@@ -4,6 +4,7 @@ import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { usePick } from '@prism-ui/components/pick';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
 import { receiptMotion } from './motion';
+import { MockupToolContent, mockupToolCss } from './mockup-tools';
 
 type SlotProps = FrameSlotProps<unknown>;
 type EstimateRow = EstimateModel['rows'][number];
@@ -23,7 +24,7 @@ const Header = forwardRef<HTMLElement, SlotProps>(function Header({ as = 'header
 });
 const Tool = forwardRef<HTMLElement, SlotProps>(function Tool({ as = 'button', model, frame, overflow, children, ...props }, ref) {
   const component = (props as Record<string, unknown>)['data-prism'] as string;
-  return createElement(as, { ...props, ref, 'data-print-tool': supported.has(component) ? '' : undefined }, supported.has(component) ? props['aria-label'] : children);
+  return createElement(as, { ...props, ref, 'data-print-tool': supported.has(component) ? '' : undefined }, component === 'mockup' ? <MockupToolContent label={props['aria-label']}>{children}</MockupToolContent> : supported.has(component) ? props['aria-label'] : children);
 });
 const EstimateRoot = forwardRef<HTMLElement, SlotProps>(function EstimateRoot({ as = 'section', model, frame, overflow, children, ...props }, ref) {
   const [header, body, footer] = Children.toArray(children);
@@ -114,6 +115,17 @@ export const print = defineTheme({
     view: { strings: { sectionIndex: '04 / SETUP' } },
   },
   css: `
+    ${mockupToolCss}
+
+    :scope :is(.prism-mockup__toolGroup,.prism-mockup__tool,.prism-mockup__popover,.prism-mockup__item) { border-radius:0; }
+    :scope .prism-mockup__tool { font:10px var(--prism-font-mono); text-transform:uppercase; }
+    :scope .prism-mockup__dimension { border-radius:0; font-family:var(--prism-font-mono); }
+    :scope .prism-mockup__popover { border:1px solid var(--prism-text); border-top:3px solid var(--prism-accent); box-shadow:3px 3px 0 var(--prism-border); }
+    :scope .prism-mockup__composerHeader { font-family:var(--prism-font-mono); text-transform:uppercase; letter-spacing:.05em; }
+    :scope .prism-mockup__list { border-top:1px solid var(--prism-text); }
+    :scope .prism-mockup__item { border-bottom:1px solid var(--prism-border); }
+    :scope .prism-mockup__badge { border-radius:0; background:var(--prism-accent); color:var(--prism-on-accent); font-family:var(--prism-font-mono); }
+    :scope .prism-mockup__target { border:1px solid var(--prism-border); background:transparent; border-radius:0; font-family:var(--prism-font-mono); }
     ${receiptMotion}
     :scope [data-print-header] { position:relative; }
     :scope [data-print-header]::before { content:""; position:absolute; inset:-5px 0 auto; height:5px; background:var(--prism-border-strong); transform-origin:left; scale:1 1; transition:scale var(--prism-motion-slow) var(--prism-motion-ease); }

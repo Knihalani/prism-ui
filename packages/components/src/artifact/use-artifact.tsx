@@ -80,7 +80,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   const [fullscreen, setFullscreen] = useState(false);
   const [displayed, setDisplayed] = useState<{ owner: typeof owner; kind: ArtifactProps['kind']; source: string }>();
   const rendered = displayed?.owner === owner;
-  const [measured, setMeasured] = useState<{ owner: typeof owner; height: number; maximum: number }>();
+  const [measured, setMeasured] = useState<{ owner: typeof owner; height: number; maximum: number; resizing: boolean }>();
   const measurement = measured?.owner === owner ? measured : undefined;
   const height = measurement ? complete ? measurement.height : Math.max(heights[selected.size], measurement.maximum) : heights[selected.size];
   const last = useRef<{ kind: ArtifactProps['kind']; source: string; complete: boolean } | undefined>(undefined);
@@ -131,7 +131,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
     };
     const mount = () => {
       const session = mountArtifactFrame(container, importMap(imports, container.ownerDocument.baseURI), store, grants, taskPath, {
-        height: value => setMeasured(old => ({ owner, height: Math.min(maxAutoHeight, value), maximum: Math.min(maxAutoHeight, Math.max(old?.owner === owner ? old.maximum : 0, value)) })),
+      height: value => setMeasured(old => ({ owner, height: Math.min(maxAutoHeight, value), maximum: Math.min(maxAutoHeight, Math.max(old?.owner === owner ? old.maximum : 0, value)), resizing: old?.owner === owner })),
         rendered: value => { if (value === revision.current && last.current) setDisplayed({ owner, ...last.current }); },
         error: (text, value) => {
           if (value === revision.current) {
@@ -219,7 +219,7 @@ export function useArtifact(props: ArtifactProps, ctx: PrismContextValue, comple
   }
   return {
     iframeRef, needsFrame: enabled && visible && runnable, strings, streaming: !complete || updating, title: current.current.title, selected, versions, version, selectVersion, mode, setMode, diff, previous, enabled, rendered, updating, error, notice, ref, fullscreen,
-    height: typeof selected.height === 'number' ? selected.height : height,
+    height: typeof selected.height === 'number' ? selected.height : height, measured: !!measurement, resizing: !!measurement?.resizing,
     copy, download, reload, toggleFullscreen,
     fix() { if (error) emit('fix', { error, source, kind, version: version?.number ?? 1 }); },
   };

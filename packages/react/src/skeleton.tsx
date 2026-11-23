@@ -11,10 +11,13 @@ function copy(source: StyledElement, deep: boolean) {
   const clones = [ghost, ...(deep ? Array.from(ghost.querySelectorAll<StyledElement>('*')) : [])];
   originals.forEach((original, index) => {
     const clone = clones[index], style = getComputedStyle(original);
+    let css = original.style.cssText;
     for (let property = 0; property < style.length; property++) {
       const name = style.item(property);
-      clone.style.setProperty(name, style.getPropertyValue(name));
+      if (name.startsWith('--')) continue;
+      css += `${name}:${style.getPropertyValue(name)};`;
     }
+    clone.style.cssText = css;
     clone.removeAttribute('id'); clone.removeAttribute('autofocus');
   });
   return ghost;
@@ -78,6 +81,9 @@ function flush() {
 function capture(element: StyledElement | null) {
   const scope = element?.closest('.prism-root[data-prism-presentation]');
   if (!element || !scope || element.closest('[data-animate="false"]')) return;
+  for (let ancestor = element.parentElement; ancestor && ancestor !== scope; ancestor = ancestor.parentElement) {
+    if (pending.has(ancestor)) return;
+  }
   const style = getComputedStyle(element), duration = motionDuration(style.getPropertyValue('--prism-motion-fast'), 160);
   const rect = element.getBoundingClientRect();
   if (!duration || !rect.width || !rect.height) return;

@@ -7,6 +7,7 @@ import { createFeedback } from '../src/mockup/engine';
 import '../src/feedback';
 import '../src/num';
 import '../src/mockup';
+import { useFeedbackTarget } from '../src/feedback';
 
 afterEach(cleanup);
 
@@ -188,7 +189,52 @@ test('inline numeric feedback is a sibling control in a reserved end gutter', as
 });
 const source = '```ui:feedback-test\n{"id":"target"}\n```';
 const View = () => <button>Actual input</button>;
+for (const rootWidth of [500, 0]) test(`opening a list comment with a hidden preview uses visible feedback bounds (${rootWidth})`, () => {
+  function Target() { const ref = useFeedbackTarget(); return <div ref={ref} data-test-preview="">Preview</div>; }
+  const view = render(<Prism feedback animate={false} source={source} renderers={{ 'feedback-test': Target }} />);
+  const preview = view.container.querySelector('[data-test-preview]') as HTMLElement;
+  preview.getBoundingClientRect = () => preview.hidden ? new DOMRect() : new DOMRect(20, 20, 500, 300);
+  const root = view.container.querySelector('.prism-inline-feedback') as HTMLElement;
+  root.getBoundingClientRect = () => new DOMRect(20, 20, rootWidth, 600);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+  change(view.getByPlaceholderText('Add a comment…'), 'Keep this editable');
+  fireEvent.click(view.getByRole('button', { name: 'Save' }));
+  preview.hidden = true;
+  fireEvent.click(view.getByRole('button', { name: 'Open comment 1' }));
+  const layer = document.querySelector('.prism-inline-feedback__popover-layer') as HTMLElement;
+  expect(parseFloat(layer.style.width)).toBeGreaterThanOrEqual(200);
+  expect(view.getByPlaceholderText('Add a comment…').getAttribute('aria-label')).toBe('Add a comment…');
+});
+test('the feedback trigger retains its hit region while reveal chrome is transparent', async () => {
+  const css = await Bun.file(new URL('../src/feedback.css', import.meta.url)).text();
+  expect(css).toContain('.prism-inline-feedback > .prism-inline-feedback__trigger { pointer-events: auto !important; }');
+  const view = render(<Prism feedback source={source} renderers={{ 'feedback-test': View }} />);
+  const trigger = view.getByRole('button', { name: 'Give feedback' });
+  fireEvent.mouseMove(trigger);
+  fireEvent.click(trigger);
+  expect(trigger.getAttribute('aria-expanded')).toBe('true');
+  expect(view.getByRole('application')).toBeDefined();
+});
 function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.focus(element); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); }
+
+test('sent inline feedback ignores repeated submit shortcuts and can be explicitly edited', () => {
+  const actions: Action[] = [];
+  const view = render(<Prism feedback source={source} renderers={{ 'feedback-test': View }} onAction={action => actions.push(action)} />);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  const canvas = view.getByRole('application');
+  fireEvent.keyDown(canvas, { key: 'Enter', ctrlKey: true });
+  expect(actions).toHaveLength(0);
+  fireEvent.keyDown(canvas, { key: 'Enter' });
+  change(view.getByPlaceholderText('Add a comment…'), 'Send once');
+  fireEvent.keyDown(view.getByPlaceholderText('Add a comment…'), { key: 'Enter', ctrlKey: true });
+  expect(actions).toHaveLength(1);
+  for (const modifier of ['ctrlKey', 'metaKey']) fireEvent.keyDown(canvas, { key: 'Enter', [modifier]: true });
+  expect(actions).toHaveLength(1);
+  fireEvent.click(view.getByRole('button', { name: 'Edit feedback' }));
+  fireEvent.keyDown(canvas, { key: 'Enter', metaKey: true });
+  expect(actions).toHaveLength(2);
+});
 
 test('saved feedback is store-owned through revisions, local cancellation, finalization, history and explicit commits', () => {
   const original = createFeedback({ overall: 'Saved overall' });
@@ -257,7 +303,7 @@ test('saved feedback is store-owned through revisions, local cancellation, final
   change(view.getByPlaceholderText('Add a comment…'), 'Committed with submit');
   change(overall, 'Submitted overall');
   expect(store.get('target.feedback.overall')).toBe('Committed on blur');
-  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  fireEvent.click(view.getByRole('button', { name: /^Send \d+ comments?$/ }));
   const submission = store.get('target.feedback');
   expect(submission).toMatchObject({ submitted: true, overall: 'Submitted overall' });
   expect(submission.items).toHaveLength(3);
@@ -311,7 +357,7 @@ test('definitions opt in/out; empty and canceled feedback never create saved sta
   fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
   fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
   fireEvent.keyDown(view.getByPlaceholderText('Add a comment…'), { key: 'Escape' });
-  expect(view.getByRole('button', { name: 'Submit feedback' }).hasAttribute('disabled')).toBe(true);
+  expect(view.getByRole('button', { name: /^Send \d+ comments?$/ }).hasAttribute('disabled')).toBe(true);
   expect(actions).toEqual([]);
   expect(store.snapshot()).toEqual({});
   view.rerender(<Prism store={store} renderers={{ 'feedback-test': disabled }} feedback source={source} />);

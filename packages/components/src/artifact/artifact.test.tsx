@@ -59,17 +59,33 @@ test('automatic content height can shrink after completion but never collapses w
     const sent = spyOn(frame.contentWindow!, 'postMessage');
     act(() => { window.dispatchEvent(new MessageEvent('message', { data: { ns: 'prism-mockup', id, type: 'ready' }, source: frame.contentWindow, origin: 'null' })); });
     const size = (height: number) => act(() => { window.dispatchEvent(new MessageEvent('message', { data: { ns: 'prism-artifact', id, type: 'size', height }, source: frame.contentWindow, origin: 'null' })); });
-    size(320); size(80);
+    const viewport = view.container.querySelector<HTMLElement>('[data-part=viewport]')!;
+    expect(viewport.hasAttribute('data-prism-resize')).toBe(false);
+    size(320);
+    expect(viewport.hasAttribute('data-prism-resize')).toBe(false);
+    expect(frame.style.blockSize).toBe('320px');
+    expect(view.container.querySelector<HTMLElement>('[data-part=preview]')!.style.minHeight).toBe('');
+    size(80);
+    expect(viewport.hasAttribute('data-prism-resize')).toBe(true);
     expect(view.container.querySelector<HTMLElement>('[data-part=viewport]')!.style.height).toBe('320px');
     view.rerender(ui(true));
     expect(view.container.querySelector<HTMLElement>('[data-part=viewport]')!.style.height).toBe('80px');
+    expect(frame.style.blockSize).toBe('80px');
     expect(view.container.querySelector('iframe')).toBe(frame);
     expect(frame.srcdoc).toBe(document);
     expect(sent.mock.calls.filter(([message]) => message.ns === 'prism-artifact' && message.type === 'render' && message.render.complete)).toHaveLength(1);
     size(0);
     expect(view.container.querySelector<HTMLElement>('[data-part=viewport]')!.style.height).toBe('0px');
+    expect(parseFloat(frame.style.blockSize)).toBe(0);
     sent.mockRestore();
   } finally { cleanup(); restore(); }
+});
+
+test('artifact resizing clips the viewport and uses scoped motion tokens without animating iframe position', async () => {
+  const css = await Bun.file(new URL('./artifact.css', import.meta.url)).text();
+  expect(css).toContain('.prism-artifact__viewport { overflow: clip; }');
+  expect(css).toContain('.prism-artifact__viewport[data-prism-resize] { transition: height var(--prism-motion-base) var(--prism-motion-ease); }');
+  expect(css).not.toMatch(/iframe[^}]*transition:/);
 });
 
 test('SSR and schemas expose usable artifact chrome and documented fence metadata', () => {

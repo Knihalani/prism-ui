@@ -8,6 +8,7 @@ try {
       const context = await browser.newContext({ viewport: { width: width + 64, height: 1100 }, reducedMotion: preference === 'reduced' ? 'reduce' : 'no-preference' });
       try {
         const page = await context.newPage();
+        await page.route('**/favicon.ico', route => route.fulfill({ status: 204 }));
         page.on('pageerror', error => errors.push(error.message));
         page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
         await page.goto(`${process.env.BASE_URL || 'http://localhost:5173'}/motion.html?only=markdown&instant=1&width=${width}&mode=${mode}`, { waitUntil: 'networkidle' });

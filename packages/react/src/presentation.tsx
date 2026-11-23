@@ -1,6 +1,7 @@
-import { useCallback, useContext, useMemo, useSyncExternalStore, type HTMLAttributes } from 'react';
+import { useCallback, useContext, useMemo, useRef, useSyncExternalStore, type HTMLAttributes } from 'react';
 import { ComponentContext, PrismPart, usePrism, type Action } from './context';
 import { useActionDispatch } from './hooks';
+import { ReplyEntryContext } from './reply-entry';
 
 export type PresentationState = 'streaming' | 'ready' | 'sent';
 
@@ -51,6 +52,7 @@ export function useSent() {
 /** Spread on a component's existing root. No wrapper or per-item effects are required. */
 export function usePresentation({ exiting = false } = {}) {
   const { animate, unstyled } = usePrism();
+  const entry = useContext(ReplyEntryContext), history = useRef(entry?.history ?? false);
   const receipt = useContext(ComponentContext)?.receipt ?? emptyReceipt;
   const settled = useSettled();
   const sent = useSyncExternalStore(receipt.subscribe, receipt.snapshot, serverSnapshot);
@@ -60,6 +62,7 @@ export function usePresentation({ exiting = false } = {}) {
     'data-state': state,
     'data-entering': motion && !exiting ? '' : undefined,
     'data-prism-enter': motion && !exiting ? '' : undefined,
+    'data-prism-entered': motion && history.current ? '' : undefined,
     'data-exiting': motion && exiting ? '' : undefined,
   } as const;
 }

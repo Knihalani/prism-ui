@@ -37,6 +37,31 @@ test('default overflow trigger restores DOM focus after Escape', () => {
   fireEvent.keyDown(inside, { key: 'Escape' });
   expect(trigger.getAttribute('aria-expanded')).toBe('false');
   expect(document.activeElement).toBe(trigger);
+  fireEvent.keyDown(trigger, { key: 'Escape' });
+  expect(document.activeElement === trigger).toBe(false);
+});
+
+for (const handled of [true, false]) test(`frame Escape delegates before blur and respects owner prevention (${handled})`, () => {
+  let calls = 0;
+  const view = setup({ onEscape(event) { calls++; if (handled) event.preventDefault(); } });
+  const button = view.getByRole('button', { name: 'Ask about this' });
+  act(() => button.focus());
+  fireEvent.keyDown(button, { key: 'Escape' });
+  expect(calls).toBe(1);
+  expect(document.activeElement === button).toBe(handled);
+});
+
+test('an inner Escape owner keeps its overflow and frame open and focused', () => {
+  let calls = 0;
+  const view = setup({ onEscape() { calls++; }, toolbar: <FrameOverflow component="example"><button onKeyDown={event => { if (event.key === 'Escape') event.preventDefault(); }}>Inner owner</button></FrameOverflow> });
+  const trigger = view.getByRole('button', { name: 'More tools' });
+  fireEvent.click(trigger);
+  const button = view.getByRole('button', { name: 'Inner owner' });
+  act(() => button.focus());
+  fireEvent.keyDown(button, { key: 'Escape' });
+  expect(trigger.getAttribute('aria-expanded')).toBe('true');
+  expect(document.activeElement === button).toBe(true);
+  expect(calls).toBe(0);
 });
 
 test('component labels override frame strings while missing labels use frame fallbacks', () => {
