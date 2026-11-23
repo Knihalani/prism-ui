@@ -16,6 +16,7 @@ test('shared coarse targets reserve spacing, preserve decorative pseudos and giv
   expect(css).toContain('width: 28px; height: 28px');
   expect(css).toContain('border: 8px solid transparent');
   expect(css).toContain('touch-action: pan-y');
+  expect(css).toContain('.prism-num__root[data-status="editing"]::before { pointer-events: none; }');
   const num = await Bun.file(new URL('../src/num/num.css', import.meta.url)).text();
   expect(num).toContain('touch-action: pan-y'); expect(num).not.toContain('touch-action: none');
 });

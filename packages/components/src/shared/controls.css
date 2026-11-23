@@ -127,6 +127,7 @@ button.prism-chip { min-block-size: 30px; padding-inline: 10px; cursor: pointer;
   .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-estimate__input { min-inline-size: 44px; min-block-size: 44px; }
   .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :is(.prism-codeblock__body, .prism-ask__control) { min-block-size: 44px; }
   .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :is(.prism-num__root, input[type="range"]) { touch-action: pan-y; }
+  .prism-root .prism-num__root[data-status="editing"]::before { pointer-events: none; }
   .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-inline-feedback:not([data-inline]) { padding-block-start: 48px; }
   .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-inline-feedback[data-inline] { padding-inline-end: 48px; min-block-size: 48px; }
   .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-inline-feedback > .prism-inline-feedback__trigger { position: absolute; inset: 0 0 auto auto; margin: 8px !important; }
