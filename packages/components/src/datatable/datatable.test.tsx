@@ -81,7 +81,7 @@ test('sort cycles asc desc none, fuzzy filter resets pagination and clear recove
   expect(view.getByText('3–3 of 3')).toBeTruthy(); expect(order(view.container)).toEqual(['2']);
   fireEvent.input(view.getByRole('searchbox'), { target: { value: 'ad' } });
   expect(order(view.container)).toEqual(['1']); expect(view.getByText('1–1 of 1')).toBeTruthy();
-  expect(view.getByRole('status').textContent).toContain('1 rows matching ad');
+  expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toContain('1 rows matching ad');
   fireEvent.input(view.getByRole('searchbox'), { target: { value: 'unmatched' } });
   expect(view.getByText('No rows match “unmatched”')).toBeTruthy();
   fireEvent.click(view.getByRole('button', { name: 'Clear filter' }));

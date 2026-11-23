@@ -140,7 +140,7 @@ export function CodeBlock({ node, props, complete }: PrismComponentProps<CodeBlo
       </PrismPart></PrismPart>
     </PrismPart>
     <PrismPart as="div" {...parts.actions} slotProps={slotProps}>
-      <PrismPart as="button" {...parts.wrap} slotProps={slotProps} type="button" aria-label={strings.toggleLineWrap} title={strings.toggleLineWrap} aria-pressed={vm.wrap} onClick={vm.toggleWrap}>{strings.wrapLines}</PrismPart>
+      <PrismPart as="button" {...parts.wrap} slotProps={slotProps} type="button" aria-label={strings.wrapLines} title={strings.toggleLineWrap} aria-pressed={vm.wrap} onClick={vm.toggleWrap}>{strings.wrapLines}</PrismPart>
       <PrismPart as="button" {...parts.ask} slotProps={slotProps} type="button" aria-label={strings.askAboutThisCode} title={strings.askAboutThisCode} onClick={vm.onAsk}><Icon name="ask" /><PrismPart as="span" {...parts.askLabel} slotProps={slotProps}>{strings.askAboutThisCode}</PrismPart></PrismPart>
       {vm.collapsible && <PrismPart as="button" {...parts.collapse} slotProps={slotProps} type="button" disabled={!vm.complete} aria-expanded={vm.expanded} aria-label={vm.collapseLabel} title={vm.collapseLabel} onClick={vm.toggleCollapse}><Icon name="chevron" /><PrismPart as="span" {...parts.collapseLabel} slotProps={slotProps}>{vm.collapseLabel}</PrismPart></PrismPart>}
     </PrismPart>

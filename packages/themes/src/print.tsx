@@ -1,5 +1,5 @@
 import { Children, createContext, createElement, forwardRef, useContext, type CSSProperties, type ElementType, type InputHTMLAttributes, type ReactElement, type ReactNode } from 'react';
-import { ComponentContext, PrismPart, defineTheme, useFormat, usePart, useStrings } from '@prism-ui/react';
+import { ComponentContext, PrismPart, defineTheme, useFormat, usePart, useSentAnnouncement, useStrings } from '@prism-ui/react';
 import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { usePick } from '@prism-ui/components/pick';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
@@ -54,7 +54,7 @@ const Total = forwardRef<HTMLDivElement, SlotProps & { estimate: EstimateModel }
   const label = usePart('estimate', 'total-label'), value = usePart('estimate', 'total-value'), live = usePart('estimate', 'live');
   const currency = estimate.totalText.replace(/[\p{N}\p{P}\p{Z}\p{Cf}]/gu, '');
   const amount = format.number(estimate.displayedTotal, { maximumFractionDigits: estimate.fractionDigits });
-  return <div {...props} ref={ref} data-print-total="" style={{ ...props.style, '--print-total-length': amount.length + currency.length } as CSSProperties}><PrismPart as="span" {...label}>{estimate.totalLabel} / {currencyCode(context.props.currency, format.currencyCode)}</PrismPart><PrismPart as="span" {...value} aria-hidden="true"><sup>{currency}</sup><span>{amount}</span></PrismPart><PrismPart as="span" {...live} aria-live="polite">{estimate.finalTotalText}</PrismPart></div>;
+  return <div {...props} ref={ref} data-print-total="" style={{ ...props.style, '--print-total-length': amount.length + currency.length } as CSSProperties}><PrismPart as="span" {...label}>{estimate.totalLabel} / {currencyCode(context.props.currency, format.currencyCode)}</PrismPart><PrismPart as="span" {...value} aria-hidden="true"><sup>{currency}</sup><span>{amount}</span></PrismPart><PrismPart as="span" {...live} aria-live={context.node.complete === false ? 'off' : 'polite'}>{estimate.finalTotalText}</PrismPart></div>;
 });
 
 const Criteria = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<typeof usePick> }>(function Criteria({ as, model, frame, overflow, pick, children, ...props }, ref) {
@@ -66,6 +66,7 @@ const Criteria = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<typeo
 });
 function Option({ row }: { row: PickRow }) {
   const strings = useStrings('pick'), format = useFormat();
+  useSentAnnouncement(row.sent, row.chosenLabel);
   const root = usePart('pick', 'item', !row.ready ? 'loading' : row.chosen ? 'chosen' : row.top ? 'top' : 'ready');
   const title = usePart('pick', 'title'), subtitle = usePart('pick', 'subtitle'), bars = usePart('pick', 'bars'), choose = usePart('pick', 'choose');
   return <article {...root} data-print-option="" data-print-winner={row.top ? '' : undefined} data-option={row.id} aria-busy={!row.ready}>
@@ -76,7 +77,7 @@ function Option({ row }: { row: PickRow }) {
     {!!row.pros.length && <ul className="print-option-notes">{row.pros.map((pro, index) => <li key={index}>{pro}</li>)}</ul>}
     {!!row.cons.length && <ul className="print-option-notes">{row.cons.map((con, index) => <li key={index}>{con}</li>)}</ul>}
     {row.tag && <span className="print-chosen">{row.tag}</span>}
-    {row.chosen && <span className="print-chosen" role="status">{row.chosenLabel}</span>}
+    {row.chosen && <span className="print-chosen">{row.chosenLabel}</span>}
     {!row.top && <PrismPart as="button" {...choose} className={`${choose.className ?? ''} print-option-select`} type="button" disabled={!row.ready} onClick={row.onChoose}>{strings.chooseTemplate.replace('{title}', row.title)}</PrismPart>}
   </article>;
 }

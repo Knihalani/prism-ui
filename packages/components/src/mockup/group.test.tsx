@@ -130,7 +130,7 @@ test('compare has one shared toolbar, propagates controls, and saves pending dra
   expect(x.view.getByText('1 comment')).toBeDefined();
   expect(x.view.getByRole('button', { name: 'Undo' }).querySelector('svg')).not.toBeNull();
   fireEvent.click(x.view.getByRole('button', { name: /^Send \d+ comments?$/ }));
-  expect((x.actions[0].payload as any).variants).toEqual([{ variant: 'B', items: [{ n: 1, kind: 'pin', x: 50, y: 50, comment: 'Pending B draft' }] }]);
+  expect((x.actions[0].payload as any).variants).toEqual([{ variant: 'B', items: [{ n: 1, kind: 'region', x: 50, y: 50, w: 20, h: 20, comment: 'Pending B draft' }] }]);
   expect(x.view.getByRole('button', { name: 'Sent · 1 comment' })).toBeDefined();
 });
 test('group payload includes all commented variants, shared overall and preference exactly', () => {

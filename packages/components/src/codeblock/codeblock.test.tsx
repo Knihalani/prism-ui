@@ -70,8 +70,8 @@ test('copy emits exact structured payload and announces success', async () => {
     expect(actions[0]).toEqual({ type: 'copy', component: 'code', id: 'test:code:0', payload: { lang: 'js', lines: 2 },
       context: { component: 'code', props: {}, state: { wrap: false, expanded: false } },
       message: 'User copy in code: {"lang":"js","lines":2}' });
-    expect(view.getByRole('status').textContent).toBe('Copied');
-    await waitFor(() => expect(view.getByRole('status').textContent).toBe(''), { timeout: 2000 });
+    expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('Copied');
+    await waitFor(() => expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe(''), { timeout: 2000 });
   } finally { if (previous) Object.defineProperty(navigator, 'clipboard', previous); else Reflect.deleteProperty(navigator, 'clipboard'); }
 });
 
@@ -95,7 +95,7 @@ test('built-in incremental path only scans appended tail lines', () => {
 test('meta wrap and collapse=false keep long blocks expanded', () => {
   const view = render(<Prism registry={registry} source={fence('x\n'.repeat(22), 'txt {wrap collapse=false filename="notes.txt"}')} />);
   expect(view.getByRole('region').getAttribute('aria-label')).toBe('notes.txt');
-  expect(view.getByRole('button', { name: 'Toggle line wrap' }).getAttribute('aria-pressed')).toBe('true');
+  expect(view.getByRole('button', { name: 'Wrap lines' }).getAttribute('aria-pressed')).toBe('true');
   expect(view.queryByText(/Show all/)).toBeNull();
 });
 
@@ -132,7 +132,7 @@ test('clipboard fallback cleans up and reports failure without action', async ()
     document.execCommand = () => false;
     const view = render(<Prism registry={registry} source={fence('x')} onAction={a => actions.push(a)} />);
     fireEvent.click(view.getByRole('button', { name: 'Copy code' }));
-    await waitFor(() => expect(view.getByRole('status').textContent).toBe('Copy failed'));
+    await waitFor(() => expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('Copy failed'));
     expect(document.querySelector('textarea')).toBeNull(); expect(actions).toEqual([]);
     document.execCommand = () => true;
     fireEvent.click(view.getByRole('button', { name: 'Copy code' }));
@@ -144,7 +144,7 @@ test('diff states, configurable collapse and native keyboard-accessible controls
   const view = render(<Prism registry={registry} source={'```ui:code\n' + JSON.stringify({ code: '+added\n-removed\n same', lang: 'diff', collapseAfter: 2 }) + '\n```'} />);
   expect(view.container.querySelector('[data-state="inserted"]')).toBeTruthy();
   expect(view.container.querySelector('[data-state="deleted"]')).toBeTruthy();
-  const wrap = view.getByRole('button', { name: 'Toggle line wrap' });
+  const wrap = view.getByRole('button', { name: 'Wrap lines' });
   const collapse = view.getByRole('button', { name: 'Show all 3 lines' });
   expect(wrap.tagName).toBe('BUTTON'); expect(wrap.tabIndex).toBe(0); expect(collapse.tabIndex).toBe(0);
   wrap.focus(); expect(document.activeElement).toBe(wrap);

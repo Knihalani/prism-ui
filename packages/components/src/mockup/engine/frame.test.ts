@@ -24,7 +24,7 @@ describe('frame controller', () => {
     const r = rig();
     try {
       r.controller.render('<p>old</p>'); r.controller.render('<p>latest</p>', true);
-      r.controller.configure({ mode: 'svg', theme: { '--color': 'red' } });
+      r.controller.configure({ mode: 'svg', theme: { '--color': 'red' }, title: 'Preview name', lang: 'fr' });
       r.controller.configure({ mode: undefined, interactive: undefined });
       r.controller.setAnchors([{ key: 'a', selector: '#x' }]);
       expect(r.messages.length).toBe(0);
@@ -32,7 +32,7 @@ describe('frame controller', () => {
       expect(r.iframe.srcdoc).toBe(r.controller.srcdoc);
       r.send({ type: 'ready' });
       expect(r.messages.map(message => message.type)).toEqual(['config', 'anchors', 'render']);
-      expect(r.messages[0]).toMatchObject({ mode: 'svg', interactive: false, theme: { '--color': 'red' } });
+      expect(r.messages[0]).toMatchObject({ mode: 'svg', interactive: false, theme: { '--color': 'red' }, title: 'Preview name', lang: 'fr' });
       expect(r.messages[2]).toMatchObject({ ns: 'prism-mockup', v: 1, id: 'test', html: '<p>latest</p>', done: true });
       r.controller.render('<p>newest</p>');
       r.send({ type: 'ready' });

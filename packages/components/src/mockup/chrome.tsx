@@ -68,7 +68,7 @@ export function MockupFooter(vm: MockupFooterModel) {
   const ready = (labels[sendKey] !== mockupLabels[sendKey] ? labels[sendKey] : labels.submit !== mockupLabels.submit ? labels.submit : labels[sendKey]).replace('{n}', String(count));
   const oldReceipt = labels[one ? 'sentOne' : 'sentOther'];
   const receipt = oldReceipt !== mockupLabels[one ? 'sentOne' : 'sentOther'] ? oldReceipt.replace('{n}', String(count)) : labels[one ? 'receiptOne' : 'receiptOther'].replace('{n}', String(count));
-  return <PrismPart slotProps={{ model }} as="span" {...footer} role={submitted ? 'status' : undefined}>
+  return <PrismPart slotProps={{ model }} as="span" {...footer}>
     <PrismPart slotProps={{ model }} as="button" {...button} hidden={submitted} data-secondary="" data-prism-reveal="" disabled={!canUndo} onClick={undo}><Icon name="undo" />{labels.undo}</PrismPart>
     <PrismPart slotProps={{ model }} as="button" {...button} hidden={submitted} data-secondary="" data-prism-reveal="" disabled={!canRedo} onClick={redo}><Icon name="redo" />{labels.redo}</PrismPart>
     <PrismPart slotProps={{ model }} as="span" {...countPart} hidden aria-hidden="true">{commentCount(labels, locale, count)}</PrismPart>

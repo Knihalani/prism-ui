@@ -1,7 +1,7 @@
 import { createContext, memo, useCallback, useContext, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentType, type KeyboardEvent, type ReactNode } from 'react';
 import { parse, type Node } from '@prism-ui/core';
 import { s, type Infer } from '@prism-ui/schema';
-import { PrismPart, ComponentContext, StreamSkeleton, cx, defaultRenderers, defineComponent, registerComponent, usePart, usePrism, useSent, useTheme, useStrings, useFlash, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
+import { PrismPart, ComponentContext, StreamSkeleton, cx, defaultRenderers, defineComponent, registerComponent, usePart, usePrism, useSent, useTheme, useStrings, useFlash, useValueAnnouncement, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
 import { Odometer, SentContent } from '../shared/controls';
 import { useFlip } from '../lib/use-flip';
@@ -233,6 +233,7 @@ function Stat(p: PrimitiveProps) {
   const view = useContext(ViewContext)!;
   const { props } = p;
   const value = typeof props.value === 'number' || props.format ? view.format(props.value, props.format) : text(props.value);
+  useValueAnnouncement(value ? [text(props.label), value, text(props.unit)].filter(Boolean).join(' ') : '', !view.streaming && !p.open);
   const delta = props.delta;
   const d = typeof delta === 'number' ? delta : undefined;
   const trend = pick(props.trend, new Set(['up', 'down', 'flat'])) ?? (d === undefined ? undefined : d > 0 ? 'up' : d < 0 ? 'down' : 'flat');
@@ -240,7 +241,7 @@ function Stat(p: PrimitiveProps) {
   const deltaText = d === undefined ? text(delta) : (d > 0 ? '+' : '') + view.format(d, props.deltaFormat ?? 'percent:1');
   return <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('stat')} {...tokens(props)}>
     <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('statLabel')}><Icon name={props.icon} p={p} />{text(props.label)}</PrismPart>
-    <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('statValue')} aria-live="polite">{typeof props.value === 'number' ? <Odometer value={props.value} format={() => value} /> : value}{props.unit && <PrismPart as="span" slotProps={{ model: p.model, primitive: p }} {...p.part('statUnit')}>{text(props.unit)}</PrismPart>}</PrismPart>
+    <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('statValue')}>{typeof props.value === 'number' ? <Odometer value={props.value} format={() => value} /> : value}{props.unit && <PrismPart as="span" slotProps={{ model: p.model, primitive: p }} {...p.part('statUnit')}>{text(props.unit)}</PrismPart>}</PrismPart>
     {(deltaText || props.hint) && <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('statMeta')}>
       {deltaText && <PrismPart as="span" slotProps={{ model: p.model, primitive: p }} {...p.part('statDelta')} data-trend={trend} data-good={good === undefined ? undefined : String(good)}>{trend && trend !== 'flat' && <ViewIcon name={trend === 'up' ? 'trending-up' : 'trending-down'} />}{deltaText}</PrismPart>}
       {props.hint && <PrismPart as="span" slotProps={{ model: p.model, primitive: p }} {...p.part('statHint')}>{text(props.hint)}</PrismPart>}
@@ -521,6 +522,22 @@ export const view = defineComponent({
   schema: viewSchema,
   syntax: 'fence',
   component: View,
+  announcement(props, node, { store, format }) {
+    const scope: ViewScope = { view: props.id ?? node.key, locals: new Set(Object.keys(props.state ?? {})) };
+    const summaries: string[] = [], formatter = viewFormatter(format);
+    function visit(nodes: ViewNode[]) {
+      for (const item of nodes) {
+        if (item.type === 'stat') {
+          const stat = resolve(item, scope, store.get, formatter) as Record<string, unknown>;
+          const value = typeof stat.value === 'number' ? formatter(stat.value, typeof stat.format === 'string' ? stat.format : undefined) : text(stat.value);
+          summaries.push([text(stat.label), value, text(stat.unit)].filter(Boolean).join(' '));
+        }
+        if (Array.isArray(item.children)) visit(item.children as ViewNode[]);
+      }
+    }
+    visit(props.children ?? []);
+    return [props.title ?? viewStrings.title, ...summaries].join('. ');
+  },
   docs: DOCS,
   examples: [
     '```ui:view\n{"id":"split","title":"Split the bill","state":{"total":120,"people":3,"tip":0.15},"children":[{"type":"grid","cols":2,"children":[{"type":"input","label":"Bill","inputType":"number","prefix":"$","value":{"$bind":"total"}},{"type":"slider","label":"People","min":1,"max":12,"value":{"$bind":"people"}}]},{"type":"segmented","label":"Tip","value":{"$bind":"tip"},"options":[{"value":0.1,"label":"10%"},{"value":0.15,"label":"15%"},{"value":0.2,"label":"20%"}]},{"type":"stat","label":"Each pays","value":{"$calc":"total * (1 + tip) / people"},"format":"currency"}],"actions":[{"type":"button","label":"Request payment","variant":"primary","onClick":{"action":"request","payload":{"each":{"$calc":"total * (1 + tip) / people"}}}}]}\n```',

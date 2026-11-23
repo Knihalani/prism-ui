@@ -54,9 +54,9 @@ test('definitions expose schema coercion and prompt docs in an explicit or defau
   expect(registry.docs()).toContain('A typed custom counter.');
   expect(registry.docs()).toContain('count');
   const view = render(<Prism registry={registry} source={fence('typed-test', {})} />);
-  expect(view.getByRole('status').textContent).toBe('3');
+  expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('3');
   view.rerender(<Prism renderers={{ custom: def }} source={fence('custom', { count: '7' })} />);
-  expect(view.getByRole('status').textContent).toBe('7');
+  expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('7');
   expect(() => defineRenderer('../bad', Typed)).toThrow('Invalid renderer name');
 });
 
@@ -84,6 +84,6 @@ test.each(['name', 'id', 'store'] as const)('a failed renderer recovers when its
     expect(view.getByRole('alert')).toBeDefined();
     view.rerender(<Prism store={kind === 'store' ? createStore() : store} renderers={renderers} source={fence(kind === 'name' ? 'replacement' : 'recover', { id: kind === 'id' ? 'after' : 'before', fail: false })} />);
     expect(view.queryByRole('alert')).toBeNull();
-    expect(view.getByRole('status').textContent).toBe('Recovered content');
+    expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('Recovered content');
   } finally { errors.mockRestore(); }
 });

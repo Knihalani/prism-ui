@@ -1,5 +1,5 @@
 import { Children, createElement, forwardRef, useContext, useId, type InputHTMLAttributes, type ReactElement } from 'react';
-import { ComponentContext, Icon, PrismPart, defineTheme, useFlash, useFormat, usePart, useStrings } from '@prism-ui/react';
+import { ComponentContext, Icon, PrismPart, defineTheme, useFlash, useFormat, usePart, useSentAnnouncement, useStrings } from '@prism-ui/react';
 import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
 import type { usePick } from '@prism-ui/components/pick';
@@ -49,7 +49,7 @@ export const SegmentedTotal = forwardRef<HTMLDivElement, SlotProps & { estimate:
   return <div {...props} ref={ref}>
     <div className="instrument-readout-label"><PrismPart as="span" {...label}>{estimate.totalLabel}</PrismPart><span>{strings.displayLabel}</span></div>
     <PrismPart as="span" {...value} aria-hidden="true" data-instrument-change={changed ? '' : undefined}><small>{estimate.totalText.replace(/[\d.,\s-]/g, '')}</small><Segments key={text} value={text} /></PrismPart>
-    <PrismPart as="span" {...live} aria-live="polite">{estimate.finalTotalText}</PrismPart>
+    <PrismPart as="span" {...live} aria-live={context.node.complete === false ? 'off' : 'polite'}>{estimate.finalTotalText}</PrismPart>
   </div>;
 });
 const Faders = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<typeof usePick> }>(function Faders({ as, model, frame, overflow, pick, children, ...props }, ref) {
@@ -61,6 +61,7 @@ const Faders = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<typeof 
 });
 const Module = forwardRef<HTMLElement, SlotProps & { row: PickRow; pick: ReturnType<typeof usePick> }>(function Module({ as = 'article', model, frame, overflow, row, pick, children, ...props }, ref) {
   const strings = useStrings('pick'), format = useFormat();
+  useSentAnnouncement(row.sent, row.chosenLabel);
   const detailsId = useId(), collapsible = pick.compact && !row.top;
   const context = useContext(ComponentContext)!, changed = useFlash(`${context.props.id ?? context.id}.weights`);
   const part = usePart('pick', 'item', !row.ready ? 'loading' : row.chosen ? 'chosen' : row.top ? 'top' : 'ready');
@@ -75,7 +76,7 @@ const Module = forwardRef<HTMLElement, SlotProps & { row: PickRow; pick: ReturnT
     {!!row.pros.length && <ul className="instrument-notes">{row.pros.map((pro, index) => <li key={index}>{pro}</li>)}</ul>}
     {!!row.cons.length && <ul className="instrument-notes">{row.cons.map((con, index) => <li key={index}>{con}</li>)}</ul>}
     {row.tag && <span className="instrument-tag">{row.tag}</span>}
-    {row.chosen && <span className="instrument-tag" role="status">{row.chosenLabel}</span>}
+    {row.chosen && <span className="instrument-tag">{row.chosenLabel}</span>}
     <div className="instrument-module-actions">{!row.top && <PrismPart as="button" {...choose} type="button" disabled={!row.ready} onClick={row.onChoose}>{strings.chooseTemplate.replace('{title}', row.title)}</PrismPart>}</div>
     </div>
   </>);

@@ -69,7 +69,7 @@ test('streaming Text preserves textContent, merges same-frame chunks and becomes
     expect(view.container.textContent).toBe('replacement');
     view.rerender(<Prism source="replacement complete" done />);
     expect(view.container.querySelector('[data-prism-fresh]')).toBeNull();
-    expect(view.container.textContent).toBe('replacement complete');
+    expect(view.container.querySelector('[data-prism-flow]')!.textContent).toBe('replacement complete');
   } finally { now.mockRestore(); }
 });
 
@@ -98,7 +98,7 @@ test('200KB paragraph in four-character source pushes keeps a bounded DOM', () =
   let maximum = 0;
   for (let end = 4; end <= text.length; end += 4) {
     view.rerender(<Prism source={text.slice(0, end)} done={false} animate={animate} />);
-    maximum = Math.max(maximum, view.container.querySelectorAll('span').length);
+    maximum = Math.max(maximum, view.container.querySelector('[data-prism-flow]')!.querySelectorAll('span').length);
   }
   console.log(`reply text: ${text.length} bytes, 4-character source pushes, ${(performance.now() - start).toFixed(0)}ms, ${maximum} spans maximum`);
   expect(maximum).toBeLessThanOrEqual(10);

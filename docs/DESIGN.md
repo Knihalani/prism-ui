@@ -52,14 +52,15 @@ compile(expr: string) -> (scope) => number             // formula engine: + - * 
   components={{ chart: MyChart, heading: MyH }}   // override/extend any directive or markdown node type
   plugins={[...]}  store={store}  onAction={fn}  middleware={[mw]}
   theme={theme | 'light' | 'dark' | 'auto'}  density="compact|comfortable|spacious"
-  animate={true}  unstyled={false}  locale="en-GB"  currency="GBP"
+  animate={true}  announce={true}  unstyled={false}  locale="en-GB"  currency="GBP"
   slots={{ runbook: { step: MyStep } }}  classNames={{ runbook: { root, step } }}
 />
 usePrismStream(stream, opts) -> { root, done }
 registerComponent(def) / createRegistry(defs)
-def = { name, schema, component, fallback?, docs?, examples?, inline?: boolean }
+def = { name, schema, component, fallback?, docs?, examples?, inline?: boolean, announcement?(props, node, { store, format }): string }
 ```
 - Rendering: each block is a `memo` component keyed by `node.key`, compared by node reference, so frozen blocks never re-render during streaming.
+- Accessibility: each root has a hidden polite, atomic announcer. It announces each settled top-level block once, coalescing updates for 700ms and flushing at stream completion. Initially complete/history replies are silent. Components can supply `announcement(props, node)` for a concise accessible summary; otherwise their label/title, value and item count are used, never their rendered DOM. `announce={false}` disables Prism's block and receipt announcements for hosts providing their own live region. Keep the visual streaming container outside live regions. Custom receipt renderers can use `useSentAnnouncement(sent, pastTenseLabel)`; mounting an already-sent receipt is silent.
 - `Action = { type, component, id, payload, context, message }`. `context` = component name + props + current state; `message` = a short human-readable sentence ready to send to the LLM. `middleware: (action, next) => void` can log, transform or swallow.
 - Shared affordances come from `ComponentFrame`: "Ask about this" (emits `{type:'ask'}` with context), undo (store), focus ring and keyboard handling, `aria-*` labelling, enter animation.
 - Headless: every genUI component exports `useX(props, ctx)` holding all logic (state, derived values, actions); the default component only renders it. Users can build their own look on the same hook.

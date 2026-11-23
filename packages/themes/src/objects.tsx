@@ -1,5 +1,5 @@
-import { Children, createElement, forwardRef, type InputHTMLAttributes, type ReactElement } from 'react';
-import { PrismPart, defineTheme, spring, useFormat, usePart, useSent, useStrings } from '@prism-ui/react';
+import { Children, createElement, forwardRef, useContext, type InputHTMLAttributes, type ReactElement } from 'react';
+import { ComponentContext, PrismPart, defineTheme, spring, useFormat, usePart, useSent, useSentAnnouncement, useStrings } from '@prism-ui/react';
 import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
 import type { usePick } from '@prism-ui/components/pick';
@@ -28,7 +28,7 @@ const Receipt = forwardRef<HTMLElement, SlotProps>(function Receipt({ as = 'sect
       <div className="objects-receipt-brand"><strong>{strings.shopName}</strong><span>{strings.shopLine}</span><span>{strings.shopMotto}</span></div>
       {children}
       <div className="objects-receipt-end" aria-hidden="true"><div className="objects-barcode" />{strings.thankYou}<br />{strings.keepReceipt}</div>
-      <p className="objects-delivered" role="status" aria-hidden={!sent}>{strings.delivered}</p>
+      <p className="objects-delivered" aria-hidden={!sent}>{strings.delivered}</p>
     </div>);
 });
 const ReceiptItem = forwardRef<HTMLDivElement, SlotProps & { row: EstimateModel['rows'][number] }>(function ReceiptItem({ as, model, frame, overflow, row, children, ...props }, ref) {
@@ -39,8 +39,9 @@ const Switch = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement
   return <input {...props} ref={ref} role="switch" />;
 });
 const Total = forwardRef<HTMLDivElement, SlotProps & { estimate: EstimateModel }>(function Total({ as, model, frame, overflow, estimate, children, ...props }, ref) {
+  const context = useContext(ComponentContext)!;
   const label = usePart('estimate', 'total-label'), value = usePart('estimate', 'total-value'), live = usePart('estimate', 'live');
-  return <div {...props} ref={ref}><PrismPart as="span" {...label}>{estimate.totalLabel}</PrismPart><PrismPart as="span" {...value} aria-hidden="true">{estimate.totalText}</PrismPart><PrismPart as="span" {...live} aria-live="polite">{estimate.finalTotalText}</PrismPart></div>;
+  return <div {...props} ref={ref}><PrismPart as="span" {...label}>{estimate.totalLabel}</PrismPart><PrismPart as="span" {...value} aria-hidden="true">{estimate.totalText}</PrismPart><PrismPart as="span" {...live} aria-live={context.node.complete === false ? 'off' : 'polite'}>{estimate.finalTotalText}</PrismPart></div>;
 });
 const StickyNotes = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<typeof usePick> }>(function StickyNotes({ as, model, frame, overflow, pick, children, ...props }, ref) {
   const strings = useStrings('pick');
@@ -51,6 +52,7 @@ const StickyNotes = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<ty
 });
 const IndexCard = forwardRef<HTMLElement, SlotProps & { row: PickRow }>(function IndexCard({ as = 'article', model, frame, overflow, row, children, ...props }, ref) {
   const strings = useStrings('pick'), format = useFormat();
+  useSentAnnouncement(row.sent, row.chosenLabel);
   const part = usePart('pick', 'item', !row.ready ? 'loading' : row.chosen ? 'chosen' : row.top ? 'top' : 'ready');
   const title = usePart('pick', 'title'), subtitle = usePart('pick', 'subtitle'), bars = usePart('pick', 'bars'), choose = usePart('pick', 'choose');
   return createElement(as, { ...part, ...props, ref, 'data-objects-card': '', 'data-option': row.id, 'data-top': row.top || undefined, 'aria-busy': !row.ready },
@@ -63,7 +65,7 @@ const IndexCard = forwardRef<HTMLElement, SlotProps & { row: PickRow }>(function
       {!!row.pros.length && <ul className="objects-card-notes">{row.pros.map((pro, index) => <li key={index}>{pro}</li>)}</ul>}
       {!!row.cons.length && <ul className="objects-card-notes">{row.cons.map((con, index) => <li key={index}>{con}</li>)}</ul>}
       {row.tag && <span className="objects-card-tag">{row.tag}</span>}
-      {row.chosen && <span className="objects-card-tag" role="status">{row.chosenLabel}</span>}
+      {row.chosen && <span className="objects-card-tag">{row.chosenLabel}</span>}
       {!row.top && <PrismPart as="button" {...choose} className={`${choose.className ?? ''} objects-alternative`} type="button" disabled={!row.ready} onClick={row.onChoose}>{strings.chooseTemplate.replace('{title}', row.title)}</PrismPart>}
     </>);
 });

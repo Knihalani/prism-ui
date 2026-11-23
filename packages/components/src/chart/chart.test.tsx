@@ -70,12 +70,12 @@ test('keyboard navigation refreshes custom slot models while preserving path geo
   const svg = view.getByRole('img'), path = view.container.querySelector('[data-part="line"]')!, before = path.getAttribute('d');
   act(() => svg.focus());
   fireEvent.keyDown(svg, { key: 'ArrowRight' });
-  expect(view.getByRole('status').textContent).toBe('Feb. Revenue: 12. Cost: 5');
+  expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('Feb. Revenue: 12. Cost: 5');
   expect(view.getByRole('tooltip').textContent).toContain('Feb');
   fireEvent.keyDown(svg, { key: 'ArrowDown' });
   expect(view.container.querySelector('[data-part="tooltip-row"][data-state="active"]')?.textContent).toContain('Cost');
-  fireEvent.keyDown(svg, { key: 'End' }); expect(view.getByRole('status').textContent).toContain('Mar'); expect(activeIndex).toBe(2);
-  fireEvent.keyDown(svg, { key: 'Home' }); expect(view.getByRole('status').textContent).toContain('Jan');
+  fireEvent.keyDown(svg, { key: 'End' }); expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toContain('Mar'); expect(activeIndex).toBe(2);
+  fireEvent.keyDown(svg, { key: 'Home' }); expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toContain('Jan');
   expect(activeIndex).toBe(0);
   expect(view.container.querySelector('[data-part="line"]')).toBe(path);
   expect(path.getAttribute('d')).toBe(before);
@@ -111,7 +111,7 @@ test('Answer chart opens on annotation, pivots aggregate x and change type, emit
   const view = render(<Prism registry={registry} store={store} source={source(props)} onAction={action => actions.push(action)} />);
   expect(view.getByRole('heading').textContent).toBe('February was strongest');
   expect(view.container.querySelector('[data-mode="answer"]')).toBeTruthy();
-  expect(view.getByRole('status').textContent).toContain('Feb');
+  expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toContain('Feb');
   expect(view.getByText('Launch')).toBeTruthy();
   expect(view.container.querySelector('[data-part="highlight"]')).toBeTruthy();
   fireEvent.click(view.getByRole('button', { name: 'By region' }));
@@ -136,7 +136,7 @@ test('stacked area/bar, inference, Intl and pie arrow navigation', () => {
   view.rerender(<Prism registry={registry} source={source({ ...base, type: 'pie' })} />);
   fireEvent.keyDown(view.getByRole('img'), { key: 'Home' });
   fireEvent.keyDown(view.getByRole('img'), { key: 'ArrowDown' });
-  expect(view.getByRole('status').textContent).toContain('Feb');
+  expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toContain('Feb');
 });
 
 test('empty and invalid data are safe; unstyled slots and motion flag remain supported', () => {

@@ -223,7 +223,7 @@ test('an open fence header leaves the existing prose in place until a directive 
   for (let length = 1; length < fence.length; length++) {
     view.rerender(<Prism registry={registry} source={lead + fence.slice(0, length)} done={false} />);
     expect(view.getByText('Lead with context.')).toBe(prose);
-    expect(view.container.firstElementChild?.children).toHaveLength(1);
+    expect(view.container.querySelector('[data-prism-flow]')?.children).toHaveLength(1);
   }
   view.rerender(<Prism registry={registry} source={lead + fence} done={false} />);
   expect(view.getByText('Component view')).toBeDefined();

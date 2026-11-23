@@ -48,6 +48,19 @@ test.each(['print', 'objects'])('%s styles the reply, not the host chrome, and r
   await waitFor(() => expect(view.container.querySelector('.reply-content > .prism-root')?.getAttribute('data-prism-theme-name')).toBe(name));
   await waitFor(() => expect(view.container.querySelector(name === 'print' ? '[data-print-header]' : '[data-objects-header]')).not.toBeNull());
 });
+test('Editor main contains the assistant and survives hiding the narrow-screen code pane', () => {
+  history.replaceState(null, '', '?shell=editor');
+  const view = render(<App pace={fast} />);
+  const main = view.getByRole('main', { name: 'Editor' });
+  expect(main.classList.contains('ide-body')).toBe(true);
+  expect(main.contains(view.getByRole('textbox', { name: 'Message Prism' }))).toBe(true);
+  const code = view.container.querySelector<HTMLElement>('.code-pane')!;
+  code.style.display = 'none';
+  expect(view.getAllByRole('main')).toEqual([main]);
+  code.style.display = '';
+  expect(view.getAllByRole('main')).toEqual([main]);
+});
+
 test.each(shells)('%s renders and interacts with the same scenario reply', async shell => {
   history.replaceState(null, '', '?shell=' + shell + '&theme=host&mode=dark');
   const view = render(<App pace={fast} />);

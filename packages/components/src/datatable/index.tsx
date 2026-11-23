@@ -1,5 +1,5 @@
 import { createContext, createElement, useContext, forwardRef, type CSSProperties, type ElementType } from 'react';
-import { Icon, PrismPart, useSlot, cx, defineComponent, registerComponent, usePart, usePrism, type PrismComponentProps, type IconName } from '@prism-ui/react';
+import { Icon, PrismPart, useSlot, cx, defineComponent, registerComponent, usePart, usePrism, useSentAnnouncement, type PrismComponentProps, type IconName } from '@prism-ui/react';
 import { CheckMark, Odometer } from '../shared';
 import { dataTableSchema, dataTableStrings, useDataTable, useDataTableCell, type DataTableColumn, type DataTableEntry, type DataTableModel, type DataTableProps, type DataTableRow } from './use-datatable';
 export { useDataTable, dataTableSchema } from './use-datatable';
@@ -23,8 +23,9 @@ function Value({ entry, column }: { entry: DataTableEntry; column: DataTableColu
 }
 export function DataTable({ props: input, complete, node }: PrismComponentProps<DataTableProps>) {
   const table = useDataTable({ ...input, complete }, usePrism(), node.props?.rows), { props, strings } = table;
+  const announcement = useSentAnnouncement(table.submitted, table.receiptLabel);
   return <DataTableContext.Provider value={table}><Part part="root" {...table.presentation} role="region" aria-label={table.label} onKeyDown={table.frame.rootProps.onKeyDown} data-animate={table.animate ? undefined : 'false'} data-density={props.density} data-theme-mode={table.appearance} data-selectable={table.mode || undefined} data-hide-details={table.canHideDetails && !table.showDetails ? '' : undefined} style={{ '--prism-datatable-host-background': table.hostBackground } as CSSProperties}>
-    <Part part="toolbar">
+    {announcement}<Part part="toolbar">
       <Part part="intro">{table.title && <Part part="title" as="h3">{table.title}</Part>}{table.subtitle && <Part part="subtitle" as="p">{table.subtitle}</Part>}</Part>
       <Part part="ask" as="button" type="button" onClick={table.onAsk} aria-label={strings.askAboutThisTable} title={strings.askAboutThisTable}><TableIcon name="ask" /></Part>
       <Part part="undo" as="button" type="button" onClick={table.frame.onUndo} disabled={!table.frame.canUndo} aria-label={strings.undoTableChange} title={strings.undoTableChange} aria-keyshortcuts="Control+Z Meta+Z"><TableIcon name="undo" /></Part>
@@ -60,7 +61,7 @@ export function DataTable({ props: input, complete, node }: PrismComponentProps<
       {table.pageSize > 0 && <><Part part="previous" as="button" type="button" aria-label={strings.previousPage} title={strings.previousPage} disabled={table.currentPage === 0} onClick={() => table.changePage(table.currentPage - 1)}><TableIcon name="chevron-left" /></Part><Part part="next" as="button" type="button" aria-label={strings.nextPage} title={strings.nextPage} disabled={table.currentPage >= table.pageCount - 1} onClick={() => table.changePage(table.currentPage + 1)}><TableIcon name="chevron-right" /></Part></>}
       {table.mode && <Part part="submission"><Part part="submit" className={table.unstyled ? undefined : 'prism-pill'} as="button" type="button" disabled={!table.selected.length || table.submitted} aria-describedby={props.actionHint ? table.hintId : undefined} data-feedback="" data-sent={table.submitted ? '' : undefined} onClick={table.submit}><Part part="submit-label" as="span" aria-hidden={table.submitted} hidden={table.unstyled && table.submitted}>{table.actionLabel}</Part><Part part="receipt" as="span" aria-hidden={!table.submitted} hidden={table.unstyled && !table.submitted}><CheckMark />{table.receiptLabel}</Part></Part>{props.actionHint && <Part part="action-hint" as="span" id={table.hintId}>{props.actionHint}</Part>}</Part>}
     </Part></Part>
-    <Part part="status" role="status" aria-live="polite">{table.announcement}</Part>
+    <Part part="status" role="status" aria-live={complete ? 'polite' : 'off'}>{table.announcement}</Part>
   </Part></DataTableContext.Provider>;
 }
 export const dataTableDefinition = defineComponent({ name: 'dataTable', parts: [...parts], strings: dataTableStrings, schema: dataTableSchema, component: DataTable, syntax: 'fence',

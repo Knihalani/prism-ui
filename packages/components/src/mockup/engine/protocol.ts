@@ -2,6 +2,8 @@ export interface Box { x: number; y: number; w: number; h: number }
 export interface HitRect { x: number; y: number; w?: number; h?: number }
 export interface Anchor { key: string; selector: string; text?: string }
 export interface MockupConfig {
+  title?: string;
+  lang?: string;
   mode?: 'html' | 'svg' | 'wire';
   theme?: Record<string, string>;
   interactive?: boolean;

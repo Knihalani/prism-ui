@@ -216,7 +216,7 @@ export function renderWireframe(srcOrNodes: string | WireNode[], opts: Wireframe
 
 export function wireframeCss(opts: WireframeOptions = {}): string {
   const custom = wireTokenStyle(opts.tokens);
-  return `.pwf-root{--pwf-ink:#292929;--pwf-muted:#7b7b7b;--pwf-fill:#eeeeee;--pwf-paper:#fff;--pwf-line:#dcdcdc;--pwf-radius:10px;--pwf-font:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--pwf-gap:20px;${custom};color:var(--pwf-ink);background:#f5f5f5;font:14px/1.6 var(--pwf-font);padding:32px;min-height:100vh}
+  return `.pwf-root{--pwf-ink:#292929;--pwf-muted:#707070;--pwf-fill:#eeeeee;--pwf-paper:#fff;--pwf-line:#dcdcdc;--pwf-radius:10px;--pwf-font:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--pwf-gap:20px;${custom};color:var(--pwf-ink);background:#f5f5f5;font:14px/1.6 var(--pwf-font);padding:32px;min-height:100vh}
 .pwf-root *{box-sizing:border-box}
 .pwf-root :where(p,h1,h2,h3,ul){margin:0}
 .pwf-root button,.pwf-root input,.pwf-root textarea,.pwf-root select{font:inherit;color:inherit}

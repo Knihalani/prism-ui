@@ -71,7 +71,7 @@ export function Ask({ props }: PrismComponentProps<AskProps>) {
       </AskFramePart>
     </AskFramePart>
     <AskFramePart part="body" ask={ask} {...frame.parts.body}>
-      <PrismPart as="form" {...form} slotProps={model} aria-live="polite" noValidate onKeyDown={ask.onKeyDown} onSubmit={event => { event.preventDefault(); ask.submit(); }}>
+      <PrismPart as="form" {...form} slotProps={model} noValidate onKeyDown={ask.onKeyDown} onSubmit={event => { event.preventDefault(); ask.submit(); }}>
         {ask.sentence && <PrismPart as="div" {...sentence} slotProps={model} ref={ask.sentenceRef} style={{ minBlockSize: ask.sentenceHeight }}>{ask.sentence.chunks.map((item, index) => <PrismPart as="span" {...text} slotProps={{ ask, field: item.field }} key={index}>{item.text}<PrismPart as="span" {...chunk} slotProps={{ ask, field: item.field }}>{item.lead && <PrismPart as="span" {...text} slotProps={{ ask, field: item.field }}>{item.lead}</PrismPart>}{renderField(item.field, true)}{item.punctuation && <PrismPart as="span" {...punctuation} slotProps={{ ask, field: item.field }}>{item.punctuation}</PrismPart>}</PrismPart></PrismPart>)}{ask.sentence.tail && <PrismPart as="span" {...text} slotProps={model}>{ask.sentence.tail}</PrismPart>}</PrismPart>}
         <PrismPart as="div" {...grid} slotProps={model}>{remaining.length ? remaining.map(field => renderField(field)) : !ask.fields.length ? <Empty ask={ask} /> : null}</PrismPart>
         <AskActions ask={ask} />

@@ -73,6 +73,19 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     const bounds = list.getBoundingClientRect(), rect = row.getBoundingClientRect();
     if (rect.top < bounds.top) list.scrollTop -= bounds.top - rect.top; else if (rect.bottom > bounds.bottom) list.scrollTop += rect.bottom - bounds.bottom;
   }
+  const fullscreenTrigger = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const doc = root.current?.ownerDocument;
+    if (!doc) return;
+    const change = () => {
+      if (!doc.fullscreenElement && fullscreenTrigger.current) {
+        const trigger = fullscreenTrigger.current; fullscreenTrigger.current = null;
+        (trigger.isConnected && trigger.getClientRects().length ? trigger : root.current?.querySelector<HTMLElement>('[data-part="overflowTrigger"]'))?.focus();
+      }
+    };
+    doc.addEventListener('fullscreenchange', change);
+    return () => doc.removeEventListener('fullscreenchange', change);
+  }, []);
   const previousDraft = useRef({ path, draft });
   const completeRef = useRef(complete); completeRef.current = complete;
   const grow = (height: number) => setContentHeight(old => completeRef.current ? Math.max(1, height) : Math.max(old, height, 400));
@@ -92,11 +105,12 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   useEffect(() => { if (!viewport.current || typeof ResizeObserver === 'undefined') return; const observer = new ResizeObserver(entries => setContainerWidth(entries[0].contentRect.width || 1280)); observer.observe(viewport.current); return () => observer.disconnect(); }, []);
   useEffect(() => {
     if (!enabled || !visible || !framed || !iframe.current) return;
-    const frame = (options.createController ?? createFrameController)(); controller.current = frame; frame.attach(iframe.current);
+    const frame = options.createController ? options.createController() : createFrameController({ title, lang: iframe.current.ownerDocument.documentElement.lang }); controller.current = frame; frame.attach(iframe.current);
     const offSize = frame.on('size', message => grow(message.height));
     const offLayout = frame.on('layout', message => feedback.reanchor(Object.fromEntries(message.anchors.map(a => [a.key, a.box]))));
     return () => { offSize(); offLayout(); frame.destroy(); controller.current = null; };
   }, [visible, enabled, framed, options.createController, feedback]);
+  useEffect(() => { controller.current?.configure({ title, lang: iframe.current?.ownerDocument.documentElement.lang || 'en' }); }, [title, visible, enabled, framed, options.createController]);
   const documentSource = useMemo(() => kind === 'wire' ? wireframeDocument(source) : source, [source, kind]);
   useEffect(() => { controller.current?.render(documentSource, complete); }, [documentSource, complete, kind, visible, enabled, options.createController]);
   useEffect(() => { controller.current?.setAnchors(feedback.anchorRequests()); }, [state, visible, enabled, feedback]);
@@ -143,7 +157,13 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const canUndo = useSyncExternalStore(subscribeHistory, () => ctx.store.canUndo(path), () => false), canRedo = useSyncExternalStore(subscribeHistory, () => ctx.store.canRedo(path), () => false);
   function undo() { cancel(false); ctx.store.undo(path); }
   function redo() { cancel(false); ctx.store.redo(path); }
-  function move(id: string, x: number, y: number) { if (!feedback.getState().items.some(item => item.id === id)) return; feedback.edit(id, { x: clamp(x), y: clamp(y) }); if (pending.current?.id !== id) commit(value => withItem(value, id, feedback.getState().items.find(item => item.id === id)?.comment ?? '')); }
+  function resize(id: string, w: number, h: number) {
+    const item = feedback.getState().items.find(item => item.id === id);
+    if (!item || item.kind !== 'region') return;
+    feedback.edit(id, { w: Math.max(2, Math.min(100 - item.x, w)), h: Math.max(2, Math.min(100 - item.y, h)) });
+    if (pending.current?.id !== id) commit(value => withItem(value, id, item.comment));
+  }
+  function move(id: string, x: number, y: number) { const item = feedback.getState().items.find(item => item.id === id); if (!item) return; feedback.edit(id, { x: Math.min(clamp(x), 100 - (item.kind === 'region' ? item.w ?? 0 : 0)), y: Math.min(clamp(y), 100 - (item.kind === 'region' ? item.h ?? 0 : 0)) }); if (pending.current?.id !== id) commit(value => withItem(value, id, feedback.getState().items.find(item => item.id === id)?.comment ?? '')); }
   useEffect(() => {
     if (!editing) return;
     const outside = (event: globalThis.PointerEvent) => {
@@ -207,15 +227,15 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     if (!submitted && !field && !event.ctrlKey && !event.metaKey && !event.altKey) { const next = ({ p: 'pin', r: 'region', d: 'draw' } as const)[event.key.toLowerCase() as 'p' | 'r' | 'd']; if (next) { event.preventDefault(); setTool(next); return; } }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.stopPropagation(); if (field || state.overall !== (draft?.overall ?? '') || editing && comment !== editing.text) return; event.preventDefault(); event.shiftKey ? redo() : undo(); }
   }
-  function canvasKey(event: KeyboardEvent<HTMLDivElement>) { if (event.target !== event.currentTarget || submitted || event.ctrlKey || event.metaKey) return; const step = event.shiftKey ? 10 : 2; if (event.key.startsWith('Arrow')) { event.preventDefault(); setReticle(([x, y]) => [clamp(x + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0)), clamp(y + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0))]); } if (event.key === 'Enter') { event.preventDefault(); add({ x: reticle[0], y: reticle[1] }); } }
+  function canvasKey(event: KeyboardEvent<HTMLDivElement>) { if (event.target !== event.currentTarget || submitted || event.ctrlKey || event.metaKey) return; const step = event.shiftKey ? 10 : 2; if (event.key.startsWith('Arrow')) { event.preventDefault(); setReticle(([x, y]) => [clamp(x + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0)), clamp(y + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0))]); } if (event.key === 'Enter' || tool !== 'pin' && event.key === ' ') { event.preventDefault(); add(tool !== 'pin' ? { x: Math.min(80, reticle[0]), y: Math.min(80, reticle[1]), w: 20, h: 20 } : { x: reticle[0], y: reticle[1] }); } }
   function submit() { const candidate = submission(); if (submitted || !candidate.canSubmit) return;
     const pill = root.current?.querySelector('[data-feedback-submit]')?.getBoundingClientRect();
     if (pill) for (const node of Array.from(root.current?.querySelectorAll<HTMLElement>('[data-part="marker"],[data-part="stroke"]') ?? [])) { const bounds = node.getBoundingClientRect(); node.style.setProperty('--prism-mockup-exit-x', `${(pill.left + pill.width / 2 - bounds.left - bounds.width / 2) / scale}px`); node.style.setProperty('--prism-mockup-exit-y', `${(pill.top + pill.height / 2 - bounds.top - bounds.height / 2) / scale}px`); }
     cancelGesture(); close(); const saved = commit(() => candidate.toJSON(), true); const payload = createFeedback(saved).toPayload(), message = toMessage(payload, { strings: labels }); if (options.inline) emit('feedback', { ...payload, target: { name: component!.name, id: component!.id }, coordinates: 'percent' }, message); else receipt.send('feedback', payload, message); setEditing(null); }
-  return { flash, created, listRef, highlight, props, kind, framed, complete, labels, title, source, svg, root, viewport, canvas, iframe, graphic, visible: visible && enabled, width, scale, contentHeight, device, setDevice, zoom, setZoom, expanded, showSource, setShowSource, tool, setTool, pen: tool === 'draw', setPen: setPenValue, color: colorValue, setColor: setColorValue, active, setActive, editing, comment, setComment, announcement, reticle, focused, setFocused, live, livePaint, get hover() { return live.current.hover; }, get rubber() { return live.current.points; }, pointer, onKeyDown, canvasKey, feedback: { ...feedback, canUndo, canRedo, undo, redo }, state, resolved, submitted, setSubmitted, open, remove, save, saveOverall, move, cancel, close, popoverPosition, locale: ctx.format.locale, canSubmit: submission().canSubmit, imageError, setImageError,
+  return { flash, created, listRef, highlight, props, kind, framed, complete, labels, title, source, svg, root, viewport, canvas, iframe, graphic, visible: visible && enabled, width, scale, contentHeight, device, setDevice, zoom, setZoom, expanded, showSource, setShowSource, tool, setTool, pen: tool === 'draw', setPen: setPenValue, color: colorValue, setColor: setColorValue, active, setActive, editing, comment, setComment, announcement, reticle, focused, setFocused, live, livePaint, get hover() { return live.current.hover; }, get rubber() { return live.current.points; }, pointer, onKeyDown, canvasKey, feedback: { ...feedback, canUndo, canRedo, undo, redo }, state, resolved, submitted, setSubmitted, open, remove, save, saveOverall, move, resize, cancel, close, popoverPosition, locale: ctx.format.locale, canSubmit: submission().canSubmit, imageError, setImageError,
     markerPointer, imageSrc: /^(https:|data:image\/)/i.test((props.src ?? source).trim()) ? (props.src ?? source).trim() : undefined,
     imageLoaded(width: number, height: number) { setNaturalWidth(width || 800); grow(height || 400); },
-    async fullscreen() { try { if (document.fullscreenElement) await document.exitFullscreen(); else if (root.current?.requestFullscreen) await root.current.requestFullscreen(); else setExpanded(old => !old); } catch { setExpanded(old => !old); } },
+    async fullscreen() { try { if (document.fullscreenElement) await document.exitFullscreen(); else if (root.current?.requestFullscreen) { fullscreenTrigger.current = document.activeElement as HTMLElement; await root.current.requestFullscreen(); } else setExpanded(old => !old); } catch { setExpanded(old => !old); } },
     async copy() { try { await navigator.clipboard?.writeText(source); } catch {} },
     submit,
   };

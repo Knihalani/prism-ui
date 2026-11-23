@@ -75,6 +75,7 @@ try {
         await page.evaluate(() => window.motionProbe.sample('feedback/pin-enter'));
         await page.getByRole('button', { name: 'Save', exact: true }).click();
         await page.evaluate(() => window.motionProbe.sample('feedback/pin-exit'));
+        await page.getByRole('button', { name: 'Region', exact: true }).click();
         const bounds = await canvas.boundingBox();
         if (!bounds) throw Error('Missing feedback canvas');
         await page.mouse.move(bounds.x + bounds.width * .2, bounds.y + bounds.height * .3);
@@ -84,7 +85,7 @@ try {
         await page.mouse.up();
         await page.getByPlaceholder('Add a comment…').fill('Preference check region');
         await page.evaluate(() => window.motionProbe.sample('feedback/region-enter'));
-        await page.getByRole('button', { name: 'Submit feedback', exact: true }).click();
+        await page.getByRole('button', { name: /^Send \d+ comments?$/ }).click();
         await page.evaluate(() => window.motionProbe.sample('feedback/sent'));
         await page.waitForFunction(() => !document.querySelector('[data-closing]'));
         const result = await page.evaluate(() => { const result = window.motionProbe.result(); window.motionProbe.close(); return result; });

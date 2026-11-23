@@ -1,5 +1,5 @@
-import { forwardRef, useContext, type ComponentPropsWithoutRef, type ReactNode } from 'react';
-import { PrismContext, PrismPart, Icon, cx, useReducedMotion } from '@prism-ui/react';
+import { Children, forwardRef, isValidElement, useContext, type ComponentPropsWithoutRef, type ReactNode } from 'react';
+import { PrismContext, PrismPart, Icon, cx, useReducedMotion, useSentAnnouncement } from '@prism-ui/react';
 
 type ButtonProps = ComponentPropsWithoutRef<'button'>;
 type InputProps = ComponentPropsWithoutRef<'input'>;
@@ -16,11 +16,16 @@ export interface PillProps extends ButtonProps {
   receipt?: ReactNode;
 }
 
+function receiptText(value: ReactNode): string {
+  return Children.toArray(value).map(child => isValidElement<{ children?: ReactNode }>(child) ? receiptText(child.props.children) : typeof child === 'string' || typeof child === 'number' ? String(child) : '').join(' ');
+}
 export function SentContent({ sent, receipt, children }: { sent: boolean; receipt: ReactNode; children: ReactNode }) {
   const unstyled = useContext(PrismContext)?.unstyled;
+  const announcement = useSentAnnouncement(sent, receiptText(receipt));
   return <>
     <span aria-hidden={sent} hidden={unstyled && sent}>{children}</span>
     <span aria-hidden={!sent} hidden={unstyled && !sent}><CheckMark />{receipt}</span>
+    {announcement}
   </>;
 }
 

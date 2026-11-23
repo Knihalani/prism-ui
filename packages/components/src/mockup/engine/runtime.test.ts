@@ -34,6 +34,23 @@ function bounds(element: Element, x: number, y: number, width: number, height: n
 }
 
 describe('runtime', () => {
+  test('metadata changes safely update the document without replacing authored content', () => {
+    const r = rig();
+    try {
+      r.send({ type: 'render', html: '<p>Keep this node</p>' }); r.flush();
+      const node = r.win.document.querySelector('p');
+      r.send({ type: 'config', title: 'Report <A>', lang: 'fr' }); r.flush();
+      expect(r.win.document.title).toBe('Report <A>');
+      expect(r.win.document.documentElement.lang).toBe('fr');
+      expect(r.win.document.querySelector('p')).toBe(node);
+      r.send({ type: 'config', title: '', lang: '' }); r.flush();
+      expect(r.win.document.title).toBe('Preview');
+      expect(r.win.document.documentElement.lang).toBe('en');
+      r.send({ type: 'config', title: 42, lang: null } as unknown as HostPayload); r.flush();
+      expect(r.win.document.title).toBe('Preview');
+      expect(r.win.document.documentElement.lang).toBe('en');
+    } finally { r.close(); }
+  });
   test('ceil fractional content height, shrink below viewport height, and retain real overflow', () => {
     const r = rig();
     try {

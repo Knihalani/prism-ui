@@ -42,12 +42,12 @@ test('CodeBlock resolves theme strings over labels, localizes feedback and messa
   expect(model!.row!.index).toBe(0); expect(typeof model!.codeblock.toggleWrap).toBe('function');
   expect(view.getByRole('button', { name: 'Expand 3' })).toBeDefined();
   await act(async () => { fireEvent.click(view.getByRole('button', { name: 'Duplicate code' })); });
-  expect(view.getByRole('status').textContent).toBe('Saved');
+  expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('Saved');
   expect(actions[0].message).toBe('Copied {"lang":"","lines":3}');
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw Error('Denied'); } } });
   document.execCommand = () => false;
   fireEvent.click(view.getByRole('button', { name: 'Duplicate code' }));
-  await waitFor(() => expect(view.getByRole('status').textContent).toBe('Denied'));
+  await waitFor(() => expect(view.getAllByRole('status').find(node => !node.hasAttribute('data-prism-announcer'))!.textContent).toBe('Denied'));
   expect(actions).toHaveLength(1);
  } finally { document.execCommand = exec; if (previous) Object.defineProperty(navigator, 'clipboard', previous); else Reflect.deleteProperty(navigator, 'clipboard'); }
 });
