@@ -30,14 +30,14 @@
       "reason": "Multi-field form renderer, validation, conditional fields and submission state."
     },
     "datatable": {
-      "js": 8944,
+      "js": 8928,
       "css": 4096,
-      "reason": "Sorting, filtering, selection, paging/windowing and schema metadata; common extraction reverted because it increased net cost."
+      "reason": "Measured 8502B +5%; persisted sorting/filtering/paging, first-interaction selection, keyboard navigation and schema metadata remain synchronous."
     },
     "chart": {
-      "js": 10090,
+      "js": 10085,
       "css": 4096,
-      "reason": "Interactive SVG geometry, accessibility table, interaction state and schema metadata; common extraction reverted because it increased net cost."
+      "reason": "Measured 9604B +5%; first-paint SVG/accessibility table, annotations/persisted pivots, first-interaction tooltip/legend and keyboard selection remain synchronous."
     },
     "artifact": {
       "js": 52448,
@@ -60,9 +60,9 @@
       "reason": "All frame/controls, utilities, eager grammars, strings, tokens and common styles, once."
     },
     "react": {
-      "js": 23331,
+      "js": 24536,
       "css": 4096,
-      "reason": "Shared React renderer, reply motion, themes, markdown and integration prompt API; merged-main JS plus 5%."
+      "reason": "Shared React renderer, themes and synchronous exit snapshots; PR #47 merge build measured 23367B plus 5%, rounded up."
     },
     "core": {
       "js": 12288,

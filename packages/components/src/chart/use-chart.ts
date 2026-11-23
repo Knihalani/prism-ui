@@ -47,7 +47,7 @@ export const chartSchema = s.object({
 const empty: DataRow[] = [];
 const semanticColor = (name: string) => `var(--prism-chart-${name}, var(--prism-${name}, var(--prism-chart-text, var(--prism-text))))`;
 const palette = ['accent', 'info', 'positive', 'warning', 'danger'].map(semanticColor);
-palette.push(`color-mix(in srgb, ${palette[0]} 55%, ${palette[4]})`, `color-mix(in srgb, ${palette[2]} 55%, ${palette[1]})`, `color-mix(in srgb, ${palette[3]} 55%, ${palette[4]})`);
+palette.push(...[[0, 4], [2, 1], [3, 4]].map(([a, b]) => `color-mix(in srgb, ${palette[a]} 55%, ${palette[b]})`));
 export const seriesColor = (series: ChartSeries, index: number) => series.color ?? `var(--prism-chart-${index % 8 + 1}, ${palette[index % 8]})`;
 const number = (value: unknown): number | null => typeof value === 'number' && Number.isFinite(value) ? value : null;
 export function useChart(inputProps: ChartProps, ctx: PrismContextValue, fixedWidth?: number, fixedDuration?: number) {
@@ -65,10 +65,10 @@ export function useChart(inputProps: ChartProps, ctx: PrismContextValue, fixedWi
   const frame = useFrame({ component: 'chart', title: props.title ?? strings.title, undo: true });
   const [pivot, setPivot] = useComponentState('pivot', -1), [hidden, setHidden] = useComponentState<string[]>('hidden', []);
   const [interaction, setInteraction] = useState<{ index: number; series: number } | null>(null), emit = useEmit();
-  const input = useMemo(() => (props.data ?? empty).filter(row => row && typeof row === 'object' && !Array.isArray(row)), [props.data]);
+  const input = useMemo(() => (props.data ?? empty).slice(), [props.data]);
   const activePivot = props.pivots?.[pivot], type = activePivot?.type ?? props.type ?? 'line';
   const x = activePivot?.x ?? props.x ?? Object.keys(input[0] ?? {}).find(key => typeof input[0][key] !== 'number') ?? 'x';
-  const series = useMemo(() => (activePivot?.series ?? props.series ?? Object.keys(input[0] ?? {}).filter(key => key !== x && number(input[0][key]) !== null).map(key => ({ key } as ChartSeries))).filter(item => item?.key && item.key !== x).map(item => ({ ...item, label: item.label ?? item.key })), [activePivot?.series, props.series, input, x]);
+  const series = useMemo(() => (activePivot?.series ?? props.series ?? Object.keys(input[0] ?? {}).filter(key => key !== x && number(input[0][key]) !== null).map(key => ({ key } as ChartSeries))).filter(item => item.key && item.key !== x).map(item => ({ ...item, label: item.label ?? item.key })), [activePivot?.series, props.series, input, x]);
   const shown = useMemo(() => { const visible = series.filter(item => !hidden.includes(item.key)); return visible.length ? visible : series.slice(0, 1); }, [series, hidden]);
   const data = useMemo(() => {
     if (!activePivot?.x || activePivot.x === props.x) return input;
@@ -105,16 +105,15 @@ export function useChart(inputProps: ChartProps, ctx: PrismContextValue, fixedWi
     const stacks = props.stacked && type !== 'line' ? stack(data, shown.map(item => item.key), { offset: 'diverging' }) : undefined;
     const layers = shown.map((item, s) => {
       const topPoints: (Point | null)[] = data.map((row, i) => number(row[item.key]) === null ? null : [xs[i], yScale.map(stacks?.[s][i][1] ?? number(row[item.key]))]);
-      const baseline: (Point | null)[] = data.map((_, i) => [xs[i], yScale.map(stacks?.[s][i][0] ?? 0)]);
+      const baseline: Point[] = data.map((_, i) => [xs[i], yScale.map(stacks?.[s][i][0] ?? 0)]);
       const curve = props.curve ?? 'monotone', line = linePath(topPoints, { curve });
       return { key: item.key, color: seriesColor(item, series.findIndex(value => value.key === item.key)),
         d: type === 'area' ? areaPath(topPoints, baseline, { curve }) : line,
         line,
         points: topPoints,
-        bars: data.map((row, i) => {
-          const from = stacks?.[s][i][0] ?? 0, to = stacks?.[s][i][1] ?? number(row[item.key]) ?? 0;
+        bars: topPoints.map((point, i) => {
           const barWidth = band.bandwidth / (props.stacked ? 1 : Math.max(1, shown.length));
-          const start = yScale.map(from), end = yScale.map(to);
+          const start = pointY(baseline[i])!, end = point ? pointY(point)! : start;
           return barPath({ x: band.map(i) + (props.stacked ? 0 : s * barWidth), y: Math.min(start, end), width: barWidth, height: Math.abs(end - start), radius: 3, topOnly: true });
         }),
       };

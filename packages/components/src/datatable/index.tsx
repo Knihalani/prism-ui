@@ -4,7 +4,9 @@ import { CheckMark, Odometer } from '../shared';
 import { dataTableSchema, dataTableStrings, useDataTable, useDataTableCell, type DataTableColumn, type DataTableEntry, type DataTableModel, type DataTableProps, type DataTableRow } from './use-datatable';
 export { useDataTable, dataTableSchema } from './use-datatable';
 export type { DataTableProps, DataTableColumn, DataTableRow, DataTableEntry, DataTableModel, DataTableSelection } from './use-datatable';
-const parts = ['action-hint','actions','ask','badge','caption','cell','checkbox','clear','count','details','empty','filter','footer','header','heading','intro','magnitude','next','previous','range','root','row','scroll','skeleton','sort','status','submission','submit','subtitle','table','title','toolbar','undo','header-row','body','selection-heading','selection-cell','placeholder-row','placeholder-cell','spacer-row','spacer-cell','empty-row','empty-cell','submit-label','receipt','value','icon'] as const;
+type PartNames<S extends string, T extends readonly string[] = []> = S extends `${infer Head} ${infer Rest}` ? PartNames<Rest, readonly [...T, Head]> : readonly [...T, S];
+const partNames = 'action-hint actions ask badge caption cell checkbox clear count details empty filter footer header heading intro magnitude next previous range root row scroll skeleton sort status submission submit subtitle table title toolbar undo header-row body selection-heading selection-cell placeholder-row placeholder-cell spacer-row spacer-cell empty-row empty-cell submit-label receipt value icon';
+const parts = partNames.split(' ') as unknown as PartNames<typeof partNames>;
 export type DataTablePart = typeof parts[number];
 export type DataTableSlotProps = { [P in DataTablePart]: { table: DataTableModel; row?: DataTableRow; column?: DataTableColumn; entry?: DataTableEntry } }
   & { [P in 'row' | 'selection-cell']: { table: DataTableModel; row: DataTableRow; entry: DataTableEntry } }

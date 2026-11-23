@@ -7,6 +7,7 @@ const pending = new Map<Element, { frames: Frame[]; scope: Element; duration: nu
 const ancestors = new Map<Element, Frame>();
 const inherited = new Set(('color color-scheme cursor direction font-family font-feature-settings font-kerning font-language-override font-optical-sizing font-palette font-size font-size-adjust font-stretch font-style font-synthesis font-synthesis-position font-synthesis-small-caps font-synthesis-style font-synthesis-weight font-variant font-variant-alternates font-variant-caps font-variant-east-asian font-variant-emoji font-variant-ligatures font-variant-numeric font-variant-position font-variation-settings font-weight line-height letter-spacing word-spacing text-align text-align-last text-combine-upright text-emphasis-color text-emphasis-position text-emphasis-style text-indent text-justify text-orientation text-rendering text-shadow text-transform text-underline-position white-space white-space-collapse visibility quotes list-style-image list-style-position list-style-type caption-side border-collapse border-spacing empty-cells tab-size hyphens overflow-wrap word-break writing-mode paint-order fill fill-opacity fill-rule stroke stroke-dasharray stroke-dashoffset stroke-linecap stroke-linejoin stroke-miterlimit stroke-opacity stroke-width clip-rule color-interpolation color-interpolation-filters dominant-baseline marker-end marker-mid marker-start shape-rendering').split(' '));
 const omitted = new WeakMap<StyledElement, [string, string][]>();
+const declarations = new WeakMap<StyledElement, [string, string][]>();
 
 function copy(source: StyledElement, deep: boolean) {
   const ghost = source.cloneNode(deep) as StyledElement;
@@ -14,7 +15,7 @@ function copy(source: StyledElement, deep: boolean) {
   const clones = [ghost, ...(deep ? Array.from(ghost.querySelectorAll<StyledElement>('*')) : [])];
   originals.forEach((original, index) => {
     const clone = clones[index], style = getComputedStyle(original), parent = original.parentElement;
-    const parentStyle = parent ? getComputedStyle(parent) : null, values: [string, string][] = [];
+    const parentStyle = parent ? getComputedStyle(parent) : null, values: [string, string][] = [], copied: [string, string][] = [];
     for (let property = 0; property < style.length; property++) {
       const name = style.item(property);
       const value = style.getPropertyValue(name);
@@ -22,12 +23,20 @@ function copy(source: StyledElement, deep: boolean) {
         if (!index) values.push([name, value]);
         continue;
       }
-      clone.style.setProperty(name, value);
+      copied.push([name, value]);
     }
     clone.removeAttribute('id'); clone.removeAttribute('autofocus');
+    declarations.set(clone, copied);
     if (!index) omitted.set(clone, values);
   });
   return ghost;
+}
+
+function restore(ghost: StyledElement) {
+  for (const element of [ghost, ...Array.from(ghost.querySelectorAll<StyledElement>('*'))]) {
+    for (const [name, value] of declarations.get(element) ?? []) element.style.setProperty(name, value);
+    declarations.delete(element);
+  }
 }
 
 function freeze(frame: Frame, width: number, height: number) {
@@ -45,7 +54,14 @@ function flush() {
     const index = frames.findIndex(frame => frame.source.isConnected && (!svg || frame.source.namespaceURI !== element.namespaceURI));
     const last = index < 0 ? frames.length - 1 : index - 1;
     const parent = index < 0 ? scope : frames[index].source, root = frames[last], ghost = root.ghost;
-    for (let child = 0; child < last; child++) {
+    const existing = exits.get(root.source);
+    let branch = last;
+    if (existing) {
+      while (--branch >= 0 && existing.has(frames[branch].source)) {}
+      if (branch < 0) continue;
+    }
+    restore(frames[branch].ghost);
+    for (let child = 0; child < last && child <= branch; child++) {
       const frame = frames[child], ancestor = frames[child + 1];
       if (frame.source.namespaceURI === 'http://www.w3.org/2000/svg') continue;
       const sx = ancestor.source instanceof HTMLElement && ancestor.source.offsetWidth ? ancestor.rect.width / ancestor.source.offsetWidth : 1;
@@ -54,14 +70,9 @@ function flush() {
       frame.ghost.style.left = `${(frame.rect.left - ancestor.rect.left) / sx - ancestor.source.clientLeft + ancestor.source.scrollLeft}px`;
       frame.ghost.style.top = `${(frame.rect.top - ancestor.rect.top) / sy - ancestor.source.clientTop + ancestor.source.scrollTop}px`;
     }
-    const existing = exits.get(root.source);
     if (existing) {
-      for (let child = last - 1; child >= 0; child--) {
-        if (existing.has(frames[child].source)) continue;
-        existing.get(frames[child + 1].source)!.append(frames[child].ghost);
-        for (let inner = child; inner >= 0; inner--) existing.set(frames[inner].source, frames[inner].ghost);
-        break;
-      }
+      existing.get(frames[branch + 1].source)!.append(frames[branch].ghost);
+      for (let inner = branch; inner >= 0; inner--) existing.set(frames[inner].source, frames[inner].ghost);
       continue;
     }
     exits.set(root.source, new Map(frames.slice(0, last + 1).map(frame => [frame.source, frame.ghost])));
@@ -104,6 +115,7 @@ function capture(element: StyledElement | null) {
       ancestors.set(ancestor, snapshot);
     }
     const ghost = snapshot.ghost.cloneNode(false) as StyledElement;
+    declarations.set(ghost, declarations.get(snapshot.ghost) ?? []);
     omitted.set(ghost, omitted.get(snapshot.ghost) ?? []);
     ghost.append(frames.at(-1)!.ghost);
     frames.push({ source: ancestor, ghost, rect: snapshot.rect });
