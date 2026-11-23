@@ -30,6 +30,16 @@ test('Print and Objects expose named themes and dark tokens', () => {
   expect('components' in objects).toBe(true);
 });
 
+test('Print totals size against the account column and retain the complete section index', () => {
+  const view = render(<Prism source={source} theme={print} animate={false} />);
+  expect(view.container.querySelector('.print-index')?.textContent).toBe('01 / ESTIMATE');
+  const total = view.container.querySelector<HTMLElement>('[data-print-total]')!;
+  const value = total.querySelector('[data-part="total-value"]')!;
+  expect(Number(total.style.getPropertyValue('--print-total-length'))).toBe(value.textContent!.length);
+  expect(print.css).toContain('container-type:inline-size; min-width:0; border-left');
+  expect(print.css).toContain('white-space:nowrap; font:900 min(93px,calc(160cqi / var(--print-total-length)))');
+});
+
 test('Objects receipt preserves increase, Undo, switch and sent state without feeding when animation is disabled', () => {
   const actions: { type: string }[] = [];
   const view = render(<Prism source={source} theme={objects} animate={false} onAction={action => actions.push(action)} />);
