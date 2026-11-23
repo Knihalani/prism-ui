@@ -13,6 +13,7 @@ import { examples } from '../src/gallery-data';
 import { Hero } from '../src/islands/hero';
 import { docsDirectory, type SiteRoute } from '../src/routes';
 import { sitePath } from '../src/paths';
+import { staticMediaPreview } from './static-preview';
 
 function highlightSource(source: string) {
   const fence = source.match(/^(```ui:[\w]+\n)([\s\S]*)(\n```)$/);
@@ -57,7 +58,7 @@ export function renderPage(route: SiteRoute, template: string, base: string) {
     return createRegistry([name, ...(dependencies[name] ?? [])].map(name => defaultRegistry.get(name)!));
   };
   const highlight = (code: string) => hljs.highlight(code, { language: 'tsx' }).value;
-  const previews = route.kind === 'gallery' ? Object.fromEntries(defaultRegistry.list().map(def => [def.name, renderToString(<Prism source={examples(def)[0]} registry={registryFor(def.name)} plugins={plugins} store={createStore({ initial: { rent: 1200 } })} scope={`preview-${def.name}`} animate={false} />, { identifierPrefix: `preview-${def.name}-` })])) : {};
+  const previews = route.kind === 'gallery' ? Object.fromEntries(defaultRegistry.list().map(def => [def.name, staticMediaPreview(examples(def)[0], plugins) ?? renderToString(<Prism source={examples(def)[0]} registry={registryFor(def.name)} plugins={plugins} store={createStore({ initial: { rent: 1200 } })} scope={`preview-${def.name}`} animate={false} />, { identifierPrefix: `preview-${def.name}-` })])) : {};
   const exampleHtml = def ? renderToString(<Example data={{ name: def.name, sources: examples(def) }} bundle={{ registry: registryFor(def.name), plugins }} />, { identifierPrefix: 'example-' }) : '';
   const content = renderToString(<Site route={route} base={base}
     previews={previews} exampleHtml={exampleHtml} highlighted={def ? examples(def).map(highlightSource) : []} highlight={highlight}

@@ -42,6 +42,8 @@ Mockup's browser-visibility gate does not produce a hydration-stable first rende
 Its island therefore hydrates the server HTML as a snapshot before mounting the
 live content in an effect; its complete prerendered preview stays readable with
 JavaScript off. Other component islands hydrate their Prism tree directly.
+The index uses script-disabled sandbox frames for static HTML/SVG media previews,
+derived through the real fence plugins; neither media preview runs JavaScript.
 
 Component references derive props, nested types, parts, strings and examples from
 the registry. Source highlighting runs at build time. The five-theme comparison
