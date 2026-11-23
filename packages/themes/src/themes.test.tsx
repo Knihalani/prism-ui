@@ -38,6 +38,13 @@ test('Print solid badges preserve six distinct semantic inks in light and dark',
   expect(print.css).toContain('background:var(--prism-badge-color); color:var(--prism-bg);');
 });
 
+test('Instrument narrow Pick keeps weights and scores compact without dropping evidence', () => {
+  expect(instrument.css).toContain('.instrument-fader { display:grid; grid-template-columns:minmax(0,1fr) 92px;');
+  expect(instrument.css).toContain('.instrument-score { grid-column:2; grid-row:2/4;');
+  expect(instrument.css).toContain('.instrument-notes { margin:2px 0; line-height:1.4; }');
+  expect(instrument.css).toContain('.instrument-module-actions:empty { display:none; }');
+});
+
 test('Instrument tabs keep whole labels in a scrollable strip with narrow chassis padding', () => {
   const view = render(<Prism theme={instrument} source={'::::tabs{title="Be available"}\n:::tab{label="Before"}\nFirst\n:::\n:::tab{label="During"}\nSecond\n:::\n::::'} animate={false} />);
   expect(within(view.container).getByRole('tab', { name: 'Before' }).textContent).toBe('Before');

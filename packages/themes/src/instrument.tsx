@@ -242,6 +242,27 @@ export const instrument = defineTheme({
     }
     @container (max-width:360px) {
       :scope [data-instrument-chassis] { padding:22px 16px; }
+      :scope .prism-pick__root[data-instrument-chassis] { padding:12px; }
+      :scope .prism-pick__criteria { gap:2px; margin:12px 0; }
+      :scope .instrument-fader { display:grid; grid-template-columns:minmax(0,1fr) 92px; align-items:center; gap:10px; min-height:30px; }
+      :scope .instrument-fader input { margin:0; height:24px; background-size:100% 7px; }
+      :scope .instrument-fader input::-webkit-slider-thumb { height:20px; }
+      :scope .instrument-fader input::-moz-range-thumb { height:20px; }
+      :scope .instrument-fader > i { display:none; }
+      :scope [data-instrument-module] { display:grid; grid-template-columns:minmax(0,1fr) 52px; gap:4px 8px; padding:10px; }
+      :scope .instrument-module-index, :scope [data-instrument-module] .prism-pick__bars, :scope .instrument-notes, :scope .instrument-tag, :scope .instrument-module-actions { grid-column:1/-1; }
+      :scope .instrument-module-index { margin:0 0 2px; }
+      :scope [data-instrument-module] .prism-pick__title { grid-column:1; font-size:14px; }
+      :scope [data-instrument-module] .prism-pick__subtitle { grid-column:1; min-height:0; margin:0; line-height:1.4; }
+      :scope .instrument-score { grid-column:2; grid-row:2/4; align-self:start; min-height:34px; padding:4px; margin:0; }
+      :scope .instrument-score svg { height:24px; }
+      :scope .instrument-rating { padding-block:2px; }
+      :scope .instrument-notes { margin:2px 0; line-height:1.4; }
+      :scope .instrument-tag { margin:0; }
+      :scope .instrument-module-actions { min-height:20px; margin:0; }
+      :scope .instrument-module-actions:empty { display:none; }
+      :scope .instrument-pick-footer { padding-top:10px; }
+      :scope .instrument-pick-footer p { margin-bottom:8px; line-height:1.4; }
       :scope .prism-mockup__header { flex-direction:row; }
       :scope .prism-mockup__toolbar { position:static; order:2; flex-wrap:wrap; justify-content:flex-end; }
       :scope .prism-mockup__tools { flex:1 1 auto; min-width:0; flex-wrap:wrap; justify-content:flex-end; }
