@@ -29,6 +29,8 @@ async function settle(page) {
   await page.waitForFunction(() => !document.querySelector('[data-artifact-shell] [aria-busy="true"]'), undefined, { timeout: 15000 });
   await page.waitForFunction(() => document.getAnimations().every(a => a.effect?.getTiming().iterations === Infinity || a.playState === 'finished'), undefined, { timeout: 10000 });
   for (const frame of page.frames()) await frame.evaluate(() => document.fonts.ready).catch(() => {});
+  const previewErrors = await page.locator('.prism-artifact__error').allTextContents();
+  if (previewErrors.length) throw Error('Artifact preview failed: ' + previewErrors.join('; '));
 }
 
 async function scan(page, label) {
