@@ -35,6 +35,25 @@ test('reply height skips first/small measures, retargets the visual height and c
   } finally { globalThis.ResizeObserver = original; }
 });
 
+test('reply height leaves in-flight child height transitions in control', () => {
+  const original = globalThis.ResizeObserver;
+  let resize!: () => void, size = 100;
+  globalThis.ResizeObserver = class { constructor(callback: () => void) { resize = callback; } observe() {} disconnect() {} } as unknown as typeof ResizeObserver;
+  try {
+    function Reply() { return <section><div ref={useSmoothHeight()}>Preview</div></section>; }
+    const view = render(<Reply />), root = view.container.firstElementChild as HTMLElement, content = root.firstElementChild as HTMLElement;
+    content.getBoundingClientRect = () => ({ height: size }) as DOMRect;
+    root.animate = mock(() => ({ cancel: mock() }) as unknown as Animation);
+    content.getAnimations = mock(() => [{ transitionProperty: 'height' }] as unknown as Animation[]);
+    act(resize);
+    size = 240; act(resize);
+    expect(root.animate).not.toHaveBeenCalled();
+    content.getAnimations = () => [];
+    size = 360; act(resize);
+    expect(root.animate).toHaveBeenCalledTimes(1);
+  } finally { globalThis.ResizeObserver = original; }
+});
+
 test('flow is a single stable box, history skips entry, and arrivals stagger per commit', () => {
   const history = render(<Prism source={'First\n\nSecond'} />);
   expect(history.container.querySelector('[data-prism-enter]:not([data-prism-entered])')).toBeNull();

@@ -22,6 +22,7 @@ export function useSmoothHeight(enabled = true, threshold = 24) {
       const change = previous === undefined ? 0 : next - previous, delta = Math.abs(change);
       previous = next;
       if (from === undefined || delta < .5) return;
+      if ((animation || delta > threshold) && content.getAnimations?.({ subtree: true }).some(item => 'transitionProperty' in item && item.transitionProperty === 'height')) { clear(); return; }
       const duration = motionDuration(style.getPropertyValue('--prism-motion-base'), 240);
       const line = parseFloat(style.lineHeight) || 0;
       const offset = style.boxSizing === 'border-box' ? 0 : inset;
