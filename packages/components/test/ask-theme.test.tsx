@@ -111,7 +111,7 @@ test('swallowed and delayed middleware never display an attempted payload as a s
   let deliver: (() => void) | undefined;
   const middleware: Middleware[] = [(action, next) => { deliver = () => next({ ...action, payload: { values: { name: null } } }); }];
   const view = render(<Prism source={source({ fields: [{ id: 'name', label: 'Name', type: 'text', value: 'Guess' }] })} registry={registry} middleware={middleware} onAction={() => {}} />);
-  fireEvent.click(view.getByRole('button', { name: 'Send' })); expect(view.queryByText('Sent')).toBeNull(); expect(view.getByRole('textbox')).toBeDefined();
+  fireEvent.click(view.getByRole('button', { name: 'Send' })); expect(view.queryByRole('button', { name: 'Sent' })).toBeNull(); expect(view.getByRole('textbox')).toBeDefined();
   act(() => deliver?.()); expect(view.getByText('Not provided')).toBeDefined(); expect(view.queryByText('Guess')).toBeNull();
 });
 

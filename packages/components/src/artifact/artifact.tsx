@@ -89,9 +89,9 @@ export function Artifact({ props, complete }: PrismComponentProps<ArtifactProps>
   const ErrorSlot = useSlot('artifact', 'error', Failure);
   const SourceSlot = useSlot('artifact', 'source', Code);
   const title = model.title;
-  return <PrismPart slotProps={{ model: model }} as="div" {...shell} tabIndex={0} aria-label={title} data-artifact-shell="" data-variant={selected.variant} data-size={selected.size}>
+  return <PrismPart slotProps={{ model: model }} as="div" {...shell} tabIndex={0} aria-label={title} data-artifact-shell="" data-prism-reveal-host="" data-variant={selected.variant} data-size={selected.size}>
     <ComponentFrame slotProps={{ model: model }} component="artifact" title={title} state={model.streaming ? 'streaming' : 'ready'}
-      undo toolbar={<ControlsSlot {...controls} model={model} />}>
+      undo toolbar={<ControlsSlot {...controls} data-prism-reveal={selected.variant === 'inline' ? '' : undefined} model={model} />}>
       <PrismPart slotProps={{ model: model }} as="div" {...preview} ref={feedbackTarget} data-feedback-target="" hidden={model.mode !== 'preview'} style={{ ...preview.style, minHeight: model.height }} aria-busy={model.updating || (model.enabled && !model.rendered && !model.error)}>
         <PrismPart slotProps={{ model: model }} as="div" {...viewport} ref={model.ref} style={{ height: model.height, ...viewport.style }} hidden={!!model.error || !model.enabled}>{model.needsFrame && <PrismPart as="iframe" {...iframe} slotProps={{ model }} ref={model.iframeRef} title={model.title} sandbox="allow-scripts" referrerPolicy="no-referrer" />}</PrismPart>
         {model.error ? <ErrorSlot {...error} model={model} role="alert" /> : (!model.rendered || !model.enabled) && <EmptySlot {...empty} model={model} role={model.enabled ? 'status' : undefined} aria-label={model.enabled ? model.strings.preparingPreview : undefined} />}

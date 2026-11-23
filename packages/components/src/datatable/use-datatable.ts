@@ -1,12 +1,11 @@
 import { useContext, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { ComponentContext, useComponentState, useEmit, useFlash, useSent, useStrings, useTheme, type PrismContextValue } from '@prism-ui/react';
+import { createFlip, ComponentContext, useComponentState, useEmit, useFlash, useSent, useStrings, useTheme, type PrismContextValue } from '@prism-ui/react';
 import { s } from '@prism-ui/schema';
 import { filter, prepare } from '../lib/fuzzy';
 import { format } from '../lib/format';
 import { componentStrings } from '../strings';
 import { interpolate } from '../interpolate';
 import { useFrame } from '../frame';
-import { createFlip } from '../lib/flip';
 
 export interface DataTableColumn {
   key: string; label?: string; type?: 'text' | 'number' | 'currency' | 'date';

@@ -15,7 +15,7 @@ export interface RendererProps<T = Record<string, unknown>> {
 export interface RendererOptions<T> { schema?: Schema<T>; prompt?: string; feedback?: boolean }
 export type Renderers = Record<string, ComponentType<any> | ComponentDef>;
 
-const tokenNames = 'bg surface surfaceRaised text textMuted textSubtle border borderStrong accent accentText onAccent positive warning danger info focus fontBody fontDisplay fontMono fontNumeric textXs textSm textBase textLg textXl text2xl text3xl weightRegular weightMedium weightSemibold weightBold radiusSm radiusMd radiusLg radiusPill space1 space2 space3 space4 space5 space6 space7 space8 elevation1 elevation2 elevation3 motionFast motionBase motionSlow motionEase motionSpring'.split(' ');
+const tokenNames = 'bg surface surfaceRaised text textMuted textSubtle border borderStrong accent accentText onAccent positive warning danger info focus fontBody fontDisplay fontMono fontNumeric textXs textSm textBase textLg textXl text2xl text3xl weightRegular weightMedium weightSemibold weightBold radiusSm radiusMd radiusLg radiusPill space1 space2 space3 space4 space5 space6 space7 space8 elevation1 elevation2 elevation3 motionFast motionBase motionSlow motionEase motionSpring motionInstant motionEaseInOut motionEaseExit motionSpringDuration motionSpringBouncy motionSpringBouncyDuration motionStagger motionDistance motionScale motionBlur'.split(' ');
 const tokens = Object.fromEntries(tokenNames.map(key => [key, `var(--prism-${key.replace(/[A-Z]|(?<=space|text|elevation)[0-9]/g, c => '-' + c.toLowerCase())})`])) as unknown as Tokens;
 function useRendererState<S>(initial: S | (() => S)) { return useComponentState('state', initial); }
 const adapters = new WeakMap<ComponentType<any>, ComponentType<PrismComponentProps<any>>>();

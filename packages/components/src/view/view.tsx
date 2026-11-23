@@ -3,6 +3,8 @@ import { parse, type Node } from '@prism-ui/core';
 import { s, type Infer } from '@prism-ui/schema';
 import { PrismPart, ComponentContext, StreamSkeleton, cx, defaultRenderers, defineComponent, registerComponent, usePart, usePrism, useSent, useTheme, useStrings, useFlash, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
+import { Odometer, SentContent } from '../shared/controls';
+import { useFlip } from '../lib/use-flip';
 import { ViewIcon, iconNames } from './icons';
 import { gallery } from './fixtures';
 import { bindPath, collect, evaluate, isOpen, listPath, resolve, resolvePath, run, snapshot, template, type Formatter, type Read, type ViewNode, type ViewScope, type ViewValue } from './tree';
@@ -31,8 +33,9 @@ export interface ViewConfig {
 export const ViewConfigContext = createContext<ViewConfig>({});
 export interface ViewRuntime { readonly model: ViewModel; strings: Record<string, string>; id: string; streaming: boolean; format: Formatter; prism: PrismContextValue; config: ViewConfig; send(type: string, payload?: unknown, message?: string): void }
 const ViewContext = createContext<ViewRuntime | null>(null);
+const buttonReceipts = new WeakMap<ViewRuntime, { path: string; previous: ViewModel['sent'] }>();
 
-export const viewStrings = { title: 'Interactive view', yes: 'Yes', no: 'No', empty: 'Nothing here yet', askMessage: 'Tell me more about this view…', actionMessage: 'User {type} in view: {payload}' };
+export const viewStrings = { title: 'Interactive view', sent: 'Sent', yes: 'Yes', no: 'No', empty: 'Nothing here yet', askMessage: 'Tell me more about this view…', actionMessage: 'User {type} in view: {payload}' };
 export function viewFormatter(f: Format, strings: Record<string, string> = viewStrings): Formatter {
   return (value, kind) => {
     if (value == null || typeof value === 'number' && !Number.isFinite(value)) return '';
@@ -122,7 +125,7 @@ export function useViewNode(node: ViewNode, scope: ViewScope) {
   }, [node, scope, values, store, view.format]);
 }
 
-function useActions(scope: ViewScope) {
+function useActions(scope: ViewScope, onSend?: () => void) {
   const view = useContext(ViewContext)!;
   const { store } = view.prism;
   return useCallback((spec: unknown, extra?: Record<string, unknown>) => {
@@ -136,8 +139,11 @@ function useActions(scope: ViewScope) {
       },
     };
     store.batch(() => { action = run(spec, scope, writer, view.format, extra); });
-    if (action) view.send(action.type, action.payload, view.strings.actionMessage !== viewStrings.actionMessage ? view.strings.actionMessage.replace('{type}', action.type).replace('{payload}', JSON.stringify(action.payload ?? {}).slice(0, 200)) : action.message);
-  }, [store, scope, view]);
+    if (action) {
+      onSend?.();
+      view.send(action.type, action.payload, view.strings.actionMessage !== viewStrings.actionMessage ? view.strings.actionMessage.replace('{type}', action.type).replace('{payload}', JSON.stringify(action.payload ?? {}).slice(0, 200)) : action.message);
+    }
+  }, [store, scope, view, onSend]);
 }
 
 const PRIMITIVES = new Set(['stack', 'row', 'column', 'grid', 'box', 'card', 'text', 'markdown', 'heading', 'stat', 'badge', 'image', 'icon', 'divider', 'spacer', 'button', 'input', 'select', 'segmented', 'toggle', 'slider', 'checkbox', 'list', 'table', 'progress', 'avatar', 'tabs']);
@@ -235,7 +241,7 @@ function Stat(p: PrimitiveProps) {
   const deltaText = d === undefined ? text(delta) : (d > 0 ? '+' : '') + view.format(d, props.deltaFormat ?? 'percent:1');
   return <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('stat')} {...tokens(props)}>
     <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('statLabel')}><Icon name={props.icon} p={p} />{text(props.label)}</PrismPart>
-    <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('statValue')} aria-live="polite">{value}{props.unit && <PrismPart as="span" slotProps={{ model: p.model, primitive: p }} {...p.part('statUnit')}>{text(props.unit)}</PrismPart>}</PrismPart>
+    <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('statValue')} aria-live="polite">{typeof props.value === 'number' ? <Odometer value={props.value} format={() => value} /> : value}{props.unit && <PrismPart as="span" slotProps={{ model: p.model, primitive: p }} {...p.part('statUnit')}>{text(props.unit)}</PrismPart>}</PrismPart>
     {(deltaText || props.hint) && <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('statMeta')}>
       {deltaText && <PrismPart as="span" slotProps={{ model: p.model, primitive: p }} {...p.part('statDelta')} data-trend={trend} data-good={good === undefined ? undefined : String(good)}>{trend && trend !== 'flat' && <ViewIcon name={trend === 'up' ? 'trending-up' : 'trending-down'} />}{deltaText}</PrismPart>}
       {props.hint && <PrismPart as="span" slotProps={{ model: p.model, primitive: p }} {...p.part('statHint')}>{text(props.hint)}</PrismPart>}
@@ -257,11 +263,19 @@ function Divider(p: PrimitiveProps) { return p.props.label ? <PrismPart as="div"
 function Spacer(p: PrimitiveProps) { return <PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('spacer')} data-size={pick(p.props.size, SIZES)} aria-hidden="true" />; }
 function Button(p: PrimitiveProps) {
   const view = useContext(ViewContext)!;
+  const { sent: acknowledged } = useSent();
+  const receipt = buttonReceipts.get(view);
+  const sent = !!acknowledged && receipt?.path === p.path && receipt.previous !== acknowledged;
+  const handlers = Array.isArray(p.node.onClick) ? p.node.onClick : [p.node.onClick];
+  const submits = handlers.some(handler => handler && typeof handler === 'object' && !Array.isArray(handler) && typeof handler.action === 'string' && handler.action);
+  const act = useActions(p.scope, () => buttonReceipts.set(view, { path: p.path, previous: acknowledged }));
   const get: Read = path => view.prism.store.get(path);
   const disabled = flag(p.node.disabled, p.props.disabled, p.scope, get) || isOpen(p.node.onClick) || (p.open && p.node.onClick === undefined);
-  return <PrismPart as="button" type="button" slotProps={{ model: p.model, primitive: p }} {...p.part('button')} {...tokens(p.props)} data-variant={pick(p.props.variant, new Set(['primary', 'secondary', 'ghost', 'outline', 'danger', 'link'])) ?? 'secondary'} data-full={p.props.full ? '' : undefined}
-    disabled={disabled} aria-label={p.props.ariaLabel ? text(p.props.ariaLabel) : undefined} onClick={() => p.act(p.node.onClick)}>
-    <Icon name={p.props.icon} p={p} />{p.props.label !== undefined && <span>{text(p.props.label)}</span>}<Icon name={p.props.iconRight} p={p} />
+  const part = p.part('button');
+  const label = <><Icon name={p.props.icon} p={p} />{p.props.label !== undefined && <span>{text(p.props.label)}</span>}<Icon name={p.props.iconRight} p={p} /></>;
+  return <PrismPart as="button" type="button" slotProps={{ model: p.model, primitive: p }} {...part} className={cx(part.className, submits && !view.prism.unstyled && 'prism-pill')} {...tokens(p.props)} data-feedback={submits ? '' : undefined} data-sent={sent ? '' : undefined} data-variant={pick(p.props.variant, new Set(['primary', 'secondary', 'ghost', 'outline', 'danger', 'link'])) ?? 'secondary'} data-full={p.props.full ? '' : undefined}
+    disabled={disabled || sent} aria-label={sent ? view.strings.sent : p.props.ariaLabel ? text(p.props.ariaLabel) : undefined} onClick={() => submits ? act(p.node.onClick) : p.act(p.node.onClick)}>
+    {submits ? <SentContent sent={sent} receipt={view.strings.sent}>{label}</SentContent> : label}
   </PrismPart>;
 }
 function Field({ p, children, id, inline }: { p: PrimitiveProps; children: ReactNode; id: string; inline?: boolean }) {
@@ -332,7 +346,7 @@ function Slider(p: PrimitiveProps) {
   const min = num(props.min, 0), max = num(props.max, 100), value = num(props.value, min);
   const pct = max > min ? ((Math.min(max, Math.max(min, value)) - min) / (max - min)) * 100 : 0;
   return <Field p={p} id={id}><PrismPart as="div" slotProps={{ model: p.model, primitive: p }} {...p.part('sliderRow')}>
-    <PrismPart as="input" id={id} type="range" slotProps={{ model: p.model, primitive: p }} {...p.part('slider')} min={min} max={max} step={num(props.step, 1)} value={value} style={{ '--prism-view-fill': pct + '%' } as React.CSSProperties} aria-valuetext={view.format(value, props.format)} onChange={e => p.set(+e.target.value)} />
+    <span className="prism-view__sliderTrack" style={{ '--prism-view-ratio': pct / 100 } as React.CSSProperties}><PrismPart as="input" id={id} type="range" slotProps={{ model: p.model, primitive: p }} {...p.part('slider')} min={min} max={max} step={num(props.step, 1)} value={value} style={{ '--prism-view-fill': pct + '%' } as React.CSSProperties} aria-valuetext={view.format(value, props.format)} onChange={e => p.set(+e.target.value)} /><span className="prism-view__sliderThumb" aria-hidden="true" /></span>
     <PrismPart as="output" slotProps={{ model: p.model, primitive: p }} {...p.part('sliderValue')} htmlFor={id}>{view.format(value, props.format)}{props.unit ? (/^[%°]/.test(text(props.unit)) ? '' : ' ') + text(props.unit) : ''}</PrismPart>
   </PrismPart></Field>;
 }
@@ -351,22 +365,8 @@ function Avatar(p: PrimitiveProps) {
   return <PrismPart as="span" slotProps={{ model: p.model, primitive: p }} {...p.part('avatar')} {...tokens(p.props)} data-hue={hue} title={name} role="img" aria-label={name}>{/^https:\/\//.test(src) ? <img src={src} alt="" loading="lazy" /> : initials}</PrismPart>;
 }
 export function useViewReorder() {
-  const ref = useRef<HTMLDivElement>(null), positions = useRef(new Map<Element, DOMRect>()), { animate } = usePrism();
-  useLayoutEffect(() => {
-    const root = ref.current;
-    if (!root) return;
-    const next = new Map<Element, DOMRect>(), style = getComputedStyle(root);
-    const duration = style.getPropertyValue('--prism-view-motion-fast').trim() || style.getPropertyValue('--prism-motion-fast').trim();
-    const easing = style.getPropertyValue('--prism-view-motion-spring').trim() || style.getPropertyValue('--prism-motion-spring').trim();
-    for (const node of Array.from(root.querySelectorAll<HTMLElement>('[data-part="listItem"], tbody > [data-part="tableRow"]'))) {
-      const rect = node.getBoundingClientRect(), old = positions.current.get(node); next.set(node, rect);
-      if (animate && !root.ownerDocument.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches && old && (old.x !== rect.x || old.y !== rect.y) && duration && easing) {
-        node.animate?.([{ translate: `${old.x - rect.x}px ${old.y - rect.y}px` }, { translate: '0 0' }], { duration: parseFloat(duration) * (duration.endsWith('ms') ? 1 : 1000), easing });
-      }
-    }
-    positions.current = next;
-  });
-  return ref;
+  const { animate } = usePrism();
+  return useFlip(animate, '[data-part="listItem"], tbody > [data-part="tableRow"]');
 }
 function ListItem({ p, item, index, base }: { p: PrimitiveProps; item: unknown; index: number; base: string }) {
   const scope = useMemo(() => ({ ...p.scope, item: `${base}.${index}`, index }), [p.scope, base, index]);
@@ -474,7 +474,12 @@ export function useView(props: ViewProps, ctx: PrismContextValue, { id, complete
     const init = () => store.batch(() => { for (const key of Object.keys(stateObj)) if (store.get(`${id}.${key}`) === undefined) store.set(`${id}.${key}`, stateObj[key]); }, { history: false });
     if (store.hydrated === false) void store.ready?.then(init); else init();
   }, [store, id, stateReady, stateObj]);
-  const { send, sent } = useSent();
+  const { send, sent, reset } = useSent();
+  const receiptPaths = useMemo(() => [...collect(tree, scope, new Set([id]), 0, true)], [tree, scope, id]);
+  useLayoutEffect(() => {
+    const unsubscribe = receiptPaths.map(path => store.subscribe(path, reset));
+    return () => unsubscribe.forEach(off => off());
+  }, [store, receiptPaths, reset]);
   const resolvedStrings = useStrings('view', { ...viewStrings, title: typeof tree.title === 'string' ? tree.title : viewStrings.title });
   const strings = useMemo(() => resolvedStrings, [JSON.stringify(resolvedStrings)]);
   const format = useMemo(() => viewFormatter(ctx.format, strings), [ctx.format, strings]);

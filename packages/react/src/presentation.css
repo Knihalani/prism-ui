@@ -1,3 +1,10 @@
+.prism-root [data-prism-skeleton-exit] {
+  transition: opacity var(--prism-motion-fast) var(--prism-motion-ease-exit) !important;
+  translate: none !important; filter: none !important;
+}
+.prism-root [data-prism-skeleton-exit], .prism-root [data-prism-skeleton-exit] *,
+.prism-root [data-prism-skeleton-exit]::before, .prism-root [data-prism-skeleton-exit]::after,
+.prism-root [data-prism-skeleton-exit] *::before, .prism-root [data-prism-skeleton-exit] *::after { animation: none !important; }
 /* Only follow the last rendered branch of built-in prose. A directive or
  * custom block ends that branch unless its view supplies an explicit caret. */
 .prism-root[data-prism-presentation] { --prism-stream-tail: none; }
@@ -51,25 +58,29 @@
   background: linear-gradient(100deg, transparent, var(--prism-stream-skeleton-highlight, color-mix(in oklab, currentColor 8%, transparent)), transparent);
   transform: translateX(-100%);
 }
-.prism-root[data-prism-presentation] [data-prism-flash] {
-  background-color: var(--prism-stream-flash-bg, color-mix(in oklab, var(--prism-accent, currentColor) 14%, transparent));
-  box-shadow: 0 0 .75rem var(--prism-stream-flash-shadow, color-mix(in oklab, var(--prism-accent, currentColor) 18%, transparent));
+.prism-root[data-prism-presentation] :is(.prism-flash, .prism-tabs__linkedText, .prism-view__content, .prism-mockup__list) {
+  position: relative; isolation: isolate;
 }
+.prism-root[data-prism-presentation] :is(.prism-flash, .prism-tabs__linkedText, .prism-view__content, .prism-mockup__list)::before {
+  content: ""; position: absolute; inset: -.1em; border-radius: inherit; z-index: -1; pointer-events: none;
+  background: var(--prism-stream-flash-bg, color-mix(in oklab, var(--prism-accent, currentColor) 10%, transparent));
+  opacity: 0; transition: opacity var(--prism-motion-spring-bouncy-duration) var(--prism-motion-ease);
+}
+.prism-root[data-prism-presentation] [data-prism-flash]::before { opacity: 1; transition-duration: var(--prism-motion-fast); }
 
 @media (prefers-reduced-motion: no-preference) {
   .prism-root[data-prism-presentation]:not([data-animate="false"]) :where(.prism-paragraph__root, .prism-heading__root, .prism-code__root > code)::after,
   .prism-root[data-prism-presentation][data-state="streaming"]:not([data-animate="false"]):empty::after,
   .prism-root[data-prism-presentation]:not([data-animate="false"]) .prism-stream-caret {
-    animation: prism-caret-breathe 1.4s ease-in-out infinite;
+    animation: prism-caret-breathe calc(var(--prism-motion-slow) * 3) var(--prism-motion-ease-in-out) infinite;
   }
   .prism-root[data-prism-presentation]:not([data-animate="false"]) [data-prism-skeleton-line]::after {
-    animation: prism-skeleton-sweep 1.65s ease-in-out infinite;
+    animation: prism-skeleton-sweep calc(var(--prism-motion-slow) * 4) var(--prism-motion-ease-in-out) infinite;
   }
-  .prism-root[data-prism-presentation]:not([data-animate="false"]) [data-entering]:not([data-prism-enter]) {
-    animation: prism-presentation-enter var(--prism-motion-base, 240ms) var(--prism-motion-spring, cubic-bezier(.2, .8, .25, 1)) var(--prism-frame-enter-delay, 0ms) backwards;
-  }
+
   .prism-root[data-prism-presentation]:not([data-animate="false"]) [data-exiting] {
-    animation: prism-presentation-exit var(--prism-motion-fast, 150ms) ease-out both;
+    opacity: 0; translate: 0 calc(-1 * var(--prism-motion-distance)); filter: blur(var(--prism-motion-blur));
+    transition: opacity var(--prism-motion-fast) var(--prism-motion-ease-exit), translate var(--prism-motion-fast) var(--prism-motion-ease-exit), filter var(--prism-motion-fast) var(--prism-motion-ease-exit);
   }
 }
 @keyframes prism-caret-breathe {
@@ -77,11 +88,4 @@
 }
 @keyframes prism-skeleton-sweep {
   70%, 100% { transform: translateX(100%); }
-}
-@keyframes prism-presentation-enter {
-  from { opacity: 0; transform: translateY(3px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes prism-presentation-exit {
-  to { opacity: 0; transform: translateY(-2px); }
 }

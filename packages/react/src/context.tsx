@@ -5,6 +5,7 @@ import type { Registry, ComponentDef } from './registry';
 import { ThemeContext, type Theme, type ResolvedTheme } from './theme';
 import type { Format } from './format';
 import type { Receipt } from './presentation';
+import { SkeletonPart } from './skeleton';
 
 export interface Action {
   type: string; component: string; id: string; payload: unknown;
@@ -54,7 +55,11 @@ export const PrismPart = forwardRef<any, { as?: ElementType; slotProps?: Record<
   const prism = useContext(PrismContext);
   const theme = useContext(ThemeContext).theme, component = props['data-prism'], part = props['data-part'];
   const Custom = prism?.customization ? prism.customization.slots[component]?.[part] ?? theme.components[component]?.slots?.[part] : prism?.slots[component]?.[part];
-  return createElement(Custom ?? as, { ...props, ...(Custom ? { as, ...slotProps } : {}), ref });
+  const elementProps = { ...props, ...(Custom ? { as, ...slotProps } : {}) };
+  if (typeof as === 'string' && (props['data-prism-skeleton'] !== undefined || ['skeleton', 'skeleton-line', 'stepPlaceholder'].includes(part))) {
+    return createElement(SkeletonPart, { element: (Custom ?? as) as ElementType, elementProps, ref });
+  }
+  return createElement(Custom ?? as, { ...elementProps, ref });
 }) as <T extends ElementType = 'div'>(props: { as?: T; slotProps?: Record<string, unknown> } & Omit<ComponentPropsWithRef<T>, 'as'>) => ReactElement;
 export function useStore() { return usePrism().store; }
 export function useFormat() { return usePrism().format; }

@@ -20,7 +20,7 @@
   font-family: var(--prism-font-body); font-size: var(--prism-text-base); line-height: 1.2; font-weight: var(--prism-weight-medium);
   letter-spacing: inherit;
   cursor: pointer;
-  transition: transform var(--prism-motion-fast) var(--prism-motion-ease), background var(--prism-motion-base);
+  transition: scale var(--prism-motion-spring-duration) var(--prism-motion-spring);
 }
 .prism-pill:where([data-variant="secondary"], [data-sent]) {
   background: color-mix(in srgb, var(--prism-text) 6%, transparent);
@@ -39,22 +39,40 @@
   color: var(--prism-text-muted);
   box-shadow: none;
 }
-.prism-pill[data-feedback] { display: inline-grid; }
+.prism-root .prism-pill[data-feedback], .prism-pill[data-feedback] { display: inline-grid; position: relative; }
+.prism-root .prism-pill[data-feedback][data-sent] { opacity: 1; cursor: default; color: var(--prism-text); box-shadow: none; }
 .prism-pill[data-feedback] > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
-.prism-pill[data-feedback] > [aria-hidden="true"] { visibility: hidden; }
+.prism-pill[data-feedback] > span {
+  position: relative; z-index: 1; opacity: 1; translate: 0 0; filter: blur(0);
+  transition: opacity var(--prism-motion-slow) var(--prism-motion-ease), translate var(--prism-motion-slow) var(--prism-motion-ease), filter var(--prism-motion-slow) var(--prism-motion-ease);
+}
+.prism-pill[data-feedback] > [aria-hidden="true"] {
+  opacity: 0; filter: blur(var(--prism-motion-blur)); pointer-events: none;
+  transition-duration: var(--prism-motion-fast); transition-timing-function: var(--prism-motion-ease-exit);
+}
+.prism-pill[data-feedback]:not([data-sent]) > span:last-child { translate: 0 var(--prism-motion-distance); }
+.prism-pill[data-feedback][data-sent] > span:first-child { translate: 0 calc(-1 * var(--prism-motion-distance)); }
+.prism-pill[data-variant="primary"][data-sent] { background: var(--prism-accent, #525252); }
+.prism-pill[data-feedback]::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
+  background: linear-gradient(color-mix(in srgb, var(--prism-text) 6%, transparent), color-mix(in srgb, var(--prism-text) 6%, transparent)), var(--prism-surface-raised, Canvas);
+  transition: opacity var(--prism-motion-slow) var(--prism-motion-ease);
+}
+.prism-pill[data-feedback][data-sent]::before { opacity: 1; }
 .prism-pill svg { flex: none; inline-size: 14px; block-size: 14px; }
 .prism-receipt { position: relative; }
-.prism-receipt[data-sent]::after, .prism-pill[data-sent]::after {
+.prism-receipt::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: var(--prism-shared-highlight, var(--prism-accent, #525252));
+  background: color-mix(in srgb, var(--prism-shared-highlight, var(--prism-accent, #525252)) 12%, transparent);
   opacity: 0;
+  transition: opacity var(--prism-motion-spring-bouncy-duration) var(--prism-motion-ease);
   pointer-events: none;
-  animation: prism-receipt-flash var(--prism-motion-slow) var(--prism-motion-ease);
+
 }
-@keyframes prism-receipt-flash { 25% { opacity: .23; } }
+
 
 .prism-chip {
   display: inline-flex;
@@ -66,7 +84,6 @@
   background: color-mix(in srgb, var(--prism-text) 3.5%, transparent);
   color: var(--prism-text-muted);
   font-family: var(--prism-font-body); font-size: var(--prism-text-xs); line-height: 1.35; font-weight: var(--prism-weight-medium);
-  font-variant-numeric: tabular-nums;
 }
 button.prism-chip { min-block-size: 30px; padding-inline: 10px; cursor: pointer; }
 .prism-chip:is([data-active], [aria-pressed="true"], [aria-selected="true"]) {
@@ -124,15 +141,16 @@ button.prism-chip { min-block-size: 30px; padding-inline: 10px; cursor: pointer;
   block-size: 14px;
   border-radius: 50%;
   background: var(--prism-text-subtle);
-  transition: inset-inline-start var(--prism-motion-base) var(--prism-motion-spring), background var(--prism-motion-base);
+  transition: transform var(--prism-motion-spring-duration) var(--prism-motion-spring);
 }
 .prism-switch:is(:checked, [aria-checked="true"]) { background: var(--prism-accent, #525252); }
 .prism-switch:is(:checked, [aria-checked="true"])::after {
-  inset-inline-start: 14px;
+  transform: translateX(12px);
   background: var(--prism-on-accent);
 }
 
-:is(input.prism-check, .prism-listItem__root > input[type="checkbox"]) {
+:is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]),
+.prism-root input.prism-estimate__checkbox:not([role="switch"]) {
   appearance: none;
   display: inline-grid;
   place-items: center;
@@ -146,28 +164,49 @@ button.prism-chip { min-block-size: 30px; padding-inline: 10px; cursor: pointer;
   color: var(--prism-on-accent);
   vertical-align: middle;
 }
-:is(input.prism-check, .prism-listItem__root > input[type="checkbox"]):is(:checked, :indeterminate) {
+:is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]):is(:checked, :indeterminate),
+.prism-root input.prism-estimate__checkbox:not([role="switch"]):is(:checked, :indeterminate) {
   background: var(--prism-accent, #525252);
   border-color: var(--prism-accent, #525252);
 }
-:is(input.prism-check, .prism-listItem__root > input[type="checkbox"]):checked::after {
+:is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"])::after,
+.prism-root input.prism-estimate__checkbox:not([role="switch"])::after {
   content: "";
   inline-size: 12px;
   block-size: 12px;
   background: currentColor;
+  opacity: 0;
+  transform: scaleX(1);
+  transform-origin: left;
+  transition: opacity var(--prism-motion-fast) var(--prism-motion-ease-exit);
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='m2.5 6 2.2 2.2 4.8-4.6' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain;
-  animation: prism-native-check var(--prism-motion-slow) var(--prism-motion-ease);
+
 }
-input.prism-check:indeterminate::after { content: ""; inline-size: 8px; block-size: 2px; background: currentColor; }
-@keyframes prism-native-check { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+:is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]):checked::after,
+.prism-root input.prism-estimate__checkbox:not([role="switch"]):checked::after {
+  opacity: 1; transform: scaleX(1);
+  animation: prism-check-stroke var(--prism-motion-slow) var(--prism-motion-ease) var(--prism-motion-instant) both;
+}
+:is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]),
+.prism-root input.prism-estimate__checkbox:not([role="switch"]) { transition: background-color var(--prism-motion-fast) var(--prism-motion-ease), border-color var(--prism-motion-fast) var(--prism-motion-ease); }
+.prism-view__checkBox svg { opacity: 0; transition: opacity var(--prism-motion-fast) var(--prism-motion-ease-exit); }
+.prism-view__checkBox path { stroke-dasharray: 20; stroke-dashoffset: 0; }
+.prism-view__checkbox[data-checked] .prism-view__checkBox svg { opacity: 1; }
+.prism-view__checkbox[data-checked] .prism-view__checkBox path { animation: prism-draw-check var(--prism-motion-slow) var(--prism-motion-ease) var(--prism-motion-instant) both; }
+input.prism-check:indeterminate::after { content: ""; inline-size: 8px; block-size: 2px; background: currentColor; opacity: 1; transform: none; }
+
 .prism-check-mark path { stroke-dasharray: 20; }
 [data-sent] .prism-check-mark path, .prism-check-mark[data-draw] path {
-  animation: prism-draw-check var(--prism-motion-slow) var(--prism-motion-ease) both;
+  animation: prism-draw-check var(--prism-motion-slow) var(--prism-motion-spring-bouncy) var(--prism-motion-instant) both;
 }
+@keyframes prism-check-stroke { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+[data-sent] .prism-check-mark path { animation-duration: var(--prism-motion-spring-bouncy-duration); }
 @keyframes prism-draw-check { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
 @media (forced-colors: active) {
-  :is(input.prism-check, .prism-listItem__root > input[type="checkbox"]) { appearance: auto; }
-  :is(input.prism-check, .prism-listItem__root > input[type="checkbox"])::after { display: none; }
+  :is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]),
+  .prism-root input.prism-estimate__checkbox { appearance: auto; }
+  :is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"])::after,
+  .prism-root input.prism-estimate__checkbox::after { display: none; }
   .prism-switch { border: 1px solid ButtonText; }
   .prism-switch::after { forced-color-adjust: none; background: ButtonText; }
 }
@@ -200,46 +239,9 @@ input.prism-inline-value:focus { background: color-mix(in srgb, var(--prism-acce
 
 .prism-odometer { display: inline-flex; align-items: baseline; font-variant-numeric: lining-nums tabular-nums; }
 .prism-odometer__label { position: absolute; inline-size: 1px; block-size: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.prism-odometer__digit { position: relative; display: inline-grid; overflow: clip; vertical-align: baseline; }
-.prism-odometer__previous { position: absolute; inset: 0; pointer-events: none; }
-@media (prefers-reduced-motion: no-preference) {
-  :where(:not([data-animate="false"] *)) .prism-odometer__digit[data-roll] > :first-child {
-    animation: prism-digit-in var(--prism-motion-slow) var(--prism-motion-ease) both;
-  }
-  :where(:not([data-animate="false"] *)) .prism-odometer__previous {
-    animation: prism-digit-out var(--prism-motion-slow) var(--prism-motion-ease) both;
-  }
-  :is(.prism-pill, :where(.prism-frame__footer) > button:not([class])):hover:not(:disabled) { transform: translateY(-1px); }
-  [data-animate="false"] .prism-pill:hover:not(:disabled) { transform: none; }
-}
-.prism-odometer__digit[data-roll="down"] { --prism-odometer-digit-offset: -100%; }
-@keyframes prism-digit-in { from { transform: translateY(var(--prism-odometer-digit-offset, 100%)); } }
-@keyframes prism-digit-out { to { transform: translateY(calc(-1 * var(--prism-odometer-digit-offset, 100%))); visibility: hidden; } }
-.prism-odometer__previous { visibility: hidden; }
-@media (prefers-reduced-motion: no-preference) {
-  :where(:not([data-animate="false"] *)) .prism-odometer__previous:not([data-animate="false"]) { visibility: visible; }
-}
+.prism-odometer__digit { position: relative; display: inline-block; inline-size: 1ch; block-size: 1lh; overflow: clip; vertical-align: bottom; }
+.prism-odometer__reel { display: flex; flex-direction: column; transition: transform var(--prism-motion-spring-duration) var(--prism-motion-spring); }
+.prism-odometer__reel > span { display: block; block-size: 1lh; flex: none; }
+.prism-odometer__reel > span::before { content: attr(data-digit); }
 
 .prism-materialise { position: relative; }
-@media (prefers-reduced-motion: no-preference) {
-  :is(.prism-materialise, .prism-frame__root):is([data-entering], [data-materialise]):not([data-animate="false"], [data-animate="false"] *) {
-    animation: prism-materialise-in var(--prism-motion-slow) var(--prism-motion-ease) var(--prism-frame-enter-delay, 0ms) backwards;
-  }
-  :is(.prism-materialise, .prism-frame__root):is([data-entering], [data-materialise]):not([data-animate="false"], [data-animate="false"] *)::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: var(--prism-shared-highlight, var(--prism-accent, #525252));
-    mix-blend-mode: var(--prism-shared-light-blend, normal);
-    pointer-events: none;
-    opacity: 0;
-    mask: linear-gradient(90deg, transparent, #000 48%, transparent) -50% 0 / 35% 100% no-repeat;
-    animation: prism-materialise-light var(--prism-motion-slow) linear var(--prism-frame-enter-delay, 0ms) both;
-  }
-}
-@keyframes prism-materialise-in { from { opacity: 0; transform: translateY(6px); } }
-@keyframes prism-materialise-light {
-  0% { opacity: 0; mask-position: -50% 0; }
-  20% { opacity: .16; }
-  100% { opacity: 0; mask-position: 160% 0; }
-}

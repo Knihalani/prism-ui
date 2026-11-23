@@ -3,6 +3,7 @@ import { useLayoutEffect, useRef } from 'react';
 import { useStrings, Icon, PrismPart, cx, StreamSkeleton, usePart, useSent, type PrismComponentProps } from '@prism-ui/react';
 import { Badge } from '../badge/badge';
 import { useFrame } from '../frame';
+import { CheckMark } from '../shared/controls';
 
 export interface CardProps {
   id?: string; title?: string; subtitle?: string; image?: string; href?: string; action?: string;
@@ -56,9 +57,9 @@ export function Card({ props, children, ...ctx }: PrismComponentProps<CardProps>
         ? <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="div" {...parts.skeleton} className={cx(parts.skeleton.className, !model.unstyled && 'prism-skeleton') || undefined} aria-hidden="true" />
         : children}</PrismPart>
     {model.action && <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="footer" {...parts.actions}>
-      <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="button" {...parts.action} className={cx(parts.action.className, !model.unstyled && 'prism-pill') || undefined} type="button" data-variant={props.actionVariant ?? 'primary'} data-feedback="" data-sent={sent ? '' : undefined} onClick={model.onSelect}>
+      <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="button" {...parts.action} className={cx(parts.action.className, !model.unstyled && 'prism-pill') || undefined} type="button" data-variant={props.actionVariant ?? 'primary'} data-feedback="" data-sent={sent ? '' : undefined} disabled={sent} onClick={model.onSelect}>
         <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="span" {...parts.actionLabel} aria-hidden={sent || undefined} hidden={model.unstyled && sent}>{model.action}</PrismPart>
-        <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="span" {...parts.receipt} aria-hidden={!sent || undefined} hidden={model.unstyled && !sent}><Icon name="check" /> {themeStrings.sent}</PrismPart>
+        <PrismPart slotProps={{ card: model } satisfies CardSlotProps} as="span" {...parts.receipt} aria-hidden={!sent || undefined} hidden={model.unstyled && !sent}><CheckMark /> {themeStrings.sent}</PrismPart>
       </PrismPart>
     </PrismPart>}
   </PrismPart>;

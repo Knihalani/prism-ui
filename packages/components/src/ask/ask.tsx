@@ -1,7 +1,8 @@
 import { createElement, useId, type ElementType, type ReactNode } from 'react';
 import { interpolate } from '../interpolate';
 import { s } from '@prism-ui/schema';
-import { Icon, PrismPart, defineComponent, registerComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
+import { Icon, PrismPart, cx, defineComponent, registerComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
+import { SentContent } from '../shared/controls';
 import { type FramePart } from '../frame';
 import { askStrings as defaults, askMessage, normalize, safeFields, useAsk, type AskProps, type AskField, type AskModel } from './use-ask';
 export { useAsk } from './use-ask';
@@ -48,10 +49,11 @@ function AskFramePart({ part, ask, as = 'div', ...props }: { part: FramePart; as
 }
 function AskIcon({ name, ask }: { name: 'check' | 'send' | 'undo' | 'ask'; ask: AskModel }) { return <PrismPart as={Icon} {...usePart('ask', 'icon')} name={name} slotProps={{ ask }} />; }
 function AskActions({ ask }: { ask: AskModel }) {
+  const { unstyled } = usePrism();
   const actions = usePart('ask', 'actions'), primary = usePart('ask', 'submit'), edit = usePart('ask', 'edit');
   return <AskFramePart part="footer" as="footer" ask={ask} {...ask.frame.parts.footer}><PrismPart as="div" {...actions} slotProps={{ ask }}>
     {ask.submitted && <PrismPart as="button" {...edit} slotProps={{ ask }} type="button" onClick={() => ask.edit()}>{ask.strings.edit}</PrismPart>}
-    <PrismPart as="button" {...primary} slotProps={{ ask }} type={ask.submitted ? 'button' : 'submit'} disabled={ask.submitted || !ask.canSubmit} data-sent={ask.submitted || undefined}><AskIcon name={ask.submitted ? 'check' : 'send'} ask={ask} />{ask.submitted ? ask.strings.sentLabel : ask.submitLabel}</PrismPart>
+    <PrismPart as="button" {...primary} slotProps={{ ask }} className={cx(primary.className, !unstyled && 'prism-pill')} data-variant="primary" data-feedback="" type={ask.submitted ? 'button' : 'submit'} disabled={ask.submitted || !ask.canSubmit} data-sent={ask.submitted ? '' : undefined}><SentContent sent={ask.submitted} receipt={ask.strings.sentLabel}><AskIcon name="send" ask={ask} />{ask.submitLabel}</SentContent></PrismPart>
   </PrismPart></AskFramePart>;
 }
 export function Ask({ props }: PrismComponentProps<AskProps>) {

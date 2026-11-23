@@ -3,12 +3,31 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { Prism, createRegistry, defineTheme, usePrism, type Action, type PrismComponentProps } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { replayStart } from './harness/replay';
+import { MockupFooter } from './chrome';
 import { MockupView, createFeedback, mockupDefinition, mockupPlugin, parseMockupMeta, useMockup, toMessage, type FrameController, type FrameMessage, type HitRect, type MockupProps } from './index';
 
 const { render, cleanup, fireEvent, act } = await import('@testing-library/react');
 const observer = globalThis.IntersectionObserver;
 beforeEach(() => { Object.assign(globalThis, { IntersectionObserver: undefined }); });
 afterEach(() => { cleanup(); Object.assign(globalThis, { IntersectionObserver: observer }); });
+
+test('native primary slots receive disabled and sent state without interpreting Pill props', () => {
+  const store = createStore();
+  store.set('review.feedback', createFeedback({ overall: 'Looks good' }).toJSON());
+  const registry = createRegistry([{ ...mockupDefinition, component({ props }: PrismComponentProps<MockupProps>) {
+    const vm = useMockup(props, usePrism());
+    return <MockupFooter model={vm} labels={vm.labels} count={0} submitted={vm.submitted} edit={() => vm.setSubmitted(false)} canUndo={false} canRedo={false} undo={() => {}} redo={() => {}} canSubmit={vm.canSubmit} submit={vm.submit} />;
+  } }]);
+  const view = render(<Prism registry={registry} store={store} source={source({})} onAction={() => {}} slots={{ mockup: { primary: ({ model, as, sent, receipt, ...props }: any) => <button {...props} /> } }} />);
+  const button = view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement;
+  expect(button.disabled).toBe(false);
+  fireEvent.click(button);
+  expect(button.disabled).toBe(true);
+  expect(button.getAttribute('aria-disabled')).toBe('true');
+  expect(button.hasAttribute('data-sent')).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Edit feedback' }));
+  expect(button.disabled).toBe(false); expect(button.hasAttribute('data-sent')).toBe(false);
+});
 const source = (props: MockupProps) => '```ui:mockup\n' + JSON.stringify({ id: 'review', ...props }) + '\n```';
 function setup(props: MockupProps = {}, done = true, store = createStore()) {
   const renders: [string, boolean | undefined][] = [], actions: Action[] = [];
@@ -221,7 +240,7 @@ test('streaming grows source without replacing controller; empty and partial SVG
   const b = setup({ kind: 'svg', source: '' }, false); b.rerender({ kind: 'svg', source: '<svg><circle r="4"/><path d="' }, false); expect(b.view.container.querySelector('circle')).not.toBeNull();
 });
 test('pin target, comment and overall submit an exact payload and message; edit resubmits', async () => {
-  const a = setup({ title: 'Pricing', variant: 'A' }); expect((a.view.getByText('Submit feedback') as HTMLButtonElement).disabled).toBe(true);
+  const a = setup({ title: 'Pricing', variant: 'A' }); expect((a.view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement).disabled).toBe(true);
   await act(async () => { a.pointer('pointerdown', 250, 100); a.pointer('pointerup', 250, 100); });
   a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'Make it bigger'); fireEvent.click(a.view.getByText('Save'));
   a.change(a.view.getByRole('textbox', { name: 'Overall feedback' }), 'Looks good'); fireEvent.click(a.view.getByText('Submit feedback'));
@@ -242,7 +261,7 @@ test('keyboard reticle, previous resolved items and persisted drafts exclude res
   const a = setup({ previous: { overall: '', items: [{ n: 1, kind: 'pin', x: 10, y: 10, comment: 'Old' }] } });
   fireEvent.keyDown(a.canvas(), { key: 'ArrowRight' }); fireEvent.keyDown(a.canvas(), { key: 'ArrowDown', shiftKey: true }); fireEvent.keyDown(a.canvas(), { key: 'Enter' });
   expect(a.model.state.items[0]).toMatchObject({ x: 52, y: 60 }); a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'New'); fireEvent.click(a.view.getByText('Save')); fireEvent.click(a.view.getByText('Submit feedback')); expect((a.actions[0].payload as any).items).toHaveLength(1); expect(a.view.getByRole('button', { name: 'Resolved 1: Old' }).getAttribute('aria-disabled')).toBe('true');
-  fireEvent.click(a.view.getByText('Edit feedback')); a.rerender({ title: 'Updated' }); expect(a.view.getByText('New')).toBeDefined();
+  fireEvent.click(a.view.getByText('Edit feedback')); a.rerender({ title: 'Updated' }); expect(a.view.getByText('New', { selector: '[data-part="list"] [data-part="item"] span' })).toBeDefined();
 });
 test('direct image directive and plugin fences resolve through the registry', () => {
   const registry = createRegistry([mockupDefinition]); const view = render(<Prism registry={registry} plugins={[mockupPlugin]} source={'::mockup{kind=image src="https://example.com/a.png" title="Poster"}\n\n```mockup:svg {title="Logo"}\n<svg><rect width="10"/></svg>\n```'} />); expect(view.getByRole('img', { name: 'Poster' })).toBeDefined(); expect(view.container.querySelector('rect')).not.toBeNull();

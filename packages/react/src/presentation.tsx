@@ -59,6 +59,7 @@ export function usePresentation({ exiting = false } = {}) {
   return {
     'data-state': state,
     'data-entering': motion && !exiting ? '' : undefined,
+    'data-prism-enter': motion && !exiting ? '' : undefined,
     'data-exiting': motion && exiting ? '' : undefined,
   } as const;
 }
@@ -68,7 +69,7 @@ export function StreamCaret() {
   return <span className="prism-stream-caret" aria-hidden="true" />;
 }
 
-type StreamSkeletonProps = HTMLAttributes<HTMLElement> & { as?: 'div' | 'span' };
+type StreamSkeletonProps = HTMLAttributes<HTMLElement> & { as?: 'div' | 'span' | 'li'; slotProps?: Record<string, unknown> };
 export function StreamSkeleton({ as: Element = 'div', ...props }: StreamSkeletonProps) {
   return <PrismPart as={Element} {...props} aria-hidden="true" data-state="streaming" data-prism-skeleton="" />;
 }

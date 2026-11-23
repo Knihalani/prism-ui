@@ -1,0 +1,113 @@
+.prism-root[data-prism-presentation] :is(.prism-enter, .prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-chart__plot, .prism-tab__root, .prism-view__content [data-prism="view"]:not(.prism-view__skeleton, [data-prism-skeleton-line]), .prism-artifact__root, .prism-mockup__root, .prism-mockup__popover, .prism-mockup__marker, .prism-troubleshoot__historyItem, .prism-troubleshoot__step, .prism-troubleshoot__result, .prism-frame__overflowContent) {
+  opacity: 1;
+  translate: 0 0;
+  filter: blur(0);
+  transition: opacity var(--prism-motion-slow) var(--prism-motion-ease), translate var(--prism-motion-slow) var(--prism-motion-ease), filter var(--prism-motion-slow) var(--prism-motion-ease);
+  transition-delay: calc(min(var(--prism-motion-index, 0), 8) * var(--prism-motion-stagger));
+}
+@starting-style {
+  .prism-root[data-prism-presentation] :is(.prism-enter, .prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-chart__plot, .prism-tab__root, .prism-view__content [data-prism="view"]:not(.prism-view__skeleton, [data-prism-skeleton-line]), .prism-artifact__root, .prism-mockup__root, .prism-mockup__popover, .prism-mockup__marker, .prism-troubleshoot__historyItem, .prism-troubleshoot__step, .prism-troubleshoot__result, .prism-frame__overflowContent):not([data-prism-entered]) {
+    opacity: 0; translate: 0 var(--prism-motion-distance); filter: blur(var(--prism-motion-blur));
+  }
+}
+.prism-root :is(.prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-view__listItem, .prism-view__tableRow, .prism-view__content [data-prism="view"], .prism-chart__bar):nth-child(1) { --prism-motion-index: 0; }
+.prism-root :is(.prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-view__listItem, .prism-view__tableRow, .prism-view__content [data-prism="view"], .prism-chart__bar):nth-child(2) { --prism-motion-index: 1; }
+.prism-root :is(.prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-view__listItem, .prism-view__tableRow, .prism-view__content [data-prism="view"], .prism-chart__bar):nth-child(3) { --prism-motion-index: 2; }
+.prism-root :is(.prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-view__listItem, .prism-view__tableRow, .prism-view__content [data-prism="view"], .prism-chart__bar):nth-child(4) { --prism-motion-index: 3; }
+.prism-root :is(.prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-view__listItem, .prism-view__tableRow, .prism-view__content [data-prism="view"], .prism-chart__bar):nth-child(5) { --prism-motion-index: 4; }
+.prism-root :is(.prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-view__listItem, .prism-view__tableRow, .prism-view__content [data-prism="view"], .prism-chart__bar):nth-child(6) { --prism-motion-index: 5; }
+.prism-root :is(.prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-view__listItem, .prism-view__tableRow, .prism-view__content [data-prism="view"], .prism-chart__bar):nth-child(7) { --prism-motion-index: 6; }
+.prism-root :is(.prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-view__listItem, .prism-view__tableRow, .prism-view__content [data-prism="view"], .prism-chart__bar):nth-child(8) { --prism-motion-index: 7; }
+.prism-root :is(.prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-view__listItem, .prism-view__tableRow, .prism-view__content [data-prism="view"], .prism-chart__bar):nth-child(n + 9) { --prism-motion-index: 8; }
+
+.prism-root[data-prism-presentation] :is(.prism-tab__root, .prism-frame__overflowContent)[hidden] { display: none; }
+.prism-root[data-prism-presentation] :is(.prism-summary__source, .prism-runbook__stepBody, .prism-troubleshoot__history) {
+  transition: grid-template-rows var(--prism-motion-base) var(--prism-motion-ease), opacity var(--prism-motion-fast) var(--prism-motion-ease);
+}
+.prism-root[data-prism-presentation] .prism-summary__source:not([data-expanded]) { transition-duration: var(--prism-motion-fast); transition-timing-function: var(--prism-motion-ease-exit); }
+
+.prism-root[data-prism-presentation] :is([data-part="ask"], [data-part="undo"]) {
+  opacity: 1; translate: 0 0; pointer-events: auto;
+  transition: opacity var(--prism-motion-fast) var(--prism-motion-ease), translate var(--prism-motion-fast) var(--prism-motion-ease);
+}
+@media (hover: hover) {
+  .prism-root[data-prism-presentation] [data-part="root"]:not(:hover, :focus-within) :is([data-part="ask"], [data-part="undo"]) {
+    opacity: 0; translate: 0 min(2px, var(--prism-motion-distance)); pointer-events: none;
+  }
+}
+
+.prism-root[data-prism-presentation] :is(.prism-frame__header .prism-icon-btn, .prism-frame__ask, .prism-frame__undo, .prism-codeblock__copy, .prism-codeblock__wrap, .prism-codeblock__ask, .prism-codeblock__collapse, .prism-summary__pointAsk, .prism-runbook__stuck, .prism-runbook__copy, .prism-datatable__rowActions, [data-prism-reveal]) {
+  opacity: 1; translate: 0 0;
+  transition: opacity var(--prism-motion-fast) var(--prism-motion-ease), translate var(--prism-motion-fast) var(--prism-motion-ease), scale var(--prism-motion-spring-duration) var(--prism-motion-spring);
+}
+@media (hover: hover) {
+  .prism-root[data-prism-presentation] :is(.prism-frame__root, .prism-codeblock__root, .prism-summary__point, .prism-runbook__step, .prism-datatable__row, [data-prism-reveal-host]):not(:hover, :focus-within) :is(.prism-frame__header .prism-icon-btn, .prism-frame__ask, .prism-frame__undo, .prism-codeblock__copy, .prism-codeblock__wrap, .prism-codeblock__ask, .prism-codeblock__collapse, .prism-summary__pointAsk, .prism-runbook__stuck, .prism-runbook__copy, .prism-datatable__rowActions, [data-prism-reveal]) {
+    opacity: 0; translate: 0 min(2px, var(--prism-motion-distance)); pointer-events: none;
+  }
+  .prism-root[data-prism-presentation] :is(.prism-frame__root, .prism-codeblock__root, .prism-summary__point, .prism-runbook__step, .prism-datatable__row, [data-prism-reveal-host]):is(:hover, :focus-within) :is(.prism-frame__header .prism-icon-btn, .prism-frame__ask, .prism-frame__undo, .prism-codeblock__copy, .prism-codeblock__wrap, .prism-codeblock__ask, .prism-codeblock__collapse, .prism-summary__pointAsk, .prism-runbook__stuck, .prism-runbook__copy, .prism-datatable__rowActions, [data-prism-reveal]) { opacity: 1; translate: 0 0; pointer-events: auto; }
+}
+.prism-root[data-prism-presentation] :is(.prism-pill, button.prism-chip, .prism-icon-btn, .prism-stepper > button, .prism-switch, .prism-check, .prism-estimate__checkbox:where(:not([role="switch"])), .prism-estimate__increase, .prism-estimate__decrease, .prism-pick__choose, .prism-pick__chip, .prism-tabs__tab, .prism-view__tab, .prism-view__button, .prism-view__switch, .prism-view__checkWrap, .prism-ask__switch, .prism-ask__choice, .prism-view__segment, .prism-runbook__check, .prism-summary__checkbox, .prism-frame__overflowTrigger) {
+  scale: 1; transition: scale var(--prism-motion-spring-duration) var(--prism-motion-spring), opacity var(--prism-motion-fast) var(--prism-motion-ease);
+}
+.prism-root[data-prism-presentation] .prism-estimate__checkbox:not([role="switch"]) {
+  transition: background-color var(--prism-motion-fast) var(--prism-motion-ease), border-color var(--prism-motion-fast) var(--prism-motion-ease), scale var(--prism-motion-spring-duration) var(--prism-motion-spring);
+}
+.prism-root[data-prism-presentation] :is(.prism-pill, button.prism-chip, .prism-icon-btn, .prism-stepper > button, .prism-switch, .prism-check, .prism-estimate__checkbox:where(:not([role="switch"])), .prism-estimate__increase, .prism-estimate__decrease, .prism-pick__choose, .prism-pick__chip, .prism-tabs__tab, .prism-view__tab, .prism-view__button, .prism-view__switch, .prism-view__checkWrap, .prism-ask__switch, .prism-ask__choice, .prism-view__segment, .prism-runbook__check, .prism-summary__checkbox, .prism-frame__overflowTrigger):active:not(:disabled) {
+  scale: var(--prism-motion-scale); transition-duration: var(--prism-motion-instant);
+}
+.prism-root[data-prism-presentation] :is(.prism-card__root, .prism-pick__item):active { scale: 1; background: color-mix(in srgb, var(--prism-accent, var(--prism-accent-text)) 4%, var(--prism-surface)); }
+
+.prism-root[data-prism-presentation] :is(.prism-estimate__skeleton, .prism-ask__skeleton, .prism-runbook__skeleton, .prism-troubleshoot__skeleton, .prism-summary__skeleton, .prism-skeleton) {
+  animation: prism-skeleton-pulse calc(var(--prism-motion-slow) * 3) var(--prism-motion-ease-in-out) infinite alternate;
+}
+@keyframes prism-skeleton-pulse { to { opacity: .45; } }
+
+.prism-root[data-prism-presentation] :is(.prism-view__fill, .prism-runbook__fill, .prism-datatable__magnitude) {
+  transform-origin: left center;
+  transition: transform var(--prism-motion-spring-duration) var(--prism-motion-spring);
+}
+.prism-root[data-prism-presentation] .prism-tabs__indicator {
+  width: 1px;
+  transform-origin: left center;
+  transform: translateX(var(--prism-tabs-indicator-left)) scaleX(var(--prism-tabs-indicator-size, 0));
+  transition: transform var(--prism-motion-spring-duration) var(--prism-motion-spring);
+}
+.prism-root[data-prism-presentation] .prism-chart__line { animation-duration: calc(var(--prism-motion-slow) * 2); }
+.prism-root[data-prism-presentation] .prism-chart__bar {
+  transition: transform var(--prism-motion-spring-duration) var(--prism-motion-spring), opacity var(--prism-motion-fast) var(--prism-motion-ease);
+  transition-delay: calc(min(var(--prism-motion-index, 0), 8) * var(--prism-motion-stagger));
+}
+.prism-root[data-prism-presentation] .prism-chart__area { opacity: 1; transition: opacity var(--prism-motion-slow) var(--prism-motion-ease); }
+@starting-style { .prism-root[data-prism-presentation] .prism-chart__area:not([data-prism-entered]) { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .prism-root[data-prism-presentation] *, .prism-root[data-prism-presentation] *::before, .prism-root[data-prism-presentation] *::after {
+    animation: none !important; transition-property: opacity !important; transition-duration: var(--prism-motion-fast) !important; transition-delay: calc(var(--prism-motion-instant) * 0) !important;
+  }
+  .prism-root[data-prism-presentation] :is([data-prism-enter], [data-entering], .prism-enter, .prism-pick__item, .prism-estimate__item, .prism-runbook__step, .prism-summary__point, .prism-summary__action, .prism-datatable__row, .prism-table__row, .prism-ask__field, .prism-chart__plot, .prism-tab__root, .prism-view__content [data-prism="view"]:not(.prism-view__skeleton, [data-prism-skeleton-line]), .prism-artifact__root, .prism-mockup__root, .prism-mockup__popover, .prism-mockup__marker, .prism-troubleshoot__historyItem, .prism-troubleshoot__step, .prism-troubleshoot__result, .prism-frame__overflowContent) { translate: none !important; filter: none !important; }
+}
+.prism-root[data-animate="false"] *, .prism-root[data-animate="false"] *::before, .prism-root[data-animate="false"] *::after {
+  animation: none !important; transition: none !important;
+}
+.prism-root[data-prism-presentation] .prism-frame__overflowContent[aria-hidden="true"] { padding-block: 0; border-block-width: 0; pointer-events: none; }
+.prism-root[data-prism-presentation] .prism-troubleshoot__history[aria-hidden="true"] { margin-block: 0; border: 0; }
+.prism-root[data-prism-presentation] .prism-view__thumb, .prism-root[data-prism-presentation] .prism-view__tab::after {
+  transition: transform var(--prism-motion-spring-duration) var(--prism-motion-spring);
+}
+.prism-root[data-prism-presentation] .prism-ask__thumb { transition: transform var(--prism-motion-spring-duration) var(--prism-motion-spring); }
+.prism-root[data-prism-presentation] .prism-runbook__check[data-state="done"] path { stroke-dasharray: 20; animation: prism-draw-check var(--prism-motion-slow) var(--prism-motion-spring-bouncy) var(--prism-motion-instant) both; }
+.prism-root[data-prism-presentation] .prism-view__sliderTrack { position: relative; display: grid; flex: 1; min-width: 0; container-type: inline-size; }
+.prism-root[data-prism-presentation] .prism-view__slider { width: 100%; }
+.prism-root[data-prism-presentation] .prism-view__sliderThumb {
+  position: absolute; inset-inline-start: 0; top: 50%; width: 16px; height: 16px; pointer-events: none;
+  border: 2px solid var(--prism-view-accent, var(--prism-accent, var(--prism-accent-text))); border-radius: var(--prism-radius-pill); background: var(--prism-surface);
+  transform: translateX(calc((100cqw - 16px) * var(--prism-view-ratio))) translateY(-50%);
+  transition: transform var(--prism-motion-spring-duration) var(--prism-motion-spring);
+}
+.prism-root[data-prism-presentation] .prism-view__slider::-webkit-slider-thumb { opacity: 0; }
+.prism-root[data-prism-presentation] .prism-view__slider::-moz-range-thumb { opacity: 0; }
+@media (forced-colors: active) {
+  .prism-root[data-prism-presentation] .prism-view__sliderThumb { display: none; }
+  .prism-root[data-prism-presentation] .prism-view__slider::-webkit-slider-thumb { opacity: 1; }
+  .prism-root[data-prism-presentation] .prism-view__slider::-moz-range-thumb { opacity: 1; }
+}

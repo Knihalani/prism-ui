@@ -97,7 +97,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
       const popupWidth = Math.min(320, Math.max(0, availableWidth - 24)), popupHeight = 180;
       const left = Math.max(12, Math.min(availableWidth - popupWidth - 12, x / 100 * availableWidth));
       const top = Math.max(12, Math.min(availableHeight - popupHeight - 12, y / 100 * availableHeight + 20));
-      return { left, top, width: popupWidth };
+      return { left, top, width: popupWidth, transformOrigin: `${x / 100 * availableWidth - left}px ${y / 100 * availableHeight - top}px` };
     }
     const bounds = root.current?.getBoundingClientRect(), artboard = canvas.current?.getBoundingClientRect();
     const availableWidth = bounds?.width || containerWidth, availableHeight = bounds?.height || contentHeight * scale;
@@ -106,7 +106,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
     const anchorY = (artboard?.top ?? 0) - (bounds?.top ?? 0) + y / 100 * (artboard?.height || contentHeight * scale);
     const left = Math.max(12, Math.min(availableWidth - popupWidth - 12, anchorX));
     const top = Math.max(12, Math.min(availableHeight - popupHeight - 12, anchorY + 20));
-    return { left, top, width: popupWidth };
+    return { left, top, width: popupWidth, transformOrigin: `${anchorX - left}px ${anchorY - top}px` };
   }
   function save(restoreFocus = false) { const edit = editing; close(restoreFocus); if (edit) { feedback.edit(edit.id, { comment }); commit(value => withItem(value, edit.id, comment)); } }
   function saveOverall(event?: { relatedTarget: EventTarget | null }) { if (event?.relatedTarget instanceof Element && root.current?.contains(event.relatedTarget) && event.relatedTarget.closest('[data-feedback-submit]')) return; const overall = feedback.getState().overall; if (overall !== (ctx.store.get(path)?.overall ?? '')) commit(value => ({ ...value, overall })); }

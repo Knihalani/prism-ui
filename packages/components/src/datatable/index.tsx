@@ -1,6 +1,6 @@
 import { createContext, createElement, useContext, forwardRef, type CSSProperties, type ElementType } from 'react';
-import { Icon, useSlot, cx, defineComponent, registerComponent, usePart, usePrism, type PrismComponentProps, type IconName } from '@prism-ui/react';
-import { Odometer } from '../shared';
+import { Icon, PrismPart, useSlot, cx, defineComponent, registerComponent, usePart, usePrism, type PrismComponentProps, type IconName } from '@prism-ui/react';
+import { CheckMark, Odometer } from '../shared';
 import { dataTableSchema, dataTableStrings, useDataTable, useDataTableCell, type DataTableColumn, type DataTableEntry, type DataTableModel, type DataTableProps, type DataTableRow } from './use-datatable';
 export { useDataTable, dataTableSchema } from './use-datatable';
 export type { DataTableProps, DataTableColumn, DataTableRow, DataTableEntry, DataTableModel, DataTableSelection } from './use-datatable';
@@ -11,7 +11,7 @@ export type DataTableSlotProps = { [P in DataTablePart]: { table: DataTableModel
   & { [P in 'heading' | 'sort']: { table: DataTableModel; column: DataTableColumn } }
   & { [P in 'cell' | 'value' | 'badge' | 'magnitude']: { table: DataTableModel; row: DataTableRow; column: DataTableColumn; entry: DataTableEntry } };
 const DataTableContext = createContext<DataTableModel | null>(null);
-const Element = forwardRef<any, { as?: ElementType; [key: string]: any }>(function Element({ as = 'div', ...props }, ref) { return createElement(as, { ...props, ref }); });
+const Element = forwardRef<any, { as?: ElementType; [key: string]: any }>(function Element({ as = 'div', ...props }, ref) { return props['data-part'] === 'skeleton' ? <PrismPart as={as} {...props} ref={ref} /> : createElement(as, { ...props, ref }); });
 const Part = forwardRef<any, { part: DataTablePart; row?: DataTableRow; column?: DataTableColumn; entry?: DataTableEntry; as?: ElementType; state?: string; [key: string]: any }>(function Part({ part, row, column, entry, as = 'div', state, style, className, ...props }, ref) {
   const table = useContext(DataTableContext)!, attrs = usePart('datatable', part, state), View = useSlot('datatable', part, Element);
   return <View as={as} {...attrs} {...props} ref={ref} {...(View === Element ? {} : { table, row, column, entry })} className={cx(attrs.className, className) || undefined} style={{ ...style, ...attrs.style }} />;
@@ -58,7 +58,7 @@ export function DataTable({ props: input, complete, node }: PrismComponentProps<
     </Part>
     <Part part="footer"><Part part="count">{table.countLabel}</Part><Part part="range">{table.range}</Part><Part part="actions">
       {table.pageSize > 0 && <><Part part="previous" as="button" type="button" aria-label={strings.previousPage} title={strings.previousPage} disabled={table.currentPage === 0} onClick={() => table.changePage(table.currentPage - 1)}><TableIcon name="chevron-left" /></Part><Part part="next" as="button" type="button" aria-label={strings.nextPage} title={strings.nextPage} disabled={table.currentPage >= table.pageCount - 1} onClick={() => table.changePage(table.currentPage + 1)}><TableIcon name="chevron-right" /></Part></>}
-      {table.mode && <Part part="submission"><Part part="submit" as="button" type="button" disabled={!table.selected.length} aria-describedby={props.actionHint ? table.hintId : undefined} data-sent={table.submitted ? '' : undefined} onClick={table.submit}><Part part="submit-label" as="span" hidden={table.submitted}>{table.actionLabel}</Part><Part part="receipt" as="span" hidden={!table.submitted}><TableIcon name="check" />{table.receiptLabel}</Part></Part>{props.actionHint && <Part part="action-hint" as="span" id={table.hintId}>{props.actionHint}</Part>}</Part>}
+      {table.mode && <Part part="submission"><Part part="submit" className={table.unstyled ? undefined : 'prism-pill'} as="button" type="button" disabled={!table.selected.length || table.submitted} aria-describedby={props.actionHint ? table.hintId : undefined} data-feedback="" data-sent={table.submitted ? '' : undefined} onClick={table.submit}><Part part="submit-label" as="span" aria-hidden={table.submitted} hidden={table.unstyled && table.submitted}>{table.actionLabel}</Part><Part part="receipt" as="span" aria-hidden={!table.submitted} hidden={table.unstyled && !table.submitted}><CheckMark />{table.receiptLabel}</Part></Part>{props.actionHint && <Part part="action-hint" as="span" id={table.hintId}>{props.actionHint}</Part>}</Part>}
     </Part></Part>
     <Part part="status" role="status" aria-live="polite">{table.announcement}</Part>
   </Part></DataTableContext.Provider>;

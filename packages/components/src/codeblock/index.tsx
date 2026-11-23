@@ -1,6 +1,6 @@
 import { componentStrings, formatComponentMessage } from '../strings';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { useStrings, useFormat, Icon, PrismPart, cx, defineComponent, registerComponent, StreamSkeleton, useComponentState, useEmit, usePart, usePrism, type PrismContextValue, type PrismComponentProps } from '@prism-ui/react';
+import { useStrings, useFormat, useCollapse, Icon, PrismPart, cx, defineComponent, registerComponent, StreamSkeleton, useComponentState, useEmit, usePart, usePrism, type PrismContextValue, type PrismComponentProps } from '@prism-ui/react';
 import { s } from '@prism-ui/schema';
 import { useFrame } from '../frame';
 import { createIncremental, escapeHTML, highlight } from '../lib/highlight';
@@ -83,16 +83,35 @@ export function useCodeBlock(props: CodeBlockProps, ctx: PrismContextValue) {
     const body = pre.current?.parentElement;
     if (body && collapsed) body.scrollTop = complete ? 0 : body.scrollHeight;
   }, [code, complete, collapsed]);
+  const [previewHeight, setPreviewHeight] = useState(0);
+  useLayoutEffect(() => {
+    const element = pre.current, body = element?.parentElement;
+    if (!element || !body) return;
+    const measure = () => {
+      const style = getComputedStyle(body), lines = Array.from(element.querySelectorAll<HTMLElement>('[data-part="line"]'));
+      setPreviewHeight(lines.slice(0, threshold).reduce((height, line) => height + line.getBoundingClientRect().height, 0) + parseFloat(style.paddingTop || '0') + parseFloat(style.paddingBottom || '0'));
+    };
+    measure();
+    if (typeof ResizeObserver !== 'function') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [code, html, threshold, wrap]);
+  const collapse = useCollapse(!collapsed, previewHeight, 'auto');
   const language = !ctx.unstyled && Object.hasOwn(languageLabels, lang) ? strings[languageLabels[lang]] : lang;
   return { code, lang, html, rawLines, highlights, count, threshold, collapsed, collapsible, expanded, wrap, copyState, strings, parts, rows, pre,
     complete, animate: ctx.animate, unstyled: ctx.unstyled, label, lines: props.lines ?? !!meta.lines,
     feedback: copyState === 'copied' ? strings.copied : copyState === 'error' ? strings.copyFailed : '',
     heading: ctx.unstyled || !lang ? label : label === lang ? language : label + ' · ' + language,
     collapseLabel: !complete ? strings.streaming : collapsed ? formatComponentMessage(strings.showAll, { count: format.number(count) }) : strings.showLess,
-    bodyStyle: { '--prism-codeblock-visible-lines': collapsed ? threshold : undefined, ...parts.body.style } as CSSProperties,
+    bodyRef: collapse.ref, bodyStyle: { ...collapse.style, '--prism-codeblock-visible-lines': collapsed ? threshold : undefined, ...parts.body.style } as CSSProperties,
     rootProps: { ...parts.root, onKeyDown: frame.rootProps.onKeyDown, 'data-state': frame.rootProps['data-state'], 'data-entering': frame.rootProps['data-entering'], 'data-animate': ctx.animate ? undefined : 'false' },
     onAsk: () => emit('ask'),
-    toggleWrap: () => setWrap(value => !value), toggleCollapse: () => setExpanded(value => !value),
+    toggleWrap: () => setWrap(value => !value), toggleCollapse: () => {
+      const body = collapse.ref.current;
+      if (body) body.style.height = `${body.getBoundingClientRect().height}px`;
+      setExpanded(value => !value);
+    },
     async copy() {
       try { await clipboard(code); if (!mounted.current) return; setCopyState('copied'); emit('copy', { lang, lines: count }, formatComponentMessage(strings.copyMessage, { payload: JSON.stringify({ lang, lines: count }) })); }
       catch { if (mounted.current) setCopyState('error'); }
@@ -110,7 +129,7 @@ export function CodeBlock({ node, props, complete }: PrismComponentProps<CodeBlo
       <PrismPart as="span" {...parts.label} slotProps={slotProps}>{vm.heading}</PrismPart>
       <PrismPart as="button" {...parts.copy} slotProps={slotProps} type="button" aria-label={strings.copyCode} title={vm.feedback || strings.copyCode} onClick={vm.copy}>{vm.copyState === 'copied' ? strings.copied : strings.copy}</PrismPart>
     </PrismPart>
-    <PrismPart as="div" {...parts.body} slotProps={slotProps} tabIndex={0} data-tail={!vm.complete && vm.collapsed ? 'true' : undefined} data-streaming={!vm.complete ? '' : undefined} style={vm.bodyStyle} data-wrap={vm.wrap ? 'true' : 'false'}>
+    <PrismPart as="div" {...parts.body} slotProps={slotProps} ref={vm.bodyRef} tabIndex={0} data-tail={!vm.complete && vm.collapsed ? 'true' : undefined} data-streaming={!vm.complete ? '' : undefined} style={vm.bodyStyle} data-wrap={vm.wrap ? 'true' : 'false'}>
       <PrismPart as="pre" {...parts.pre} slotProps={slotProps} ref={vm.pre}><PrismPart as="code" {...parts.code} slotProps={slotProps}>
         {vm.rows.map(row => <PrismPart as="span" key={row.index} {...parts.line} slotProps={{ codeblock: vm, row } satisfies CodeBlockSlotProps} data-state={row.state} data-highlight={row.highlighted ? '' : undefined}>
           <PrismPart as="span" {...parts.gutter} slotProps={{ codeblock: vm, row } satisfies CodeBlockSlotProps} aria-hidden="true">{row.gutter}</PrismPart>

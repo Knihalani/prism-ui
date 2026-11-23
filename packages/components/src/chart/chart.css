@@ -14,10 +14,10 @@
 .prism-chart__svg { display: block; overflow: visible; touch-action: pan-y; }
 .prism-chart__grid { stroke: color-mix(in srgb, var(--prism-chart-border, var(--prism-border)) 50%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .prism-chart__tick { fill: var(--prism-chart-text-muted, var(--prism-text-muted)); font-family: var(--prism-chart-font-body, var(--prism-font-body)); font-size: var(--prism-chart-text-xs, var(--prism-text-xs)); font-weight: var(--prism-chart-weight-regular, var(--prism-weight-regular)); font-variant-numeric: tabular-nums; transition: x var(--prism-chart-motion-base, var(--prism-motion-base)) var(--prism-chart-motion-ease, var(--prism-motion-ease)); }
-.prism-chart__line { stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; animation: prism-chart-draw var(--prism-chart-motion-slow, var(--prism-motion-slow)) var(--prism-chart-motion-ease, var(--prism-motion-ease)) both; }
-.prism-chart__line, .prism-chart__area, .prism-chart__bar, .prism-chart__slice { transition: opacity var(--prism-chart-motion-base, var(--prism-motion-base)) var(--prism-chart-motion-ease, var(--prism-motion-ease)); }
+.prism-chart__line { stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: 0; transition: stroke-dashoffset var(--prism-chart-motion-slow, var(--prism-motion-slow)) var(--prism-chart-motion-ease, var(--prism-motion-ease)), opacity var(--prism-chart-motion-fast, var(--prism-motion-fast)) var(--prism-chart-motion-ease, var(--prism-motion-ease)); }
+.prism-chart__area, .prism-chart__bar, .prism-chart__slice { transition: opacity var(--prism-chart-motion-base, var(--prism-motion-base)) var(--prism-chart-motion-ease, var(--prism-motion-ease)); }
 .prism-chart__point { cursor: pointer; stroke: var(--prism-chart-surface, var(--prism-surface)); stroke-width: 1.5; transition: cx var(--prism-chart-motion-base, var(--prism-motion-base)) var(--prism-chart-motion-ease, var(--prism-motion-ease)); }
-.prism-chart__bar { transform-box: fill-box; transform-origin: center bottom; animation: prism-chart-grow var(--prism-chart-motion-slow, var(--prism-motion-slow)) var(--prism-chart-motion-ease, var(--prism-motion-ease)) both; cursor: pointer; }
+.prism-chart__bar { transform-box: fill-box; transform-origin: center bottom; transform: scaleY(1); transition: transform var(--prism-chart-motion-base, var(--prism-motion-spring-duration)) var(--prism-chart-motion-spring, var(--prism-motion-spring)), opacity var(--prism-chart-motion-fast, var(--prism-motion-fast)) var(--prism-chart-motion-ease, var(--prism-motion-ease)); cursor: pointer; }
 .prism-chart__slice { stroke: var(--prism-chart-surface, var(--prism-surface)); stroke-width: 2; cursor: pointer; }
 .prism-chart__slice:hover, .prism-chart__bar:hover { opacity: .8; }
 .prism-chart__leader { fill: none; stroke: var(--prism-chart-border, var(--prism-border)); stroke-width: 1; }
@@ -31,7 +31,8 @@
 .prism-chart__tooltip { position: absolute; z-index: 2; min-width: 140px; max-width: 240px; padding: var(--prism-chart-space-3, var(--prism-space-3)); background: var(--prism-chart-surface-raised, var(--prism-surface-raised)); border: 1px solid var(--prism-chart-border, var(--prism-border)); border-radius: var(--prism-chart-radius-md, var(--prism-radius-md)); box-shadow: var(--prism-chart-elevation-2, var(--prism-elevation-2)); pointer-events: none; font-size: var(--prism-chart-text-xs, var(--prism-text-xs)); }
 .prism-chart__tooltip-title { font-weight: var(--prism-chart-weight-semibold, var(--prism-weight-semibold)); margin-bottom: var(--prism-chart-space-2, var(--prism-space-2)); }
 .prism-chart__tooltip-annotation { color: var(--prism-chart-accent-text, var(--prism-accent-text, var(--prism-chart-accent, var(--prism-accent, var(--prism-chart-text, var(--prism-text)))))); margin-bottom: var(--prism-chart-space-2, var(--prism-space-2)); }
-.prism-chart__tooltip-row { display: flex; justify-content: space-between; gap: var(--prism-chart-space-4, var(--prism-space-4)); color: var(--prism-chart-text-muted, var(--prism-text-muted)); font-variant-numeric: tabular-nums; }
+.prism-chart__tooltip-row { display: flex; justify-content: space-between; gap: var(--prism-chart-space-4, var(--prism-space-4)); color: var(--prism-chart-text-muted, var(--prism-text-muted)); }
+.prism-chart__tooltip-value { font-variant-numeric: tabular-nums; }
 .prism-chart__tooltip-row[data-state="active"] { color: var(--prism-chart-text, var(--prism-text)); }
 .prism-chart__legend { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--prism-chart-space-2, var(--prism-space-2)); padding: var(--prism-chart-space-2, var(--prism-space-2)) var(--prism-chart-space-4, var(--prism-space-4)) var(--prism-chart-space-4, var(--prism-space-4)); }
 .prism-chart__legend-item { display: inline-flex; align-items: center; gap: var(--prism-chart-space-2, var(--prism-space-2)); }
@@ -40,8 +41,8 @@
 .prism-chart__summary, .prism-chart__status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .prism-chart__skeleton { fill: color-mix(in srgb, var(--prism-chart-text-muted, var(--prism-text-muted)) 8%, transparent); animation: prism-chart-shimmer calc(var(--prism-chart-motion-slow, var(--prism-motion-slow)) * 3) var(--prism-chart-motion-ease, var(--prism-motion-ease)) infinite alternate; }
 .prism-chart__empty { position: absolute; inset: 45% 0 auto; text-align: center; color: var(--prism-chart-text-muted, var(--prism-text-muted)); font-size: var(--prism-chart-text-sm, var(--prism-text-sm)); pointer-events: none; }
-@keyframes prism-chart-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-@keyframes prism-chart-grow { from { transform: scaleY(.02); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+@starting-style { .prism-root[data-prism-presentation] .prism-chart__bar:not([data-prism-entered]) { transform: scaleY(0); opacity: 0; } }
+@starting-style { .prism-root[data-prism-presentation] .prism-chart__line:not([data-prism-entered]) { stroke-dashoffset: 1; } }
 @keyframes prism-chart-shimmer { from { opacity: .3; } to { opacity: .8; } }
 [data-animate="false"] .prism-chart__root *, .prism-chart__root[data-animate="false"] * { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-chart__root * { animation: none; transition: none; } }

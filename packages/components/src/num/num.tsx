@@ -6,6 +6,7 @@ import { Icon, useStrings, PrismPart, defineComponent, registerComponent, useEmi
 import { interpolate } from '../interpolate';
 import { useInlineReadout } from './inline-layout';
 import { useNumberTween } from './use-tween';
+import { Odometer } from '../shared/controls';
 
 export const numStrings = { label: '{id}', valueLabel: '{value}', loadingLabel: '\u00a0', instructions: 'Drag to adjust, or press Enter to type. Arrow keys adjust by {step}; hold Shift for larger steps.', readoutLabel: '{label}: {value}', dragHint: 'Drag to adjust. Shift for larger steps.', changeMessage: '{label}: {value}' };
 export const calcStrings = { errorLabel: '—', loadingLabel: '\u00a0', valueLabel: '{label}: {value}', numberLabel: '{value}', errorDescription: '{expression}' };
@@ -93,7 +94,7 @@ export function useNum(props: NumProps, ctx: PrismComponentProps<NumProps>) {
 export function Num(ctx: PrismComponentProps<NumProps>) {
   const num = useNum(ctx.props, ctx), model = { num };
   return <PrismPart as="span" {...num.rootProps} slotProps={model}>
-    {num.editing ? <PrismPart as="input" {...num.inputProps} slotProps={model} /> : <PrismPart as="span" {...num.parts.value} slotProps={model} data-prism-skeleton={!num.ready ? '' : undefined}>{num.formatted}</PrismPart>}
+    {num.editing ? <PrismPart as="input" {...num.inputProps} slotProps={model} /> : <PrismPart as="span" {...num.parts.value} slotProps={model} data-prism-skeleton={!num.ready ? '' : undefined}><Odometer value={num.value} format={() => num.formatted} /></PrismPart>}
     {num.readoutVisible && <PrismPart as="span" {...num.parts.readout} slotProps={model} ref={num.layout.readout} style={{ ...num.parts.readout.style, ...num.layout.style }} data-side={num.layout.below ? 'below' : 'above'} aria-hidden="true">
       <PrismPart as={Icon} {...num.parts.icon} slotProps={model} name="chevron-left" />
       {num.scrubbing ? <PrismPart as="span" {...num.parts.readoutValue} slotProps={model}>{interpolate(num.strings.readoutLabel, { label: num.label, value: num.formatted })}</PrismPart> : <PrismPart as="span" {...num.parts.readoutHint} slotProps={model}>{num.strings.dragHint}</PrismPart>}

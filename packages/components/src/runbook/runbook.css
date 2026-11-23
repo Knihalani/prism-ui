@@ -26,8 +26,8 @@
 .prism-root .prism-runbook__skeleton { background: linear-gradient(100deg, color-mix(in srgb, var(--prism-runbook-text-muted, var(--prism-text-muted)) 8%, transparent) 20%, color-mix(in srgb, var(--prism-runbook-surface, var(--prism-surface)) 70%, transparent) 45%, color-mix(in srgb, var(--prism-runbook-text-muted, var(--prism-text-muted)) 8%, transparent) 70%); background-size: 220% 100%; }
 .prism-root .prism-runbook__stepTitle[data-state="loading"] { width: 40%; height: var(--prism-runbook-space-5, var(--prism-space-5)); border-radius: var(--prism-runbook-radius-sm, var(--prism-radius-sm)); background: color-mix(in srgb, var(--prism-runbook-text-muted, var(--prism-text-muted)) 8%, transparent); }
 @keyframes prism-runbook-pulse { 50% { opacity: .55; } }
-@keyframes prism-runbook-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
-.prism-root .prism-runbook__skeleton { animation: prism-runbook-shimmer calc(var(--prism-runbook-motion-fast, var(--prism-motion-fast)) * 6) linear infinite; }
+@keyframes prism-runbook-shimmer { from { opacity: .45; } to { opacity: 1; } }
+.prism-root .prism-runbook__skeleton { animation: prism-runbook-shimmer calc(var(--prism-runbook-motion-fast, var(--prism-motion-fast)) * 6) var(--prism-motion-ease-in-out) infinite; }
 .prism-root :is(.prism-runbook__stepTitle[data-state="loading"], .prism-runbook__check[data-streaming="true"]) { animation: prism-runbook-pulse calc(var(--prism-runbook-motion-fast, var(--prism-motion-fast)) * 6) var(--prism-runbook-motion-spring, var(--prism-motion-spring)) infinite; }
 .prism-root[data-animate="false"] :is(.prism-runbook__skeleton, .prism-runbook__stepTitle, .prism-runbook__check), .prism-root [data-animate="false"] :is(.prism-runbook__skeleton, .prism-runbook__stepTitle, .prism-runbook__check) { animation: none; }
 @media (prefers-reduced-motion: reduce) {
@@ -43,8 +43,7 @@
 .prism-root :is(.prism-runbook__ask, .prism-runbook__undo, .prism-runbook__copy, .prism-runbook__stuck, .prism-runbook__pointAsk, .prism-runbook__command > .prism-runbook__ghost) { opacity: 0; pointer-events: none; transition: opacity var(--prism-runbook-motion-fast, var(--prism-motion-fast)) var(--prism-runbook-motion-spring, var(--prism-motion-spring)); }
 .prism-root :is(.prism-runbook__root, .prism-runbook__step):is(:hover, :focus-within) :is(.prism-runbook__ask, .prism-runbook__undo, .prism-runbook__copy, .prism-runbook__stuck, .prism-runbook__pointAsk, .prism-runbook__command > .prism-runbook__ghost) { opacity: 1; pointer-events: auto; }
 @media (hover: none) { .prism-root :is(.prism-runbook__ask, .prism-runbook__undo, .prism-runbook__copy, .prism-runbook__stuck, .prism-runbook__pointAsk, .prism-runbook__command > .prism-runbook__ghost) { opacity: 1; pointer-events: auto; } }
-.prism-root :is(.prism-runbook__root, .prism-runbook__step, .prism-runbook__point, .prism-runbook__action) { animation: prism-runbook-enter var(--prism-runbook-motion-fast, var(--prism-motion-fast)) var(--prism-runbook-motion-spring, var(--prism-motion-spring)); }
-@keyframes prism-runbook-enter { from { opacity: 0; transform: translateY(var(--prism-runbook-space-1, var(--prism-space-1))); } to { opacity: 1; transform: none; } }
+
 .prism-root[data-animate="false"] [data-prism="runbook"], .prism-root [data-animate="false"] [data-prism="runbook"] { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-root [data-prism="runbook"] { animation: none; transition: none; } }
 

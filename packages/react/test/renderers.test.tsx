@@ -13,6 +13,9 @@ test('one-line renderers share scoped store state, functional updates, patches, 
   const store = createStore(), actions: Action[] = [];
   function Input({ data, id, useState, emit, tokens }: RendererProps<{ label: string }>) {
     const [value, setValue] = useState(1);
+    expect(tokens.motionInstant).toBe('var(--prism-motion-instant)');
+    expect(tokens.motionEaseExit).toBe('var(--prism-motion-ease-exit)');
+    expect(tokens.motionSpringBouncyDuration).toBe('var(--prism-motion-spring-bouncy-duration)');
     return <button style={{ color: tokens.accent }} onClick={() => { setValue(v => v + 1); emit({ type: 'select', payload: value + 1 }); }}>{data.label}:{id}:{value}</button>;
   }
   const view = render(<Prism store={store} renderers={{ input: Input }} source={fence('input', { id: 'one', label: 'First' }) + '\n\n' + fence('input', { id: 'two', label: 'Second' })} onAction={action => actions.push(action)} />);
