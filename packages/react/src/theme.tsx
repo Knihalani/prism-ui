@@ -100,7 +100,8 @@ const subscribeStyles = () => () => {};
 function ThemeCss({ name, css }: { name: string; css: string }) {
   const server = useSyncExternalStore(subscribeStyles, () => false, () => true);
   useInsertionEffect(() => {
-    if (document.head.querySelector(`style[data-prism-theme-css="${name}"]`)) return;
+    const existing = document.head.querySelector(`style[data-prism-theme-css="${name}"]`);
+    if (existing) { if (existing.textContent !== css) existing.textContent = css; return; }
     const style = document.createElement('style'); style.dataset.prismThemeCss = name; style.textContent = css;
     document.head.append(style);
   }, [name, css]);

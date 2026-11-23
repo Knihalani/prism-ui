@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties } from 'react';
+import { useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { scenarios } from './agent/scenarios';
 import { Icon, type IconName } from './ui/Icon';
 import { AssistantTurn } from './ui/Turn';
@@ -11,11 +11,12 @@ const descriptions = ['Find the right balance of power and portability.', 'Four 
 const scenarioIcons: IconName[] = ['laptop', 'trip', 'deploy', 'design', 'budget', 'research', 'grid'];
 const scenarioTitles = ['Pick a laptop', 'Four days in Kyoto', 'Debug a deploy', 'Mock up a landing page', 'Plan a team offsite', 'Make sense of research', 'Build a team dashboard'];
 
-export function ShellSwitcher({ shell, theme, mode, inert, onShell, onTheme, onMode }: { shell: Shell; theme: string; mode: string; inert: boolean; onShell(shell: Shell): void; onTheme(theme: string): void; onMode(): void }) {
+export function ShellSwitcher({ shell, theme, mode, inert, onShell, onTheme, onMode, customName, editorOpen, toggleRef, onEditor }: { shell: Shell; theme: string; mode: string; inert: boolean; onShell(shell: Shell): void; onTheme(theme: string): void; onMode(): void; customName?: string; editorOpen?: boolean; toggleRef?: RefObject<HTMLButtonElement | null>; onEditor?(): void }) {
   return <nav className="shell-switcher" aria-label="Presentation" inert={inert || undefined} hidden={inert}>
-    <div className="shell-segments" role="group" aria-label="Shell">{shells.map(value => <button key={value} aria-pressed={value === shell} onClick={() => onShell(value)}><Icon name={value === 'chat' ? 'chat' : value === 'editor' ? 'deploy' : 'grid'} /><span>{value[0].toUpperCase() + value.slice(1)}</span></button>)}</div>
+    <div className="shell-segments" role="group" aria-label="Shell">{shells.map(value => <button key={value} aria-label={value[0].toUpperCase() + value.slice(1)} aria-pressed={value === shell} onClick={() => onShell(value)}><Icon name={value === 'chat' ? 'chat' : value === 'editor' ? 'deploy' : 'grid'} /><span>{value[0].toUpperCase() + value.slice(1)}</span></button>)}</div>
     <span className="switcher-divider" />
-    <label className="theme-choice"><span>Theme</span><select aria-label="Design theme" value={theme} onChange={event => onTheme(event.target.value)}>{availableThemes.map(item => <option key={item.name} value={item.name}>{item.name[0].toUpperCase() + item.name.slice(1)}</option>)}</select></label>
+    <label className="theme-choice" data-custom={customName !== undefined || undefined}><span>Theme</span><select aria-label="Design theme" title={customName === undefined ? undefined : 'Custom: ' + (customName || 'Untitled')} value={theme} onChange={event => onTheme(event.target.value)}>{customName !== undefined && <option value="custom">{customName || 'Untitled'}</option>}{availableThemes.map(item => <option key={item.name} value={item.name}>{item.name[0].toUpperCase() + item.name.slice(1)}</option>)}</select></label>
+    {onEditor && <button ref={toggleRef} className="editor-toggle" aria-label="Customise theme" aria-expanded={!!editorOpen} aria-controls="theme-editor" onClick={onEditor}><Icon name="design" /><span>Theme</span></button>}
     <button className="mode-choice" aria-label={'Switch to ' + (mode === 'dark' ? 'light' : 'dark') + ' mode'} onClick={onMode}><Icon name={mode === 'dark' ? 'moon' : 'sun'} /></button>
   </nav>;
 }

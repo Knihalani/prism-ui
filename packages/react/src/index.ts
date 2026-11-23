@@ -14,7 +14,7 @@ export { useFlash, useLocalWrite } from './flash';
 export { spring, useReducedMotion, useSpringValue, useCollapse, createFlip } from './motion';
 export type { SpringOptions, SpringValueOptions, FlipOptions, FlipElements } from './motion';
 export type { PresentationState } from './presentation';
-export { ThemeScope, createTheme, defineTheme, fromCssVars, host, shadcn, useTheme } from './theme';
+export { ThemeScope, createTheme, defineTheme, fromCssVars, host, shadcn, tokenVariable, useTheme } from './theme';
 export type { Theme, Tokens, ThemeTokens, PrismTheme, ComponentTheme, ThemeStyle, ThemeScopeProps, Density, Mode } from './theme';
 export { Icon, iconNames } from './icons';
 export type { Icons, IconName } from './icons';
