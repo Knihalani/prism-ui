@@ -10,9 +10,9 @@
       "reason": "Interactive table editing, sorting, expansion and action bindings."
     },
     "num": {
-      "js": 4385,
+      "js": 4500,
       "css": 4096,
-      "reason": "Editable numeric input with drag, keyboard, units, expressions and undo."
+      "reason": "Editable numeric input with drag, keyboard, units, expressions and undo, plus settled screen-reader announcements for num/calc (~110B gzip; main was 4376B, 9B under the old 4385B budget)."
     },
     "pick": {
       "js": 5400,

@@ -21,13 +21,16 @@ function rawText(node: Node): string {
   const text = node.children?.map(rawText).join('') ?? node.value ?? '';
   return node.type === 'emphasis' ? `*${text}*` : node.type === 'strong' ? `**${text}**` : text;
 }
-function useNumberFormat(props: Pick<NumProps, 'format' | 'currency' | 'decimals'>) {
-  const format = useFormat();
+function numberFormatter(props: Pick<NumProps, 'format' | 'currency' | 'decimals'>, format: ReturnType<typeof useFormat>) {
   const currency = props.currency?.trim().toUpperCase();
-  return useMemo(() => (value: number) => format.number(value, {
+  return (value: number) => format.number(value, {
     ...(props.format === 'currency' ? { style: 'currency', currency: currency && /^[A-Z]{3}$/.test(currency) ? currency : format.currencyCode } : props.format === 'percent' ? { style: 'percent' } : props.format === 'compact' ? { notation: 'compact' } : {}),
     ...(props.decimals !== undefined ? { minimumFractionDigits: props.decimals, maximumFractionDigits: props.decimals } : {}),
-  }), [format, props.format, currency, props.decimals]);
+  });
+}
+function useNumberFormat(props: Pick<NumProps, 'format' | 'currency' | 'decimals'>) {
+  const format = useFormat();
+  return useMemo(() => numberFormatter(props, format), [format, props.format, props.currency, props.decimals]);
 }
 
 export function useNum(props: NumProps, ctx: PrismComponentProps<NumProps>) {
@@ -125,12 +128,9 @@ export type NumModel = ReturnType<typeof useNum>;
 export type CalcModel = ReturnType<typeof useCalc>;
 export type NumSlotProps = { [Part in 'root' | 'value' | 'input' | 'readout' | 'readout-value' | 'readout-hint' | 'icon']: { num: NumModel } };
 export type CalcSlotProps = { [Part in 'root' | 'value']: { calc: CalcModel } };
-function numberAnnouncement(props: NumProps | CalcProps, value: number, format: ReturnType<typeof useFormat>) {
-  const options: Intl.NumberFormatOptions = props.format === 'currency' ? { style: 'currency', currency: props.currency ?? format.currencyCode } : props.format === 'percent' ? { style: 'percent' } : props.format === 'compact' ? { notation: 'compact' } : {};
-  if (props.decimals !== undefined) { options.minimumFractionDigits = props.decimals; options.maximumFractionDigits = props.decimals; }
-  return [props.label ?? ('id' in props ? props.id : undefined), Number.isFinite(value) ? format.number(value, options) : calcStrings.errorLabel].filter(Boolean).join(': ');
-}
-export const num = defineComponent({ name: 'num', parts: ['input', 'root', 'value', 'readout', 'readout-value', 'readout-hint', 'icon'], strings: numStrings, schema: numSchema, syntax: 'inline', inline: true, component: Num, announcement: (props, node, { store, format }) => numberAnnouncement(props, Number(props.id ? store.get(props.id) ?? props.value ?? rawText(node) : props.value ?? rawText(node)), format), docs: 'Editable shared-store number. Drag, click to type, or use arrow keys; percent values are fractions.', examples: [':num[1200]{id=rent min=0 max=5000 step=50 format=currency}'] });
-export const calc = defineComponent({ name: 'calc', parts: ['root', 'value'], strings: calcStrings, schema: calcSchema, syntax: 'inline', inline: true, component: Calc, announcement(props, node, { store, format }) { let value = NaN; try { value = compile(props.expr ?? rawText(node))(store.get); } catch {} return numberAnnouncement(props, value, format); }, docs: 'Read-only live formula over shared-store paths, with localized number formatting.', examples: [':calc[rent * 12]{format=currency}'] });
+const numberAnnouncement = (props: Pick<NumProps, "format" | "currency" | "decimals" | "label"> & { id?: string }, value: number, format: ReturnType<typeof useFormat>) =>
+  [props.label ?? props.id, Number.isFinite(value) ? numberFormatter(props, format)(value) : calcStrings.errorLabel].filter(Boolean).join(': ');
+export const num = defineComponent({ name: 'num', parts: ['input', 'root', 'value', 'readout', 'readout-value', 'readout-hint', 'icon'], strings: numStrings, schema: numSchema, syntax: 'inline', inline: true, component: Num, announcement: (props, node, { store, format }) => numberAnnouncement(props, Number((props.id && store.get(props.id)) ?? props.value ?? rawText(node)), format), docs: 'Editable shared-store number. Drag, click to type, or use arrow keys; percent values are fractions.', examples: [':num[1200]{id=rent min=0 max=5000 step=50 format=currency}'] });
+export const calc = defineComponent({ name: 'calc', parts: ['root', 'value'], strings: calcStrings, schema: calcSchema, syntax: 'inline', inline: true, component: Calc, announcement: (props, node, { store, format }) => numberAnnouncement(props, compile(props.expr ?? rawText(node))(store.get), format), docs: 'Read-only live formula over shared-store paths, with localized number formatting.', examples: [':calc[rent * 12]{format=currency}'] });
 registerComponent(num);
 registerComponent(calc);
