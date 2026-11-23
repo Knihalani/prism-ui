@@ -34,7 +34,8 @@ export function renderPage(route: SiteRoute, template: string, base: string) {
   };
   const highlight = (code: string) => hljs.highlight(code, { language: 'tsx' }).value;
   const previews = route.kind === 'gallery' ? Object.fromEntries(defaultRegistry.list().map(def => [def.name, staticMediaPreview(previewSource(def), plugins) ?? renderToString(<Prism source={previewSource(def)} registry={registryFor(def.name)} plugins={plugins} store={createStore({ initial: { rent: 1200 } })} scope={`preview-${def.name}`} animate={false} />, { identifierPrefix: `preview-${def.name}-` })])) : {};
-  const exampleHtml = def ? renderToString(<Example data={{ name: def.name, sources: examples(def) }} bundle={{ registry: registryFor(def.name), plugins }} />, { identifierPrefix: 'example-' }) : '';
+  const snapshot = def?.name === 'artifact' ? staticMediaPreview(examples(def)[0], plugins) ?? renderToString(<p>The live preview requires JavaScript. <a href="#source">Read the artifact source</a>.</p>) : undefined;
+  const exampleHtml = def ? renderToString(<Example data={{ name: def.name, sources: examples(def) }} bundle={{ registry: registryFor(def.name), plugins }} snapshot={snapshot} />, { identifierPrefix: 'example-' }) : '';
   const document = route.file ? renderDocument(route.file, base) : undefined;
   const content = renderToString(<Site route={route} base={base}
     previews={previews} exampleHtml={exampleHtml} highlighted={def ? examples(def).map(highlightSource) : []} highlight={highlight}

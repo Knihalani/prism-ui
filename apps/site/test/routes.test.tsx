@@ -18,10 +18,15 @@ const result = Bun.spawnSync(['bun', '-e', `
   const pages = routes.map(route => renderPage(route, template, '/prism-ui/'));
   defaultRegistry.register({ name: 'empty-fixture', component: () => null, docs: 'Literal $& replacement text', examples: [], parts: [], strings: {} });
   const emptyPage = renderPage({ kind: 'component', path: '/components/empty-fixture/', name: 'empty-fixture', title: 'Empty' }, template, '/');
-  console.log(JSON.stringify({ routes, names, pages, emptyPage }));
+  const artifact = defaultRegistry.get('artifact');
+  const artifactFallbacks = ['\u0060\u0060\u0060artifact:react\\nexport default () => null\\n\u0060\u0060\u0060', ''].map(source => {
+    defaultRegistry.register({ ...artifact, examples: source ? [source] : [] });
+    return renderPage(routes.find(route => route.name === 'artifact'), template, '/');
+  });
+  console.log(JSON.stringify({ routes, names, pages, emptyPage, artifactFallbacks }));
 `], { cwd: fileURLToPath(new URL('../', import.meta.url)) });
 if (result.exitCode !== 0) throw new Error(result.stderr.toString());
-const { routes, names, pages, emptyPage } = JSON.parse(result.stdout.toString()) as { routes: SiteRoute[]; names: string[]; pages: string[]; emptyPage: string };
+const { routes, names, pages, emptyPage, artifactFallbacks } = JSON.parse(result.stdout.toString()) as { routes: SiteRoute[]; names: string[]; pages: string[]; emptyPage: string; artifactFallbacks: string[] };
 
 test('empty references render readable fallbacks and literal replacement characters', () => {
   expect(emptyPage).toContain('Literal $&amp; replacement text');
@@ -30,6 +35,24 @@ test('empty references render readable fallbacks and literal replacement charact
   expect(emptyPage).toContain('No declared props.');
   expect(emptyPage).toContain('No replaceable parts declared.');
   expect(emptyPage).toContain('No registered string defaults.');
+});
+
+test('Artifact reference has a script-disabled static preview instead of a permanent loading state', () => {
+  const html = pages[routes.findIndex(route => route.name === 'artifact')].split('<section class="example-section"')[1].split('</section>')[0];
+  expect(html).not.toContain('aria-label="Preparing preview"');
+  expect(html).toContain('title="Static artifact preview"');
+  expect(html).toContain('sandbox=""');
+  expect(html).toContain('Shipping checklist');
+  expect(html).not.toContain('allow-scripts');
+});
+
+test('non-static and empty Artifact examples link to readable source rather than loading forever', () => {
+  for (const page of artifactFallbacks) {
+    const html = page.split('<section class="example-section"')[1].split('</section>')[0];
+    expect(html).toContain('The live preview requires JavaScript.');
+    expect(html).toContain('href="#source"');
+    expect(html).not.toContain('aria-label="Preparing preview"');
+  }
 });
 
 test('every registered component and top-level Markdown document has a unique prerendered route', () => {
