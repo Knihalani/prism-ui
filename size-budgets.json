@@ -40,14 +40,14 @@
       "reason": "Interactive SVG geometry, accessibility table, interaction state and schema metadata; common extraction reverted because it increased net cost."
     },
     "artifact": {
-      "js": 42413,
-      "css": 5130,
-      "reason": "Sandbox/compiler plus deferred graphic feedback and mockup engines; all lazy JS is charged."
+      "js": 52448,
+      "css": 7101,
+      "reason": "Sandbox/compiler plus deferred graphic feedback, pressure drawing and mobile composer; merged-main sizes plus 5%, all lazy JS charged."
     },
     "mockup": {
-      "js": 33950,
-      "css": 4096,
-      "reason": "Wireframe renderer, sandbox messaging, drawing, annotations and feedback history."
+      "js": 43579,
+      "css": 5118,
+      "reason": "Wireframe, pressure drawing, touch gestures and keyboard-safe feedback composer; merged-main sizes plus 5%."
     },
     "view": {
       "js": 19008,
@@ -56,13 +56,13 @@
     },
     "shared": {
       "js": 26154,
-      "css": 9400,
+      "css": 10674,
       "reason": "All frame/controls, utilities, eager grammars, strings, tokens and common styles, once."
     },
     "react": {
-      "js": 20050,
+      "js": 23331,
       "css": 4096,
-      "reason": "Shared React renderer, motion, themes, markdown and integration prompt API."
+      "reason": "Shared React renderer, reply motion, themes, markdown and integration prompt API; merged-main JS plus 5%."
     },
     "core": {
       "js": 12288,

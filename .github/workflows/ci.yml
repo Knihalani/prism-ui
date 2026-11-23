@@ -14,6 +14,8 @@ jobs:
         with:
           bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
-      - run: bun run size
       - run: bunx tsc --noEmit
       - run: bun test
+        if: ${{ !cancelled() }}
+      - run: bun run size
+        if: ${{ !cancelled() }}

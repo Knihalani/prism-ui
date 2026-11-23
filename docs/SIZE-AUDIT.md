@@ -10,19 +10,23 @@ subpath consumers. The size script now avoids counting a companion stylesheet
 again when it is already included by the JS graph; a regression test covers
 both imported and separately supplied CSS.
 
-Six existing caps are exceeded after integration. The same caps are exceeded
+Six original caps were exceeded after integration. The same caps were exceeded
 by unmodified `a9ad258`, measured with the same script and Bun version:
 
-| Entry / metric, gzip bytes | Existing cap | Upstream main | Merged tree |
-|---|---:|---:|---:|
-| Artifact JS, all chunks | 42413 | 54439 | 49950 |
-| Artifact CSS | 5130 | 6696 | 6762 |
-| Mockup JS | 33950 | 41465 | 41503 |
-| Mockup CSS | 4096 | 4874 | 4874 |
-| Shared CSS | 9400 | 10165 | 10165 |
-| React JS | 20050 | 21621 | 22220 |
+| Entry / metric, gzip bytes | Original cap | Upstream main | Merged tree | Updated cap |
+|---|---:|---:|---:|---:|
+| Artifact JS, all chunks | 42413 | 54439 | 49950 | 52448 |
+| Artifact CSS | 5130 | 6696 | 6762 | 7101 |
+| Mockup JS | 33950 | 41465 | 41503 | 43579 |
+| Mockup CSS | 4096 | 4874 | 4874 | 5118 |
+| Shared CSS | 9400 | 10165 | 10165 | 10674 |
+| React JS | 20050 | 21621 | 22220 | 23331 |
 
-Caps have **not** been raised automatically. Artifact is 13,827B initial plus
+After review, only those six caps are rebased to the measured merged-tree size
+plus 5% (rounded up). All other caps and the 4KiB defaults remain unchanged.
+CI runs type checking and tests before size; test/size steps still execute if an
+earlier check fails, unless the workflow is cancelled.
+Artifact is 13,827B initial plus
 36,123B deferred, with no duplicate JS modules in the chunk metafile. Its merged
 full JS is 74,873B versus upstream's 79,431B. The additional React snapshot
 logic remains charged to the runtime. Measurements, source-isolated upstream
