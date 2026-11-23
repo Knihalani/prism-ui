@@ -1,11 +1,13 @@
 import { PrismPart, usePart, useSlot } from '@prism-ui/react';
-import type { HTMLAttributes } from 'react';
+import type { ElementType, HTMLAttributes } from 'react';
 import { FrameOverflow } from '../frame';
+import { Pill, type PillProps } from '../shared/controls';
 import { MockupIcon as Icon } from './icon';
 import type { MockupGroupModel } from './group';
 import type { MockupModel } from './use-mockup';
 
 function Box({ model, ...props }: HTMLAttributes<HTMLDivElement> & { model?: unknown }) { return <div {...props} />; }
+function FeedbackPill({ model, as, ...props }: PillProps & { model?: unknown; as?: ElementType }) { return <Pill {...props} />; }
 export function MockupToolbar({ vm, model }: { model: MockupModel | MockupGroupModel; vm: Pick<MockupModel, 'labels' | 'framed' | 'device' | 'setDevice' | 'zoom' | 'setZoom' | 'fullscreen' | 'showSource' | 'setShowSource' | 'pen' | 'setPen' | 'color' | 'setColor'> }) {
   const devices = usePart('mockup', 'devices'), actions = usePart('mockup', 'headerActions');
   const toolbar = usePart('mockup', 'tools'), button = usePart('mockup', 'button'), Actions = useSlot('mockup', 'headerActions', Box);
@@ -38,6 +40,12 @@ export function MockupFooter(vm: MockupFooterModel) {
   const { labels, locale, count, submitted, edit, canUndo, canRedo, undo, redo, canSubmit, submit } = vm;
   const countPart = usePart('mockup', 'count');
   const footer = usePart('mockup', 'feedbackFooter'), button = usePart('mockup', 'button'), primary = usePart('mockup', 'primary');
-  return submitted ? <PrismPart slotProps={{ model }} as="span" {...footer} role="status">{commentCount(labels, locale, count, true)}<PrismPart slotProps={{ model }} as="button" {...button} onClick={edit}>{labels.editFeedback}</PrismPart></PrismPart> :
-    <PrismPart slotProps={{ model }} as="span" {...footer}><PrismPart slotProps={{ model }} as="button" {...button} data-secondary="" disabled={!canUndo} onClick={undo}><Icon name="undo" />{labels.undo}</PrismPart><PrismPart slotProps={{ model }} as="button" {...button} data-secondary="" disabled={!canRedo} onClick={redo}><Icon name="redo" />{labels.redo}</PrismPart><PrismPart slotProps={{ model }} as="span" {...countPart}>{commentCount(labels, locale, count)}</PrismPart><PrismPart slotProps={{ model }} as="button" {...primary} data-feedback-submit="" disabled={!canSubmit} onBlur={() => vm.commitOverall?.()} onClick={submit}>{labels.submit}</PrismPart></PrismPart>;
+  const Primary = useSlot('mockup', 'primary', FeedbackPill);
+  return <PrismPart slotProps={{ model }} as="span" {...footer} role={submitted ? 'status' : undefined}>
+    <PrismPart slotProps={{ model }} as="button" {...button} hidden={submitted} data-secondary="" disabled={!canUndo} onClick={undo}><Icon name="undo" />{labels.undo}</PrismPart>
+    <PrismPart slotProps={{ model }} as="button" {...button} hidden={submitted} data-secondary="" disabled={!canRedo} onClick={redo}><Icon name="redo" />{labels.redo}</PrismPart>
+    <PrismPart slotProps={{ model }} as="span" {...countPart} hidden={submitted}>{commentCount(labels, locale, count)}</PrismPart>
+    <Primary model={model} as="button" {...primary} data-feedback-submit="" data-sent={submitted ? '' : undefined} sent={submitted} receipt={commentCount(labels, locale, count, true)} disabled={submitted || !canSubmit} aria-disabled={submitted || !canSubmit} onBlur={() => vm.commitOverall?.()} onClick={submit}>{labels.submit}</Primary>
+    {submitted && <PrismPart slotProps={{ model }} as="button" {...button} onClick={edit}>{labels.editFeedback}</PrismPart>}
+  </PrismPart>;
 }

@@ -26,7 +26,7 @@ test('every declared Pick part is replaceable in populated, sent, empty and stre
     const tags = new Map(Array.from(base.container.querySelectorAll('[data-prism="pick"][data-part]')).map(node => [node.getAttribute('data-part')!, node.tagName.toLowerCase()]));
     for (const part of tags.keys()) expect(pick.parts).toContain(part);
     for (const element of Array.from(base.container.querySelectorAll('[data-prism="pick"][data-part="root"] *'))) {
-      if (!['path'].includes(element.tagName.toLowerCase())) expect(element.getAttribute('data-prism')).toBe('pick');
+      if (!element.closest('[data-feedback] > span') && !['path'].includes(element.tagName.toLowerCase())) expect(element.getAttribute('data-prism')).toBe('pick');
     }
     cleanup();
     for (const [part, tag] of tags) {

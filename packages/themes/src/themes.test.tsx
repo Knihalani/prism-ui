@@ -118,13 +118,12 @@ test('Objects sticky sliders update the stamped leader and choose action', () =>
   expect(actions.at(-1)).toMatchObject({ type: 'choose', payload: { option: 'concierge' } });
 });
 
-test('Objects feed is triggered only by sending, and finishes without replaying on a sent receipt mount', () => {
+test('Objects feed follows shared sent state and does not replay on a sent receipt mount', () => {
   const view = render(<Prism source={source} theme={objects} onAction={() => {}} />);
   expect(view.container.querySelector('[data-printing]')).toBeNull();
   fireEvent.click(within(view.container).getByRole('button', { name: 'Print & send estimate ↗' }));
   const receipt = view.container.querySelector('[data-objects-receipt]')!;
-  expect(receipt.hasAttribute('data-printing')).toBe(true);
-  fireEvent.animationEnd(receipt);
+  expect(receipt.getAttribute('data-state')).toBe('sent');
   expect(receipt.hasAttribute('data-printing')).toBe(false);
   const Plain = ({ children }: { children?: ReactNode }) => <section>{children}</section>;
   view.rerender(<Prism source={source} theme={objects} slots={{ estimate: { root: Plain } }} onAction={() => {}} />);
@@ -216,7 +215,7 @@ test('Print retains loading/error guards and uses the estimate currency and actu
 const source = '```ui:estimate\n' + JSON.stringify({ id: 'quote', items: [{ id: 'seats', label: 'Seats', price: 36, qty: 6 }, { id: 'notes', label: 'Notes', price: 36, optional: true }] }) + '\n```';
 test('the same Estimate uses independent themes and real structural slots', () => {
   const view = render(<><Prism source={source} theme={host} animate={false} /><Prism source={source} theme={refraction} animate={false} /><Prism source={source} theme={instrument} animate={false} onAction={() => {}} /></>);
-  const roots = view.container.querySelectorAll('.prism-root');
+  const roots = view.container.querySelectorAll<HTMLElement>('.prism-root');
   expect(roots.length).toBe(3); expect(roots[0].querySelector('[data-segmented]')).toBeNull(); expect(roots[1].querySelector('[data-segmented]')).toBeNull();
   expect(roots[2].querySelector('[data-segmented]')).not.toBeNull(); expect(roots[2].querySelectorAll('.instrument-screw').length).toBe(4);
   expect(roots[2].querySelectorAll('[role="spinbutton"]').length).toBe(1); expect(roots[2].querySelector('[role="switch"]')).not.toBeNull();
@@ -224,7 +223,7 @@ test('the same Estimate uses independent themes and real structural slots', () =
   expect(roots[2].querySelector('[data-part="live"]')?.textContent).toBe('$288.00');
   expect(roots[0].querySelector('[data-part="live"]')?.textContent).toBe('$252.00');
   fireEvent.click(roots[2].querySelector('[data-part="submit"]')!);
-  expect(roots[2].querySelector('[data-part="submit"]')?.textContent).toBe('Sent');
+  expect(within(roots[2]).getByRole('button', { name: 'Sent' })).toBeTruthy();
 });
 
 test('an outer Instrument scope does not replace parts in a nested host Prism', () => {

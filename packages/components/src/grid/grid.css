@@ -39,7 +39,5 @@
 .prism-root .prism-grid__ask { opacity: 0; pointer-events: none; transition: opacity var(--prism-grid-motion-fast, var(--prism-motion-fast)) var(--prism-grid-motion-spring, var(--prism-motion-spring)); }
 .prism-root .prism-grid__root:is(:hover, :focus-within) .prism-grid__ask { opacity: 1; pointer-events: auto; }
 @media (hover: none) { .prism-root .prism-grid__ask { opacity: 1; pointer-events: auto; } }
-.prism-root .prism-grid__root { animation: prism-grid-enter var(--prism-grid-motion-fast, var(--prism-motion-fast)) var(--prism-grid-motion-spring, var(--prism-motion-spring)); }
-@keyframes prism-grid-enter { from { opacity: 0; transform: translateY(var(--prism-grid-space-1, var(--prism-space-1))); } to { opacity: 1; transform: none; } }
 .prism-root[data-animate="false"] [data-prism="grid"], .prism-root [data-animate="false"] [data-prism="grid"] { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-root [data-prism="grid"] { animation: none; transition: none; } }

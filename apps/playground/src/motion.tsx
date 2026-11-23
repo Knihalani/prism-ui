@@ -1,8 +1,9 @@
 import { Component, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Prism } from '@prism-ui/react';
+import { Prism, type Middleware } from '@prism-ui/react';
 import '@prism-ui/components/styles.css';
-import { demos, demoSource, type Demo } from './catalogue';
+import { demoSource, type Demo } from './catalogue';
+import { motionDemos as demos, motionRenderers } from './motion-demos';
 import { createReplay } from './replay';
 import { playgroundPlugins } from './plugins';
 import './motion.css';
@@ -13,6 +14,8 @@ const query = new URLSearchParams(location.search);
 const width = query.get('width') === '320' ? 320 : 760;
 const mode = query.get('mode') === 'dark' ? 'dark' : 'light';
 const instant = query.get('instant') === '1';
+const acknowledge = () => {};
+const delivery: Middleware[] = [(action, next) => { setTimeout(() => next(action), 400); }];
 document.documentElement.dataset.mode = mode;
 document.documentElement.dataset.width = String(width);
 
@@ -26,7 +29,7 @@ function Reply({ demo, immediate }: { demo: Demo; immediate: boolean }) {
   const source = useMemo(() => demoSource(demo, `motion-${demo.id}`), [demo]);
   const [replay] = useState(() => createReplay(source, () => ({ chars: 6, delay: 16 }), () => {}));
   useEffect(() => () => replay.stop(), [replay]);
-  return <ReplyBoundary><Prism source={immediate ? source : undefined} stream={immediate ? undefined : replay.stream} plugins={playgroundPlugins} mode={mode} locale="en-US" /></ReplyBoundary>;
+  return <ReplyBoundary><Prism source={immediate ? source : undefined} stream={immediate ? undefined : replay.stream} plugins={playgroundPlugins} renderers={motionRenderers} feedback={demo.id === 'feedback'} mode={mode} locale="en-US" onAction={acknowledge} middleware={delivery} /></ReplyBoundary>;
 }
 
 function Section({ demo, generation }: { demo: Demo; generation: number }) {

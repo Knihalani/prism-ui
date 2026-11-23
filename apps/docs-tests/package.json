@@ -1,0 +1,22 @@
+{
+  "name": "@prism-ui/docs-tests",
+  "private": true,
+  "type": "module",
+  "scripts": { "check": "bun test test" },
+  "devDependencies": {
+    "@prism-ui/react": "workspace:*",
+    "@prism-ui/components": "workspace:*",
+    "@prism-ui/state": "workspace:*",
+    "@prism-ui/themes": "workspace:*",
+    "ai": "5.0.60",
+    "@ai-sdk/react": "2.0.60",
+    "@ai-sdk/openai": "2.0.41",
+    "openai": "5.23.2",
+    "@anthropic-ai/sdk": "0.65.0",
+    "zod": "3.25.76",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2"
+  }
+}

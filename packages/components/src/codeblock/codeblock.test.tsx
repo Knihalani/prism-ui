@@ -17,6 +17,16 @@ afterEach(() => { cleanup(); setHighlighter(); });
 const registry = createRegistry([codeBlockDefinition]);
 const fence = (code: string, info = 'ts') => `\`\`\`${info}\n${code}\n\`\`\``;
 
+test('collapsed unwrapped previews retain horizontal scrolling across expand and collapse', () => {
+  const view = render(<Prism registry={registry} source={'```ui:code\n' + JSON.stringify({ code: 'x'.repeat(500) + '\nline two\nline three', collapseAfter: 2 }) + '\n```'} />);
+  const body = view.container.querySelector<HTMLElement>('[data-part="body"]')!;
+  expect(body.style.overflowX).toBe('auto'); expect(body.style.overflowY).toBe('hidden');
+  fireEvent.click(view.getByRole('button', { name: 'Show all 3 lines' }));
+  expect(body.style.overflowX).toBe('auto');
+  fireEvent.click(view.getByRole('button', { name: 'Show less' }));
+  expect(body.style.overflowX).toBe('auto'); expect(body.style.overflowY).toBe('hidden');
+});
+
 test('static registry render, metadata, empty and escaped unknown languages', () => {
   const view = render(<Prism registry={registry} source={fence('const x = 1;', 'ts {lines title="file.ts"}')} />);
   expect(view.getByRole('region').getAttribute('aria-label')).toBe('file.ts');

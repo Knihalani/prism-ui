@@ -12,6 +12,20 @@ afterEach(cleanup);
 function type(el: HTMLElement, value: string) { act(() => el.focus()); fireEvent.change(el, { target: { value } }); fireEvent.keyUp(el); }
 const fence = (value: unknown) => '```ui:view\n' + JSON.stringify(value) + '\n```';
 
+test('checkbox draw state toggles without replacing the native input or tick', () => {
+  const view = render(<Prism source={gallery.todos} />);
+  const input = view.getAllByRole('checkbox')[0] as HTMLInputElement;
+  const control = input.closest('[data-part="checkbox"]')!, mark = control.querySelector('[data-part="checkBox"]')!;
+  const path = mark.querySelector('path')!, checked = input.checked;
+  expect(path).not.toBeNull(); expect(mark.getAttribute('aria-hidden')).toBe('true');
+  fireEvent.click(input);
+  expect(input.checked).toBe(!checked); expect(control.hasAttribute('data-checked')).toBe(!checked);
+  expect(mark.querySelector('path')).toBe(path);
+  fireEvent.click(input);
+  expect(input.checked).toBe(checked); expect(control.hasAttribute('data-checked')).toBe(checked);
+  expect(view.getAllByRole('checkbox')[0]).toBe(input); expect(mark.querySelector('path')).toBe(path);
+});
+
 test('every gallery view renders statically with parts, docs and no skeletons', () => {
   for (const [name, source] of Object.entries(gallery)) {
     const view = render(<Prism source={source} locale="en-US" />);

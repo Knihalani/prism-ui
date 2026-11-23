@@ -104,8 +104,7 @@
 .prism-codeblock__root :is(.prism-codeblock__copy, .prism-codeblock__wrap, .prism-codeblock__ask, .prism-codeblock__collapse) { opacity: 0; pointer-events: none; transition: opacity var(--prism-codeblock-motion-fast, var(--prism-motion-fast)) var(--prism-codeblock-motion-spring, var(--prism-motion-spring)); }
 .prism-codeblock__root:is(:hover, :focus-within) :is(.prism-codeblock__copy, .prism-codeblock__wrap, .prism-codeblock__ask, .prism-codeblock__collapse) { opacity: 1; pointer-events: auto; }
 @media (hover: none) { .prism-codeblock__root :is(.prism-codeblock__copy, .prism-codeblock__wrap, .prism-codeblock__ask, .prism-codeblock__collapse) { opacity: 1; pointer-events: auto; } }
-.prism-codeblock__root { animation: prism-codeblock-enter var(--prism-codeblock-motion-fast, var(--prism-motion-fast)) var(--prism-codeblock-motion-spring, var(--prism-motion-spring)); }
-@keyframes prism-codeblock-enter { from { opacity: 0; transform: translateY(var(--prism-codeblock-space-1, var(--prism-space-1))); } to { opacity: 1; transform: none; } }
+
 .prism-root[data-animate="false"] [data-prism="codeblock"], .prism-root [data-animate="false"] [data-prism="codeblock"] { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-root [data-prism="codeblock"] { animation: none; transition: none; } }
 

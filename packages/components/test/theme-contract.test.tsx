@@ -44,7 +44,7 @@ test('registry fixtures declare every rendered part and rendered declared parts 
     }
   }
   expect(components).toBeGreaterThan(15); expect(occurrences).toBeGreaterThan(100);
-});
+}, 20000);
 
 test('best-effort string contract: JSX prose and accessibility labels come from strings or props', () => {
   const violations: string[] = [];

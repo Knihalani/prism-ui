@@ -1,5 +1,5 @@
 import { createElement, forwardRef, useCallback, useContext, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ElementType, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from 'react';
-import { ComponentContext, Icon, cx, useEmit, usePart, usePresentation, usePrism, useSlot, useStrings, useTheme } from '@prism-ui/react';
+import { ComponentContext, useCollapse, Icon, cx, useEmit, usePart, usePresentation, usePrism, useSlot, useStrings, useTheme } from '@prism-ui/react';
 
 export interface FrameOptions {
   component: string; title?: string; label?: string; state?: string; ask?: boolean; undo?: boolean;
@@ -83,10 +83,11 @@ export function useFrameOverflow() {
 }
 export interface FrameOverflowSlotProps<Model = unknown> extends HTMLAttributes<HTMLElement> { as?: ElementType; ref?: Ref<HTMLElement>; model?: Model; overflow?: ReturnType<typeof useFrameOverflow>; open?: boolean }
 export function FrameOverflow({ component, model, children }: { component: string; model?: unknown; children: ReactNode }) {
-  const overflow = useFrameOverflow(), strings = useStrings('frame', frameStrings);
+  const overflow = useFrameOverflow(), strings = useStrings('frame', frameStrings), collapse = useCollapse(overflow.open);
+  const content = useFramePart(component, 'overflowContent');
   const Root = useFrameSlot(component, 'overflow'), Trigger = useFrameSlot(component, 'overflowTrigger'), Content = useFrameSlot(component, 'overflowContent');
   return <Root as="div" {...useFramePart(component, 'overflow')} model={model} overflow={overflow} onKeyDown={overflow.onKeyDown} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) overflow.setOpen(false); }}>
     <Trigger as="button" {...useFramePart(component, 'overflowTrigger')} model={model} overflow={overflow} ref={overflow.trigger} type="button" aria-label={strings.moreLabel} title={strings.moreLabel} aria-expanded={overflow.open} aria-controls={overflow.id} onClick={() => overflow.setOpen(!overflow.open)}><Icon name="more" strokeLinecap="round" strokeWidth={4} /></Trigger>
-    <Content as="div" {...useFramePart(component, 'overflowContent')} model={model} overflow={overflow} id={overflow.id} hidden={!overflow.open}>{children}</Content>
+    <Content as="div" {...content} {...collapse} style={{ ...content.style, ...collapse.style }} model={model} overflow={overflow} id={overflow.id}>{children}</Content>
   </Root>;
 }

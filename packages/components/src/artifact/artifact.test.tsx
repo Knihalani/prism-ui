@@ -2,7 +2,7 @@ import '../../../react/test/setup';
 import { afterEach, expect, spyOn, test } from 'bun:test';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { createRegistry, defineTheme, Prism, type Action } from '@prism-ui/react';
+import { createRegistry, createSystemPrompt, defineTheme, Prism, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { ArtifactProvider, artifact, artifactPlugin } from './index';
 import { fence } from './fixtures';
@@ -28,9 +28,9 @@ test('serialized worker and iframe imports stay native instead of capturing Vite
 test('artifacts default to inline, with adaptive runtime and model instructions', () => {
   expect(artifact.schema!.coerce({ kind: 'html', source: '' }).value?.variant).toBe('inline');
   expect(artifact.feedback).toBe(true);
-  const docs = registry.docs();
-  expect(docs).toContain('@container'); expect(docs).toContain('window.prism.emit');
-  expect(docs).toContain('host-granted'); expect(docs).toContain('--prism-on-accent');
+  const docs = createSystemPrompt({ registry, artifacts: { statePaths: ['planning'] } });
+  expect(docs).toContain('@container'); expect(docs).toContain('prism.emit');
+  expect(docs).toContain('Granted read/write paths'); expect(docs).toContain('--prism-on-accent');
 });
 
 test('narrow inline toolbars reserve document flow space rather than covering the preview', async () => {
@@ -44,7 +44,7 @@ test('narrow inline toolbars reserve document flow space rather than covering th
 
 test('inline toolbar hover and focus override the complete resting selector', async () => {
   const css = await Bun.file(new URL('./artifact.css', import.meta.url)).text();
-  expect(css).toContain('.prism-root .prism-artifact__shell[data-variant="inline"]:is(:hover,:focus-within) .prism-artifact__header { opacity: 1; transform: none; pointer-events: auto; }');
+  expect(css).toContain('.prism-root .prism-artifact__shell[data-variant="inline"]:not(:hover,:focus-within) .prism-artifact__header { opacity: 0; translate: 0 min(2px, var(--prism-motion-distance)); pointer-events: none; }');
 });
 
 test('automatic content height can shrink after completion but never collapses while streaming', async () => {

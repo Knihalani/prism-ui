@@ -8,6 +8,12 @@ import '../src/num';
 
 afterEach(cleanup);
 
+test('host stepper draws its keyboard focus ring outside the clipping container', async () => {
+  const css = await Bun.file(new URL('../src/styles/host.css', import.meta.url)).text();
+  expect(css).toContain('.prism-estimate__stepper:has(:focus-visible) { outline: 2px solid var(--prism-focus); outline-offset: 2px; }');
+  expect(css).toContain('.prism-estimate__stepper :focus-visible { outline: none; }');
+});
+
 test('frame undo and keyboard redo affect only their estimate in a shared store', () => {
   const store = createStore(), props = { items: [{ id: 'seats', label: 'Seats', price: 20, qty: 5 }] };
   const view = render(<><Prism source={source({ ...props, id: 'first', title: 'First' })} store={store} animate={false} /><Prism source={source({ ...props, id: 'second', title: 'Second' })} store={store} animate={false} /></>);

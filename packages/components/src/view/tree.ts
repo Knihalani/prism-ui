@@ -117,19 +117,19 @@ function listAt(path: string, scope: ViewScope, read: Read) { const resolved = r
 export const listPath = (each: ViewValue, scope: ViewScope) => typeof each === 'string' ? resolvePath(each, scope) : each && typeof each === 'object' && !Array.isArray(each) && typeof each.$ref === 'string' ? resolvePath(each.$ref, scope) : undefined;
 export const bindPath = (value: ViewValue, scope: ViewScope) => value && typeof value === 'object' && !Array.isArray(value) && typeof value.$bind === 'string' ? resolvePath(value.$bind, scope) : undefined;
 /** Paths a node depends on, for per-node subscriptions. */
-export function collect(value: ViewValue, scope: ViewScope, into: Set<string>, depth = 0) {
+export function collect(value: ViewValue, scope: ViewScope, into: Set<string>, depth = 0, descendants = false) {
   if (typeof value === 'string') {
     if (value.includes('{{')) for (const match of value.matchAll(/\{\{([^{}]*)\}\}/g)) { const bar = formatBar(match[1]); exprDeps(bar < 0 ? match[1] : match[1].slice(0, bar), scope, into); };
     return into;
   }
   if (!value || typeof value !== 'object' || depth > 32) return into;
-  if (Array.isArray(value)) { for (const item of value) collect(item, scope, into, depth + 1); return into; }
+  if (Array.isArray(value)) { for (const item of value) collect(item, scope, into, depth + 1, descendants); return into; }
   const path = typeof value.$bind === 'string' ? value.$bind : typeof value.$ref === 'string' ? value.$ref : undefined;
   if (path !== undefined) { const resolved = resolvePath(path, scope); if (resolved) into.add(watchPath(resolved)); return into; }
   if (typeof value.$calc === 'string') { exprDeps(value.$calc, scope, into); return into; }
   { const p = listPath(value.each, scope); if (p) into.add(watchPath(p)); }
   if (Array.isArray(value.tabs)) for (const tab of value.tabs) if (tab && typeof tab === 'object' && !Array.isArray(tab)) { collect(tab.label, scope, into, depth + 1); collect(tab.badge, scope, into, depth + 1); }
-  for (const key of Object.keys(value)) if (!unsafe(key) && !raw(key) && key !== 'each') EXPR_KEYS.has(key) && typeof value[key] === 'string' ? exprDeps(value[key] as string, scope, into) : collect(value[key], scope, into, depth + 1);
+  for (const key of Object.keys(value)) if (!unsafe(key) && (descendants || !raw(key)) && key !== 'each') EXPR_KEYS.has(key) && typeof value[key] === 'string' ? exprDeps(value[key] as string, scope, into) : collect(value[key], scope, into, depth + 1, descendants);
   return into;
 }
 const EXPR_KEYS = new Set(['when', 'selected', 'disabled', 'filter']);

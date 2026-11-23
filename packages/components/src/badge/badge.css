@@ -28,8 +28,6 @@
 .prism-root .prism-badge__ask { opacity: 0; pointer-events: none; transition: opacity var(--prism-badge-motion-fast, var(--prism-motion-fast)) var(--prism-badge-motion-spring, var(--prism-motion-spring)); }
 .prism-root .prism-badge__root:is(:hover, :focus-within) .prism-badge__ask { opacity: 1; pointer-events: auto; }
 @media (hover: none) { .prism-root .prism-badge__ask { opacity: 1; pointer-events: auto; } }
-.prism-root .prism-badge__root { animation: prism-badge-enter var(--prism-badge-motion-fast, var(--prism-motion-fast)) var(--prism-badge-motion-spring, var(--prism-motion-spring)); }
-@keyframes prism-badge-enter { from { opacity: 0; transform: translateY(var(--prism-badge-space-1, var(--prism-space-1))); } to { opacity: 1; transform: none; } }
 .prism-root[data-animate="false"] [data-prism="badge"], .prism-root [data-animate="false"] [data-prism="badge"] { animation: none; transition: none; }
 @media (prefers-reduced-motion: reduce) { .prism-root [data-prism="badge"] { animation: none; transition: none; } }
 
