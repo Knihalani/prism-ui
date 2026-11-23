@@ -3,6 +3,7 @@ import { afterEach, expect, test } from 'bun:test';
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { StrictMode, useState } from 'react';
 import { createStore } from '@prism-ui/state';
+import { parse } from '@prism-ui/core';
 import { s } from '@prism-ui/schema';
 import { Prism, createRegistry, defineComponent, useSentAnnouncement, type PrismComponentProps } from '../src';
 import { createFormat } from '../src/format';
@@ -91,6 +92,11 @@ test('component summaries use coerced bound data, not rendered DOM, with safe fa
   expect(blockAnnouncement({ type: 'component', name: 'state', key: 'state' }, registry, context)).toBe('');
   expect(blockAnnouncement({ type: 'paragraph', key: 'empty', children: [] }, registry, context)).toBe('');
   expect(blockAnnouncement({ type: 'component', name: 'unknown', key: 'unknown', props: { title: 'Untyped', items: [1, 2] } }, registry, context)).toBe('Untyped. 2 items');
+});
+
+test.each(['alpha  \nbeta', 'alpha\\\nbeta', '**alpha  \nbeta**'])('hard breaks keep adjacent words separate: %s', source => {
+  const registry = createRegistry(), context = { store: createStore(), format: createFormat('en-US', 'USD') };
+  expect(blockAnnouncement(parse(source).children[0], registry, context)).toBe('alpha beta');
 });
 
 function Receipt({ props }: PrismComponentProps) {

@@ -30,6 +30,7 @@ function resolve(value: unknown, store: Store): any {
 }
 
 export function blockAnnouncement(node: Node, registry: Registry, context: Pick<PrismContextValue, 'store' | 'format'>): string {
+  if (node.type === 'break') return ' ';
   if (node.type === 'component' && node.name === 'state') return '';
   const name = node.type === 'component' ? node.name! : node.type;
   const def = registry.get(name);
