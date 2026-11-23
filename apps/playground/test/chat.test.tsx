@@ -89,7 +89,7 @@ test.each(['Enter', 'Send message', 'suggestion'])('first message via %s moves f
   expect(composer === original).toBe(false);
   expect(document.activeElement === composer).toBe(true);
   fireEvent.click(view.getByRole('button', { name: 'Settings' }));
-  expect(document.activeElement === view.getByLabelText('Assistant')).toBe(true);
+  expect(document.activeElement === view.getByRole('button', { name: 'OpenAI' })).toBe(true);
   await act(async () => { fireEvent.click(view.getByRole('button', { name: 'Close' })); fireEvent.click(view.getByRole('button', { name: 'Stop response' })); });
 });
 
@@ -198,8 +198,9 @@ test('settings apply injected live agent to next turn; gallery still uses script
   const live: Agent = { id: 'mock', label: 'Mock model', async *respond(input) { calls.push(input.kind); yield { type: 'text', delta: 'A connected model replied.' }; } };
   const view = render(<App pace={fast} agentFactory={() => live} />);
   fireEvent.click(view.getByRole('button', { name: 'Settings' }));
-  fireEvent.change(view.getByLabelText('Assistant'), { target: { value: 'openai' } });
+  fireEvent.click(view.getByRole('button', { name: 'OpenAI' }));
   change(view.getByLabelText('API key'), 'test-only');
+  fireEvent.change(view.getByLabelText('Model preset'), { target: { value: 'custom' } });
   change(view.getByLabelText('Model'), 'mock-model');
   fireEvent.click(view.getByRole('button', { name: 'Save changes' }));
   send(view, 'Hello from a real person'); await done(view);

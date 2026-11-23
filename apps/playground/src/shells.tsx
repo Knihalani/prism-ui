@@ -5,6 +5,8 @@ import { AssistantTurn } from './ui/Turn';
 import { availableThemes } from './themes';
 import { shells, type Shell } from './url-state';
 import type { PlaygroundController } from './usePlayground';
+import { Settings } from './ui/Settings';
+import { modelPresets } from './agent/policy';
 
 type Props = { c: PlaygroundController };
 const descriptions = ['Find the right balance of power and portability.', 'Four days, with room to get a little lost.', 'Get from a red build to a safe recovery.', 'Explore two directions, then make it yours.', 'A thoughtful day together, with a clear budget.', 'Turn interview notes into a useful next step.', 'A live team dashboard, with a decision built in.'];
@@ -21,12 +23,13 @@ export function ShellSwitcher({ shell, theme, mode, inert, onShell, onTheme, onM
   </nav>;
 }
 function Composer({ c }: Props) {
+  const chip = useRef<HTMLButtonElement>(null);
   return <div className="composer-area"><form className="composer" onSubmit={event => { event.preventDefault(); if (!c.busy) c.send(c.current.draft); }}>
     <textarea ref={c.textarea} rows={1} aria-label="Message Prism" placeholder="Message Prism" value={c.current.draft} onChange={event => { c.current.draft = event.target.value; c.notify(); }} onKeyDown={event => {
       if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) { event.preventDefault(); if (!c.busy) c.send(c.current.draft); }
     }} />
     <button type={c.busy ? 'button' : 'submit'} className="send-btn" title={c.busy ? 'Stop response' : 'Send message'} aria-label={c.busy ? 'Stop response' : 'Send message'} disabled={!c.busy && !c.current.draft.trim()} onClick={c.busy ? () => c.stop() : undefined}><Icon name={c.busy ? 'stop' : 'send'} /></button>
-  </form><button className="model-status" onClick={() => c.openOverlay('settings')}>{c.live ? `${c.providerName} · ${c.config.model || (c.config.provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4o-mini')}` : 'Scripted demo · Connect a model'}</button></div>;
+  </form><button ref={chip} className="model-status" aria-haspopup="dialog" aria-expanded={c.overlay === 'settings'} aria-controls="model-settings" onClick={() => c.overlay === 'settings' ? c.closeOverlay() : c.openOverlay('settings')}><span className="model-dot" data-live={c.live} />{c.live ? `Live · ${c.config.model || modelPresets[c.config.provider === 'scripted' ? 'openai' : c.config.provider ?? 'openai'][0]}` : 'Scripted demo · Connect a model'}</button>{c.overlay === 'settings' && <Settings anchor={chip} config={c.config} onSave={c.saveSettings} onForget={c.forgetKey} onClose={c.closeOverlay} />}</div>;
 }
 function ConversationPicker({ c }: Props) {
   const value = c.empty ? '' : 'chat:' + c.current.id;
@@ -36,7 +39,7 @@ function ConversationPicker({ c }: Props) {
   }}><option value="" disabled>New conversation</option>{c.ownChats.length > 0 && <optgroup label="Conversations">{c.ownChats.map(chat => <option key={chat.id} value={'chat:' + chat.id}>{chat.title}</option>)}</optgroup>}<optgroup label="Try a scenario">{scenarios.map(item => <option key={item.id} value={'scenario:' + item.id}>{item.title}</option>)}</optgroup></select>;
 }
 function ConversationSurface({ c, compact = false }: Props & { compact?: boolean }) {
-  return <main className={'chat-main' + (compact ? ' compact-conversation' : '')} data-conversation={c.current.id} inert={c.overlay || (c.drawer && c.mobile) ? true : undefined}>
+  return <main className={'chat-main' + (compact ? ' compact-conversation' : '')} data-conversation={c.current.id} inert={c.overlay === 'palette' || (c.drawer && c.mobile) ? true : undefined}>
     <header className="chat-header">{compact ? <><span className="assistant-mark"><Icon name="design" /></span><strong>Assistant</strong><span className="assistant-presence">{c.busy ? 'Working' : 'Ready'}</span><div className="panel-tools"><button className="icon-btn" title="Components" aria-label="Components" onClick={() => c.openOverlay('palette')}><Icon name="grid" /></button><button className="icon-btn" title="New chat" aria-label="New chat" onClick={c.newChat}><Icon name="plus" /></button><button className="icon-btn" title="Settings" aria-label="Settings" onClick={() => c.openOverlay('settings')}><Icon name="settings" /></button></div></> : <><button ref={c.sidebarToggle} className={'icon-btn sidebar-toggle' + (c.sidebar ? ' desktop-hidden' : '')} title="Open sidebar" aria-label="Open sidebar" onClick={() => { if (c.mobile) c.setDrawer(true); else c.setSidebar(true); }}><Icon name="sidebar" /></button><span>{c.empty ? 'Prism' : c.current.title}</span><span className="chat-header-note">A little more possible.</span></>}</header>
     {compact && <div className="conversation-picker"><ConversationPicker c={c} /><span>↵</span></div>}
     {c.empty ? <div className="landing"><div className="landing-inner">{compact && <span className="eyebrow">YOUR IDEAS, IN MOTION</span>}<h1>{compact ? 'What’s next?' : 'What are we working on?'}</h1>{!compact && <Composer c={c} />}<div className="suggestions" aria-label="Suggestions">{scenarios.map((scenario, index) => <button key={scenario.id} className="suggestion" onClick={() => c.send(scenario.prompt)}><Icon name={scenarioIcons[index]} /><strong>{scenarioTitles[index]}</strong><span>{descriptions[index]}</span></button>)}</div></div></div> : <div ref={c.scroll} className="thread-scroll" onScroll={() => { const element = c.scroll.current!; c.current.scroll = element.scrollTop; const following = element.scrollHeight - element.scrollTop - element.clientHeight < 72; if (following !== c.current.following) { c.current.following = following; c.notify(); } }}>
