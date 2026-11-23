@@ -26,6 +26,20 @@ test.each(availableThemes)('$name exports only overrides and evaluates to the li
   expect(source).not.toContain('surfaceRaised:');
 });
 
+test('font stacks use readable single quotes and preserve escaping in either quoting style', () => {
+  const draft: ThemeDraft = { name: 'Readable fonts', base: 'host', tokens: {
+    fontBody: '"DM Sans", sans-serif',
+    fontDisplay: `"Director's Sans", serif`,
+    fontMono: 'A "quoted" \\ family\nnext\t\u2028\u2029',
+  }, dark: {} };
+  const source = exportTheme(draft);
+  expect(source).toContain(`fontBody: '"DM Sans", sans-serif',`);
+  expect(source).toContain('fontDisplay: ' + JSON.stringify(draft.tokens.fontDisplay) + ',');
+  expect(source).not.toContain('\u2028');
+  expect(source).not.toContain('\u2029');
+  expect(evaluate(source)).toEqual(toTheme(draft, availableThemes));
+});
+
 test('empty maps are omitted and every catalogue key round-trips in stable catalogue order', () => {
   const empty: ThemeDraft = { name: '', base: 'host', tokens: {}, dark: {} };
   const source = exportTheme(empty);

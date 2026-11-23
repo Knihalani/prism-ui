@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import type { Tokens } from '@prism-ui/react';
+import { tokenVariable, type Tokens } from '@prism-ui/react';
 import { availableThemes } from '../themes';
 import { Icon } from '../ui/Icon';
 import { baseValue, clearToken, radiusScale, setToken, spaceScale, springTokens, toTheme, tokenCatalogue, typeScale, type EditTarget, type ThemeDraft, type TokenDefinition } from './model';
@@ -15,7 +15,6 @@ const fonts = [
   ['Manrope', '"Shell Manrope", sans-serif'], ['Inter', '"Shell Inter", sans-serif'], ['JetBrains Mono', '"Shell Mono", monospace'],
   ['DM Sans', '"DM Sans", sans-serif'], ['Caveat', '"Caveat", cursive'], ['Inter Tight', '"Inter Tight", sans-serif'], ['IBM Plex Mono', '"IBM Plex Mono", monospace'],
 ];
-const variable = (key: string) => '--prism-' + key.replace(/[A-Z]|(?<=space|text|elevation)[0-9]/g, c => '-' + c.toLowerCase());
 const px = (value: string | undefined, fallback: number) => value && /^\d*\.?\d+(px|rem)$/.test(value) ? parseFloat(value) * (value.endsWith('rem') ? 16 : 1) : fallback;
 const ms = (value: string | undefined) => value ? parseFloat(value) * (value.endsWith('ms') ? 1 : 1000) : 0;
 
@@ -26,7 +25,7 @@ function ColourWell({ value, token, revision, onChange }: { value?: string; toke
     if (!root) return;
     const probe = document.createElement('span');
     probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
-    probe.style.color = value || `var(${variable(token)}, currentColor)`;
+    probe.style.color = value || `var(${tokenVariable(token)}, currentColor)`;
     root.append(probe);
     const computed = getComputedStyle(probe).color;
     probe.remove(); setColour(computed || 'transparent');

@@ -27,7 +27,8 @@ test('toggle is nonmodal, restores focus, and round-trips editor URL state witho
   const editor = open(view);
   expect(new URLSearchParams(location.search).get('editor')).toBe('1');
   expect(view.container.querySelector('.shell-stage')?.hasAttribute('inert')).toBe(false);
-  expect(view.getByRole('combobox', { name: 'Design theme' }).textContent).toContain('Custom (My theme)');
+  expect(view.getByRole('combobox', { name: 'Design theme' }).textContent).toContain('My theme');
+  expect(view.getByRole('combobox', { name: 'Design theme' }).getAttribute('title')).toBe('Custom: My theme');
   fireEvent.click(editor.getByRole('button', { name: 'Close theme editor' }));
   expect(view.queryByRole('complementary', { name: 'Theme editor' })).toBeNull();
   expect(new URLSearchParams(location.search).has('editor')).toBe(false);

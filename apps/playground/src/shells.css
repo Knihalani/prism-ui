@@ -44,7 +44,8 @@
 .switcher-divider { align-self: stretch; width: 1px; margin: 6px 0; background: var(--app-line); }
 .theme-choice { display: flex; align-items: center; gap: 4px; color: var(--app-muted); }
 .theme-choice > span { display: none; }
-.theme-choice select { max-width: 110px; padding: 4px 2px; border: 0; background: transparent; color: var(--app-text); font-size: 11px; }
+.theme-choice select { max-width: 150px; padding: 4px 2px; border: 0; background: transparent; color: var(--app-text); font-size: 11px; text-overflow: ellipsis; }
+.theme-choice[data-custom]::before { content: 'Custom'; font-size: 9px; color: var(--app-muted); }
 .mode-choice { display: grid; place-items: center; border: 0; border-left: 1px solid var(--app-line); width: 30px; background: transparent; color: var(--app-muted); }
 
 .shell.shell-editor { --shell-font: "Shell Inter", "Liberation Sans", Arial, sans-serif; --shell-radius: 7px; --shell-gap: 12px; --shell-density: .85; --app-bg: #fbfcfd; --app-panel: #f3f4f6; --app-fill: #edf0f4; --app-text: #303744; --app-muted: #687381; --app-line: #e1e5eb; --app-accent: #356bd1; --app-accent-soft: #e4ebfa; font-size: 13px; }
