@@ -60,6 +60,11 @@ test('Objects tabs retain whole labels in a compact, scrollable paper strip', ()
   expect(objects.css).toContain('@container (max-width:360px) { :scope .prism-tabs__root { padding:12px; }');
 });
 
+test('Print pill tabs do not shrink ordinary words into letter fragments', () => {
+  expect(print.css).toContain('.prism-tabs__list { gap:0; min-height:40px; overflow-x:auto; flex-wrap:nowrap; }');
+  expect(print.css).toContain('white-space:nowrap; overflow-wrap:normal; word-break:normal; flex:0 0 auto;');
+});
+
 test('Instrument tabs keep whole labels in a scrollable strip with narrow chassis padding', () => {
   const view = render(<Prism theme={instrument} source={'::::tabs{title="Be available"}\n:::tab{label="Before"}\nFirst\n:::\n:::tab{label="During"}\nSecond\n:::\n::::'} animate={false} />);
   expect(within(view.container).getByRole('tab', { name: 'Before' }).textContent).toBe('Before');

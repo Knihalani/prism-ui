@@ -252,8 +252,8 @@ export const print = defineTheme({
     :scope :is(.prism-runbook__progress,.prism-summary__actionsTitle,.prism-summary__progress,.prism-troubleshoot__position,.prism-grid__meta) { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text-muted); }
     :scope .prism-runbook__actions { min-width:0; }
     :scope .prism-runbook__stuck { font:10px var(--prism-font-mono); }
-    :scope .prism-tabs__list { gap:0; min-height:40px; overflow:visible; flex-wrap:wrap; }
-    :scope .prism-tabs__tab { min-width:0; white-space:normal; flex:1; padding:12px 14px; color:var(--prism-text-muted); font:11px/1.5 var(--prism-font-mono); }
+    :scope .prism-tabs__list { gap:0; min-height:40px; overflow-x:auto; flex-wrap:nowrap; }
+    :scope .prism-tabs__tab { min-width:0; white-space:nowrap; overflow-wrap:normal; word-break:normal; flex:0 0 auto; padding:12px 14px; color:var(--prism-text-muted); font:11px/1.5 var(--prism-font-mono); }
     :scope .prism-tabs__indicator { display:none; }
     :scope .prism-tab__body { padding:18px 0; }
     :scope .prism-badge__root { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text); }
