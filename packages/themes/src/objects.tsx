@@ -105,7 +105,8 @@ export const objects = defineTheme({
   },
   css: `
     :scope { container-type:inline-size; padding:24px; display:grid; grid-template-columns:minmax(0,1fr); background-color:var(--prism-bg); color:var(--prism-text); --objects-grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='130'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Cpath d='M0 0h130v130H0z' filter='url(%23n)' opacity='.075'/%3E%3C/svg%3E"); background-image:var(--objects-grain); }
-    :scope > * { min-width:0; width:100%; box-sizing:border-box; }
+    :scope > *, :scope > [data-prism-flow] > * { min-width:0; width:100%; box-sizing:border-box; }
+    :scope > [data-prism-flow] { display:grid; grid-template-columns:minmax(0,1fr); }
     :scope[data-prism-theme="dark"] { --prism-frame-note-yellow:#4b4630; --prism-frame-note-pink:#503e39; --prism-frame-note-sage:#344b40; --prism-frame-card-two:#323e34; --prism-frame-card-three:#46422f; --prism-frame-tape:#786f50; --prism-frame-stamp:#efb2a2; --prism-frame-slot:#171611; }
     @media (prefers-color-scheme:dark) { :scope[data-prism-theme="auto"] { --prism-frame-note-yellow:#4b4630; --prism-frame-note-pink:#503e39; --prism-frame-note-sage:#344b40; --prism-frame-card-two:#323e34; --prism-frame-card-three:#46422f; --prism-frame-tape:#786f50; --prism-frame-stamp:#efb2a2; --prism-frame-slot:#171611; } }
     :scope .prism-heading__root { font-family:var(--prism-font-display); font-weight:600; letter-spacing:-1px; line-height:1; }

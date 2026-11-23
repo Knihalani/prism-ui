@@ -1,3 +1,15 @@
+.prism-root > [data-prism-flow] { display: flow-root; min-width: 0; }
+.prism-root [data-prism-fresh] {
+  animation: prism-text-settle var(--prism-motion-base) var(--prism-motion-ease) both;
+}
+@keyframes prism-text-settle {
+  from { opacity: 0; filter: blur(var(--prism-motion-blur)); }
+  to { opacity: 1; filter: blur(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prism-root [data-prism-fresh] { animation: none; }
+}
+.prism-root[data-animate="false"] [data-prism-fresh] { animation: none; }
 .prism-root [data-prism-skeleton-exit] {
   transition: opacity var(--prism-motion-fast) var(--prism-motion-ease-exit) !important;
   translate: none !important; filter: none !important;
@@ -11,21 +23,21 @@
 .prism-root[data-prism-presentation][data-state="streaming"] {
   --prism-stream-tail: "";
 }
-.prism-root[data-prism-presentation] > :not(:is(.prism-paragraph__root, .prism-heading__root, .prism-list__root, .prism-blockquote__root, .prism-code__root):last-child),
+:is(.prism-root[data-prism-presentation], .prism-root[data-prism-presentation] > [data-prism-flow]) > :not([data-prism-flow], :is(.prism-paragraph__root, .prism-heading__root, .prism-list__root, .prism-blockquote__root, .prism-code__root):last-child),
 .prism-root[data-prism-presentation] :is(.prism-list__root, .prism-listItem__root, .prism-blockquote__root) > :not(:is(.prism-paragraph__root, .prism-heading__root, .prism-list__root, .prism-listItem__root, .prism-blockquote__root, .prism-code__root):last-child) {
   --prism-stream-tail: none;
 }
 .prism-root[data-prism-presentation] :where(.prism-paragraph__root:not(:empty), .prism-heading__root, .prism-code__root > code):not(:has(.prism-stream-caret))::after {
   content: var(--prism-stream-tail, none);
 }
-.prism-root[data-prism-presentation][data-state="streaming"]:empty {
+.prism-root[data-prism-presentation][data-state="streaming"]:is(:empty, :has(> [data-prism-flow]:empty)) {
   min-block-size: 1lh;
 }
-.prism-root[data-prism-presentation][data-state="streaming"]:empty::after {
+.prism-root[data-prism-presentation][data-state="streaming"]:is(:empty, :has(> [data-prism-flow]:empty))::after {
   content: "";
 }
 .prism-root[data-prism-presentation] :where(.prism-paragraph__root, .prism-heading__root, .prism-code__root > code)::after,
-.prism-root[data-prism-presentation][data-state="streaming"]:empty::after,
+.prism-root[data-prism-presentation][data-state="streaming"]:is(:empty, :has(> [data-prism-flow]:empty))::after,
 .prism-stream-caret {
   position: absolute;
   inline-size: 2px;
@@ -70,7 +82,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .prism-root[data-prism-presentation]:not([data-animate="false"]) :where(.prism-paragraph__root, .prism-heading__root, .prism-code__root > code)::after,
-  .prism-root[data-prism-presentation][data-state="streaming"]:not([data-animate="false"]):empty::after,
+  .prism-root[data-prism-presentation][data-state="streaming"]:not([data-animate="false"]):is(:empty, :has(> [data-prism-flow]:empty))::after,
   .prism-root[data-prism-presentation]:not([data-animate="false"]) .prism-stream-caret {
     animation: prism-caret-breathe calc(var(--prism-motion-slow) * 3) var(--prism-motion-ease-in-out) infinite;
   }

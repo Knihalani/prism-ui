@@ -144,7 +144,7 @@ export const instrument = defineTheme({
     :scope .prism-estimate__submit { width:100%; min-height:40px; border:1px solid color-mix(in srgb,var(--prism-accent) 70%,var(--prism-text)); border-radius:3px; background:var(--prism-accent); box-shadow:0 3px 0 color-mix(in srgb,var(--prism-accent) 60%,var(--prism-text)); font:500 11px/1.4 var(--prism-font-mono); text-transform:uppercase; letter-spacing:.08em; }
     :scope .prism-estimate__submit[data-sent] { background:var(--prism-bg); color:var(--prism-text); border-color:var(--prism-border-strong); box-shadow:0 2px 0 var(--prism-border); opacity:1; }
     :scope { container-type:inline-size; box-sizing:border-box; padding:28px; background:var(--prism-bg); --prism-prose-measure:760px; }
-    :scope > * { min-width:0; width:100%; box-sizing:border-box; }
+    :scope > *, :scope > [data-prism-flow] > * { min-width:0; width:100%; box-sizing:border-box; }
     :scope[data-prism-theme="dark"], :scope [data-prism-theme="dark"] { --prism-frame-lcd:#1b1c18; --prism-frame-lcd-ink:#c3c2b7; --prism-frame-groove:#161713; --prism-frame-groove-shadow:#0e0f0c; --prism-frame-key-shadow:#141510; --prism-frame-chassis-shadow:#11120f; }
     :scope [data-instrument-chassis] { box-sizing:border-box; min-width:0; position:relative; padding:24px; border:1px solid var(--prism-border-strong); border-radius:var(--prism-radius-lg); background:var(--prism-surface); box-shadow:0 3px 0 var(--prism-frame-chassis-shadow), inset 0 1px 0 var(--prism-surface-raised); }
     :scope [data-instrument-header] { position:relative; display:flex; align-items:center; flex-wrap:wrap; gap:10px 16px; margin:0 0 22px; padding:0 0 16px; border-bottom:1px solid var(--prism-border); }

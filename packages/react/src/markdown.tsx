@@ -1,7 +1,9 @@
-import { Children, createContext, useContext, type ElementType, type ReactNode } from 'react';
+import { Children, createContext, useContext, useLayoutEffect, useRef, type ElementType, type ReactNode } from 'react';
 import type { Node } from '@prism-ui/core';
 import { PrismPart, usePart, usePrism, useStrings } from './context';
 import { defineComponent } from './registry';
+import { motionDuration } from './motion';
+import { settleText, type FreshTextState } from './fresh';
 
 export interface MarkdownProps { node: Node; children?: ReactNode }
 export const markdownParts = {
@@ -22,7 +24,7 @@ export function useMarkdown({ node, children }: MarkdownProps, component = node.
  const external = /^(?:https?:)?\/\//i.test(node.url ?? '');
  return { node, children, component, parts, strings, external,
   heading: ('h' + Math.max(1, Math.min(6, node.depth ?? 1))) as ElementType,
-  rootProps: { ...parts.root, 'data-prism-enter': blocks.has(component) && prism.animate && !node.key.includes('.') ? '' : undefined,
+  rootProps: { ...parts.root, 'data-prism-enter': blocks.has(component) && prism.animate && !prism.unstyled && !node.key.includes('.') ? '' : undefined,
    style: { overflowWrap: 'anywhere' as const, ...parts.root.style } },
   cellProps: { ...parts.root, style: { textAlign: align?.[Number(node.key.split('.').at(-1))] ?? undefined, ...parts.root.style } },
   wrapperProps: { ...parts.wrapper, style: { overflowX: 'auto' as const, containerType: 'inline-size', marginBlockStart: node.key.split('.').at(-1) === '0' ? 0 : 'var(--prism-table-space-5, var(--prism-space-5))', ...parts.wrapper.style } },
@@ -37,7 +39,23 @@ function Root({ as, model, children, ...props }: { as: ElementType; model: Markd
 }
 export function Heading(props: MarkdownProps) { const model = useMarkdown(props); return <Root as={model.heading} model={model}>{props.children}</Root>; }
 export function Paragraph(props: MarkdownProps) { const model = useMarkdown(props); return <Root as="p" model={model}>{props.children}</Root>; }
-export function Text(props: MarkdownProps) { const model = useMarkdown(props); return <Root as="span" model={model}>{props.node.value}</Root>; }
+function SettlingText({ value }: { value: string }) {
+ const { resolvedTheme } = usePrism();
+ const state = useRef<FreshTextState>({ value: '', settled: 0, tail: 0, segments: [] });
+ const fresh = useRef<HTMLSpanElement>(null), lifetime = useRef(400);
+ useLayoutEffect(() => {
+  if (!fresh.current) return;
+  const style = getComputedStyle(fresh.current);
+  lifetime.current = motionDuration(style.getPropertyValue('--prism-motion-base'), 240) + motionDuration(style.getPropertyValue('--prism-motion-fast'), 160);
+ }, [resolvedTheme]);
+ const text = settleText(state.current, value, performance.now(), lifetime.current);
+ return <>{value.slice(0, text.settled)}{text.segments.map((segment, index) => <span ref={index === 0 ? fresh : undefined} data-prism-fresh="" key={segment.key}>{value.slice(segment.start, text.segments[index + 1]?.start)}</span>)}</>;
+}
+export function Text(props: MarkdownProps) {
+ const model = useMarkdown(props), prism = usePrism();
+ return <Root as="span" model={model}>{!Object.isFrozen(props.node) && prism.animate && !prism.unstyled
+  ? <SettlingText value={props.node.value ?? ''} /> : props.node.value}</Root>;
+}
 export function List(props: MarkdownProps) { const model = useMarkdown(props); return <Root as={props.node.ordered ? 'ol' : 'ul'} model={model} start={props.node.ordered ? props.node.start : undefined}>{props.children}</Root>; }
 export function ListItem(props: MarkdownProps) {
  const model = useMarkdown(props);

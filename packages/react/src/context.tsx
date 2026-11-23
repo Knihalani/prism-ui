@@ -1,4 +1,4 @@
-import { createContext, createElement, forwardRef, useContext, type ComponentPropsWithRef, type ComponentType, type CSSProperties, type ElementType, type ReactElement } from 'react';
+import { createContext, createElement, forwardRef, useContext, useRef, type ComponentPropsWithRef, type ComponentType, type CSSProperties, type ElementType, type ReactElement } from 'react';
 import type { Store } from '@prism-ui/state';
 import type { Node } from '@prism-ui/core';
 import type { Registry, ComponentDef } from './registry';
@@ -6,6 +6,7 @@ import { ThemeContext, type Theme, type ResolvedTheme } from './theme';
 import type { Format } from './format';
 import type { Receipt } from './presentation';
 import { SkeletonPart } from './skeleton';
+import { ReplyEntryContext } from './reply-entry';
 
 export interface Action {
   type: string; component: string; id: string; payload: unknown;
@@ -35,10 +36,13 @@ export function usePrism(): PrismContextValue {
 }
 export const cx = (...values: (string | false | null | undefined)[]) => values.filter(Boolean).join(' ');
 export function usePart(component: string, part: string, state?: string) {
-  const { unstyled, customization, classNames, styles } = usePrism(), theme = useContext(ThemeContext).theme.components[component];
+  const { animate, unstyled, customization, classNames, styles } = usePrism(), theme = useContext(ThemeContext).theme.components[component];
+  const entry = useContext(ReplyEntryContext);
   const className = customization ? customization.classNames[component]?.[part] ?? theme?.classNames?.[part] : classNames[component]?.[part];
   const style = customization ? { ...theme?.styles?.[part], ...customization.styles[component]?.[part] } : styles[component]?.[part];
-  return { className: cx(!unstyled && `prism-${component}__${part}`, className) || undefined, style, 'data-prism': component, 'data-part': part, 'data-state': state };
+  return { className: cx(!unstyled && `prism-${component}__${part}`, className) || undefined,
+    style: part === 'root' && animate && !unstyled && entry ? { ...style, '--prism-motion-index': entry.index } as CSSProperties : style,
+    'data-prism': component, 'data-part': part, 'data-state': state };
 }
 export function useSlot<T extends ComponentType<any>>(component: string, part: string, Default: T): T {
   const prism = usePrism(), theme = useContext(ThemeContext).theme;
@@ -53,6 +57,8 @@ export function useStrings(component: string, fallback: Record<string, string> =
 }
 export const PrismPart = forwardRef<any, { as?: ElementType; slotProps?: Record<string, unknown>; [key: string]: any }>(function PrismPart({ as = 'div', slotProps, ...props }, ref) {
   const prism = useContext(PrismContext);
+  const entry = useContext(ReplyEntryContext), history = useRef(entry?.history ?? false);
+  if (history.current && prism?.animate && !prism.unstyled) props['data-prism-entered'] = '';
   const theme = useContext(ThemeContext).theme, component = props['data-prism'], part = props['data-part'];
   const Custom = prism?.customization ? prism.customization.slots[component]?.[part] ?? theme.components[component]?.slots?.[part] : prism?.slots[component]?.[part];
   const elementProps = { ...props, ...(Custom ? { as, ...slotProps } : {}) };

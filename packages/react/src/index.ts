@@ -3,6 +3,7 @@ export type { PrismProps } from './Prism';
 export { defineRenderer, registerFeedbackSurface } from './renderers';
 export type { RendererProps, RendererOptions, RendererAction, Renderers, PartialData, FeedbackSurfaceProps } from './renderers';
 export { usePrismStream } from './stream';
+export { useSmoothHeight, useFollowScroll } from './reply-motion';
 export type { PrismStream, StreamOptions } from './stream';
 export { createRegistry, defineComponent, defaultRegistry, registerComponent, toPromptDocs } from './registry';
 export type { ComponentDef, PrismComponentProps, Registry } from './registry';
