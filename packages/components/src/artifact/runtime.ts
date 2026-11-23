@@ -119,9 +119,9 @@ function installArtifact(id: string, strings: typeof artifactStrings, exported?:
   const frame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
   const loadModule = async (source: string) => {
     const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
-    try { return await import(url); } finally { URL.revokeObjectURL(url); }
+    try { return await import(/* @vite-ignore */ url); } finally { URL.revokeObjectURL(url); }
   };
-  const library = (specifier: string) => import(specifier);
+  const library = (specifier: string) => import(/* @vite-ignore */ specifier);
   const runScript = async (original: HTMLScriptElement) => {
     if (!['', 'module', 'text/javascript', 'application/javascript'].includes(original.type)) return;
     const script = document.createElement('script');
