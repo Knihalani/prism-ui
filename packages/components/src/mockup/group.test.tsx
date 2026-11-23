@@ -42,6 +42,23 @@ test('sent groups ignore duplicate submit shortcuts until explicitly edited', ()
   fireEvent.keyDown(tab, { key: 'Enter', metaKey: true });
   expect(x.actions).toHaveLength(2);
 });
+test('sent group drawings release their hit region and regain it when edited', () => {
+  const x = setup(a + b + '</h1>\n```', true);
+  const canvas = x.view.getByRole('application');
+  fireEvent.keyDown(canvas, { key: 'd' });
+  fireEvent.pointerDown(canvas, { button: 0, pointerId: 1, clientX: 10, clientY: 10 });
+  fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 30, clientY: 20 });
+  fireEvent.pointerUp(canvas, { pointerId: 1, clientX: 50, clientY: 30 });
+  x.change(x.view.getByPlaceholderText('Add a comment…'), 'A drawing');
+  fireEvent.click(x.view.getByRole('button', { name: 'Save' }));
+  const path = x.view.container.querySelector('[data-part="canvas"] ~ [data-part="stroke"] [data-part="strokePath"]') as SVGElement;
+  expect(path.getAttribute('style')?.replace(/\s/g, '')).toContain('pointer-events:fill');
+  fireEvent.click(x.view.getByRole('button', { name: 'Send 1 comment' }));
+  expect(path.closest('[data-part="stroke"]')?.hasAttribute('data-submitted')).toBe(true);
+  expect(path.getAttribute('style')?.replace(/\s/g, '')).toContain('pointer-events:none');
+  fireEvent.click(x.view.getByRole('button', { name: 'Edit feedback' }));
+  expect(path.getAttribute('style')?.replace(/\s/g, '')).toContain('pointer-events:fill');
+});
 test('group Redo stays subscribed to the streaming feedback model after completion', () => {
   const x = setup();
   fireEvent.click(x.view.getByRole('tab', { name: 'B' }));
