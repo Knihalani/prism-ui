@@ -14,7 +14,7 @@ button, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .chat-app[data-prism-theme="dark"] {
   --app-bg: #1c1d1b; --app-panel: #171816; --app-fill: #282a26; --app-text: #e4e5df; --app-muted: #96998f; --app-line: #33352f; --app-accent: #b3cabb; --app-accent-soft: #2b3c31; --app-shadow: 0 3px 18px #0002, 0 1px 3px #0002; color-scheme: dark;
 }
-.chat-app button { color: inherit; }
+:where(.chat-app) button { color: inherit; }
 .chat-app button, .chat-app a, .chat-app input, .chat-app select, .chat-app textarea { outline-offset: 4px; }
 .chat-app :focus-visible { outline: 2px solid var(--prism-accent, var(--app-accent)); }
 .chat-app svg { flex: 0 0 auto; }
