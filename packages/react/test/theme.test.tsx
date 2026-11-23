@@ -1,10 +1,10 @@
 import './setup';
 import { expect, test } from 'bun:test';
-import { act, createElement } from 'react';
+import { act, createElement, useEffect } from 'react';
 import { hydrateRoot } from 'react-dom/client';
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
-import { Prism, ThemeScope, Icon, createTheme, defineComponent, defineTheme, createRegistry, fromCssVars, host, shadcn, usePart, useSlot, useStrings } from '../src';
+import { Prism, ThemeScope, Icon, createTheme, defineComponent, defineTheme, createRegistry, fromCssVars, host, shadcn, useComponentState, usePart, useSlot, useStrings } from '../src';
 
 function Sample() {
   const Part = useSlot('sample', 'body', 'p' as any), attrs = usePart('sample', 'body'), strings = useStrings('sample');
@@ -52,6 +52,38 @@ test('legacy modes, style objects, empty themes and host defaults remain support
   expect((view.container.querySelector('.prism-root') as HTMLElement).style.getPropertyValue('--prism-accent')).toBe('tomato');
   expect(host.name).toBe('host'); expect(fromCssVars({ accent: '--primary' })).toEqual({ accent: 'var(--primary)' });
   expect(shadcn.tokens.bg).toBe('var(--background)');
+});
+
+test('same-name themes update one stylesheet and remove cleared declarations', () => {
+  const name = 'test-live-css';
+  const view = render(<ThemeScope theme={defineTheme({ name, tokens: { accent: '#111111' } })} />);
+  const sheet = document.head.querySelector(`style[data-prism-theme-css="${name}"]`)!;
+  view.rerender(<ThemeScope theme={defineTheme({ name, tokens: { accent: '#222222' }, dark: { accent: '#eeeeee' } })} />);
+  expect(document.head.querySelectorAll(`style[data-prism-theme-css="${name}"]`)).toHaveLength(1);
+  expect(document.head.querySelector(`style[data-prism-theme-css="${name}"]`)).toBe(sheet);
+  expect(sheet.textContent).toContain('--prism-accent:#222222');
+  expect(sheet.textContent).toContain('--prism-accent:#eeeeee');
+  expect(sheet.textContent).not.toContain('#111111');
+  view.rerender(<ThemeScope theme={defineTheme({ name })} />);
+  expect(sheet.textContent).not.toContain('--prism-accent:');
+});
+
+test('live theme objects preserve the Prism tree and widget state', () => {
+  let mounts = 0, unmounts = 0;
+  function Counter() {
+    const [count, setCount] = useComponentState('count', 0);
+    useEffect(() => { mounts++; return () => { unmounts++; }; }, []);
+    return <button onClick={() => setCount(count + 1)}>Count {count}</button>;
+  }
+  const counters = createRegistry([defineComponent({ name: 'counter', component: Counter })]);
+  const content = (accent: string) => <ThemeScope theme={defineTheme({ name: 'test-live-state', tokens: { accent } })}><Prism registry={counters} source={'::counter{}\n'} /></ThemeScope>;
+  const view = render(content('#123456')), root = view.container.querySelector('.prism-root');
+  const button = view.getByRole('button', { name: 'Count 0' });
+  fireEvent.click(button);
+  view.rerender(content('#654321'));
+  expect(view.container.querySelector('.prism-root')).toBe(root);
+  expect(view.getByRole('button', { name: 'Count 1' })).toBe(button);
+  expect(mounts).toBe(1); expect(unmounts).toBe(0);
 });
 
 test('icons resolve centrally and invalid theme names or cycles fail explicitly', () => {
