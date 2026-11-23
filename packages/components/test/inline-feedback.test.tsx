@@ -29,7 +29,7 @@ for (const value of [null, 'other value', [], {}, { items: [], overall: 1 }, { i
   expect(store.get('amount.feedback')).toEqual(value);
   expect(store.get('__prism.feedback.amount')).toBeUndefined();
   expect((view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('');
-  expect((view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement).disabled).toBe(true);
+  expect((view.getByRole('button', { name: /^Send \d+ comments?$/ }) as HTMLButtonElement).disabled).toBe(true);
 });
 
 for (const id of ['007', 'group.007', '7']) for (const legacy of [false, true]) test(`${legacy ? 'legacy' : 'new'} feedback for numeric id ${id} survives JSON snapshot and reload`, () => {
@@ -53,7 +53,7 @@ for (const id of ['007', 'group.007', '7']) for (const legacy of [false, true]) 
   const reloaded = createStore({ initial: serialized }), restored = render(ui(reloaded));
   fireEvent.click(restored.getByRole('button', { name: 'Give feedback' }));
   expect(restored.getByRole('button', { name: 'Comment 1: Saved annotation' })).toBeTruthy();
-  fireEvent.click(restored.getByRole('button', { name: 'Submit feedback' }));
+  fireEvent.click(restored.getByRole('button', { name: /^Send \d+ comments?$/ }));
   expect(reloaded.get(`${path}.submitted`)).toBe(true);
   act(() => reloaded.undo(path));
   expect(restored.getByRole('button', { name: 'Comment 1: Saved annotation' })).toBeTruthy();
@@ -66,7 +66,7 @@ test('Mockup keeps its own feedback controls without a duplicate global editor',
     const view = render(<Prism feedback animate={false} source={'```ui:mockup\n' + JSON.stringify({ id: 'native-review', kind: 'image', src }) + '\n```'} />);
     expect(view.queryByRole('button', { name: 'Give feedback' })).toBeNull();
     expect(view.getAllByRole('textbox', { name: 'Overall feedback' })).toHaveLength(1);
-    expect(view.getAllByRole('button', { name: 'Submit feedback' })).toHaveLength(1);
+    expect(view.getAllByRole('button', { name: /^Send \d+ comments?$/ })).toHaveLength(1);
     view.unmount();
   }
 });
@@ -124,7 +124,7 @@ test('saving numeric inline feedback preserves the scalar value and dependent fo
   const overall = view.getByRole('textbox', { name: 'Overall feedback' });
   change(overall, 'Keep this budget'); fireEvent.blur(overall);
   expect(store.get('rent')).toBe(1200);
-  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  fireEvent.click(view.getByRole('button', { name: /^Send \d+ comments?$/ }));
   expect(store.get('rent')).toBe(1200);
   expect(view.getByRole('math').textContent).toBe('14,400');
 });
@@ -142,7 +142,7 @@ for (const id of ['amount', '007']) for (const name of ['num', 'calc']) test(`sa
   expect(view.getByRole('button', { name: 'Comment 1: Saved during streaming' })).toBeTruthy();
   expect(createStore({ initial: JSON.parse(JSON.stringify(store.snapshot())) }).get(`__prism.feedback.${id}.items`)).toHaveLength(1);
   if (name === 'num') expect(store.get(id)).toBe(1200);
-  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  fireEvent.click(view.getByRole('button', { name: /^Send \d+ comments?$/ }));
   expect(actions.at(-1)?.payload).toMatchObject({ target: { id }, items: [{ comment: 'Saved during streaming' }] });
   view.unmount();
   const restored = render(ui(true));
@@ -160,8 +160,8 @@ for (const name of ['num', 'calc']) for (const operation of ['submit', 'submit-o
   const marker = view.getByRole('button', { name: 'Comment 1: Legacy annotation' });
   if (name === 'num') expect(view.getByRole('slider').getAttribute('aria-valuenow')).toBe('1200');
   if (operation !== 'delete') {
-    expect((view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement).disabled).toBe(false);
-    fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+    expect((view.getByRole('button', { name: /^Send \d+ comments?$/ }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(view.getByRole('button', { name: /^Send \d+ comments?$/ }));
     expect(actions.at(-1)?.payload).toMatchObject({ items: [{ comment: 'Legacy annotation' }] });
     expect(store.get('__prism.feedback.amount.items')).toHaveLength(1);
   } else {
