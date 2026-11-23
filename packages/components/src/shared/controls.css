@@ -86,6 +86,74 @@
   font-family: var(--prism-font-body); font-size: var(--prism-text-xs); line-height: 1.35; font-weight: var(--prism-weight-medium);
 }
 button.prism-chip { min-block-size: 30px; padding-inline: 10px; cursor: pointer; }
+
+@media (pointer: coarse) {
+  .prism-touch-target,
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :where(button:not(.prism-mockup__marker), summary, [role="tab"], .prism-num__root) { position: relative; }
+  .prism-touch-target,
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :is(button, summary, [role="tab"], .prism-num__root):where(:not(.prism-pill):not(.prism-mockup__marker):not([role="switch"])) {
+    min-inline-size: 28px !important;
+    min-block-size: 28px !important;
+    margin: 9px !important;
+    overflow: visible;
+  }
+  .prism-touch-target::before,
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :is(button, summary, [role="tab"], .prism-num__root):not(.prism-pill)::before,
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :is(.prism-switch, .prism-check, input[type="checkbox"])::before {
+    content: "";
+    position: absolute;
+    inset: auto;
+    top: 50%; left: 50%;
+    inline-size: max(100%, 46px);
+    block-size: max(100%, 46px);
+    transform: translate(-50%, -50%);
+    background: transparent;
+    border: 0;
+    pointer-events: auto;
+  }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :is(.prism-pill, button[type="submit"], .prism-mockup__primary, .prism-artifact__fix, .prism-troubleshoot__primary) {
+    min-block-size: 44px !important;
+    min-inline-size: 44px !important;
+    margin-block: 2px !important;
+  }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :is(.prism-switch, [role="switch"], .prism-check, input[type="checkbox"]) {
+    position: relative;
+    margin: 14px !important;
+    flex-shrink: 0;
+  }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) { min-block-size: 44px !important; min-inline-size: 44px; box-sizing: border-box; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-stepper > button { min-inline-size: 28px; min-block-size: 28px; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :is(.prism-estimate__stepper, .prism-mockup__toolGroup) { overflow: visible; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-estimate__input { min-inline-size: 44px; min-block-size: 44px; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :is(.prism-codeblock__body, .prism-ask__control) { min-block-size: 44px; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :is(.prism-num__root, input[type="range"]) { touch-action: pan-y; }
+  .prism-root .prism-num__root[data-status="editing"]::before { pointer-events: none; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-inline-feedback:not([data-inline]) { padding-block-start: 48px; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-inline-feedback[data-inline] { padding-inline-end: 48px; min-block-size: 48px; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-inline-feedback > .prism-inline-feedback__trigger { position: absolute; inset: 0 0 auto auto; margin: 8px !important; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-listItem__root:has(> input[type="checkbox"]) { padding-inline-start: 52px; min-block-size: 46px; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-datatable__checkbox { appearance: none; min-inline-size: 18px; min-block-size: 18px; border: 1px solid var(--prism-border-strong); border-radius: 4px; background: var(--prism-surface); }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-datatable__checkbox:checked { background: var(--prism-accent); box-shadow: inset 0 0 0 4px var(--prism-surface); }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-tabs__list { padding-block: 4px; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-pill:not(.prism-receipt)::after { content: ""; position: absolute; inset: -1px; pointer-events: auto; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :is(.prism-callout__ask, .prism-card__ask) { inset-block-start: 0 !important; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-runbook__command .prism-codeblock__actions { inset-inline-end: 80px; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-mockup__marker { overflow: visible; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) .prism-mockup__marker::before { min-inline-size: 44px; min-block-size: 44px; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) input[type="range"] { height: 44px; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) input[type="range"]::-webkit-slider-runnable-track { height: 8px; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) input[type="range"]::-moz-range-track { height: 8px; }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) input[type="range"]::-webkit-slider-thumb {
+    appearance: none; box-sizing: content-box; width: 28px; height: 28px; margin-top: -18px;
+    border: 8px solid transparent; border-radius: 50%; background: var(--prism-surface-raised, Canvas); background-clip: padding-box;
+    box-shadow: inset 0 0 0 2px var(--prism-accent, currentColor);
+  }
+  .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) input[type="range"]::-moz-range-thumb {
+    box-sizing: content-box; width: 28px; height: 28px;
+    border: 8px solid transparent; border-radius: 50%; background: var(--prism-surface-raised, Canvas); background-clip: padding-box;
+    box-shadow: inset 0 0 0 2px var(--prism-accent, currentColor);
+  }
+}
 .prism-chip:is([data-active], [aria-pressed="true"], [aria-selected="true"]) {
   box-shadow: inset 0 0 0 1px var(--prism-accent, #525252);
   background: color-mix(in srgb, var(--prism-accent, #525252) 8%, transparent);

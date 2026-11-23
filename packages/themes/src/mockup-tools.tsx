@@ -8,7 +8,7 @@ export function MockupToolContent({ children, label }: { children: ReactNode; la
 
 export const mockupToolCss = `
   :scope :is(.prism-mockup__ask,.prism-mockup__overflowTrigger) > svg { display:none; }
-  @container (max-width:360px) {
+  @container (max-width:480px) {
     :scope :is(.prism-mockup__ask,.prism-mockup__overflowTrigger) > svg { display:block; }
   }
 `;

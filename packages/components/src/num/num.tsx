@@ -41,7 +41,7 @@ export function useNum(props: NumProps, ctx: PrismComponentProps<NumProps>) {
   const value = typeof current === 'number' && Number.isFinite(current) ? current : Number.isFinite(initial) ? normalize(initial) : 0;
   const format = useNumberFormat(props), [editing, setEditing] = useState(false), [draft, setDraft] = useState(''), [scrubbing, setScrubbing] = useState(false), [hovered, setHovered] = useState(false), [focused, setFocused] = useState(false);
   const formatted = ready ? format(value) : strings.loadingLabel, readoutVisible = ready && !editing && (scrubbing || hovered || focused), layout = useInlineReadout(readoutVisible, scrubbing ? formatted : strings.dragHint);
-  const suppressClick = useRef(false), edit = useRef(false), previous = useRef(value), drag = useRef<{ x: number; previous: number; next: number; moved: boolean; pointer: number } | null>(null), frame = useRef<number | null>(null);
+  const suppressClick = useRef(false), edit = useRef(false), previous = useRef(value), drag = useRef<{ x: number; y: number; touch: boolean; previous: number; next: number; moved: boolean; pointer: number } | null>(null), frame = useRef<number | null>(null);
   const returnFocus = useRef(false);
   useLayoutEffect(() => { if (!editing && returnFocus.current) { returnFocus.current = false; layout.root.current?.focus(); } }, [editing, layout.root]);
   useLayoutEffect(() => { if (store.get(id) === undefined && Number.isFinite(initial)) localWrite(() => store.set(id, normalize(initial))); }, [store, id, initial, min, max, step, localWrite]);
@@ -66,11 +66,12 @@ export function useNum(props: NumProps, ctx: PrismComponentProps<NumProps>) {
     if (!ready || event.button !== 0) return;
     suppressClick.current = false;
     event.currentTarget.setPointerCapture?.(event.pointerId);
-    drag.current = { x: event.clientX, previous: value, next: value, moved: false, pointer: event.pointerId };
+    drag.current = { x: event.clientX, y: event.clientY, touch: event.pointerType === 'touch', previous: value, next: value, moved: false, pointer: event.pointerId };
   };
   const onPointerMove = (event: PointerEvent<HTMLElement>) => {
     const active = drag.current; if (!active || active.pointer !== event.pointerId) return;
     const distance = event.clientX - active.x;
+    if (active.touch && !active.moved && Math.abs(event.clientY - active.y) > Math.max(3, Math.abs(distance))) { drag.current = null; suppressClick.current = true; event.currentTarget.releasePointerCapture?.(event.pointerId); return; }
     active.moved ||= Math.abs(distance) >= 3;
     if (!active.moved) return;
     setScrubbing(true);

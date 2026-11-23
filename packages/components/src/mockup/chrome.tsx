@@ -16,9 +16,9 @@ export function MockupToolbar({ vm, model }: { model: MockupModel | MockupGroupM
     const container = root.current?.closest('.prism-mockup__root, .prism-mockup__group');
     if (!container) return;
     const width = container.getBoundingClientRect().width;
-    if (width) setNarrow(width <= 360);
+    if (width) setNarrow(width <= 480);
     if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(entries => { const width = entries[0]?.contentRect.width; if (width) setNarrow(width <= 360); });
+    const observer = new ResizeObserver(entries => { const width = entries[0]?.contentRect.width; if (width) setNarrow(width <= 480); });
     observer.observe(container);
     return () => observer.disconnect();
   }, []);

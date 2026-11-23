@@ -35,7 +35,7 @@ export function usePlaygroundController({ pace = realistic, agentFactory }: AppP
   const [sidebar, setSidebar] = useState(true), [drawer, setDrawer] = useState(false);
   const [overlay, setOverlay] = useState<'palette' | 'settings'>();
   const [themeChoice, setThemeChoice] = useState<'light' | 'dark' | 'system'>(() => initialMode ?? readModePreference());
-  const darkSystem = useMedia('(prefers-color-scheme: dark)'), mobile = useMedia('(max-width: 760px)'), reduced = useMedia('(prefers-reduced-motion: reduce)');
+  const darkSystem = useMedia('(prefers-color-scheme: dark)'), mobile = useMedia('(max-width: 820px)'), reduced = useMedia('(prefers-reduced-motion: reduce)');
   const theme = themeChoice === 'system' ? darkSystem ? 'dark' : 'light' : themeChoice;
   const scroll = useRef<HTMLDivElement>(null), textarea = useRef<HTMLTextAreaElement>(null), sidebarRef = useRef<HTMLElement>(null), sidebarToggle = useRef<HTMLButtonElement>(null);
   const { following, jumpToLatest, setFollowing } = useFollowScroll(scroll);
@@ -52,20 +52,23 @@ export function usePlaygroundController({ pace = realistic, agentFactory }: AppP
     };
     document.addEventListener('keydown', listener); return () => document.removeEventListener('keydown', listener);
   }, []);
+  useEffect(() => { if (!mobile) setDrawer(false); }, [mobile]);
   useEffect(() => {
     if (!drawer || !mobile) return;
     const previous = document.activeElement as HTMLElement | null, root = sidebarRef.current;
     if (!root) return;
-    root.querySelector<HTMLButtonElement>('button')?.focus();
+    const items = () => Array.from(root.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])')).filter(element => !element.closest('[hidden], [inert]') && getComputedStyle(element).display !== 'none');
+    items()[0]?.focus();
     const listener = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
       if (event.key === 'Escape') { event.preventDefault(); setDrawer(false); }
       if (event.key === 'Tab') {
-        const items = Array.from(root.querySelectorAll<HTMLButtonElement>('button')), first = items[0], last = items.at(-1);
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-        if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        const targets = items(), first = targets[0], last = targets.at(-1);
+        if (event.shiftKey && (document.activeElement === first || !root.contains(document.activeElement))) { event.preventDefault(); last?.focus(); }
+        if (!event.shiftKey && (document.activeElement === last || !root.contains(document.activeElement))) { event.preventDefault(); first?.focus(); }
       }
     };
-    root.addEventListener('keydown', listener); return () => { root.removeEventListener('keydown', listener); (previous?.isConnected ? previous : sidebarToggle.current)?.focus(); };
+    document.addEventListener('keydown', listener); return () => { document.removeEventListener('keydown', listener); (sidebarToggle.current?.isConnected ? sidebarToggle.current : previous)?.focus(); };
   }, [drawer, mobile]);
   useLayoutEffect(() => {
     const element = textarea.current; if (!element) return;

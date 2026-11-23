@@ -10,6 +10,25 @@ import '../src/mockup';
 import { useFeedbackTarget } from '../src/feedback';
 
 afterEach(cleanup);
+test('portal composer clamps to visualViewport bounds and updates when the keyboard opens', () => {
+  const previous = Object.getOwnPropertyDescriptor(window, 'visualViewport');
+  const vv = Object.assign(new window.EventTarget(), { width: 320, height: 600, offsetLeft: 20, offsetTop: 40 });
+  Object.defineProperty(window, 'visualViewport', { configurable: true, value: vv });
+  try {
+    function Target() { const ref = useFeedbackTarget(); return <div ref={ref}>Preview</div>; }
+    const view = render(<Prism feedback animate={false} source={'```ui:feedback-test\n{"id":"keyboard"}\n```'} renderers={{ 'feedback-test': Target }} />);
+    const root = view.container.querySelector('.prism-inline-feedback') as HTMLElement;
+    root.getBoundingClientRect = () => new DOMRect(0, 0, 375, 812);
+    fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+    fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+    act(() => { vv.height = 320; vv.dispatchEvent(new window.Event('resize')); });
+    const layer = document.querySelector('.prism-inline-feedback__popover-layer') as HTMLElement;
+    expect(parseFloat(layer.style.left)).toBeGreaterThanOrEqual(32);
+    expect(parseFloat(layer.style.top)).toBeGreaterThanOrEqual(52);
+    expect(parseFloat(layer.style.top) + 210).toBeLessThanOrEqual(348);
+    expect((view.getByRole('dialog') as HTMLElement).style.maxHeight).toBe('296px');
+  } finally { cleanup(); if (previous) Object.defineProperty(window, 'visualViewport', previous); else delete (window as any).visualViewport; }
+});
 
 test('opening inline feedback never migrates another control at the legacy path', () => {
   const store = createStore();
@@ -189,6 +208,44 @@ test('inline numeric feedback is a sibling control in a reserved end gutter', as
 });
 const source = '```ui:feedback-test\n{"id":"target"}\n```';
 const View = () => <button>Actual input</button>;
+test('embedded frame hit-testing is excluded only while inline feedback is open', async () => {
+  const css = await Bun.file(new URL('../src/feedback.css', import.meta.url)).text();
+  const selector = '.prism-inline-feedback[data-feedback-open]:has(.prism-mockup__canvas:not([data-disabled])) iframe';
+  expect(css).toContain(`${selector} { pointer-events: none; }`);
+  const saved = createFeedback(); saved.addPin({ x: 30, y: 30, comment: 'Saved' });
+  const store = createStore({ initial: { target: { feedback: saved.toJSON() } } });
+  const view = render(<Prism feedback source={source} store={store} renderers={{ 'feedback-test': () => <iframe title="Preview" /> }} />);
+  const frame = view.getByTitle('Preview');
+  expect(frame.matches(selector)).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' })); expect(frame.matches(selector)).toBe(true);
+  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter', ctrlKey: true });
+  expect(view.getByRole('application').hasAttribute('data-disabled')).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Edit feedback' }));
+  expect(view.getByRole('application').hasAttribute('data-disabled')).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: 'Close feedback' })); expect(frame.matches(selector)).toBe(false);
+});
+for (const release of [false, true]) test(`closing inline feedback restores the preview after a pinch (released: ${release})`, () => {
+  function Target() { const ref = useFeedbackTarget(); return <div ref={ref} data-test-preview="" style={{ width: '80%' }}><span>Preview</span></div>; }
+  const view = render(<Prism feedback animate={false} source={source} renderers={{ 'feedback-test': Target }} />);
+  const target = view.container.querySelector<HTMLElement>('[data-test-preview]')!, parent = target.parentElement!;
+  Object.defineProperties(target, { offsetWidth: { configurable: true, value: 300 }, offsetHeight: { configurable: true, value: 180 } });
+  parent.style.overflow = 'clip'; parent.style.maxHeight = '240px';
+  const pinch = () => {
+    const canvas = view.getByRole('application');
+    canvas.getBoundingClientRect = () => new DOMRect(0, 0, 300, 180);
+    const event = (type: string, id: number, x: number) => fireEvent(canvas, new window.PointerEvent(type, { bubbles: true, button: 0, pointerType: 'touch', pointerId: id, clientX: x, clientY: 80 }));
+    event('pointerdown', 1, 60); event('pointerdown', 2, 160); event('pointermove', 2, 210);
+    if (release) { event('pointerup', 1, 60); event('pointerup', 2, 210); }
+  };
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' })); pinch();
+  expect(target.style.zoom).toBe('1.5'); expect(parent.style.maxHeight).toBe('180px');
+  fireEvent.click(view.getByRole('button', { name: 'Close feedback' }));
+  expect(target.style.zoom).toBe(''); expect(target.style.width).toBe('80%');
+  expect(parent.style.maxHeight).toBe('240px'); expect(parent.style.overflow).toBe('clip');
+  expect(parent.hasAttribute('data-feedback-scroll')).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' })); pinch();
+  expect(target.style.zoom).toBe('1.5'); expect(view.queryByRole('dialog')).toBeNull();
+});
 for (const rootWidth of [500, 0]) test(`opening a list comment with a hidden preview uses visible feedback bounds (${rootWidth})`, () => {
   function Target() { const ref = useFeedbackTarget(); return <div ref={ref} data-test-preview="">Preview</div>; }
   const view = render(<Prism feedback animate={false} source={source} renderers={{ 'feedback-test': Target }} />);
