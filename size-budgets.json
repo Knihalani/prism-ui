@@ -1,0 +1,83 @@
+{
+  "defaults": {
+    "js": 4096,
+    "css": 4096
+  },
+  "entries": {
+    "table": {
+      "js": 4540,
+      "css": 4096,
+      "reason": "Interactive table editing, sorting, expansion and action bindings."
+    },
+    "num": {
+      "js": 4385,
+      "css": 4096,
+      "reason": "Editable numeric input with drag, keyboard, units, expressions and undo."
+    },
+    "pick": {
+      "js": 5400,
+      "css": 4096,
+      "reason": "Weighted multi-criterion comparison, scoring and selection state."
+    },
+    "troubleshoot": {
+      "js": 4510,
+      "css": 4096,
+      "reason": "Branching diagnostic graph with history, completion and action controls."
+    },
+    "ask": {
+      "js": 6750,
+      "css": 4096,
+      "reason": "Multi-field form renderer, validation, conditional fields and submission state."
+    },
+    "datatable": {
+      "js": 8325,
+      "css": 4096,
+      "reason": "Sortable, selectable, virtualized data grid with streaming, animation and accessibility."
+    },
+    "chart": {
+      "js": 8780,
+      "css": 4096,
+      "reason": "Interactive SVG renderer for four chart types, streaming domains, pivots and accessibility."
+    },
+    "artifact": {
+      "js": 49550,
+      "css": 5130,
+      "reason": "Sandbox/compiler plus deferred graphic feedback and mockup engines; all lazy JS is charged."
+    },
+    "mockup": {
+      "js": 33950,
+      "css": 4096,
+      "reason": "Wireframe renderer, sandbox messaging, drawing, annotations and feedback history."
+    },
+    "view": {
+      "js": 16050,
+      "css": 5500,
+      "reason": "Recursive bound UI renderer and styled primitives, expressions and event handlers."
+    },
+    "shared": {
+      "js": 28500,
+      "css": 9400,
+      "reason": "All frame/controls, utilities, eager grammars, strings, tokens and common styles, once."
+    },
+    "react": {
+      "js": 20050,
+      "css": 4096,
+      "reason": "Shared React renderer, motion, themes, markdown and integration prompt API."
+    },
+    "core": {
+      "js": 12288,
+      "css": 0,
+      "reason": "Streaming Markdown, directives, JSON and parser plugins."
+    },
+    "state": {
+      "js": 3600,
+      "css": 0,
+      "reason": "Shared state, patch, undo and persistence runtime."
+    },
+    "schema": {
+      "js": 2048,
+      "css": 0,
+      "reason": "Shared schema and prompt documentation runtime."
+    }
+  }
+}
