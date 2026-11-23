@@ -6,8 +6,19 @@ import { createStore } from '@prism-ui/state';
 import { createFeedback } from '../src/mockup/engine';
 import '../src/feedback';
 import '../src/num';
+import '../src/mockup';
 
 afterEach(cleanup);
+
+test('Mockup keeps its own feedback controls without a duplicate global editor', () => {
+  for (const src of ['', 'data:image/png;base64,iVBORw0KGgo=']) {
+    const view = render(<Prism feedback animate={false} source={'```ui:mockup\n' + JSON.stringify({ id: 'native-review', kind: 'image', src }) + '\n```'} />);
+    expect(view.queryByRole('button', { name: 'Give feedback' })).toBeNull();
+    expect(view.getAllByRole('textbox', { name: 'Overall feedback' })).toHaveLength(1);
+    expect(view.getAllByRole('button', { name: 'Submit feedback' })).toHaveLength(1);
+    view.unmount();
+  }
+});
 
 test('saving numeric inline feedback preserves the scalar value and dependent formula', () => {
   const store = createStore();
