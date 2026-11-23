@@ -1,7 +1,7 @@
 import { useEffect, useState, type HTMLAttributes } from 'react';
 import { Icon as ThemeIcon, PrismPart, defineComponent, useFormat, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
-import { useFeedbackTarget } from '../feedback';
+import { useFeedbackTarget } from '../feedback-target';
 import { artifactSchema, type ArtifactProps } from './model';
 import { useArtifact, artifactStrings } from './use-artifact';
 import './artifact.css';

@@ -6,7 +6,6 @@ import { ComponentFrame } from '../frame';
 import { Odometer, SentContent } from '../shared/controls';
 import { useFlip } from '../lib/use-flip';
 import { ViewIcon, iconNames } from './icons';
-import { gallery } from './fixtures';
 import { bindPath, collect, evaluate, isOpen, listPath, resolve, resolvePath, run, snapshot, template, type Formatter, type Read, type ViewNode, type ViewScope, type ViewValue } from './tree';
 
 export const viewSchema = s.object({
@@ -540,7 +539,7 @@ export const view = defineComponent({
     return [props.title ?? viewStrings.title, ...summaries].join('. ');
   },
   docs: DOCS,
-  examples: [...Object.values(gallery),
+  examples: [
     '```ui:view\n{"id":"split","title":"Split the bill","state":{"total":120,"people":3,"tip":0.15},"children":[{"type":"grid","cols":2,"children":[{"type":"input","label":"Bill","inputType":"number","prefix":"$","value":{"$bind":"total"}},{"type":"slider","label":"People","min":1,"max":12,"value":{"$bind":"people"}}]},{"type":"segmented","label":"Tip","value":{"$bind":"tip"},"options":[{"value":0.1,"label":"10%"},{"value":0.15,"label":"15%"},{"value":0.2,"label":"20%"}]},{"type":"stat","label":"Each pays","value":{"$calc":"total * (1 + tip) / people"},"format":"currency"}],"actions":[{"type":"button","label":"Request payment","variant":"primary","onClick":{"action":"request","payload":{"each":{"$calc":"total * (1 + tip) / people"}}}}]}\n```',
   ],
   message: action => action.type === 'ask' ? viewStrings.askMessage : viewStrings.actionMessage.replace('{type}', action.type).replace('{payload}', JSON.stringify(action.payload ?? {}).slice(0, 200)),

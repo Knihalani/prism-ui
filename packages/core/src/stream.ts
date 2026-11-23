@@ -1,5 +1,5 @@
 import { freeze, type Node, type Root } from './ast';
-import { blocks } from './parser';
+import { blocks, cells } from './parser';
 import { inline, normalizeLabel } from './inline';
 import { InlineState } from './inline-state';
 import { JsonScanner } from './json';
@@ -292,8 +292,13 @@ export function streamParser(previews = true, path = '', references = new Refere
       }
       a.inline = undefined; a.inlinePending = '';
     } else if (previews && a.mode === 'table' && !tableDelimiter(value)) {
-      const row = blocks([a.lines[0], a.lines[1], value], a.node.key, 0, undefined, plugins?.inline)[0]?.children?.[1];
-      if (row) append(a.node, row);
+      if (plugins?.inline || a.node.key !== keyAt(a.index)) {
+        const row = blocks([a.lines[0], a.lines[1], value], a.node.key, 0, undefined, plugins?.inline)[0]?.children?.[1];
+        if (row) append(a.node, row);
+      } else {
+        const row = cells(value), key = `${a.node.key}.${a.node.children!.length}`;
+        a.node.children!.push({ type: 'tableRow', key, children: a.node.align!.map((_, c) => ({ type: 'tableCell', key: `${key}.${c}`, children: inline(row[c] ?? '', `${key}.${c}`) })) });
+      }
     }
   }
   function acceptPlugin(value: string) {

@@ -1,5 +1,6 @@
 export { ComponentFrame, useFrame, frameStrings, frameParts, FrameOverflow, useFrameOverflow } from './frame';
-export * from './shared';
+export { CheckMark, Checkbox, Chip, IconButton, InlineValue, KbdHint, Odometer, Pill, Stepper, Switch, createFlip } from './shared';
+export type { ChipProps, InlineValueProps, OdometerProps, PillProps, StepperProps, SwitchProps, FlipElements, FlipOptions } from './shared';
 export * from './runbook';
 export * from './troubleshoot';
 export * from './ask';
@@ -22,5 +23,7 @@ export type { DataTableProps, DataTableColumn, DataTableRow, DataTableSelection,
 export { Chart, useChart, chartDefinition, chartSchema } from './chart';
 export type { ChartProps, ChartSeries, ChartType, ChartPivot, ChartAnnotation, ChartModel, ChartSelectPayload, ChartPivotPayload } from './chart';
 export * from './artifact';
-export * from './view';
+export { View, useView, useViewNode, useViewReorder, viewSchema, view, viewFormatter, viewStrings, tokens, Markdown as ViewMarkdown, ViewSkeleton, ViewConfigContext, iconNames as viewIconNames } from './view/view';
+export type { ViewProps, ViewNode, ViewScope, ViewValue, PrimitiveProps, ViewConfig, ViewModel, ViewSlotProps, ViewRuntime } from './view/view';
+export { gallery as viewGallery, views as viewFixtures } from './view/fixtures';
 export { InlineFeedback } from './feedback';

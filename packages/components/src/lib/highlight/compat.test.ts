@@ -1,5 +1,7 @@
 import { expect, test } from 'bun:test';
-import { highlight, listLanguages, tokenize } from './index';
+import { createHighlighter } from './index';
+
+const { highlight, listLanguages, tokenize } = createHighlighter();
 
 const source = '/* comment\n nested */ const value = 12.5 / 2; // tail\n' +
   '`template ${user.name} ${`nested ${x}`}`\n' +

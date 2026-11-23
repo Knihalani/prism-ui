@@ -1,14 +1,15 @@
 import '../../react/test/setup';
-import { afterEach, expect, test } from 'bun:test';
+import { beforeAll, afterEach, expect, test } from 'bun:test';
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { Prism, defineRenderer, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { createFeedback } from '../src/mockup/engine';
-import '../src/feedback';
+import { preloadFeedback } from '../src/feedback';
 import '../src/num';
 import '../src/mockup';
 import { useFeedbackTarget } from '../src/feedback';
 
+beforeAll(() => preloadFeedback());
 afterEach(cleanup);
 test('portal composer clamps to visualViewport bounds and updates when the keyboard opens', () => {
   const previous = Object.getOwnPropertyDescriptor(window, 'visualViewport');
