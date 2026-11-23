@@ -93,7 +93,7 @@ test.each(['replace', 'mutate'])('receipt and edits reflect cleared, filled and 
   const view = render(<Prism source={source({ id: 'receipt', fields })} registry={registry} middleware={middleware} onAction={action => actions.push(action)} />);
   fireEvent.click(view.getByRole('button', { name: 'Send' }));
   const rows = Array.from(view.container.querySelectorAll('[data-part="confirmed-value"]')).map(row => row.getAttribute('aria-label'));
-  expect(rows).toContain('Edit Party: Not provided'); expect(rows).toContain('Edit Name: Middleware'); expect(rows).toContain('Edit Notes: Filled after submit'); expect(rows).toContain('Edit extra: No'); expect(rows.some(row => row === 'Edit Date: 12 Dec 2026')).toBe(false);
+  expect(rows).toContain('Edit Party: Not provided'); expect(rows).toContain('Edit Name: Middleware'); expect(rows).toContain('Edit Notes: Filled after submit'); expect(view.container.querySelector('span[data-part="confirmed-value"]')?.textContent).toBe('No'); expect(rows.some(row => row === 'Edit Date: 12 Dec 2026')).toBe(false);
   expect((actions[0].payload as any).values.party).toBeNull();
   fireEvent.click(view.getByRole('button', { name: 'Edit' })); expect((view.getByRole('spinbutton') as HTMLInputElement).value).toBe(''); expect((view.getByRole('textbox', { name: 'Name' }) as HTMLInputElement).value).toBe('Middleware');
 });
@@ -143,4 +143,17 @@ test('unstyled sent receipts remove all original inputs and segmented controls f
   const name = view.getByRole('textbox', { name: /Name/ });
   expect(name.hasAttribute('inert')).toBe(false);
   expect(document.activeElement).toBe(name);
+});
+
+test('middleware-only receipt fields are static, not edit actions without controls', () => {
+  const middleware: Middleware = (action, next) => next({ ...action, payload: { values: { name: 'Ada', reference: 'ABC-123' } } });
+  const view = render(<Prism registry={registry} source={source({ id: 'extra', fields: [{ id: 'name', label: 'Name', type: 'text', value: 'Ada' }] })} middleware={[middleware]} animate={false} onAction={() => {}} />);
+  fireEvent.click(view.getByRole('button', { name: 'Send' }));
+  const receipt = view.getByText('ABC-123');
+  expect(receipt.closest('button')).toBeNull();
+  expect(receipt.getAttribute('tabindex')).toBeNull();
+  expect(view.queryByRole('button', { name: 'Edit reference: ABC-123' })).toBeNull();
+  fireEvent.click(view.getByRole('button', { name: 'Edit Name: Ada' }));
+  expect(document.activeElement).toBe(view.getByRole('textbox', { name: /Name/ }));
+  expect(view.queryByText('ABC-123')).toBeNull();
 });
