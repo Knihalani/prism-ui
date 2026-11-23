@@ -70,6 +70,51 @@ test('Mockup keeps its own feedback controls without a duplicate global editor',
   }
 });
 
+for (const id of ['007', '0', '01', 'a.007']) for (const arrayParent of [false, true]) test(`only legacy draft ${id} with ${arrayParent ? 'array' : 'record'} source parent survives migration, deletes, serialized history and reload`, () => {
+  const original = createFeedback(); original.addPin({ x: 20, y: 30, comment: 'Only annotation' });
+  const parent = arrayParent ? Object.assign([], { feedback: original.toJSON() }) : { feedback: original.toJSON() };
+  const initial = id === 'a.007' ? { a: { '007': parent } } : { [id]: parent };
+  const persisted: object[] = [], store = createStore({ initial, persist: { load: () => ({}), save: (_, data) => persisted.push(data) } });
+  const legacyPath = `${id}.feedback`, path = `__prism.feedback.${id}`;
+  store.set(`${legacyPath}.overall`, 'Earlier'); store.set(`${legacyPath}.overall`, 'Latest'); store.undo();
+  const ui = (active = store) => <Prism store={active} feedback animate={false} source={`:calc[1]{id="${id}"}`} />;
+  const view = render(ui());
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  const checkSnapshot = () => {
+    expect(store.get(legacyPath)).toBeUndefined();
+    const snapshot = JSON.parse(JSON.stringify(store.snapshot()));
+    expect(Array.isArray(snapshot.__prism.feedback)).toBe(false);
+    if (id.includes('.')) expect(Array.isArray(snapshot.__prism.feedback.a)).toBe(false);
+    expect(createStore({ initial: snapshot }).get(`${path}.items.0.comment`)).toBe('Only annotation');
+    return snapshot;
+  };
+  checkSnapshot(); persisted.length = 0;
+  expect(store.canUndo(path)).toBe(true); expect(store.canRedo(path)).toBe(true);
+  act(() => store.undo(path)); checkSnapshot();
+  act(() => store.redo(path)); checkSnapshot();
+  act(() => store.redo(path)); checkSnapshot();
+  act(() => store.undo()); checkSnapshot();
+  act(() => store.apply({ delete: [legacyPath] }, { history: false })); checkSnapshot();
+  act(() => {
+    store.set('__prism.feedback.extra', createFeedback().toJSON(), { history: false });
+    store.apply({ delete: ['__prism.feedback.extra'] }, { history: false });
+  }); checkSnapshot();
+  fireEvent.click(view.getByRole('button', { name: 'Comment 1: Only annotation' }));
+  fireEvent.click(view.getByRole('button', { name: 'Delete' }));
+  expect(createStore({ initial: JSON.parse(JSON.stringify(store.snapshot())) }).get(`${path}.items`)).toEqual([]);
+  act(() => store.undo(path));
+  const snapshot = checkSnapshot();
+  for (const data of persisted) {
+    const restored = createStore({ initial: JSON.parse(JSON.stringify(data)) });
+    expect(Array.isArray(restored.get('__prism.feedback'))).toBe(false);
+    expect(Array.isArray(restored.get(path))).toBe(false);
+  }
+  view.unmount();
+  const restored = render(ui(createStore({ initial: snapshot })));
+  fireEvent.click(restored.getByRole('button', { name: 'Give feedback' }));
+  expect(restored.getByRole('button', { name: 'Comment 1: Only annotation' })).toBeTruthy();
+});
+
 test('saving numeric inline feedback preserves the scalar value and dependent formula', () => {
   const store = createStore();
   const view = render(<Prism store={store} feedback animate={false} source={':num[1200]{id=rent} Annual cost: :calc[rent*12]'} onAction={() => {}} />);
