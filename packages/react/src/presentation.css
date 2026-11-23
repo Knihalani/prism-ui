@@ -62,7 +62,7 @@
   position: relative; isolation: isolate;
 }
 .prism-root[data-prism-presentation] :is(.prism-flash, .prism-tabs__linkedText, .prism-view__content, .prism-mockup__list)::before {
-  content: ""; position: absolute; inset: -.1em; border-radius: inherit; z-index: -1; pointer-events: none;
+  content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: -1; pointer-events: none;
   background: var(--prism-stream-flash-bg, color-mix(in oklab, var(--prism-accent, currentColor) 10%, transparent));
   opacity: 0; transition: opacity var(--prism-motion-spring-bouncy-duration) var(--prism-motion-ease);
 }

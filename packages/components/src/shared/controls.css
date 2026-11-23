@@ -41,7 +41,7 @@
 }
 .prism-root .prism-pill[data-feedback], .prism-pill[data-feedback] { display: inline-grid; position: relative; }
 .prism-root .prism-pill[data-feedback][data-sent] { opacity: 1; cursor: default; color: var(--prism-text); box-shadow: none; }
-.prism-pill[data-feedback] > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.prism-pill[data-feedback] > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .prism-pill[data-feedback] > span {
   position: relative; z-index: 1; opacity: 1; translate: 0 0; filter: blur(0);
   transition: opacity var(--prism-motion-slow) var(--prism-motion-ease), translate var(--prism-motion-slow) var(--prism-motion-ease), filter var(--prism-motion-slow) var(--prism-motion-ease);
@@ -204,9 +204,9 @@ input.prism-check:indeterminate::after { content: ""; inline-size: 8px; block-si
 @keyframes prism-draw-check { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
 @media (forced-colors: active) {
   :is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]),
-  .prism-root input.prism-estimate__checkbox { appearance: auto; }
+  .prism-root input.prism-estimate__checkbox:not([role="switch"]) { appearance: auto; }
   :is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"])::after,
-  .prism-root input.prism-estimate__checkbox::after { display: none; }
+  .prism-root input.prism-estimate__checkbox:not([role="switch"])::after { display: none; }
   .prism-switch { border: 1px solid ButtonText; }
   .prism-switch::after { forced-color-adjust: none; background: ButtonText; }
 }
