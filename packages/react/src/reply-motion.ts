@@ -94,7 +94,11 @@ export function useFollowScroll(scrollRef: RefObject<HTMLElement | null>, { thre
     };
     const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(schedule);
     const observe = () => { observer?.disconnect(); observer?.observe(node); for (const child of Array.from(node.children)) observer?.observe(child); schedule(); };
-    const mutations = new MutationObserver(observe); mutations.observe(node, { childList: true });
+    const mutations = new MutationObserver(records => {
+      if (records.some(record => record.type === 'childList' && record.target === node)) observe();
+      else schedule();
+    });
+    mutations.observe(node, { childList: true, characterData: true, subtree: true });
     observe();
     node.addEventListener('scroll', scroll); node.addEventListener('wheel', wheel, { passive: true });
     node.addEventListener('touchstart', touchStart, { passive: true }); node.addEventListener('touchmove', touchMove, { passive: true });
