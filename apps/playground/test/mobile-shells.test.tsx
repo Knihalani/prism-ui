@@ -76,12 +76,14 @@ test('Workspace navigation and the Assistant never open together', () => {
   expect(assistant.getAttribute('aria-expanded')).toBe('false');
 });
 
-test('Chat also isolates the open theme editor while navigation is modal', () => {
+test('Chat closes the theme editor sheet before navigation becomes modal', () => {
   window.location.href = 'http://localhost/?shell=chat';
   const view = render(<App />);
   fireEvent.click(view.getByRole('button', { name: 'Customise theme' }));
   fireEvent.click(view.getByRole('button', { name: 'Open sidebar' }));
-  expect(view.container.querySelector('#theme-editor')!.hasAttribute('inert')).toBe(true);
+  expect(view.container.querySelector('#theme-editor')).toBeNull();
+  expect(view.container.querySelector('.shell')!.classList.contains('theme-editor-open')).toBe(false);
   fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
-  expect(view.container.querySelector('#theme-editor')!.hasAttribute('inert')).toBe(false);
+  expect(view.container.querySelector('#theme-editor')).toBeNull();
+  expect(document.activeElement).toBe(view.getByRole('button', { name: 'Open sidebar' }));
 });

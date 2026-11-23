@@ -31,6 +31,7 @@ export function App(props: AppProps) {
     window.addEventListener('popstate', restore); return () => window.removeEventListener('popstate', restore);
   }, []);
   const navigationOpen = c.drawer && c.mobile;
+  useEffect(() => { if (navigationOpen) editor.setOpen(false); }, [navigationOpen]);
   return <ThemeScope as={ShellFrame} theme={theme} mode={c.mode} density={selection.shell === 'chat' ? 'comfortable' : 'compact'} animate={!c.reduced} className={'chat-app shell shell-' + selection.shell + (editor.open ? ' theme-editor-open' : '')} data-shell={selection.shell} data-mode={c.mode} data-theme-base={editor.draft?.base ?? selected.name}>
     <div className="shell-viewport">
     <div className="shell-stage" key={selection.shell} inert={c.overlay === 'palette' || undefined}>
