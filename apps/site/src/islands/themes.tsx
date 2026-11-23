@@ -20,7 +20,7 @@ export const comparisonSource = [
   '```', '', '```ui:chart',
   '{"type":"bar","title":"Room to grow","x":"month","height":150,"series":[{"key":"people","label":"People"}],"data":[{"month":"Apr","people":8},{"month":"May","people":10},{"month":"Jun","people":12}]}',
   '```', '', 'Your first month, at a glance:', '',
-  '| Included | Amount |', '| --- | ---: |', '| Seats | 12 |', '| Per seat | $18 |', '| Monthly | $216 |',
+  '| Included | Amount |', '| --- | ---: |', '| Seats | :calc[seats] |', '| Per seat | $18 |', '| Monthly | :calc[seats * 18]{format=currency decimals=0} |',
 ].join('\n');
 
 const variants = [
