@@ -71,6 +71,38 @@ test('empty scroll refs are safe and attach when a scroller appears', () => {
   view.rerender(<Surface show={false} />);
 });
 
+test('small upward gestures stay paused until moving downward near the bottom or reaching it', () => {
+  const original = { raf: globalThis.requestAnimationFrame, cancel: globalThis.cancelAnimationFrame };
+  let frame: FrameRequestCallback | undefined, latest!: ReturnType<typeof useFollowScroll>;
+  globalThis.requestAnimationFrame = callback => { frame = callback; return 1; };
+  globalThis.cancelAnimationFrame = () => { frame = undefined; };
+  function Surface() { const ref = useRef<HTMLDivElement>(null); latest = useFollowScroll(ref); return <div ref={ref} />; }
+  const touch = (node: HTMLElement, type: string, y: number) => {
+    const event = new Event(type); Object.defineProperty(event, 'touches', { value: [{ clientY: y }] }); node.dispatchEvent(event);
+  };
+  try {
+    const view = render(<Surface />), node = view.container.firstElementChild as HTMLElement;
+    Object.defineProperties(node, { scrollHeight: { value: 1000 }, clientHeight: { value: 100 } });
+    for (const gesture of ['wheel', 'touch']) {
+      act(() => { latest.jumpToLatest(); const tick = frame; frame = undefined; tick?.(0); });
+      expect(node.scrollTop).toBe(900);
+      act(() => {
+        if (gesture === 'wheel') node.dispatchEvent(new WheelEvent('wheel', { deltaY: -20 }));
+        else { touch(node, 'touchstart', 100); touch(node, 'touchmove', 120); }
+        node.scrollTop = 880; node.dispatchEvent(new Event('scroll'));
+      });
+      expect(latest.following).toBe(false); expect(frame).toBeUndefined(); expect(node.scrollTop).toBe(880);
+      act(() => node.dispatchEvent(new Event('scroll')));
+      expect(latest.following).toBe(false);
+      act(() => { node.scrollTop = 885; node.dispatchEvent(new Event('scroll')); });
+      expect(latest.following).toBe(true);
+    }
+    act(() => { node.dispatchEvent(new WheelEvent('wheel', { deltaY: -20 })); node.scrollTop = 899; node.dispatchEvent(new Event('scroll')); });
+    expect(latest.following).toBe(true);
+    view.unmount(); expect(frame).toBeUndefined();
+  } finally { globalThis.requestAnimationFrame = original.raf; globalThis.cancelAnimationFrame = original.cancel; }
+});
+
 test('only upward wheel, touch and non-editing keys stop following; existing gutters survive cleanup', () => {
   let latest!: ReturnType<typeof useFollowScroll>;
   function Surface() { const ref = useRef<HTMLDivElement>(null); latest = useFollowScroll(ref); return <div ref={ref} style={{ scrollbarGutter: 'stable both-edges' }}><input /><textarea /><select /><span contentEditable="plaintext-only" /></div>; }

@@ -60,7 +60,7 @@ export function useFollowScroll(scrollRef: RefObject<HTMLElement | null>, { thre
     if (node === state.current.node) return;
     state.current.cleanup(); state.current.schedule = () => {}; state.current.node = node;
     if (!node) return;
-    let active = true, frame: number | undefined, dragging = false, touchY = 0, quiet = 0, height: number | undefined;
+    let active = true, frame: number | undefined, dragging = false, touchY = 0, quiet = 0, height: number | undefined, lastTop = node.scrollTop;
     const anchor = node.style.overflowAnchor, gutter = node.style.scrollbarGutter;
     const computedGutter = getComputedStyle(node).scrollbarGutter;
     if (!computedGutter || computedGutter === 'auto') node.style.scrollbarGutter = 'stable';
@@ -76,6 +76,7 @@ export function useFollowScroll(scrollRef: RefObject<HTMLElement | null>, { thre
       quiet = next === height ? quiet + 1 : 0; height = next;
       const top = Math.max(0, next - node.clientHeight);
       if (Math.abs(node.scrollTop - top) > .5) node.scrollTop = top;
+      lastTop = node.scrollTop;
       if (quiet < 24) frame = requestAnimationFrame(settle);
     };
     const schedule = () => {
@@ -84,11 +85,12 @@ export function useFollowScroll(scrollRef: RefObject<HTMLElement | null>, { thre
       quiet = 0;
       if (frame === undefined) frame = requestAnimationFrame(settle);
     };
-    const stop = () => { change(false); cancel(); updateAnchor(); };
+    const stop = () => { lastTop = node.scrollTop; change(false); cancel(); updateAnchor(); };
     const scroll = () => {
       const distance = node.scrollHeight - node.clientHeight - node.scrollTop;
       if (dragging && distance > threshold) stop();
-      else if (distance <= threshold) { change(true); schedule(); }
+      else if (distance <= 2 || (node.scrollTop > lastTop && distance <= threshold)) { change(true); schedule(); }
+      lastTop = node.scrollTop;
     };
     const pointerDown = (event: PointerEvent) => { dragging = event.target === node; };
     const pointerUp = () => { dragging = false; };
