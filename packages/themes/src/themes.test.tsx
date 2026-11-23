@@ -54,6 +54,12 @@ test('Instrument and Objects solid badges retain semantic fills and contrasting 
   expect(instrument.css).toContain('.prism-badge__dot { background:var(--prism-badge-color); }');
 });
 
+test('Objects tabs retain whole labels in a compact, scrollable paper strip', () => {
+  expect(objects.css).toContain('overflow-x:auto; flex-wrap:nowrap;');
+  expect(objects.css).toContain('white-space:nowrap; overflow-wrap:normal; word-break:normal; flex:0 0 auto;');
+  expect(objects.css).toContain('@container (max-width:360px) { :scope .prism-tabs__root { padding:12px; }');
+});
+
 test('Instrument tabs keep whole labels in a scrollable strip with narrow chassis padding', () => {
   const view = render(<Prism theme={instrument} source={'::::tabs{title="Be available"}\n:::tab{label="Before"}\nFirst\n:::\n:::tab{label="During"}\nSecond\n:::\n::::'} animate={false} />);
   expect(within(view.container).getByRole('tab', { name: 'Before' }).textContent).toBe('Before');

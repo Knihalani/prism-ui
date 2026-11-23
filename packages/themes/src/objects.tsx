@@ -258,8 +258,8 @@ export const objects = defineTheme({
     :scope :is(.prism-runbook__progress,.prism-summary__actionsTitle,.prism-summary__progress,.prism-troubleshoot__position,.prism-grid__meta) { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text-muted); }
     :scope .prism-runbook__actions { min-width:0; }
     :scope .prism-runbook__stuck { font:10px var(--prism-font-mono); }
-    :scope .prism-tabs__list { gap:0; min-height:40px; overflow:visible; flex-wrap:wrap; }
-    :scope .prism-tabs__tab { min-width:0; white-space:normal; flex:1; padding:12px 14px; color:var(--prism-text-muted); font:11px/1.5 var(--prism-font-mono); }
+    :scope .prism-tabs__list { gap:0; min-height:40px; overflow-x:auto; flex-wrap:nowrap; }
+    :scope .prism-tabs__tab { min-width:0; white-space:nowrap; overflow-wrap:normal; word-break:normal; flex:0 0 auto; padding:12px 14px; color:var(--prism-text-muted); font:11px/1.5 var(--prism-font-mono); }
     :scope .prism-tabs__indicator { display:none; }
     :scope .prism-tab__body { padding:18px 0; }
     :scope .prism-badge__root { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text); }
@@ -317,6 +317,7 @@ export const objects = defineTheme({
     :scope .prism-summary__pointRow { min-height:0; padding-block:12px; }
     :scope .prism-summary__footer { padding:16px 0 0; margin-top:16px; border-top:1px solid var(--prism-border); background:none; gap:12px; flex-wrap:wrap; }
     :scope .prism-tabs__body { padding:0; }
+    @container (max-width:360px) { :scope .prism-tabs__root { padding:12px; } :scope .prism-tabs__tab { padding-inline:9px; } }
     @container (max-width:420px) { :scope .prism-summary__footer { align-items:stretch; flex-direction:column; } :scope .prism-summary__send { width:100%; justify-content:center; } }
 
     :scope .prism-runbook__stepBody .prism-paragraph__root { line-height:26px; }
