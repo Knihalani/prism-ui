@@ -9,14 +9,20 @@ type Handlers = {
   onLostPointerCapture(event: PointerEvent<HTMLDivElement>): void;
   onPointerLeave(): void;
 };
-export function useTouchFeedback({ canvas, viewport, zoom, setZoom, inline, cancel, pointer }: {
+export function useTouchFeedback({ canvas, viewport, zoom, setZoom, enabled, inline, cancel, pointer }: {
   canvas: RefObject<HTMLElement | null>; viewport: RefObject<HTMLElement | null>;
-  zoom: number; setZoom(value: number): void; inline: boolean; cancel(): void; pointer: Handlers;
+  zoom: number; setZoom(value: number): void; enabled: boolean; inline: boolean; cancel(): void; pointer: Handlers;
 }): Handlers {
   const touches = useRef(new Map<number, Point>()), pen = useRef<number | null>(null);
   const pinch = useRef<{ distance: number; zoom: number; anchor: Point; center: Point; ended: boolean } | null>(null);
   const [revision, update] = useState(0);
   useLayoutEffect(() => {
+    if (enabled) return;
+    touches.current.clear(); pinch.current = null; pen.current = null; cancel();
+    if (inline) setZoom(1);
+  }, [enabled, inline, setZoom]);
+  useLayoutEffect(() => {
+    if (!enabled) return;
     const element = inline ? viewport.current?.parentElement : viewport.current;
     if (!element) return;
     const previous = element.getAttribute('data-feedback-scroll');
@@ -24,23 +30,23 @@ export function useTouchFeedback({ canvas, viewport, zoom, setZoom, inline, canc
     return () => { if (previous === null) element.removeAttribute('data-feedback-scroll'); else element.setAttribute('data-feedback-scroll', previous); };
   });
   useLayoutEffect(() => {
-    if (inline || zoom <= 1) return;
+    if (!enabled || inline || zoom <= 1) return;
     const element = viewport.current;
     if (!element?.clientHeight || !element.scrollHeight) return;
     const previous = element.style.maxHeight;
     element.style.maxHeight = `${Math.min(element.clientHeight, element.scrollHeight / zoom)}px`;
     return () => { element.style.maxHeight = previous; };
-  }, [inline, viewport, zoom]);
+  }, [enabled, inline, viewport, zoom]);
   useLayoutEffect(() => {
     const element = canvas.current;
-    if (!element) return;
+    if (!enabled || !element) return;
     const block = (event: TouchEvent) => { if (event.touches.length > 1 || pen.current !== null) event.preventDefault(); };
     element.addEventListener('touchstart', block, { passive: false });
     element.addEventListener('touchmove', block, { passive: false });
     return () => { element.removeEventListener('touchstart', block); element.removeEventListener('touchmove', block); };
   });
   useLayoutEffect(() => {
-    if (!inline) return;
+    if (!enabled || !inline) return;
     const target = viewport.current, parent = target?.parentElement;
     if (!target || !parent || zoom === 1) return;
     const width = target.style.width, previousZoom = target.style.zoom, overflow = parent.style.overflow, maxHeight = parent.style.maxHeight;
@@ -56,7 +62,7 @@ export function useTouchFeedback({ canvas, viewport, zoom, setZoom, inline, canc
       if (scale) target.style.setProperty('--prism-mockup-scale', scale); else target.style.removeProperty('--prism-mockup-scale');
       if (inverse) target.style.setProperty('--prism-mockup-inverse-scale', inverse); else target.style.removeProperty('--prism-mockup-inverse-scale');
     };
-  }, [inline, viewport, zoom]);
+  }, [enabled, inline, viewport, zoom]);
   useLayoutEffect(() => {
     const current = pinch.current, box = canvas.current?.getBoundingClientRect();
     const scroller = inline ? viewport.current?.parentElement : viewport.current;

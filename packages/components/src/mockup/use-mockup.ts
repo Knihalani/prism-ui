@@ -166,7 +166,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
       live.current.points.push(p); live.current.pressure.push(live.current.realPressure ? Math.max(0, Math.min(1, sample.pressure || 0)) : .5);
     }
   }
-  const pointer = useTouchFeedback({ canvas, viewport, zoom, setZoom, inline: !!options.inline, cancel: cancelGesture, pointer: {
+  const pointer = useTouchFeedback({ canvas, viewport, zoom, setZoom, enabled, inline: !!options.inline, cancel: cancelGesture, pointer: {
     onPointerDown(event: PointerEvent<HTMLDivElement>) { if (event.button !== 0 || submitted || gesture.current) return; if (event.pointerType !== 'touch' || tool !== 'pin') { event.preventDefault(); event.currentTarget.focus({ preventScroll: true }); } event.currentTarget.setPointerCapture?.(event.pointerId); const box = event.currentTarget.getBoundingClientRect(), p = point(event, box); gesture.current = { clientX: event.clientX, clientY: event.clientY, box, element: event.currentTarget, pointerId: event.pointerId, pointerType: event.pointerType, moved: false }; live.current = { points: [p], pressure: [event.pointerType === 'pen' ? event.pressure : .5], realPressure: event.pointerType === 'pen', hover: null, tool }; livePaint.current?.(); },
     onPointerMove(event: PointerEvent<HTMLDivElement>) { if (submitted) return; const g = gesture.current; if (g?.pointerType === 'touch' && live.current.tool === 'pin') { g.moved ||= Math.hypot(event.clientX - g.clientX, event.clientY - g.clientY) >= 5; return; } if (g) collect(event); else live.current.hover = point(event, event.currentTarget.getBoundingClientRect()); livePaint.current?.(); },
     onPointerUp(event: PointerEvent<HTMLDivElement>) {

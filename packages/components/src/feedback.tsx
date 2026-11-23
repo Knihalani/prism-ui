@@ -32,7 +32,7 @@ export function InlineFeedback({ children, targetKey }: FeedbackSurfaceProps) {
 }
 function FeedbackEditor({ open, close, surface }: { open: boolean; close(): void; surface: NonNullable<import('./mockup/use-mockup').MockupOptions['surface']> }) {
   const component = useContext(ComponentContext)!;
-  const vm = useMockup({ kind: 'image', title: component.name }, usePrism(), { inline: true, surface });
+  const vm = useMockup({ kind: 'image', title: component.name }, usePrism(), { inline: true, surface, enabled: open });
   const input = usePart('mockup', 'input'), overall = usePart('mockup', 'overall'), fields = usePart('mockup', 'feedbackFields');
   const labels = useStrings('feedback', { title: 'Graphic feedback' });
   useEffect(() => { if (!open) vm.cancel(false); }, [open]);
