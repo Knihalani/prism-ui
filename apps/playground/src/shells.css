@@ -48,7 +48,7 @@
 .theme-choice[data-custom]::before { content: 'Custom'; font-size: 9px; color: var(--app-muted); }
 .mode-choice { display: grid; place-items: center; border: 0; border-left: 1px solid var(--app-line); width: 30px; background: transparent; color: var(--app-muted); }
 
-.shell.shell-editor { --shell-font: "Shell Inter", "Liberation Sans", Arial, sans-serif; --shell-radius: 7px; --shell-gap: 12px; --shell-density: .85; --app-bg: #fbfcfd; --app-panel: #f3f4f6; --app-fill: #edf0f4; --app-text: #303744; --app-muted: #687381; --app-line: #e1e5eb; --app-accent: #356bd1; --app-accent-soft: #e4ebfa; font-size: 13px; }
+.shell.shell-editor { --shell-font: "Shell Inter", "Liberation Sans", Arial, sans-serif; --shell-radius: 7px; --shell-gap: 12px; --shell-density: .85; --app-bg: #fbfcfd; --app-panel: #f3f4f6; --app-fill: #edf0f4; --app-text: #303744; --app-muted: #65707e; --app-line: #e1e5eb; --app-accent: #356bd1; --app-accent-soft: #e4ebfa; font-size: 13px; }
 .shell.shell-editor[data-mode="dark"] { --app-bg: #191c22; --app-panel: #15181e; --app-fill: #242831; --app-text: #d4d9e3; --app-muted: #818a9b; --app-line: #2c313b; --app-accent: #8ba9ed; --app-accent-soft: #27354d; }
 .editor-shell { height: 100%; display: flex; flex-direction: column; }
 .ide-titlebar { height: 40px; display: flex; align-items: center; gap: 18px; padding: 0 16px; background: var(--app-panel); border-bottom: 1px solid var(--app-line); color: var(--app-muted); font-size: 11px; flex-shrink: 0; }
