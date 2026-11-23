@@ -1,5 +1,138 @@
 # Component size audit
 
+## Synchronous Chart/DataTable follow-up
+
+Fresh comparison: `origin/main` **953ae94**, versus this follow-up after
+**bbfe7e8**. Bun **1.4.4**, minified browser ESM, gzip-9, identical external
+boundaries. These are the current tables; older checkpoints below are historical.
+All values are bytes. Full component cost is own plus the **entire** shared
+entry, not a recompressed standalone bundle. Runtime entries do not add shared.
+
+**The 4KiB goal remains unmet, and the retained savings are marginal.**
+No Chart/DataTable code is deferred: initial = total, deferred = 0.
+The size script still charges every lazy chunk, including Artifact's 36,123B.
+
+| Entry | Own JS main → branch | Full JS main → branch | Own CSS main → branch | Full CSS main → branch | Branch initial / deferred JS |
+|---|---:|---:|---:|---:|---:|
+| callout | 1210 → 1201 | 26221 → 26124 | 1092 → 1092 | 11719 → 11257 | 1201 / 0 |
+| card | 2191 → 2166 | 27202 → 27089 | 1487 → 1487 | 12114 → 11652 | 2166 / 0 |
+| grid | 917 → 917 | 25928 → 25840 | 1080 → 1080 | 11707 → 11245 | 917 / 0 |
+| badge | 755 → 755 | 25766 → 25678 | 830 → 830 | 11457 → 10995 | 755 / 0 |
+| tabs | 2929 → 2929 | 27940 → 27852 | 1577 → 1577 | 12204 → 11742 | 2929 / 0 |
+| table | 4327 → 4321 | 29338 → 29244 | 1844 → 1844 | 12471 → 12009 | 4321 / 0 |
+| summary | 3755 → 3755 | 28766 → 28678 | 2727 → 2700 | 13354 → 12865 | 3755 / 0 |
+| num | 4510 → 4376 | 29521 → 29299 | 1482 → 1482 | 12109 → 11647 | 4376 / 0 |
+| estimate | 3556 → 3543 | 28567 → 28466 | 1432 → 1432 | 12059 → 11597 | 3543 / 0 |
+| pick | 5180 → 5174 | 30191 → 30097 | 2399 → 2399 | 13026 → 12564 | 5174 / 0 |
+| runbook | 3713 → 3697 | 28724 → 28620 | 2300 → 2300 | 12927 → 12465 | 3697 / 0 |
+| troubleshoot | 4296 → 4295 | 29307 → 29218 | 2208 → 2208 | 12835 → 12373 | 4295 / 0 |
+| ask | 6414 → 6425 | 31425 → 31348 | 2486 → 2486 | 13113 → 12651 | 6425 / 0 |
+| codeblock | 3673 → 3675 | 28684 → 28598 | 2572 → 2572 | 13199 → 12737 | 3675 / 0 |
+| datatable | 8554 → 8502 | 33565 → 33425 | 3309 → 3309 | 13936 → 13474 | 8502 / 0 |
+| chart | 9671 → 9604 | 34682 → 34527 | 2328 → 2328 | 12955 → 12493 | 9604 / 0 |
+| artifact | 50530 → 49950 | 75541 → 74873 | 6762 → 6762 | 17389 → 16927 | 13827 / 36123 |
+| mockup | 42043 → 41503 | 67054 → 66426 | 4874 → 4874 | 15501 → 15039 | 41503 / 0 |
+| view | 18311 → 18102 | 43322 → 43025 | 5249 → 5231 | 15876 → 15396 | 18102 / 0 |
+| shared | 25011 → 24923 | 25011 → 24923 | 10627 → 10165 | 10627 → 10165 | 24923 / 0 |
+| react | 23297 → 22301 | 23297 → 22301 | 2827 → 2827 | 2827 → 2827 | 22301 / 0 |
+| core | 11694 → 11694 | 11694 → 11694 | 0 → 0 | 0 → 0 | 11694 / 0 |
+| state | 3440 → 3440 | 3440 → 3440 | 0 → 0 | 0 → 0 | 3440 / 0 |
+| schema | 1825 → 1825 | 1825 → 1825 | 0 → 0 | 0 → 0 | 1825 / 0 |
+
+### Retained eager changes, measured against the starting branch
+
+Each row is a measured candidate/change set, not estimated source bytes.
+
+| Change | Own JS before → after | Full JS before → after |
+|---|---:|---:|
+| Chart hook cleanup: normalize rows once, reuse computed bar endpoints, compact palette construction | 9609 → 9604 | 34532 → 34527 |
+| DataTable compact part-name literals, preserving the exact readonly tuple and public union type | 8518 → 8502 | 33441 → 33425 |
+| Shared, unchanged | 24923 → 24923 | 24923 → 24923 |
+
+Shared + Chart + DataTable: **43,050 → 43,029B (−21B)**. Nothing was moved
+into shared. Row-focus/selection hoisting (+11B), a column-attribute helper
+(+5B), and shared DataTable enum arrays (+9B) were measured and dropped.
+Chart context indirection and its negligible own-byte saving were not retained:
+adding React subscriptions solely to move a few bytes was not justified.
+
+### Why the synchronous implementations remain above 4KiB
+
+- **Chart:** SVG geometry and the accessible data table are first-paint content.
+  Annotations can select an initial point; persisted pivot/hidden-series state
+  changes the initial plot. Hover/tooltip, keyboard selection, legend and pivot
+  responses must work immediately, including on a cold network. There is no
+  existing asynchronous step after which those features can safely be loaded.
+- **DataTable:** column inference/formatting, persisted sort/filter/page/selection
+  state, controls and accessibility structure affect first paint. Sorting,
+  filtering, row navigation, selection and pagination must respond synchronously.
+  This implementation has no editing, CSV/export or column-resize engine to defer.
+
+Those requirements rule out the proposed lazy splits. This pass did not find
+eager reductions sufficient to bridge the remaining 5.5KiB/4.3KiB gaps; this is
+not a proof that no larger behavior-preserving redesign could compress further.
+Mount/hover/focus preloading does not guarantee a loaded chunk at first input.
+Budgets are honest measured total JS plus 5%, rounded up: **Chart 10,085B**,
+**DataTable 8,928B**. With zero deferred bytes these also cap initial JS.
+CSS budgets remain 4,096B each.
+
+### Own-entry contributors before this change
+
+Metafile `bytesInOutput` (minified, uncompressed), not additive gzip attribution:
+
+| Chart source | Bytes | DataTable source | Bytes |
+|---|---:|---|---:|
+| `chart/index.tsx` | 13683 | `datatable/use-datatable.ts` | 14415 |
+| `chart/use-chart.ts` | 11817 | `datatable/index.tsx` | 10764 |
+| `chart/stream-props.ts` | 1247 | | |
+| `chart/use-domain.ts` | 981 | | |
+
+### Browser and scaling proof
+
+The same host-themed playground fixture was rendered before/after, with reduced
+motion and fixed viewport. Chart: static, partial stream, hover tooltip, then
+keyboard-selected/pivoted/legend-toggled. DataTable: static, partial stream,
+hover, then keyboard-sorted/navigated/selected. All eight final RGBA comparisons
+are **0 changed pixels**. The first Chart static capture differed by four pixels
+(0.00131%) on line edges; two consecutive same-code recaptures both match the
+original baseline exactly, without any source change. The matching repeat is
+the final static proof, not a modified baseline.
+
+Screenshots: `~/shots/perf/sizes-{chart,datatable}-{state}-{before,after,diff}.png`.
+Final Chart static: `sizes-chart-static-repeat-after.png` and
+`sizes-chart-static-repeat2-after.png`; all other pairs use `*-after.png`.
+Keyboard checks: Chart select/pivot/legend and DataTable sort/row navigation/
+selection all true; no page errors. Chart selection/pivot payloads match.
+
+Core scaling retains all five corpora, four-character pushes with a root read
+after every push, the 5,000/10,000 sizes, **2.6x limit** and 30s test timeout.
+After three warmup pairs it takes five windows of seven samples of each size,
+alternating small/large order, and asserts the median of the five min-time
+ratios. Minima still suppress GC/scheduling outliers, as the original test did;
+the median prevents one unusually fast/slow endpoint window deciding CI.
+Mean-time batching was rejected after GC-sensitive false positives.
+
+Isolated normal ratios: **2.12, 2.06, 2.06, 2.01, 2.04x** (pass).
+A temporary copy ran the same parser plus nested work proportional to
+`text.length²`, on the first corpus with the exact same guard/statistics:
+**13.19 → 48.23ms; 3.64x > 2.6**, expected failure (exit 1).
+The injection is not committed. Default full-suite scaling also passes:
+**2.06, 2.01, 2.00, 2.00, 2.14x**.
+
+Checks: targeted component/domain/presentation tests **60 pass, 0 fail**;
+TypeScript exit 0; size exit 0, all budgets passed. Default-timeout full
+`bun test`: **1,303 pass, 2 skip, 2 fail** (170.61s). The failures are the
+known Mockup conditional fixtures (**7,049.71ms**) and Chart malformed-prefix
+replay (**5,091.62ms**) exceeding 5s. No timeouts or test coverage were relaxed.
+See the performance audit for comparison/limitations.
+
+Same-machine isolated main → branch: Mockup **6,033.92 → 5,993.07ms** (both
+timeout), Chart malformed replay **4,460.47 → 4,747.55ms** (both pass).
+This single pair does not establish a branch-specific slowdown. Main CI's
+available log failed scaling only. No full-suite green result is claimed.
+
+Raw measurements, metafiles, proof harness, pixel counts, quadratic simulation
+and check logs: `~/conformance/perf-audit/size-followup/`.
+
 ## Upstream integration checkpoint
 
 The original table below records audit checkpoint `5f60b2e`, before merging

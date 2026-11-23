@@ -1,5 +1,48 @@
 # Production streaming audit
 
+## Latest bounded-round trace checkpoint
+
+The size follow-up preserves the final **bbfe7e8** trace table below; it does not
+claim a fresh performance measurement for the subsequent micro-trims.
+Production host-shell/theme, fixed 16-character chunks through settle, all
+artifact renderer main threads included. Counts remain noisy; zero tasks was
+not reached.
+
+| Run | Previous tasks >50ms | Previous maximum | Final tasks >50ms | Final maximum |
+|---|---:|---:|---:|---:|
+| 1 | 4 | 76.331ms | 3 | 64.523ms |
+| 2 | 3 | 77.161ms | 1 | 56.256ms |
+| 3 | 3 | 76.693ms | 6 | 60.876ms |
+
+Artifact renderer threads have zero long tasks. The detailed per-task capture,
+restoration, geometry and render stacks, synchronous-ordering constraints and
+zero-difference ghost proof remain in the final bounded-round section below.
+The residuals have not been established to be irreducible.
+
+The size follow-up keeps Chart/DataTable first paint, persisted-state rendering
+and every first interaction synchronous. No new asynchronous loading boundary
+was introduced. Fresh size tables and visual/keyboard/scaling evidence are in
+[SIZE-AUDIT.md](SIZE-AUDIT.md#synchronous-chartdatatable-follow-up).
+The scaling test now retains the 2.6x guard but uses warmups and a median of five
+interleaved min-of-seven windows; injected quadratic work is rejected at 3.64x.
+
+Default-timeout full-suite check: **1,303 pass, 2 skip, 2 fail** (170.61s).
+Scaling passes all five corpora. Existing Mockup conditional-fixtures and Chart
+malformed-prefix tests exceed 5s (7,049.71/5,091.62ms). Their test files are
+unchanged versus main. The earlier baseline failures and their animation-disabled
+gates are documented below; source snapshot/restore work is not reached by those
+tests. No timeout or test case was removed or increased.
+
+Same-machine isolated comparison (main 953ae94 → branch): Mockup conditional
+fixtures **6,033.92 → 5,993.07ms**, both timeout; Chart malformed-prefix replay
+**4,460.47 → 4,747.55ms**, both pass. Imports in the main test resolve to the
+main worktree's React package. A single pair is not a statistical slowdown
+measurement; no branch-specific regression was established. Main CI's available
+log failed only scaling, not these two tests. The two local default-suite
+timeout failures remain unresolved rather than hidden by a longer timeout.
+
+## Historical integration checkpoint
+
 This records historical audit checkpoint `5f60b2e`, before integration of
 `origin/main` at `a9ad258`. Benchmarks, traces and screenshot comparisons have
 not been repeated after that integration and do not describe the merged head.
