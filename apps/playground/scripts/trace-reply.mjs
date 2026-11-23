@@ -27,7 +27,7 @@ try {
         const summary = '```ui:summary\n' + JSON.stringify({ id: 'trace-brief', title: 'A day together · decision brief', points: ['Venue and catering', 'Facilitation', 'Materials', 'Accessible transport'].map(text => ({ text: text + ': confirm the details with the team before booking.' })), actions: [{ text: 'Share the plan', owner: 'Maya' }] }) + '\n```\n\n';
         const artifact = '```artifact:html {title="Live offsite report" id=trace-preview}\n<main id="reply-card" style="height:180px;padding:24px;box-sizing:border-box;background:var(--prism-surface);color:var(--prism-text)"><h1 style="margin:0 0 12px;font-size:22px">Space to think together</h1><p>A local venue, a shared meal, and time for useful conversation.</p><p>Live preview · all practical details in one place.</p></main>\n```\n\n';
         const tail = paragraph.repeat(3);
-        const probe = window.replyTrace = { frames: [], longtasks: [], loaf: [], observers: [], rootAnimations: [], resizeSamples: [], fresh: false, skeleton: false, ghost: false, phase: 'idle', active: false };
+        const probe = window.replyTrace = { frames: [], frameGaps: [], longtasks: [], loaf: [], observers: [], rootAnimations: [], resizeSamples: [], fresh: false, skeleton: false, ghost: false, phase: 'idle', active: false };
         const nativeAnimate = Element.prototype.animate;
         Element.prototype.animate = function (frames, options) {
           if (this.matches('.reply-content > .prism-root')) probe.rootAnimations.push({ phase: probe.phase, frames, options });
@@ -48,7 +48,14 @@ try {
           let previous;
           const sample = now => {
             if (!probe.active) return;
-            if (previous !== undefined) probe.frames.push(now - previous);
+            if (previous !== undefined) {
+              probe.frames.push(now - previous);
+              if (now - previous > 33) {
+                const gap = { start: previous, end: now, duration: now - previous, phase: probe.phase };
+                probe.frameGaps.push(gap);
+                performance.measure('reply-frame-gap', { start: previous, end: now, detail: gap });
+              }
+            }
             previous = now;
             probe.fresh ||= !!host.querySelector('[data-prism-fresh]');
             if (probe.phase === 'resize') {
@@ -104,7 +111,7 @@ try {
       const metrics = await page.evaluate(() => {
         const probe = window.replyTrace; probe.stop();
         const sorted = [...probe.frames].sort((a, b) => a - b), percentile = p => sorted[Math.floor((sorted.length - 1) * p)] ?? 0;
-        return { frameCount: sorted.length, p50: percentile(.5), p95: percentile(.95), max: sorted.at(-1) ?? 0, over33: sorted.filter(time => time > 33).length, longTasks: probe.longtasks.filter(entry => entry.duration > 50), loaf: probe.loaf.filter(entry => entry.duration > 50), fresh: probe.fresh, skeleton: probe.skeleton, ghost: probe.ghost, resizeRootAnimations: probe.rootAnimations.filter(animation => animation.phase === 'resize').length, maxRootGap: Math.max(0, ...probe.resizeSamples.map(sample => Math.abs(sample.rootGap))), maxIframeTop: Math.max(0, ...probe.resizeSamples.map(sample => Math.abs(sample.iframeTop))), heightTransitions: probe.resizeSamples.some(sample => sample.transitions.some(transition => transition.property === 'height' && transition.duration > 0)) };
+        return { frameCount: sorted.length, p50: percentile(.5), p95: percentile(.95), max: sorted.at(-1) ?? 0, over33: sorted.filter(time => time > 33).length, frameGaps: probe.frameGaps, longTasks: probe.longtasks.filter(entry => entry.duration > 50), loaf: probe.loaf.filter(entry => entry.duration > 50), fresh: probe.fresh, skeleton: probe.skeleton, ghost: probe.ghost, resizeRootAnimations: probe.rootAnimations.filter(animation => animation.phase === 'resize').length, maxRootGap: Math.max(0, ...probe.resizeSamples.map(sample => Math.abs(sample.rootGap))), maxIframeTop: Math.max(0, ...probe.resizeSamples.map(sample => Math.abs(sample.iframeTop))), heightTransitions: probe.resizeSamples.some(sample => sample.transitions.some(transition => transition.property === 'height' && transition.duration > 0)) };
       });
       const complete = new Promise(resolve => cdp.once('Tracing.tracingComplete', resolve));
       await cdp.send('Tracing.end');
