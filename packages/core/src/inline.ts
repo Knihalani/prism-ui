@@ -3,7 +3,7 @@ import { attributes, safeUrl } from './values';
 import { Precedence } from './precedence';
 import { matchInline, pluginNode, type InlineExtensions } from './plugins';
 
-export function inline(text: string, path: string, resolve?: (node: Node) => void, extensions?: InlineExtensions): Node[] {
+export function inline(text: string, path: string, resolve?: (node: Node) => void, extensions?: InlineExtensions, streaming = false): Node[] {
   const out: Node[] = []; let i = 0; let buffer = '';
   let precedence: Precedence | undefined;
   const boundaries = () => precedence ??= new Precedence(text, extensions ? pos => matchInline(extensions, text, pos)?.end : undefined);
@@ -28,6 +28,7 @@ export function inline(text: string, path: string, resolve?: (node: Node) => voi
       const value = text.slice(i + span.length, span.close).replace(/\n/g, ' ');
       add({ type: 'inlineCode', value: /^ .* $/.test(value) && /[^ ]/.test(value) ? value.slice(1, -1) : value }); i = span.close + span.length; continue;
     }
+    if (c === ':' && streaming && (i === text.length - 1 || /^:[a-zA-Z][\w-]*(?:\[[^\]]*)?$/.test(text.slice(i)))) break;
     if (c === ':' && /[a-zA-Z]/.test(text[i + 1] ?? '')) {
       const m = /^:([\w-]+)\[([^\]]*)\]/.exec(text.slice(i));
       if (m) {
@@ -41,6 +42,7 @@ export function inline(text: string, path: string, resolve?: (node: Node) => voi
             else if (ch === '{') depth++;
             else if (ch === '}') depth--;
           }
+          if (streaming && depth) break;
           attrs = text.slice(begin + 1, depth ? end : end - 1);
         }
         add({ type: 'component', name: m[1], props: attributes(attrs), complete: true, children: inline(m[2], childPath(), resolve, extensions) }); i = end; continue;

@@ -13,7 +13,7 @@ const cells = (s: string) => s.trim().replace(/^\||\|$/g, '').split(/(?<!\\)\|/)
 const tableDelimiter = (s: string) => s.includes('-') && cells(s).every(c => /^:?-{3,}:?$/.test(c));
 const starts = (s: string) => !!(fence(s) || directive(s) || item(s) || /^ {0,3}(?:#{1,6}\s|>)/.test(s) || thematic(s));
 
-export function blocks(lines: string[], path = '', offset = 0, resolve?: (node: Node) => void, extensions?: InlineExtensions): Node[] {
+export function blocks(lines: string[], path = '', offset = 0, resolve?: (node: Node) => void, extensions?: InlineExtensions, streaming = false): Node[] {
   const result: Node[] = []; let i = 0;
   while (i < lines.length) {
     if (!lines[i].trim()) { i++; continue; }
@@ -37,16 +37,16 @@ export function blocks(lines: string[], path = '', offset = 0, resolve?: (node: 
         }
         complete = i < lines.length;
       }
-      node = { type: 'component', key, name: d[2], props: attributes(d[3] ?? ''), children: d[1].length === 2 ? [] : blocks(lines.slice(start, i), key, 0, resolve, extensions), complete, idComplete: true };
+      node = { type: 'component', key, name: d[2], props: attributes(d[3] ?? ''), children: d[1].length === 2 ? [] : blocks(lines.slice(start, i), key, 0, resolve, extensions, streaming && !complete), complete, idComplete: true };
       if (d[1].length > 2 && complete) i++;
     } else if (/^ {0,3}#{1,6}(?:\s|$)/.test(line)) {
-      const m = /^ {0,3}(#{1,6})(?:\s+(.*)|$)/.exec(line)!; node = { type: 'heading', depth: m[1].length, key, children: inline((m[2] ?? '').replace(/\s+#+\s*$/, ''), key, resolve, extensions) }; i++;
+      const m = /^ {0,3}(#{1,6})(?:\s+(.*)|$)/.exec(line)!; node = { type: 'heading', depth: m[1].length, key, children: inline((m[2] ?? '').replace(/\s+#+\s*$/, ''), key, resolve, extensions, streaming && i === lines.length - 1) }; i++;
     } else if (i + 1 < lines.length && /^ {0,3}(?:=+|-+)\s*$/.test(lines[i + 1]) && !item(line) && !thematic(line)) {
       node = { type: 'heading', key, depth: lines[i + 1].trim()[0] === '=' ? 1 : 2, children: inline(line, key, resolve, extensions) }; i += 2;
     } else if (thematic(line)) { node = { type: 'thematicBreak', key }; i++; }
     else if (/^ {0,3}>/.test(line)) {
       const body: string[] = []; while (i < lines.length && /^ {0,3}>/.test(lines[i])) body.push(lines[i++].replace(/^ {0,3}> ?/, ''));
-      node = { type: 'blockquote', key, children: blocks(body, key, 0, resolve, extensions) };
+      node = { type: 'blockquote', key, children: blocks(body, key, 0, resolve, extensions, streaming && i === lines.length) };
     } else if (item(line)) {
       const first = item(line)!; const indent = first[1].length; const ordered = /\d/.test(first[2]); const children: Node[] = [];
       while (i < lines.length) {
@@ -58,7 +58,7 @@ export function blocks(lines: string[], path = '', offset = 0, resolve?: (node: 
           body.push(lines[i++].slice(Math.min(width, spaces)));
         }
         const task = /^\[([ xX])\]\s+/.exec(body[0]); if (task) body[0] = body[0].slice(task[0].length);
-        const childKey = `${key}.${children.length}`; children.push({ type: 'listItem', key: childKey, checked: task ? task[1] !== ' ' : undefined, children: blocks(body, childKey, 0, resolve, extensions) });
+        const childKey = `${key}.${children.length}`; children.push({ type: 'listItem', key: childKey, checked: task ? task[1] !== ' ' : undefined, children: blocks(body, childKey, 0, resolve, extensions, streaming && i === lines.length) });
       }
       node = { type: 'list', key, ordered, start: ordered ? parseInt(first[2]) : undefined, children };
     } else if (i + 1 < lines.length && tableDelimiter(lines[i + 1])) {
@@ -72,7 +72,7 @@ export function blocks(lines: string[], path = '', offset = 0, resolve?: (node: 
         if (starts(lines[i]) || (i + 1 < lines.length && tableDelimiter(lines[i + 1]))) break;
         i++;
       }
-      node = { type: depth ? 'heading' : 'paragraph', key, children: inline(lines.slice(start, i).join('\n'), key, resolve, extensions) };
+      node = { type: depth ? 'heading' : 'paragraph', key, children: inline(lines.slice(start, i).join('\n'), key, resolve, extensions, streaming && i === lines.length) };
       if (depth) { node.depth = depth; i++; }
     }
     result.push(node);
