@@ -12,6 +12,38 @@ const registry = createRegistry([troubleshootDefinition]);
 const props = { id: 'wifi', title: 'Wi-Fi drops', start: 'a', steps: { a: { title: 'Restart', text: 'Restart the adapter.', command: '$ nmcli radio wifi on', no: 'b' }, b: { text: 'Restart the router.', yes: '$fixed', no: '$escalate', hint: 'Wait for the lights.' } } };
 const fence = (value: unknown) => '```ui:troubleshoot\n' + JSON.stringify(value) + '\n```\n';
 
+test('history retains inert crumbs through close and reverses an interrupted opening', async () => {
+  const view = render(<Prism source={fence(props)} registry={registry} />);
+  const history = view.container.querySelector<HTMLElement>('[data-part="history"]')!;
+  let visual: number | undefined;
+  history.getBoundingClientRect = () => ({ height: visual ?? (history.style.height === 'auto' ? history.childElementCount * 50 : 0) }) as DOMRect;
+  const animations: { finished: Promise<void>; finish(): void; cancel(): void; frames: Keyframe[]; onfinish?: (() => void) | null }[] = [];
+  history.animate = ((frames: Keyframe[]) => {
+    let resolve!: () => void;
+    const animation = { frames, finished: new Promise<void>(done => { resolve = done; }), finish() { visual = undefined; resolve(); animation.onfinish?.(); }, cancel() { visual = undefined; resolve(); }, onfinish: null as (() => void) | null };
+    animations.push(animation); return animation as unknown as Animation;
+  }) as typeof history.animate;
+  history.getAnimations = () => animations.slice(-1) as unknown as Animation[];
+  fireEvent.click(view.getByRole('button', { name: 'No' }));
+  const crumb = view.getByRole('button', { name: 'Restart the adapter.' });
+  visual = 20;
+  fireEvent.click(crumb);
+  expect(animations.at(-1)!.frames).toEqual([{ height: '20px', opacity: 1 }, { height: '0px', opacity: 0 }]);
+  expect(history.contains(crumb)).toBe(true);
+  expect(history.inert).toBe(true); expect(history.getAttribute('aria-hidden')).toBe('true');
+  visual = 10;
+  fireEvent.click(view.getByRole('button', { name: 'No' }));
+  expect(animations.at(-1)!.frames).toEqual([{ height: '10px', opacity: 1 }, { height: '50px', opacity: 1 }]);
+  await act(async () => {});
+  expect(history.childElementCount).toBe(1); expect(history.inert).toBe(false);
+  animations.at(-1)!.finish();
+  fireEvent.click(view.getByRole('button', { name: 'Restart the adapter.' }));
+  expect(history.childElementCount).toBe(1);
+  await act(async () => { animations.at(-1)!.finish(); });
+  expect(history.childElementCount).toBe(0);
+  view.unmount();
+});
+
 test('static render has a step card, command, position, question and keyboard-accessible buttons', () => {
   const view = render(<Prism source={fence(props)} registry={registry} />);
   expect(view.getByText('Step 1')).toBeDefined(); expect(view.getByText('Restart the adapter.')).toBeDefined();
