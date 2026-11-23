@@ -17,6 +17,16 @@ const plugins = [artifactPlugin], registry = createRegistry([artifact]);
 const html = '<p>First version</p>';
 const snippet = fence('html', 'title="Read-only report" id=report height=180px', html);
 
+test('serialized worker and iframe imports stay native instead of capturing Vite host helpers', async () => {
+  for (const file of ['compiler.ts', 'runtime.ts']) {
+    const source = await Bun.file(new URL(file, import.meta.url)).text();
+    const start = source.indexOf('function '), runtime = source.slice(start, source.indexOf('\nexport ', start));
+    expect(runtime).toContain('function ');
+    expect(runtime).not.toMatch(/import\((url|specifier)\)/);
+    expect(source).toContain('specifier => import(specifier)');
+  }
+});
+
 test('artifacts default to inline, with adaptive runtime and model instructions', () => {
   expect(artifact.schema!.coerce({ kind: 'html', source: '' }).value?.variant).toBe('inline');
   expect(artifact.feedback).toBe(true);
@@ -34,6 +44,11 @@ test('narrow inline toolbars reserve document flow space rather than covering th
   expect(header).toMatch(/margin-block-end:\s*var\(--prism-space-2\)/);
 });
 
+test('inline toolbar hover and focus override the complete resting selector', async () => {
+  const css = await Bun.file(new URL('./artifact.css', import.meta.url)).text();
+  expect(css).toContain('.prism-root .prism-artifact__shell[data-variant="inline"]:not(:hover,:focus-within) .prism-artifact__header { opacity: 0; translate: 0 min(2px, var(--prism-motion-distance)); pointer-events: none; }');
+});
+
 test('automatic content height can shrink after completion but never collapses while streaming', async () => {
   const restore = observeFrames();
   const store = createStore(), text = '```artifact:html {id=autofit}\n<p>Hello</p>';
@@ -46,17 +61,33 @@ test('automatic content height can shrink after completion but never collapses w
     const sent = spyOn(frame.contentWindow!, 'postMessage');
     act(() => { window.dispatchEvent(new MessageEvent('message', { data: { ns: 'prism-mockup', id, type: 'ready' }, source: frame.contentWindow, origin: 'null' })); });
     const size = (height: number) => act(() => { window.dispatchEvent(new MessageEvent('message', { data: { ns: 'prism-artifact', id, type: 'size', height }, source: frame.contentWindow, origin: 'null' })); });
-    size(320); size(80);
+    const viewport = view.container.querySelector<HTMLElement>('[data-part=viewport]')!;
+    expect(viewport.hasAttribute('data-prism-resize')).toBe(false);
+    size(320);
+    expect(viewport.hasAttribute('data-prism-resize')).toBe(false);
+    expect(frame.style.blockSize).toBe('320px');
+    expect(view.container.querySelector<HTMLElement>('[data-part=preview]')!.style.minHeight).toBe('');
+    size(80);
+    expect(viewport.hasAttribute('data-prism-resize')).toBe(true);
     expect(view.container.querySelector<HTMLElement>('[data-part=viewport]')!.style.height).toBe('320px');
     view.rerender(ui(true));
     expect(view.container.querySelector<HTMLElement>('[data-part=viewport]')!.style.height).toBe('80px');
+    expect(frame.style.blockSize).toBe('80px');
     expect(view.container.querySelector('iframe')).toBe(frame);
     expect(frame.srcdoc).toBe(document);
     expect(sent.mock.calls.filter(([message]) => message.ns === 'prism-artifact' && message.type === 'render' && message.render.complete)).toHaveLength(1);
     size(0);
     expect(view.container.querySelector<HTMLElement>('[data-part=viewport]')!.style.height).toBe('0px');
+    expect(parseFloat(frame.style.blockSize)).toBe(0);
     sent.mockRestore();
   } finally { cleanup(); restore(); }
+});
+
+test('artifact resizing clips the viewport and uses scoped motion tokens without animating iframe position', async () => {
+  const css = await Bun.file(new URL('./artifact.css', import.meta.url)).text();
+  expect(css).toContain('.prism-artifact__viewport { overflow: clip; }');
+  expect(css).toContain('.prism-artifact__viewport[data-prism-resize] { transition: height var(--prism-motion-base) var(--prism-motion-ease); }');
+  expect(css).not.toMatch(/iframe[^}]*transition:/);
 });
 
 test('SSR and schemas expose usable artifact chrome and documented fence metadata', () => {

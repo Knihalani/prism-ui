@@ -8,6 +8,7 @@ import { importCssVariables, type CssImport } from './import-css';
 
 type Props = {
   draft: ThemeDraft; mode: EditTarget; onMode(mode: EditTarget): void; onChange(draft: ThemeDraft): void;
+  importText: string; onImportTextChange(value: string): void;
   onClose(): void; undo(): void; redo(): void; canUndo: boolean; canRedo: boolean; inert?: boolean;
 };
 const fonts = [
@@ -75,9 +76,9 @@ function SpringControl({ bouncy = false, easing, duration, profile, onChange }: 
   </div>;
 }
 
-export function ThemeEditor({ draft, mode, onMode, onChange, onClose, undo, redo, canUndo, canRedo, inert }: Props) {
+export function ThemeEditor({ draft, importText, onImportTextChange, mode, onMode, onChange, onClose, undo, redo, canUndo, canRedo, inert }: Props) {
   const nameRef = useRef<HTMLInputElement>(null);
-  const [pendingBase, setPendingBase] = useState<string>(), [paste, setPaste] = useState(''), [report, setReport] = useState<CssImport>(), [copied, setCopied] = useState(false), [error, setError] = useState('');
+  const [pendingBase, setPendingBase] = useState<string>(), [report, setReport] = useState<CssImport>(), [copied, setCopied] = useState(false), [error, setError] = useState('');
   const theme = toTheme(draft, availableThemes), code = exportTheme(draft);
   const nameId = useId(), baseId = useId(), pasteId = useId();
   useEffect(() => { nameRef.current?.focus(); }, []);
@@ -139,8 +140,8 @@ export function ThemeEditor({ draft, mode, onMode, onChange, onClose, undo, redo
         {tokenCatalogue.filter(token => ['motionStagger', 'motionDistance', 'motionScale', 'motionBlur'].includes(token.key)).map(row)}
       </Group>
       <Group title="Import" caption="Bring your system">
-        <label className="te-textarea-label" htmlFor={pasteId}>Paste shadcn / Tailwind CSS variables</label><textarea id={pasteId} className="te-paste" value={paste} spellCheck={false} placeholder={':root {\n  --primary: oklch(.6 .16 150);\n  --radius: .5rem;\n}'} onChange={event => setPaste(event.target.value)} />
-        <div className="te-action-row"><span role="status">{report ? `Mapped ${report.mapped.length}, ignored ${report.unmapped.length}` : 'v3 HSL · v4 OKLCH · @theme'}</span><button className="te-primary" disabled={!paste.trim()} onClick={() => { const result = importCssVariables(paste); setReport(result); onChange({ ...draft, tokens: { ...draft.tokens, ...result.tokens }, dark: { ...draft.dark, ...result.dark } }); }}>Apply</button></div>
+        <label className="te-textarea-label" htmlFor={pasteId}>Paste shadcn / Tailwind CSS variables</label><textarea id={pasteId} className="te-paste" value={importText} spellCheck={false} placeholder={':root {\n  --primary: oklch(.6 .16 150);\n  --radius: .5rem;\n}'} onChange={event => onImportTextChange(event.target.value)} />
+        <div className="te-action-row"><span role="status">{report ? `Mapped ${report.mapped.length}, ignored ${report.unmapped.length}` : 'v3 HSL · v4 OKLCH · @theme'}</span><button className="te-primary" disabled={!importText.trim()} onClick={() => { const result = importCssVariables(importText); setReport(result); onChange({ ...draft, tokens: { ...draft.tokens, ...result.tokens }, dark: { ...draft.dark, ...result.dark } }); }}>Apply</button></div>
         {!!report?.unmapped.length && <details className="te-nested"><summary>Ignored variables</summary><p className="te-ignored">{report.unmapped.join(', ')}</p></details>}
       </Group>
       <Group title="Export" caption="Make it yours">

@@ -1,8 +1,8 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { createFlip, usePrism } from '@prism-ui/react';
 
-export function useFlip(enabled: boolean, selector = '[data-option]') {
-  const ref = useRef<HTMLDivElement>(null), pending = useRef(false), flip = useMemo(() => createFlip(), []);
+export function useFlip<T extends HTMLElement = HTMLDivElement>(enabled: boolean, selector = '[data-option]') {
+  const ref = useRef<T>(null), pending = useRef(false), flip = useMemo(() => createFlip(), []);
   const frame = useRef<number | undefined>(undefined);
   const { store } = usePrism();
   const elements = () => Array.from(ref.current?.querySelectorAll(selector) ?? []);

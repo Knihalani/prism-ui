@@ -50,13 +50,17 @@ async function bundle(entry: string, own = false, contents?: string, extra: { pl
   return Object.assign(result.outputs, { metafile: result.metafile });
 }
 const gzip = (value: string | ArrayBuffer) => gzipSync(typeof value === 'string' ? value : new Uint8Array(value), { level: 9 }).length;
-async function measured(name: string, entry: string, kind: SizeRow['kind'], cssEntries: string[] = [], contents?: string): Promise<SizeRow> {
-  const outputs = await bundle(entry, kind === 'component', contents);
+export async function measured(name: string, entry: string, kind: SizeRow['kind'], cssEntries: string[] = [], contents?: string): Promise<SizeRow> {
+  const outputs = await bundle(entry, kind === 'component', contents, { audit: true });
   const js = outputs.filter(output => output.path.endsWith('.js'));
   const sizes = await Promise.all(js.map(async output => ({ entry: output.kind === 'entry-point', bytes: gzip(await output.arrayBuffer()) })));
   const initial = sizes.filter(x => x.entry).reduce((sum, x) => sum + x.bytes, 0), deferred = sizes.filter(x => !x.entry).reduce((sum, x) => sum + x.bytes, 0);
   const css = await Promise.all(outputs.filter(output => output.path.endsWith('.css')).map(output => output.text()));
-  for (const entry of cssEntries) css.push(...await Promise.all((await bundle(entry, kind === 'component')).filter(output => output.path.endsWith('.css')).map(output => output.text())));
+  const included = new Set(Object.keys(outputs.metafile!.inputs).map(path => resolve(path)));
+  for (const entry of cssEntries) {
+    if (included.has(resolve(entry))) continue;
+    css.push(...await Promise.all((await bundle(entry, kind === 'component')).filter(output => output.path.endsWith('.css')).map(output => output.text())));
+  }
   const cssBytes = css.length ? gzip([...new Set(css)].join('\n')) : 0;
   return { name, kind, js: initial + deferred, css: cssBytes, initial, deferred, fullJs: initial + deferred, fullCss: cssBytes };
 }

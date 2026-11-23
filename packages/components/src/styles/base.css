@@ -23,7 +23,7 @@
   .prism-root .prism-pick__list { grid-auto-rows: auto; }
   .prism-root .prism-summary__layout { grid-template-columns: minmax(0,1fr); }
 }
-.prism-root[data-prism-presentation] > :not(:where(.prism-datatable__root, div.prism-table__root, .prism-chart__root, .prism-mockup__root, .prism-artifact__root, .prism-artifact__shell, .prism-inline-feedback:not([data-inline]))) {
+:is(.prism-root[data-prism-presentation], .prism-root[data-prism-presentation] > [data-prism-flow]) > :not(:where([data-prism-flow], .prism-datatable__root, div.prism-table__root, .prism-chart__root, .prism-mockup__root, .prism-artifact__root, .prism-artifact__shell, .prism-inline-feedback:not([data-inline]))) {
   max-inline-size: var(--prism-prose-measure, 680px);
   margin-inline: auto;
 }
@@ -33,7 +33,7 @@
   line-height: 1.65;
 }
 .prism-root[data-prism-presentation] :where(.prism-paragraph__root, .prism-heading__root, .prism-code__root > code)::after,
-.prism-root[data-prism-presentation][data-state="streaming"]:empty::after,
+.prism-root[data-prism-presentation][data-state="streaming"]:is(:empty, :has(> [data-prism-flow]:empty))::after,
 .prism-root[data-prism-presentation] .prism-stream-caret {
   background: var(--prism-prose-highlight, var(--prism-accent, #525252));
   box-shadow: var(--prism-prose-highlight-shadow, none);

@@ -19,7 +19,7 @@ test('native primary slots receive disabled and sent state without interpreting 
     return <MockupFooter model={vm} labels={vm.labels} count={0} submitted={vm.submitted} edit={() => vm.setSubmitted(false)} canUndo={false} canRedo={false} undo={() => {}} redo={() => {}} canSubmit={vm.canSubmit} submit={vm.submit} />;
   } }]);
   const view = render(<Prism registry={registry} store={store} source={source({})} onAction={() => {}} slots={{ mockup: { primary: ({ model, as, sent, receipt, ...props }: any) => <button {...props} /> } }} />);
-  const button = view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement;
+  const button = view.getByRole('button', { name: /^Send \d+ comments?$/ }) as HTMLButtonElement;
   expect(button.disabled).toBe(false);
   fireEvent.click(button);
   expect(button.disabled).toBe(true);
@@ -27,6 +27,28 @@ test('native primary slots receive disabled and sent state without interpreting 
   expect(button.hasAttribute('data-sent')).toBe(true);
   fireEvent.click(view.getByRole('button', { name: 'Edit feedback' }));
   expect(button.disabled).toBe(false); expect(button.hasAttribute('data-sent')).toBe(false);
+});
+test('comment rows stagger, collapse inertly on removal, and restore the same row on undo', async () => {
+  const a = setup();
+  a.pointer('pointerdown', 200, 100); a.pointer('pointerup', 200, 100);
+  a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'Keep the title');
+  const pin = a.view.container.querySelector('[data-part=marker]')!;
+  fireEvent.mouseLeave(pin);
+  expect(pin.getAttribute('data-active')).toBe('true');
+  fireEvent.click(a.view.getByText('Save'));
+  const row = a.view.container.querySelector<HTMLElement>('[data-part=list] [data-part=item]')!;
+  expect(row.hasAttribute('data-prism-enter')).toBe(true);
+  expect(row.style.getPropertyValue('--prism-motion-index')).toBe('0');
+  act(() => a.model.remove(a.model.state.items[0].id));
+  expect(row.isConnected).toBe(true); expect(row.inert).toBe(true);
+  expect(row.getAttribute('aria-hidden')).toBe('true'); expect(row.style.height).toBe('0px');
+  act(() => a.model.feedback.undo());
+  expect(a.view.container.querySelector('[data-part=list] [data-part=item]')).toBe(row);
+  expect(row.inert).toBe(false); expect(row.hasAttribute('data-closing')).toBe(false);
+  act(() => a.model.remove(a.model.state.items[0].id));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 180)); });
+  expect(row.isConnected).toBe(false);
+  expect(a.view.container.querySelector('[data-part=list] [data-part=empty]')).not.toBeNull();
 });
 const source = (props: MockupProps) => '```ui:mockup\n' + JSON.stringify({ id: 'review', ...props }) + '\n```';
 function setup(props: MockupProps = {}, done = true, store = createStore()) {
@@ -168,7 +190,7 @@ test('drawings hit test their bounding-box centre, follow layout and still submi
   expect(x.hits).toEqual([{ x: 50, y: 15 }]);
   const draft = x.model.state;
   x.send({ ns: 'prism-mockup', v: 1, id: 'stub', type: 'layout', anchors: [{ key: draft.items[0].id, box: { x: 10, y: 40, w: 50, h: 20 } }] });
-  fireEvent.click(x.view.getByText('Submit feedback'));
+  fireEvent.click(x.view.getByRole('button', { name: /^Send \d+ comments?$/ }));
   expect((x.actions[0].payload as any).items[0]).toMatchObject({ kind: 'drawing', x: 30, y: 45, w: 10, h: 5, path: 'M30 45L40 50', target: { selector: 'h1' } });
 });
 test('plugin preserves identity, completion and parses safe attributes without registering code', () => {
@@ -203,18 +225,18 @@ test('popover stays within the content box near its lower right edge', () => {
   const x = setup({ source: '<h1>Hello</h1>' });
   x.pointer('pointerdown', 980, 490); x.pointer('pointerup', 980, 490);
   const popover = x.view.getByRole('dialog');
-  expect(popover.style.width).toBe('320px');
+  expect(popover.style.width).toBe('260px');
   expect(parseFloat(popover.style.left) + parseFloat(popover.style.width)).toBeLessThanOrEqual(1280);
   expect(parseFloat(popover.style.top) + 180).toBeLessThanOrEqual(400);
 });
 test('open typed drafts enable submit, save before payload creation and pluralize one comment', () => {
   const x = setup(); x.pointer('pointerdown', 300, 200); x.pointer('pointerup', 300, 200);
-  const area = x.view.getByRole('textbox', { name: 'Add a comment…' }), submit = x.view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement;
+  const area = x.view.getByRole('textbox', { name: 'Add a comment…' }), submit = x.view.getByRole('button', { name: /^Send \d+ comments?$/ }) as HTMLButtonElement;
   expect(submit.disabled).toBe(true); x.change(area, '   '); expect(submit.disabled).toBe(true);
   x.change(area, 'Keep this draft'); expect(submit.disabled).toBe(false);
   expect(x.view.getByText('1 comment')).toBeDefined(); fireEvent.click(submit);
   expect((x.actions[0].payload as any).items[0].comment).toBe('Keep this draft');
-  expect(x.view.getByText('Feedback sent · 1 comment')).toBeDefined();
+  expect(x.view.getByRole('button', { name: 'Sent · 1 comment' })).toBeDefined();
 });
 test('clicking another canvas point discards its unsaved predecessor; Escape writes nothing', () => {
   const x = setup(); x.pointer('pointerdown', 200, 100); x.pointer('pointerup', 200, 100);
@@ -240,10 +262,10 @@ test('streaming grows source without replacing controller; empty and partial SVG
   const b = setup({ kind: 'svg', source: '' }, false); b.rerender({ kind: 'svg', source: '<svg><circle r="4"/><path d="' }, false); expect(b.view.container.querySelector('circle')).not.toBeNull();
 });
 test('pin target, comment and overall submit an exact payload and message; edit resubmits', async () => {
-  const a = setup({ title: 'Pricing', variant: 'A' }); expect((a.view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement).disabled).toBe(true);
+  const a = setup({ title: 'Pricing', variant: 'A' }); expect((a.view.getByRole('button', { name: /^Send \d+ comments?$/ }) as HTMLButtonElement).disabled).toBe(true);
   await act(async () => { a.pointer('pointerdown', 250, 100); a.pointer('pointerup', 250, 100); });
   a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'Make it bigger'); fireEvent.click(a.view.getByText('Save'));
-  a.change(a.view.getByRole('textbox', { name: 'Overall feedback' }), 'Looks good'); fireEvent.click(a.view.getByText('Submit feedback'));
+  a.change(a.view.getByRole('textbox', { name: 'Overall feedback' }), 'Looks good'); fireEvent.click(a.view.getByRole('button', { name: /^Send \d+ comments?$/ }));
   const payload = { mockup: 'Pricing', variant: 'A', device: 'desktop', overall: 'Looks good', items: [{ n: 1, kind: 'pin', x: 25, y: 20, comment: 'Make it bigger', target: { selector: 'h1', text: 'Hello', html: '<h1>Hello</h1>' } }] };
   expect(a.actions.map(({ type, payload, message }) => ({ type, payload, message }))).toEqual([{ type: 'feedback', payload, message: toMessage(payload as Parameters<typeof toMessage>[0]) }]); expect(a.store.get('review.feedback.submitted')).toBe(true); fireEvent.click(a.view.getByText('Edit feedback')); expect(a.view.getByRole('textbox', { name: 'Overall feedback' })).toBeDefined();
 });
@@ -260,7 +282,7 @@ test('region, drawing, undo/redo and escape cancellation use percentage space', 
 test('keyboard reticle, previous resolved items and persisted drafts exclude resolved payload', () => {
   const a = setup({ previous: { overall: '', items: [{ n: 1, kind: 'pin', x: 10, y: 10, comment: 'Old' }] } });
   fireEvent.keyDown(a.canvas(), { key: 'ArrowRight' }); fireEvent.keyDown(a.canvas(), { key: 'ArrowDown', shiftKey: true }); fireEvent.keyDown(a.canvas(), { key: 'Enter' });
-  expect(a.model.state.items[0]).toMatchObject({ x: 52, y: 60 }); a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'New'); fireEvent.click(a.view.getByText('Save')); fireEvent.click(a.view.getByText('Submit feedback')); expect((a.actions[0].payload as any).items).toHaveLength(1); expect(a.view.getByRole('button', { name: 'Resolved 1: Old' }).getAttribute('aria-disabled')).toBe('true');
+  expect(a.model.state.items[0]).toMatchObject({ x: 52, y: 60 }); a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'New'); fireEvent.click(a.view.getByText('Save')); fireEvent.click(a.view.getByRole('button', { name: /^Send \d+ comments?$/ })); expect((a.actions[0].payload as any).items).toHaveLength(1); expect(a.view.getByRole('button', { name: 'Resolved 1: Old' }).getAttribute('aria-disabled')).toBe('true');
   fireEvent.click(a.view.getByText('Edit feedback')); a.rerender({ title: 'Updated' }); expect(a.view.getByText('New', { selector: '[data-part="list"] [data-part="item"] span' })).toBeDefined();
 });
 test('direct image directive and plugin fences resolve through the registry', () => {

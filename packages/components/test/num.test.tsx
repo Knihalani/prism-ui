@@ -96,6 +96,18 @@ test('drag commits exact values, suppresses click editing, and cancellation rest
   expect(view.store.get('n')).toBe(14); fireEvent.pointerCancel(slider, { pointerId: 2 }); expect(view.store.get('n')).toBe(10);
   expect(view.actions.length).toBe(1);
 });
+test('touch Num waits for horizontal intent and abandons a vertical swipe without changing or editing', () => {
+  const view = setup(':num[10]{id=n step=2}'), slider = view.getByRole('slider');
+  fireEvent.pointerDown(slider, { button: 0, pointerId: 1, pointerType: 'touch', clientX: 20, clientY: 20 });
+  fireEvent.pointerMove(slider, { pointerId: 1, pointerType: 'touch', clientX: 22, clientY: 40 });
+  fireEvent.pointerMove(slider, { pointerId: 1, pointerType: 'touch', clientX: 60, clientY: 60 });
+  fireEvent.pointerUp(slider, { pointerId: 1, pointerType: 'touch', clientX: 60, clientY: 60 }); fireEvent.click(slider);
+  expect(view.store.get('n')).toBe(10); expect(view.actions).toHaveLength(0); expect(view.queryByRole('spinbutton')).toBeNull();
+  fireEvent.pointerDown(slider, { button: 0, pointerId: 2, pointerType: 'touch', clientX: 20, clientY: 20 });
+  fireEvent.pointerMove(slider, { pointerId: 2, pointerType: 'touch', clientX: 32, clientY: 21 });
+  fireEvent.pointerUp(slider, { pointerId: 2, pointerType: 'touch', clientX: 32, clientY: 21 });
+  expect(view.store.get('n')).toBe(16); expect(changes(view.actions)).toHaveLength(1);
+});
 
 test('calc rebuilds emphasis formulas, handles NaN, and never writes to store', () => {
   const store = createStore({ initial: { a: 2, b: 3, c: 4 } }); let writes = 0;

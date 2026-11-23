@@ -1,5 +1,13 @@
 # Production streaming audit
 
+This records historical audit checkpoint `5f60b2e`, before integration of
+`origin/main` at `a9ad258`. Benchmarks, traces and screenshot comparisons have
+not been repeated after that integration and do not describe the merged head.
+The merge retains the branch's ancestor cache, inherited-value snapshots and
+per-property copying rather than the previously rejected cssText trial, while
+preserving upstream capture gating and mobile/feedback behavior. Post-merge
+size verification and its pending budget decision are in SIZE-AUDIT.md.
+
 Comparison: main `a2ebe6c` versus the perf-audit branch after Step D.
 Bun 1.4.4, React 19.3.1; same machine. No live-provider requests.
 Sizes and remaining bundle limitations are in [SIZE-AUDIT.md](SIZE-AUDIT.md).

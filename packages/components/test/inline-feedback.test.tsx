@@ -6,12 +6,293 @@ import { createStore } from '@prism-ui/state';
 import { createFeedback } from '../src/mockup/engine';
 import { preloadFeedback } from '../src/feedback';
 import '../src/num';
+import '../src/mockup';
+import { useFeedbackTarget } from '../src/feedback';
 
 beforeAll(() => preloadFeedback());
 afterEach(cleanup);
+test('portal composer clamps to visualViewport bounds and updates when the keyboard opens', () => {
+  const previous = Object.getOwnPropertyDescriptor(window, 'visualViewport');
+  const vv = Object.assign(new window.EventTarget(), { width: 320, height: 600, offsetLeft: 20, offsetTop: 40 });
+  Object.defineProperty(window, 'visualViewport', { configurable: true, value: vv });
+  try {
+    function Target() { const ref = useFeedbackTarget(); return <div ref={ref}>Preview</div>; }
+    const view = render(<Prism feedback animate={false} source={'```ui:feedback-test\n{"id":"keyboard"}\n```'} renderers={{ 'feedback-test': Target }} />);
+    const root = view.container.querySelector('.prism-inline-feedback') as HTMLElement;
+    root.getBoundingClientRect = () => new DOMRect(0, 0, 375, 812);
+    fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+    fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+    act(() => { vv.height = 320; vv.dispatchEvent(new window.Event('resize')); });
+    const layer = document.querySelector('.prism-inline-feedback__popover-layer') as HTMLElement;
+    expect(parseFloat(layer.style.left)).toBeGreaterThanOrEqual(32);
+    expect(parseFloat(layer.style.top)).toBeGreaterThanOrEqual(52);
+    expect(parseFloat(layer.style.top) + 210).toBeLessThanOrEqual(348);
+    expect((view.getByRole('dialog') as HTMLElement).style.maxHeight).toBe('296px');
+  } finally { cleanup(); if (previous) Object.defineProperty(window, 'visualViewport', previous); else delete (window as any).visualViewport; }
+});
+
+test('opening inline feedback never migrates another control at the legacy path', () => {
+  const store = createStore();
+  const view = render(<Prism store={store} feedback animate={false} source={':calc[1]{id="amount"} :num[5]{id="amount.feedback"}'} />);
+  fireEvent.keyDown(view.getByRole('slider'), { key: 'ArrowUp' });
+  expect(store.get('amount.feedback')).toBe(6);
+  fireEvent.click(view.getAllByRole('button', { name: 'Give feedback' })[0]);
+  expect(store.get('amount.feedback')).toBe(6);
+  expect(store.get('__prism.feedback.amount')).toBeUndefined();
+  expect(view.getByRole('slider').getAttribute('aria-valuenow')).toBe('6');
+});
+
+for (const value of [null, 'other value', [], {}, { items: [], overall: 1 }, { items: [null], overall: '' }, { items: [{}], overall: '' }]) test(`non-draft legacy value ${JSON.stringify(value)} is not read or migrated`, () => {
+  const store = createStore({ initial: { amount: { feedback: value } } });
+  const view = render(<Prism store={store} feedback animate={false} source={':calc[1]{id="amount"}'} />);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  expect(store.get('amount.feedback')).toEqual(value);
+  expect(store.get('__prism.feedback.amount')).toBeUndefined();
+  expect((view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('');
+  expect((view.getByRole('button', { name: /^Send \d+ comments?$/ }) as HTMLButtonElement).disabled).toBe(true);
+});
+
+for (const id of ['007', 'group.007', '7']) for (const legacy of [false, true]) test(`${legacy ? 'legacy' : 'new'} feedback for numeric id ${id} survives JSON snapshot and reload`, () => {
+  const original = createFeedback({ overall: 'Saved overall' }); original.addPin({ x: 20, y: 30, comment: 'Saved annotation' });
+  const initial = legacy ? id === 'group.007' ? { group: { '007': { feedback: original.toJSON() } } } : { [id]: { feedback: original.toJSON() } } : {};
+  const store = createStore({ initial });
+  const path = `__prism.feedback.${id}`;
+  const ui = (active = store) => <Prism store={active} feedback animate={false} source={`:calc[1]{id="${id}"}`} />;
+  const view = render(ui());
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  if (!legacy) {
+    fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+    change(view.getByPlaceholderText('Add a comment…'), 'Saved annotation');
+    fireEvent.click(view.getByRole('button', { name: 'Save' }));
+  }
+  expect(view.getByRole('button', { name: 'Comment 1: Saved annotation' })).toBeTruthy();
+  const serialized = JSON.parse(JSON.stringify(store.snapshot()));
+  expect(Array.isArray(serialized.__prism.feedback)).toBe(false);
+  expect(createStore({ initial: serialized }).get(`${path}.items`)).toHaveLength(1);
+  view.unmount();
+  const reloaded = createStore({ initial: serialized }), restored = render(ui(reloaded));
+  fireEvent.click(restored.getByRole('button', { name: 'Give feedback' }));
+  expect(restored.getByRole('button', { name: 'Comment 1: Saved annotation' })).toBeTruthy();
+  fireEvent.click(restored.getByRole('button', { name: /^Send \d+ comments?$/ }));
+  expect(reloaded.get(`${path}.submitted`)).toBe(true);
+  act(() => reloaded.undo(path));
+  expect(restored.getByRole('button', { name: 'Comment 1: Saved annotation' })).toBeTruthy();
+  act(() => reloaded.redo(path));
+  expect(createStore({ initial: JSON.parse(JSON.stringify(reloaded.snapshot())) }).get(`${path}.items`)).toHaveLength(1);
+});
+
+test('Mockup keeps its own feedback controls without a duplicate global editor', () => {
+  for (const src of ['', 'data:image/png;base64,iVBORw0KGgo=']) {
+    const view = render(<Prism feedback animate={false} source={'```ui:mockup\n' + JSON.stringify({ id: 'native-review', kind: 'image', src }) + '\n```'} />);
+    expect(view.queryByRole('button', { name: 'Give feedback' })).toBeNull();
+    expect(view.getAllByRole('textbox', { name: 'Overall feedback' })).toHaveLength(1);
+    expect(view.getAllByRole('button', { name: /^Send \d+ comments?$/ })).toHaveLength(1);
+    view.unmount();
+  }
+});
+
+for (const id of ['007', '0', '01', 'a.007']) for (const arrayParent of [false, true]) test(`only legacy draft ${id} with ${arrayParent ? 'array' : 'record'} source parent survives migration, deletes, serialized history and reload`, () => {
+  const original = createFeedback(); original.addPin({ x: 20, y: 30, comment: 'Only annotation' });
+  const parent = arrayParent ? Object.assign([], { feedback: original.toJSON() }) : { feedback: original.toJSON() };
+  const initial = id === 'a.007' ? { a: { '007': parent } } : { [id]: parent };
+  const persisted: object[] = [], store = createStore({ initial, persist: { load: () => ({}), save: (_, data) => persisted.push(data) } });
+  const legacyPath = `${id}.feedback`, path = `__prism.feedback.${id}`;
+  store.set(`${legacyPath}.overall`, 'Earlier'); store.set(`${legacyPath}.overall`, 'Latest'); store.undo();
+  const ui = (active = store) => <Prism store={active} feedback animate={false} source={`:calc[1]{id="${id}"}`} />;
+  const view = render(ui());
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  const checkSnapshot = () => {
+    expect(store.get(legacyPath)).toBeUndefined();
+    const snapshot = JSON.parse(JSON.stringify(store.snapshot()));
+    expect(Array.isArray(snapshot.__prism.feedback)).toBe(false);
+    if (id.includes('.')) expect(Array.isArray(snapshot.__prism.feedback.a)).toBe(false);
+    expect(createStore({ initial: snapshot }).get(`${path}.items.0.comment`)).toBe('Only annotation');
+    return snapshot;
+  };
+  checkSnapshot(); persisted.length = 0;
+  expect(store.canUndo(path)).toBe(true); expect(store.canRedo(path)).toBe(true);
+  act(() => store.undo(path)); checkSnapshot();
+  act(() => store.redo(path)); checkSnapshot();
+  act(() => store.redo(path)); checkSnapshot();
+  act(() => store.undo()); checkSnapshot();
+  act(() => store.apply({ delete: [legacyPath] }, { history: false })); checkSnapshot();
+  act(() => {
+    store.set('__prism.feedback.extra', createFeedback().toJSON(), { history: false });
+    store.apply({ delete: ['__prism.feedback.extra'] }, { history: false });
+  }); checkSnapshot();
+  fireEvent.click(view.getByRole('button', { name: 'Comment 1: Only annotation' }));
+  fireEvent.click(view.getByRole('button', { name: 'Delete' }));
+  expect(createStore({ initial: JSON.parse(JSON.stringify(store.snapshot())) }).get(`${path}.items`)).toEqual([]);
+  act(() => store.undo(path));
+  const snapshot = checkSnapshot();
+  for (const data of persisted) {
+    const restored = createStore({ initial: JSON.parse(JSON.stringify(data)) });
+    expect(Array.isArray(restored.get('__prism.feedback'))).toBe(false);
+    expect(Array.isArray(restored.get(path))).toBe(false);
+  }
+  view.unmount();
+  const restored = render(ui(createStore({ initial: snapshot })));
+  fireEvent.click(restored.getByRole('button', { name: 'Give feedback' }));
+  expect(restored.getByRole('button', { name: 'Comment 1: Only annotation' })).toBeTruthy();
+});
+
+test('saving numeric inline feedback preserves the scalar value and dependent formula', () => {
+  const store = createStore();
+  const view = render(<Prism store={store} feedback animate={false} source={':num[1200]{id=rent} Annual cost: :calc[rent*12]'} onAction={() => {}} />);
+  expect(store.get('rent')).toBe(1200);
+  fireEvent.click(view.getAllByRole('button', { name: 'Give feedback' })[0]);
+  const overall = view.getByRole('textbox', { name: 'Overall feedback' });
+  change(overall, 'Keep this budget'); fireEvent.blur(overall);
+  expect(store.get('rent')).toBe(1200);
+  fireEvent.click(view.getByRole('button', { name: /^Send \d+ comments?$/ }));
+  expect(store.get('rent')).toBe(1200);
+  expect(view.getByRole('math').textContent).toBe('14,400');
+});
+
+for (const id of ['amount', '007']) for (const name of ['num', 'calc']) test(`saved ${name} feedback survives streamed explicit-id ${id} finalization and reload`, () => {
+  const store = createStore(), actions: Action[] = [];
+  const ui = (done: boolean) => <Prism scope="feedback-stream" store={store} feedback animate={false} source={`:${name}[1200]{id="${id}"}`} done={done} onAction={action => actions.push(action)} />;
+  const view = render(ui(false));
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+  change(view.getByPlaceholderText('Add a comment…'), 'Saved during streaming');
+  fireEvent.click(view.getByRole('button', { name: 'Save' }));
+  expect(view.getByRole('button', { name: 'Comment 1: Saved during streaming' })).toBeTruthy();
+  view.rerender(ui(true));
+  expect(view.getByRole('button', { name: 'Comment 1: Saved during streaming' })).toBeTruthy();
+  expect(createStore({ initial: JSON.parse(JSON.stringify(store.snapshot())) }).get(`__prism.feedback.${id}.items`)).toHaveLength(1);
+  if (name === 'num') expect(store.get(id)).toBe(1200);
+  fireEvent.click(view.getByRole('button', { name: /^Send \d+ comments?$/ }));
+  expect(actions.at(-1)?.payload).toMatchObject({ target: { id }, items: [{ comment: 'Saved during streaming' }] });
+  view.unmount();
+  const restored = render(ui(true));
+  fireEvent.click(restored.getByRole('button', { name: 'Give feedback' }));
+  expect(restored.getByText('Edit feedback')).toBeTruthy();
+  expect(store.get(`__prism.feedback.${id}.submitted`)).toBe(true);
+});
+
+for (const name of ['num', 'calc']) for (const operation of ['submit', 'submit-overall', 'delete']) test(`legacy ${name} annotations ${operation} consistently`, () => {
+  const saved = createFeedback({ overall: operation === 'submit-overall' ? 'Legacy overall' : '' }); saved.addPin({ x: 20, y: 30, comment: 'Legacy annotation' });
+  const store = createStore({ initial: { amount: { feedback: saved.toJSON() } } }), actions: Action[] = [];
+  const ui = () => <Prism store={store} feedback animate={false} source={`:${name}[1200]{id="amount"}`} onAction={action => actions.push(action)} />;
+  const view = render(ui());
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  const marker = view.getByRole('button', { name: 'Comment 1: Legacy annotation' });
+  if (name === 'num') expect(view.getByRole('slider').getAttribute('aria-valuenow')).toBe('1200');
+  if (operation !== 'delete') {
+    expect((view.getByRole('button', { name: /^Send \d+ comments?$/ }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(view.getByRole('button', { name: /^Send \d+ comments?$/ }));
+    expect(actions.at(-1)?.payload).toMatchObject({ items: [{ comment: 'Legacy annotation' }] });
+    expect(store.get('__prism.feedback.amount.items')).toHaveLength(1);
+  } else {
+    fireEvent.click(marker); fireEvent.click(view.getByRole('button', { name: 'Delete' }));
+    expect(store.get('__prism.feedback.amount.items')).toEqual([]);
+    act(() => store.undo('__prism.feedback.amount'));
+    expect(view.getByRole('button', { name: 'Comment 1: Legacy annotation' })).toBeTruthy();
+    act(() => store.redo('__prism.feedback.amount'));
+    view.unmount();
+    const restored = render(ui());
+    fireEvent.click(restored.getByRole('button', { name: 'Give feedback' }));
+    expect(restored.queryByRole('button', { name: 'Comment 1: Legacy annotation' })).toBeNull();
+  }
+});
+test('inline numeric feedback is a sibling control in a reserved end gutter', async () => {
+  const view = render(<Prism feedback source={':num[1200]{id=budget}'} animate={false} />);
+  const slider = view.getByRole('slider'), bubble = view.getByRole('button', { name: 'Give feedback' });
+  expect(slider.contains(bubble)).toBe(false);
+  expect(bubble.parentElement?.hasAttribute('data-inline')).toBe(true);
+  fireEvent.click(slider);
+  expect(view.getByRole('spinbutton')).toBeTruthy();
+  const css = await Bun.file(new URL('../src/feedback.css', import.meta.url)).text();
+  expect(css).toContain('[data-inline]:has([data-prism="num"]) { padding-inline-end: 26px; pointer-events: none; }');
+  expect(css).toContain('width: 22px; height: 22px;');
+});
 const source = '```ui:feedback-test\n{"id":"target"}\n```';
 const View = () => <button>Actual input</button>;
+test('embedded frame hit-testing is excluded only while inline feedback is open', async () => {
+  const css = await Bun.file(new URL('../src/feedback.css', import.meta.url)).text();
+  const selector = '.prism-inline-feedback[data-feedback-open]:has(.prism-mockup__canvas:not([data-disabled])) iframe';
+  expect(css).toContain(`${selector} { pointer-events: none; }`);
+  const saved = createFeedback(); saved.addPin({ x: 30, y: 30, comment: 'Saved' });
+  const store = createStore({ initial: { target: { feedback: saved.toJSON() } } });
+  const view = render(<Prism feedback source={source} store={store} renderers={{ 'feedback-test': () => <iframe title="Preview" /> }} />);
+  const frame = view.getByTitle('Preview');
+  expect(frame.matches(selector)).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' })); expect(frame.matches(selector)).toBe(true);
+  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter', ctrlKey: true });
+  expect(view.getByRole('application').hasAttribute('data-disabled')).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Edit feedback' }));
+  expect(view.getByRole('application').hasAttribute('data-disabled')).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: 'Close feedback' })); expect(frame.matches(selector)).toBe(false);
+});
+for (const release of [false, true]) test(`closing inline feedback restores the preview after a pinch (released: ${release})`, () => {
+  function Target() { const ref = useFeedbackTarget(); return <div ref={ref} data-test-preview="" style={{ width: '80%' }}><span>Preview</span></div>; }
+  const view = render(<Prism feedback animate={false} source={source} renderers={{ 'feedback-test': Target }} />);
+  const target = view.container.querySelector<HTMLElement>('[data-test-preview]')!, parent = target.parentElement!;
+  Object.defineProperties(target, { offsetWidth: { configurable: true, value: 300 }, offsetHeight: { configurable: true, value: 180 } });
+  parent.style.overflow = 'clip'; parent.style.maxHeight = '240px';
+  const pinch = () => {
+    const canvas = view.getByRole('application');
+    canvas.getBoundingClientRect = () => new DOMRect(0, 0, 300, 180);
+    const event = (type: string, id: number, x: number) => fireEvent(canvas, new window.PointerEvent(type, { bubbles: true, button: 0, pointerType: 'touch', pointerId: id, clientX: x, clientY: 80 }));
+    event('pointerdown', 1, 60); event('pointerdown', 2, 160); event('pointermove', 2, 210);
+    if (release) { event('pointerup', 1, 60); event('pointerup', 2, 210); }
+  };
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' })); pinch();
+  expect(target.style.zoom).toBe('1.5'); expect(parent.style.maxHeight).toBe('180px');
+  fireEvent.click(view.getByRole('button', { name: 'Close feedback' }));
+  expect(target.style.zoom).toBe(''); expect(target.style.width).toBe('80%');
+  expect(parent.style.maxHeight).toBe('240px'); expect(parent.style.overflow).toBe('clip');
+  expect(parent.hasAttribute('data-feedback-scroll')).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' })); pinch();
+  expect(target.style.zoom).toBe('1.5'); expect(view.queryByRole('dialog')).toBeNull();
+});
+for (const rootWidth of [500, 0]) test(`opening a list comment with a hidden preview uses visible feedback bounds (${rootWidth})`, () => {
+  function Target() { const ref = useFeedbackTarget(); return <div ref={ref} data-test-preview="">Preview</div>; }
+  const view = render(<Prism feedback animate={false} source={source} renderers={{ 'feedback-test': Target }} />);
+  const preview = view.container.querySelector('[data-test-preview]') as HTMLElement;
+  preview.getBoundingClientRect = () => preview.hidden ? new DOMRect() : new DOMRect(20, 20, 500, 300);
+  const root = view.container.querySelector('.prism-inline-feedback') as HTMLElement;
+  root.getBoundingClientRect = () => new DOMRect(20, 20, rootWidth, 600);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+  change(view.getByPlaceholderText('Add a comment…'), 'Keep this editable');
+  fireEvent.click(view.getByRole('button', { name: 'Save' }));
+  preview.hidden = true;
+  fireEvent.click(view.getByRole('button', { name: 'Open comment 1' }));
+  const layer = document.querySelector('.prism-inline-feedback__popover-layer') as HTMLElement;
+  expect(parseFloat(layer.style.width)).toBeGreaterThanOrEqual(200);
+  expect(view.getByPlaceholderText('Add a comment…').getAttribute('aria-label')).toBe('Add a comment…');
+});
+test('the feedback trigger retains its hit region while reveal chrome is transparent', async () => {
+  const css = await Bun.file(new URL('../src/feedback.css', import.meta.url)).text();
+  expect(css).toContain('.prism-inline-feedback > .prism-inline-feedback__trigger { pointer-events: auto !important; }');
+  const view = render(<Prism feedback source={source} renderers={{ 'feedback-test': View }} />);
+  const trigger = view.getByRole('button', { name: 'Give feedback' });
+  fireEvent.mouseMove(trigger);
+  fireEvent.click(trigger);
+  expect(trigger.getAttribute('aria-expanded')).toBe('true');
+  expect(view.getByRole('application')).toBeDefined();
+});
 function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.focus(element); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); }
+
+test('sent inline feedback ignores repeated submit shortcuts and can be explicitly edited', () => {
+  const actions: Action[] = [];
+  const view = render(<Prism feedback source={source} renderers={{ 'feedback-test': View }} onAction={action => actions.push(action)} />);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  const canvas = view.getByRole('application');
+  fireEvent.keyDown(canvas, { key: 'Enter', ctrlKey: true });
+  expect(actions).toHaveLength(0);
+  fireEvent.keyDown(canvas, { key: 'Enter' });
+  change(view.getByPlaceholderText('Add a comment…'), 'Send once');
+  fireEvent.keyDown(view.getByPlaceholderText('Add a comment…'), { key: 'Enter', ctrlKey: true });
+  expect(actions).toHaveLength(1);
+  for (const modifier of ['ctrlKey', 'metaKey']) fireEvent.keyDown(canvas, { key: 'Enter', [modifier]: true });
+  expect(actions).toHaveLength(1);
+  fireEvent.click(view.getByRole('button', { name: 'Edit feedback' }));
+  fireEvent.keyDown(canvas, { key: 'Enter', metaKey: true });
+  expect(actions).toHaveLength(2);
+});
 
 test('saved feedback is store-owned through revisions, local cancellation, finalization, history and explicit commits', () => {
   const original = createFeedback({ overall: 'Saved overall' });
@@ -80,7 +361,7 @@ test('saved feedback is store-owned through revisions, local cancellation, final
   change(view.getByPlaceholderText('Add a comment…'), 'Committed with submit');
   change(overall, 'Submitted overall');
   expect(store.get('target.feedback.overall')).toBe('Committed on blur');
-  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  fireEvent.click(view.getByRole('button', { name: /^Send \d+ comments?$/ }));
   const submission = store.get('target.feedback');
   expect(submission).toMatchObject({ submitted: true, overall: 'Submitted overall' });
   expect(submission.items).toHaveLength(3);
@@ -134,7 +415,7 @@ test('definitions opt in/out; empty and canceled feedback never create saved sta
   fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
   fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
   fireEvent.keyDown(view.getByPlaceholderText('Add a comment…'), { key: 'Escape' });
-  expect(view.getByRole('button', { name: 'Submit feedback' }).hasAttribute('disabled')).toBe(true);
+  expect(view.getByRole('button', { name: /^Send \d+ comments?$/ }).hasAttribute('disabled')).toBe(true);
   expect(actions).toEqual([]);
   expect(store.snapshot()).toEqual({});
   view.rerender(<Prism store={store} renderers={{ 'feedback-test': disabled }} feedback source={source} />);

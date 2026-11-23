@@ -1,6 +1,6 @@
 import '../../react/test/setup';
 import { expect, test } from 'bun:test';
-import { createRef, type ElementType, type ReactNode } from 'react';
+import { createRef, type CSSProperties, type ElementType, type ReactNode } from 'react';
 import { act, fireEvent, render, within } from '@testing-library/react';
 import { Prism, ThemeScope, host } from '@prism-ui/react';
 import { createStore } from '../../state/src';
@@ -28,6 +28,59 @@ test('Print and Objects expose named themes and dark tokens', () => {
     expect(theme.dark?.text).toBeTruthy();
   }
   expect('components' in objects).toBe(true);
+});
+
+test('Print solid badges preserve six distinct semantic inks in light and dark', () => {
+  const tones = ['neutral', 'accent', 'info', 'success', 'warning', 'danger'];
+  const view = render(<Prism theme={print} source={tones.map(tone => `:badge[${tone}]{tone=${tone} variant=solid}`).join(' ')} animate={false} />);
+  expect(Array.from(view.container.querySelectorAll('[data-variant="solid"]')).map(el => el.getAttribute('data-tone'))).toEqual(tones);
+  for (const palette of [print.tokens!, { ...print.tokens, ...print.dark }]) expect(new Set([palette.text, palette.accent, palette.info, palette.positive, palette.warning, palette.danger]).size).toBe(6);
+  expect(print.css).toContain('background:var(--prism-badge-color); color:var(--prism-bg);');
+});
+
+test('Instrument narrow Pick keeps weights and scores compact without dropping evidence', () => {
+  expect(instrument.css).toContain('.instrument-fader { display:grid; grid-template-columns:minmax(0,1fr) 92px;');
+  expect(instrument.css).toContain('.instrument-score { grid-column:2; grid-row:1/3;');
+  expect(instrument.css).toContain('.instrument-notes { margin:2px 0; line-height:1.4; }');
+  expect(instrument.css).toContain('.instrument-module-actions:empty { display:none; }');
+});
+
+test('Instrument and Objects solid badges retain semantic fills and contrasting foregrounds', () => {
+  for (const theme of [instrument, objects]) {
+    expect(theme.css).toContain('background:var(--prism-badge-color); color:var(--prism-badge-on-accent,#fff);');
+    expect(theme.css).toContain('[data-variant="solid"][data-tone="neutral"] { color:var(--prism-bg); }');
+    expect(theme.css).toContain('[data-variant="solid"][data-tone="accent"] { color:var(--prism-on-accent); }');
+  }
+  expect(instrument.css).toContain('.prism-badge__dot { background:var(--prism-badge-color); }');
+});
+
+test('Objects tabs retain whole labels in a compact, scrollable paper strip', () => {
+  expect(objects.css).toContain('overflow-x:auto; flex-wrap:nowrap;');
+  expect(objects.css).toContain('white-space:nowrap; overflow-wrap:normal; word-break:normal; flex:0 0 auto;');
+  expect(objects.css).toContain('@container (max-width:360px) { :scope .prism-tabs__root { padding:12px; }');
+});
+
+test('Print pill tabs do not shrink ordinary words into letter fragments', () => {
+  expect(print.css).toContain('.prism-tabs__list { gap:0; min-height:40px; overflow-x:auto; flex-wrap:nowrap; }');
+  expect(print.css).toContain('white-space:nowrap; overflow-wrap:normal; word-break:normal; flex:0 0 auto;');
+});
+
+test('Instrument tabs keep whole labels in a scrollable strip with narrow chassis padding', () => {
+  const view = render(<Prism theme={instrument} source={'::::tabs{title="Be available"}\n:::tab{label="Before"}\nFirst\n:::\n:::tab{label="During"}\nSecond\n:::\n::::'} animate={false} />);
+  expect(within(view.container).getByRole('tab', { name: 'Before' }).textContent).toBe('Before');
+  expect(instrument.css).toContain('flex-wrap:nowrap; overflow-x:auto;');
+  expect(instrument.css).toContain('flex:0 0 auto; white-space:nowrap; overflow-wrap:normal; word-break:normal;');
+  expect(instrument.css).toContain('@container (max-width:360px) { :scope .prism-tabs__root { padding:10px; }');
+});
+
+test('Print totals size against the account column and retain the complete section index', () => {
+  const view = render(<Prism source={source} theme={print} animate={false} />);
+  expect(view.container.querySelector('.print-index')?.textContent).toBe('01 / ESTIMATE');
+  const total = view.container.querySelector<HTMLElement>('[data-print-total]')!;
+  const value = total.querySelector('[data-part="total-value"]')!;
+  expect(Number(total.style.getPropertyValue('--print-total-length'))).toBe(value.textContent!.length);
+  expect(print.css).toContain('container-type:inline-size; min-width:0; border-left');
+  expect(print.css).toContain('white-space:nowrap; font:900 min(93px,calc(160cqi / var(--print-total-length)))');
 });
 
 test('Objects receipt preserves increase, Undo, switch and sent state without feeding when animation is disabled', () => {
@@ -93,7 +146,7 @@ test('Print leaves native feedback intact while preserving edits and submit acti
   const source = '```ui:mockup\n' + JSON.stringify({ id: 'figure', kind: 'svg', source: '<svg viewBox="0 0 100 100"><rect width="100" height="100"/></svg>' }) + '\n```';
   const view = render(<Prism source={source} theme={print} animate={false} onAction={action => actions.push(action)} />);
   const field = within(view.container).getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement;
-  const submit = within(view.container).getByRole('button', { name: 'Submit feedback' });
+  const submit = within(view.container).getByRole('button', { name: /^Send \d+ comments?$/ });
   expect(field.getAttribute('rows')).toBeNull();
   expect(field.hasAttribute('model')).toBe(false);
   expect(submit.hasAttribute('disabled')).toBe(true);
@@ -198,6 +251,30 @@ test('Instrument shares its segmented geometry between Estimate and module score
   fireEvent.click(ui.getByRole('button', { name: 'Choose Concierge ↗' }));
   expect(actions.at(-1)).toMatchObject({ type: 'choose', payload: { option: 'concierge', weights: { learning: 3, cost: 0 } } });
   expect(view.container.querySelector('[data-instrument-module][data-top] [role="status"]')?.textContent).toBe('Chosen');
+});
+
+test('compact Instrument modules disclose runner-up evidence while retaining weights and choices', () => {
+  const theme = { ...instrument, components: { ...instrument.components, pick: { ...instrument.components?.pick, styles: { list: { '--prism-pick-compact': '1' } as CSSProperties } } } };
+  const source = (options: object[]) => '```ui:pick\n' + JSON.stringify({ id: 'compact-modules', criteria: [{ id: 'cost', label: 'Cost' }], options }) + '\n```';
+  const actions: { type: string; payload: unknown }[] = [];
+  const view = render(<Prism source={source([{ id: 'alpha', title: 'Alpha', scores: { cost: .9 }, pros: ['Leader evidence'] }, { id: 'beta', title: 'Beta', subtitle: 'Alternative', scores: { cost: .5 }, pros: ['Runner-up evidence'], cons: ['Trade-off'] }])} theme={theme} animate={false} onAction={action => actions.push(action)} />);
+  const ui = within(view.container), toggle = ui.getByRole('button', { name: 'Beta' });
+  const details = view.container.querySelector<HTMLElement>(`[id="${toggle.getAttribute('aria-controls')}"]`)!;
+  expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  expect(details.hidden).toBe(true);
+  expect(details.textContent).toContain('Runner-up evidence');
+  expect(details.textContent).toContain('Trade-off');
+  expect(ui.getByText('Leader evidence')).toBeTruthy();
+  fireEvent.click(toggle);
+  expect(details.hidden).toBe(false);
+  expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  fireEvent.input(ui.getByRole('slider', { name: 'Cost weight' }), { target: { value: '2' } });
+  fireEvent.click(ui.getByRole('button', { name: 'Choose Beta ↗' }));
+  expect(actions.at(-1)).toMatchObject({ type: 'choose', payload: { option: 'beta', weights: { cost: 2 } } });
+  view.rerender(<Prism source={source([{ id: 'pending', title: 'Pending' }])} theme={theme} animate={false} />);
+  expect(view.container.querySelector('[data-instrument-module]')?.getAttribute('aria-busy')).toBe('true');
+  view.rerender(<Prism source={source([])} theme={theme} animate={false} />);
+  expect(view.container.querySelector('[data-instrument-module]')).toBeNull();
 });
 
 test('Instrument keeps Estimate Undo, switch, submit and sent behavior in dark mode', () => {
@@ -374,6 +451,6 @@ for (const theme of [print, objects, instrument]) {
     expect(components.artifact).toBeUndefined();
     expect(components.feedback).toBeUndefined();
     expect(components.mockup?.slots).toBeUndefined();
-    expect(theme.css).not.toMatch(/prism-(artifact__|inline-feedback|mockup__(input|overall|count|feedbackFooter|marker|popover|primary))/);
+    expect(theme.css).not.toMatch(/prism-(artifact__|inline-feedback|mockup__(overall|count|feedbackFooter|primary))/);
   });
 }

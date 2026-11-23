@@ -1,9 +1,10 @@
-import { Children, createContext, createElement, forwardRef, useContext, type ElementType, type InputHTMLAttributes, type ReactElement, type ReactNode } from 'react';
+import { Children, createContext, createElement, forwardRef, useContext, type CSSProperties, type ElementType, type InputHTMLAttributes, type ReactElement, type ReactNode } from 'react';
 import { ComponentContext, PrismPart, defineTheme, useFormat, usePart, useStrings } from '@prism-ui/react';
 import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { usePick } from '@prism-ui/components/pick';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
 import { receiptMotion } from './motion';
+import { MockupToolContent, mockupToolCss } from './mockup-tools';
 
 type SlotProps = FrameSlotProps<unknown>;
 type EstimateRow = EstimateModel['rows'][number];
@@ -23,7 +24,7 @@ const Header = forwardRef<HTMLElement, SlotProps>(function Header({ as = 'header
 });
 const Tool = forwardRef<HTMLElement, SlotProps>(function Tool({ as = 'button', model, frame, overflow, children, ...props }, ref) {
   const component = (props as Record<string, unknown>)['data-prism'] as string;
-  return createElement(as, { ...props, ref, 'data-print-tool': supported.has(component) ? '' : undefined }, supported.has(component) ? props['aria-label'] : children);
+  return createElement(as, { ...props, ref, 'data-print-tool': supported.has(component) ? '' : undefined }, component === 'mockup' ? <MockupToolContent label={props['aria-label']}>{children}</MockupToolContent> : supported.has(component) ? props['aria-label'] : children);
 });
 const EstimateRoot = forwardRef<HTMLElement, SlotProps>(function EstimateRoot({ as = 'section', model, frame, overflow, children, ...props }, ref) {
   const [header, body, footer] = Children.toArray(children);
@@ -52,7 +53,8 @@ const Total = forwardRef<HTMLDivElement, SlotProps & { estimate: EstimateModel }
   const format = useFormat(), context = useContext(ComponentContext)!;
   const label = usePart('estimate', 'total-label'), value = usePart('estimate', 'total-value'), live = usePart('estimate', 'live');
   const currency = estimate.totalText.replace(/[\p{N}\p{P}\p{Z}\p{Cf}]/gu, '');
-  return <div {...props} ref={ref} data-print-total=""><PrismPart as="span" {...label}>{estimate.totalLabel} / {currencyCode(context.props.currency, format.currencyCode)}</PrismPart><PrismPart as="span" {...value} aria-hidden="true"><sup>{currency}</sup><span>{format.number(estimate.displayedTotal, { maximumFractionDigits: estimate.fractionDigits })}</span></PrismPart><PrismPart as="span" {...live} aria-live="polite">{estimate.finalTotalText}</PrismPart></div>;
+  const amount = format.number(estimate.displayedTotal, { maximumFractionDigits: estimate.fractionDigits });
+  return <div {...props} ref={ref} data-print-total="" style={{ ...props.style, '--print-total-length': amount.length + currency.length } as CSSProperties}><PrismPart as="span" {...label}>{estimate.totalLabel} / {currencyCode(context.props.currency, format.currencyCode)}</PrismPart><PrismPart as="span" {...value} aria-hidden="true"><sup>{currency}</sup><span>{amount}</span></PrismPart><PrismPart as="span" {...live} aria-live="polite">{estimate.finalTotalText}</PrismPart></div>;
 });
 
 const Criteria = forwardRef<HTMLDivElement, SlotProps & { pick: ReturnType<typeof usePick> }>(function Criteria({ as, model, frame, overflow, pick, children, ...props }, ref) {
@@ -91,6 +93,7 @@ export const print = defineTheme({
   tokens: {
     bg: '#fff', surface: 'transparent', surfaceRaised: '#fff', text: '#151515', textMuted: '#555', textSubtle: '#666',
     border: '#aaa', borderStrong: '#151515', accent: '#d92e24', accentText: '#d92e24', onAccent: '#fff', focus: '#d92e24',
+    info: '#275a78', positive: '#276449', warning: '#845300', danger: '#a21d36',
     fontBody: '"Inter Tight", "Arial Narrow", Arial, sans-serif', fontDisplay: '"Inter Tight", "Arial Narrow", Arial, sans-serif',
     fontMono: '"IBM Plex Mono", ui-monospace, monospace', fontNumeric: '"Inter Tight", Arial, sans-serif',
     radiusSm: '0px', radiusMd: '0px', radiusLg: '0px', radiusPill: '0px', elevation1: 'none', elevation2: 'none', elevation3: 'none',
@@ -100,10 +103,10 @@ export const print = defineTheme({
     motionSpring: 'linear', motionSpringDuration: '0ms', motionSpringBouncy: 'linear', motionSpringBouncyDuration: '120ms',
     motionStagger: '12ms', motionDistance: '2px', motionScale: '1', motionBlur: '0px',
   },
-  dark: { bg: '#151515', surface: 'transparent', surfaceRaised: '#202020', text: '#f5f3ef', textMuted: '#c2beb7', textSubtle: '#aaa69f', border: '#6d6a65', borderStrong: '#f5f3ef', accent: '#ef4438', accentText: '#ef4438', onAccent: '#151515', focus: '#ef4438' },
+  dark: { bg: '#151515', surface: 'transparent', surfaceRaised: '#202020', text: '#f5f3ef', textMuted: '#c2beb7', textSubtle: '#aaa69f', border: '#6d6a65', borderStrong: '#f5f3ef', accent: '#ef4438', accentText: '#ef4438', onAccent: '#151515', focus: '#ef4438', info: '#a0bfd0', positive: '#91b89d', warning: '#efbb63', danger: '#ef8ea3' },
   components: {
     frame: { slots: { header: Header, undo: Tool, ask: Tool, overflowTrigger: Tool }, strings: { undoLabel: 'Undo', askLabel: 'Ask', moreLabel: 'Tools' } },
-    estimate: { slots: { root: EstimateRoot, body: EstimateBody, item: EstimateItem, label: EstimateLabel, checkbox: Switch, total: Total }, strings: { title: 'Week-one estimate', sectionIndex: '01 / EST', submit: 'Send estimate ↗', sentLabel: 'Estimate sent ✓', totalLabel: 'Total', footnote: '{notes} · {currency}' } },
+    estimate: { slots: { root: EstimateRoot, body: EstimateBody, item: EstimateItem, label: EstimateLabel, checkbox: Switch, total: Total }, strings: { title: 'Week-one estimate', sectionIndex: '01 / ESTIMATE', submit: 'Send estimate ↗', sentLabel: 'Estimate sent ✓', totalLabel: 'Total', footnote: '{notes} · {currency}' } },
     pick: { slots: { criteria: Criteria, item: Option, list: Options }, strings: { question: 'What matters to you?', sectionIndex: '02 / PICK', optionIndex: '{n} / APPROACH', scoreSuffix: '/100', ratingSuffix: '/10', chooseTemplate: 'Choose {title} ↗' } },
     runbook: { strings: { sectionIndex: '05 / GUIDE' } },
     summary: { strings: { sectionIndex: '06 / NOTES' } },
@@ -112,6 +115,17 @@ export const print = defineTheme({
     view: { strings: { sectionIndex: '04 / SETUP' } },
   },
   css: `
+    ${mockupToolCss}
+
+    :scope :is(.prism-mockup__toolGroup,.prism-mockup__tool,.prism-mockup__popover,.prism-mockup__item) { border-radius:0; }
+    :scope .prism-mockup__tool { font:10px var(--prism-font-mono); text-transform:uppercase; }
+    :scope .prism-mockup__dimension { border-radius:0; font-family:var(--prism-font-mono); }
+    :scope .prism-mockup__popover { border:1px solid var(--prism-text); border-top:3px solid var(--prism-accent); box-shadow:3px 3px 0 var(--prism-border); }
+    :scope .prism-mockup__composerHeader { font-family:var(--prism-font-mono); text-transform:uppercase; letter-spacing:.05em; }
+    :scope .prism-mockup__list { border-top:1px solid var(--prism-text); }
+    :scope .prism-mockup__item { border-bottom:1px solid var(--prism-border); }
+    :scope .prism-mockup__badge { border-radius:0; background:var(--prism-accent); color:var(--prism-on-accent); font-family:var(--prism-font-mono); }
+    :scope .prism-mockup__target { border:1px solid var(--prism-border); background:transparent; border-radius:0; font-family:var(--prism-font-mono); }
     ${receiptMotion}
     :scope [data-print-header] { position:relative; }
     :scope [data-print-header]::before { content:""; position:absolute; inset:-5px 0 auto; height:5px; background:var(--prism-border-strong); transform-origin:left; scale:1 1; transition:scale var(--prism-motion-slow) var(--prism-motion-ease); }
@@ -138,7 +152,7 @@ export const print = defineTheme({
     :scope :is(.prism-estimate__root,.prism-pick__root,.prism-view__root) { border:0; border-radius:0; box-shadow:none; background:none; margin-block:28px; }
     :scope [data-print-header] { position:relative; display:flex; align-items:center; flex-wrap:wrap; gap:8px; border-top:5px solid transparent; border-bottom:1px solid var(--prism-text); padding:9px 0; margin:0; }
     :scope [data-print-header] > [data-part="title"] { font:800 20px/1.2 var(--prism-font-display); letter-spacing:-.3px; white-space:normal; overflow:visible; min-width:0; }
-    :scope .print-index { flex:none; margin-left:auto; color:var(--prism-accent-text); font:500 11px var(--prism-font-mono); }
+    :scope .print-index { flex:none; margin-left:auto; white-space:nowrap; color:var(--prism-accent-text); font:500 11px var(--prism-font-mono); }
     :scope [data-print-header] > [data-part="toolbar"] { position:absolute; bottom:calc(100% + 5px); right:0; margin:0; }
     :scope [data-print-tool] { width:auto; height:auto; min-height:24px; padding:2px 4px; border:0; border-radius:0; box-shadow:none; background:none; color:var(--prism-text-muted); font:10px/1.2 var(--prism-font-mono); text-transform:uppercase; }
     :scope [data-print-tool]:hover { color:var(--prism-accent-text); }
@@ -161,14 +175,14 @@ export const print = defineTheme({
     :scope .prism-estimate__checkbox::after { content:""; position:absolute; width:14px; height:14px; left:2px; top:2px; background:var(--prism-bg); transition:translate var(--prism-motion-fast); }
     :scope .prism-estimate__checkbox:checked { background:var(--prism-accent); border-color:var(--prism-accent); }
     :scope .prism-estimate__checkbox:checked::after { translate:18px 0; }
-    :scope .print-account { min-width:0; border-left:1px solid var(--prism-text); padding:14px 0 0 20px; }
+    :scope .print-account { container-type:inline-size; min-width:0; border-left:1px solid var(--prism-text); padding:14px 0 0 20px; }
     :scope .prism-estimate__summary { margin:0; max-width:none; }
     :scope .prism-estimate__summary-row { font:10px/1.5 var(--prism-font-mono); }
     :scope .prism-estimate__summary:not(:has(> .prism-estimate__summary-row + .prism-estimate__summary-row)) > .prism-estimate__summary-row { display:none; }
     :scope [data-print-total] { display:block; border:0; padding:0; margin:0 0 12px; }
     :scope .prism-estimate__total-label { display:block; font:9px/1.5 var(--prism-font-mono); text-transform:uppercase; letter-spacing:.3px; }
-    :scope .prism-estimate__total-value { display:flex; align-items:flex-start; font:900 clamp(42px,12cqw,93px)/.95 var(--prism-font-display); letter-spacing:-.06em; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
-    :scope .prism-estimate__total-value sup { font-size:26px; line-height:1.2; letter-spacing:0; padding-top:2px; }
+    :scope .prism-estimate__total-value { display:flex; align-items:flex-start; white-space:nowrap; font:900 min(93px,calc(160cqi / var(--print-total-length)))/.95 var(--prism-font-display); letter-spacing:-.06em; font-variant-numeric:tabular-nums; overflow-wrap:normal; }
+    :scope .prism-estimate__total-value sup { font-size:.3em; line-height:1.2; letter-spacing:0; padding-top:2px; }
     :scope .prism-estimate__footer { margin:0; padding:0; border:0; display:block; }
     :scope .prism-estimate__actions { display:block; }
     :scope .prism-estimate__submit { display:block; width:100%; min-height:36px; padding:10px; border:0; border-radius:0; box-shadow:none; background:var(--prism-accent); color:var(--prism-on-accent); font:700 12px/1.4 var(--prism-font-body); }
@@ -243,7 +257,6 @@ export const print = defineTheme({
       :scope .prism-estimate__list { display:block; }
       :scope .prism-estimate__details { flex-basis:65%; }
       :scope .print-account { border:0; padding:20px 0 0; }
-      :scope .prism-estimate__total-value { font-size:88px; }
     }
     @container (max-width:420px) {
       :scope .prism-view__content:has(> .prism-view__field) { grid-template-columns:minmax(0,1fr); }
@@ -263,12 +276,13 @@ export const print = defineTheme({
     :scope :is(.prism-runbook__progress,.prism-summary__actionsTitle,.prism-summary__progress,.prism-troubleshoot__position,.prism-grid__meta) { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text-muted); }
     :scope .prism-runbook__actions { min-width:0; }
     :scope .prism-runbook__stuck { font:10px var(--prism-font-mono); }
-    :scope .prism-tabs__list { gap:0; min-height:40px; overflow:visible; flex-wrap:wrap; }
-    :scope .prism-tabs__tab { min-width:0; white-space:normal; flex:1; padding:12px 14px; color:var(--prism-text-muted); font:11px/1.5 var(--prism-font-mono); }
+    :scope .prism-tabs__list { gap:0; min-height:40px; overflow-x:auto; flex-wrap:nowrap; }
+    :scope .prism-tabs__tab { min-width:0; white-space:nowrap; overflow-wrap:normal; word-break:normal; flex:0 0 auto; padding:12px 14px; color:var(--prism-text-muted); font:11px/1.5 var(--prism-font-mono); }
     :scope .prism-tabs__indicator { display:none; }
     :scope .prism-tab__body { padding:18px 0; }
     :scope .prism-badge__root { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text); }
-    :scope .prism-badge__root[data-variant="solid"] { background:var(--prism-accent); color:var(--prism-on-accent); }
+    :scope .prism-badge__root[data-tone="neutral"] { --prism-badge-color:var(--prism-text); }
+    :scope .prism-badge__root[data-variant="solid"] { background:var(--prism-badge-color); color:var(--prism-bg); }
     :scope .prism-grid__body { gap:20px; }
     :scope .prism-grid__body > .prism-card__root { margin:0; }
     :scope .prism-grid__body > .prism-card__root::before { display:none; }

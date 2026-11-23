@@ -1,8 +1,21 @@
 import { expect, test } from 'bun:test';
-import { fixtureCompatibility, sharedPath, table, violations, type Budgets, type SizeRow } from './size';
+import { resolve } from 'node:path';
+import { fixtureCompatibility, measured, sharedPath, table, violations, type Budgets, type SizeRow } from './size';
 
 const budgets: Budgets = { defaults: { js: 4096, css: 4096 }, entries: {} };
 const row: SizeRow = { name: 'widget', kind: 'component', js: 4096, css: 4096, initial: 4096, deferred: 0, fullJs: 9000, fullCss: 9000 };
+test('companion CSS is counted once when already imported and added when absent', async () => {
+  for (const name of ['artifact', 'chart']) {
+    const path = resolve(import.meta.dir, '../packages/components/src', name);
+    const entry = resolve(path, name === 'artifact' ? 'index.ts' : 'index.tsx');
+    const without = await measured(name, entry, 'component');
+    const withCompanion = await measured(name, entry, 'component', [resolve(path, name + '.css')]);
+    expect(withCompanion.js).toBe(without.js);
+    if (name === 'artifact') expect(withCompanion.css).toBe(without.css);
+    else expect(withCompanion.css).toBeGreaterThan(without.css);
+    expect(withCompanion.css).toBeGreaterThan(0);
+  }
+});
 test('public view fixture aliases tree-shake from root and subpath runtime imports', async () => {
   const rows = await fixtureCompatibility();
   expect(rows.map(row => row.entry)).toEqual(['view/index.ts', 'index.ts']);

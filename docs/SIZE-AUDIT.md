@@ -1,5 +1,35 @@
 # Component size audit
 
+## Upstream integration checkpoint
+
+The original table below records audit checkpoint `5f60b2e`, before merging
+`origin/main` at `a9ad258` (reply motion, feedback polish, visual QA and mobile
+support). It is historical evidence, not the current merged tree's sizes.
+The merged tree retains lazy feedback and zero fixture bytes in both root and
+subpath consumers. The size script now avoids counting a companion stylesheet
+again when it is already included by the JS graph; a regression test covers
+both imported and separately supplied CSS.
+
+Six existing caps are exceeded after integration. The same caps are exceeded
+by unmodified `a9ad258`, measured with the same script and Bun version:
+
+| Entry / metric, gzip bytes | Existing cap | Upstream main | Merged tree |
+|---|---:|---:|---:|
+| Artifact JS, all chunks | 42413 | 54439 | 49950 |
+| Artifact CSS | 5130 | 6696 | 6762 |
+| Mockup JS | 33950 | 41465 | 41503 |
+| Mockup CSS | 4096 | 4874 | 4874 |
+| Shared CSS | 9400 | 10165 | 10165 |
+| React JS | 20050 | 21621 | 22220 |
+
+Caps have **not** been raised automatically. Artifact is 13,827B initial plus
+36,123B deferred, with no duplicate JS modules in the chunk metafile. Its merged
+full JS is 74,873B versus upstream's 79,431B. The additional React snapshot
+logic remains charged to the runtime. Measurements, source-isolated upstream
+comparison and test logs are in `~/conformance/perf-audit/ci-{main,merge}-*`.
+
+## Original audit checkpoint
+
 Baseline: `ba8a0ae` (before Step B); after: Step D on the perf-audit branch.
 Bun 1.4.4, minified browser ESM, gzip level 9. See [accounting](../scripts/README.md).
 All numbers are bytes. Full component JS is **own + the entire shared entry**,

@@ -4,7 +4,7 @@ const MAX_SOURCE = 1_000_000;
 type Request = { id: number; source: string };
 type Response = { id: number; code?: string; error?: string };
 
-function compilerRuntime(url: string) {
+function compilerRuntime(url: string, load: (specifier: string) => Promise<{ transform(source: string, options: object): { code: string } }>) {
   const worker = self;
   let transformer: Promise<{ transform(source: string, options: object): { code: string } }> | undefined;
   const cache = new Map<string, { source: string; code: string }>();
@@ -25,7 +25,7 @@ function compilerRuntime(url: string) {
         worker.postMessage({ id, code: existing.code } satisfies Response);
         return;
       }
-      transformer ??= import(url).catch(error => { transformer = undefined; throw error; });
+      transformer ??= load(url).catch(error => { transformer = undefined; throw error; });
       const { code } = (await transformer).transform(source, {
         transforms: ['typescript', 'jsx'], jsxRuntime: 'automatic', production: true,
       });
@@ -47,7 +47,7 @@ export async function compileArtifact(source: string, compilerUrl = defaultCompi
   const url = new URL(compilerUrl, document.baseURI).href;
   let entry = workers.get(url);
   if (!entry) {
-    const blob = URL.createObjectURL(new Blob([`(${compilerRuntime.toString()})(${JSON.stringify(url)})`], { type: 'text/javascript' }));
+    const blob = URL.createObjectURL(new Blob([`(${compilerRuntime.toString()})(${JSON.stringify(url)},specifier => import(specifier))`], { type: 'text/javascript' }));
     let worker: Worker;
     try { worker = new Worker(blob, { type: 'module', name: 'prism-artifact' }); }
     finally { URL.revokeObjectURL(blob); }

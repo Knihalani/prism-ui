@@ -90,6 +90,9 @@ function flush() {
 function capture(element: StyledElement | null) {
   const scope = element?.closest('.prism-root[data-prism-presentation]');
   if (!element || !scope || element.closest('[data-animate="false"]')) return;
+  for (let ancestor = element.parentElement; ancestor && ancestor !== scope; ancestor = ancestor.parentElement) {
+    if (pending.has(ancestor)) return;
+  }
   const style = getComputedStyle(element), duration = motionDuration(style.getPropertyValue('--prism-motion-fast'), 160);
   const rect = element.getBoundingClientRect();
   if (!duration || !rect.width || !rect.height) return;
