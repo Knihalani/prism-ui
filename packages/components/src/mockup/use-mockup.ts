@@ -11,6 +11,14 @@ export interface MockupOptions { createController?: () => FrameController; enabl
 const widths = { desktop: 1280, tablet: 834, mobile: 390 };
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
 
+function isFeedbackDraft(value: unknown): value is FeedbackState & { submitted?: boolean } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const draft = value as Partial<FeedbackState & { submitted?: boolean }>;
+  return typeof draft.overall === 'string' && (draft.submitted === undefined || typeof draft.submitted === 'boolean') && Array.isArray(draft.items) && draft.items.every(item =>
+    item && typeof item === 'object' && typeof item.id === 'string' && typeof item.comment === 'string' &&
+    ['pin', 'region', 'drawing'].includes(item.kind) && Number.isFinite(item.x) && Number.isFinite(item.y) && Number.isFinite(item.n) && Number.isFinite(item.createdAt));
+}
+
 export function useMockupStrings(props: MockupProps): typeof mockupLabels {
   const defaults = { ...mockupLabels, ...usePrism().registry.get('mockup')?.strings }, theme = useTheme().theme.components.mockup?.strings;
   return { ...defaults, ...props.labels, title: props.title ?? props.labels?.title ?? defaults.title, ...theme } as typeof mockupLabels;
@@ -23,7 +31,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const legacyPath = `${component!.id}.feedback`, separate = options.inline && component!.def?.inline;
   const path = separate ? `__prism.feedback.${component!.id}` : legacyPath;
   const stored = useStoreValue<(FeedbackState & { submitted?: boolean }) | undefined>(path);
-  const legacy = useStoreValue<(FeedbackState & { submitted?: boolean }) | undefined>(legacyPath);
+  const legacyValue = useStoreValue<unknown>(legacyPath), legacy = isFeedbackDraft(legacyValue) ? legacyValue : undefined;
   const draft = stored ?? legacy;
   useLayoutEffect(() => {
     if (!separate || stored !== undefined || legacy === undefined) return;

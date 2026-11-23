@@ -10,6 +10,27 @@ import '../src/mockup';
 
 afterEach(cleanup);
 
+test('opening inline feedback never migrates another control at the legacy path', () => {
+  const store = createStore();
+  const view = render(<Prism store={store} feedback animate={false} source={':calc[1]{id="amount"} :num[5]{id="amount.feedback"}'} />);
+  fireEvent.keyDown(view.getByRole('slider'), { key: 'ArrowUp' });
+  expect(store.get('amount.feedback')).toBe(6);
+  fireEvent.click(view.getAllByRole('button', { name: 'Give feedback' })[0]);
+  expect(store.get('amount.feedback')).toBe(6);
+  expect(store.get('__prism.feedback.amount')).toBeUndefined();
+  expect(view.getByRole('slider').getAttribute('aria-valuenow')).toBe('6');
+});
+
+for (const value of [null, 'other value', [], {}, { items: [], overall: 1 }, { items: [null], overall: '' }, { items: [{}], overall: '' }]) test(`non-draft legacy value ${JSON.stringify(value)} is not read or migrated`, () => {
+  const store = createStore({ initial: { amount: { feedback: value } } });
+  const view = render(<Prism store={store} feedback animate={false} source={':calc[1]{id="amount"}'} />);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  expect(store.get('amount.feedback')).toEqual(value);
+  expect(store.get('__prism.feedback.amount')).toBeUndefined();
+  expect((view.getByRole('textbox', { name: 'Overall feedback' }) as HTMLTextAreaElement).value).toBe('');
+  expect((view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement).disabled).toBe(true);
+});
+
 test('Mockup keeps its own feedback controls without a duplicate global editor', () => {
   for (const src of ['', 'data:image/png;base64,iVBORw0KGgo=']) {
     const view = render(<Prism feedback animate={false} source={'```ui:mockup\n' + JSON.stringify({ id: 'native-review', kind: 'image', src }) + '\n```'} />);
