@@ -16,7 +16,8 @@ test('undo and state patches restore matching choices; only user weight edits cl
   act(() => view.store.undo());
   expect(view.store.get('plans.weights.reach')).toBe(1);
   expect(view.store.get('plans.chosen')).toBe('basic');
-  expect((view.getByRole('button', { name: 'Chosen' }) as HTMLButtonElement).disabled).toBe(true);
+  expect(view.container.querySelector('[data-option="basic"]')?.getAttribute('data-state')).toBe('chosen');
+  expect(view.queryByRole('button', { name: 'Sent' })).toBeNull();
   act(() => view.store.redo());
   expect(view.store.get('plans.chosen')).toBeUndefined();
   act(() => view.store.apply({ set: { 'plans.weights.reach': 3, 'plans.chosen': 'basic' } }));
@@ -98,7 +99,7 @@ test('static cards rank in order, explain the top pick and expose docs', () => {
   expect(view.getByText('Top pick')).toBeDefined();
   expect(view.container.querySelector('[data-part="value"]')?.textContent).toBe('100%');
   expect(view.container.querySelectorAll('[data-part="pip"][data-state="on"]').length).toBe(2);
-  expect(view.getByText('Low cost').querySelector('svg')).not.toBeNull(); expect(view.getByText('– Basic features')).toBeDefined(); expect(view.getByText('Value')).toBeDefined();
+  expect(view.getByText('Low cost').querySelector('svg')).not.toBeNull(); expect(view.getByText('Basic features').querySelector('svg')).not.toBeNull(); expect(view.getByText('Value')).toBeDefined();
   expect(view.container.querySelector('[data-part="live"]')?.textContent).toBe('Top pick: Budget');
   expect(view.getByRole('group', { name: 'Which plan?' })).toBeDefined();
   const docs = createRegistry([pick]).docs(); expect(docs).toContain('```ui:pick'); expect(docs).toContain('"scores"');
@@ -133,7 +134,7 @@ test('Choose emits exact option and current weights and marks chosen card', () =
   const card = view.container.querySelector('[data-option="premium"]')!;
   fireEvent.click(within(card as HTMLElement).getByRole('button', { name: 'Choose' }));
   expect(view.actions.map(({ type, payload }) => ({ type, payload }))).toEqual([{ type: 'choose', payload: { option: 'premium', weights: { price: 2, quality: 3 } } }]);
-  expect(view.store.get('plans.chosen')).toBe('premium'); expect(card.getAttribute('data-state')).toBe('chosen'); expect(view.getByRole('button', { name: 'Chosen' }).querySelector('.prism-check-mark path')).not.toBeNull();
+  expect(view.store.get('plans.chosen')).toBe('premium'); expect(card.getAttribute('data-state')).toBe('chosen'); expect(view.getByRole('button', { name: 'Sent' }).querySelector('.prism-check-mark path')).not.toBeNull();
 });
 
 test('streaming option without scores renders a skeleton then becomes ranked', () => {
@@ -154,4 +155,15 @@ test('empty, invalid scores and all-zero ties are safe and external weights re-r
   expect(view.container.querySelector('[data-option="bad"]')?.getAttribute('data-state')).toBe('loading');
   view.rerender(<Prism source={source({ options: [], criteria: [] })} animate={false} />);
   expect(view.getByText('Options will appear here')).toBeDefined();
+});
+
+test('Undo after choosing clears the sent receipt and permits choosing again', () => {
+  const view = setup();
+  fireEvent.click(within(view.container.querySelector('[data-option="budget"]') as HTMLElement).getByRole('button', { name: 'Choose' }));
+  expect(view.getByRole('button', { name: 'Sent' }).hasAttribute('disabled')).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Undo' }));
+  expect(view.store.get('plans.chosen')).toBeUndefined();
+  expect(view.queryByRole('button', { name: 'Sent' })).toBeNull();
+  fireEvent.click(within(view.container.querySelector('[data-option="budget"]') as HTMLElement).getByRole('button', { name: 'Choose' }));
+  expect(view.actions.filter(action => action.type === 'choose')).toHaveLength(2);
 });

@@ -202,6 +202,17 @@ segmented numerals and user-authored SVG content are not interface icons.
 
 ## Phase-one reference and checks
 
+### H. Adaptive containers
+
+Pick, Num/Calc, Ask, Chart, DataTable and Table must adapt to their container,
+not the viewport. Reuse an enclosing query container where available; otherwise
+set `container-type: inline-size` on the component root. Use container queries
+for width-dependent layouts, retaining media queries for hover and reduced motion.
+Support containers from approximately 280px through 760px and wider. Verify host
+at 280px, 320px and 760px in light and dark modes, plus Refraction light and dark;
+390px is an optional additional check. Narrow layouts should reduce detail and
+chrome without removing keyboard access, actions or accessible expansion state.
+
 `@prism-ui/themes` exports `refraction` and `instrument` (also per-theme subpaths).
 Host and the shadcn adapter are exported from React. Instrument currently themes
 **Estimate only** and intentionally has no dark reskin; Print and Objects are

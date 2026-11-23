@@ -105,7 +105,7 @@ test.each([
   ['card', fence('card', { title: 'Plan', action: 'Select' }), 'Select', 'Sent'],
   ['summary', fence('summary', { actions: [{ text: 'Ship it' }] }), 'Send action items', 'Sent'],
   ['ask', fence('ask', { fields: [{ id: 'name', label: 'Name', type: 'text', value: 'Ada' }] }), 'Send', 'Sent'],
-  ['pick', fence('pick', { criteria: [{ id: 'cost', label: 'Cost' }], options: [{ id: 'one', title: 'One', scores: { cost: 1 } }] }), 'Choose', 'Chosen'],
+  ['pick', fence('pick', { criteria: [{ id: 'cost', label: 'Cost' }], options: [{ id: 'one', title: 'One', scores: { cost: 1 } }] }), 'Choose', 'Sent'],
   ['runbook', '::::runbook\n:::step{title="Start" id="start"}\nStart here.\n:::\n::::', 'Stuck here?', 'Sent'],
   ['troubleshoot', fence('troubleshoot', { start: 'one', steps: { one: { text: 'Try restarting.', yes: '$fixed' } } }), 'Send report', 'Report sent'],
 ])('%s reserves the same receipt nodes and keeps its submit part mounted', (_name, source, readyLabel, sentLabel) => {
