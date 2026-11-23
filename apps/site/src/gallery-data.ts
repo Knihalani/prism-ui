@@ -1,4 +1,5 @@
 import { defaultRegistry, type ComponentDef } from '@prism-ui/react';
+import { formatSource } from './format-source';
 
 export const groups = ['Decisions & inputs', 'Data', 'Structure', 'Content', 'Artifacts'] as const;
 const categories: Record<string, typeof groups[number]> = {
@@ -10,7 +11,7 @@ const categories: Record<string, typeof groups[number]> = {
 export function category(name: string) { return categories[name] ?? 'Content'; }
 export function components() { return defaultRegistry.list().sort((a, b) => a.name.localeCompare(b.name)); }
 export function description(def: ComponentDef) { return def.docs?.split(/(?<=\.)\s/)[0] ?? 'A component for model-authored replies.'; }
-export function examples(def: ComponentDef) { return def.examples?.length ? def.examples : ['']; }
+export function examples(def: ComponentDef) { return def.examples?.length ? def.examples.map(formatSource) : ['']; }
 
 export type Property = { name: string; type: string; defaultValue: string; required: boolean; description: string };
 type SchemaInfo = NonNullable<ComponentDef['schema']>;

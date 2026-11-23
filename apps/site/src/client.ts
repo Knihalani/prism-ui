@@ -1,5 +1,6 @@
 import './site.css';
 import './gallery.css';
+import './pages.css';
 import { exampleLoaders } from './islands/loaders';
 
 const modeButton = document.querySelector<HTMLButtonElement>('[data-mode-toggle]');
@@ -19,6 +20,12 @@ for (const element of Array.from(document.querySelectorAll<HTMLElement>('[data-i
     element.querySelector('button')?.setAttribute('disabled', '');
     const note = element.querySelector('.reply-note');
     if (note) note.textContent = 'The preview is offline. Refresh to try the interactive reply.';
+  });
+}
+
+for (const element of Array.from(document.querySelectorAll<HTMLElement>('[data-island="themes"]'))) {
+  import('./islands/themes').then(module => module.mount(element)).catch(() => {
+    const note = document.createElement('p'); note.setAttribute('role', 'status'); note.textContent = 'Interactive comparison unavailable. The finished replies remain readable.'; element.append(note);
   });
 }
 

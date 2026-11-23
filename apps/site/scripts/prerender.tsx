@@ -18,7 +18,7 @@ function islandStyles(key: string, seen = new Set<string>()): string[] {
 for (const route of getRoutes()) {
   const file = resolve(dist, route.path === '/404.html' ? '404.html' : route.path.slice(1) + 'index.html');
   await mkdir(dirname(file), { recursive: true });
-  const entry = route.kind === 'home' ? 'src/islands/hero.tsx' : route.kind === 'component' ? `src/islands/${route.name}.tsx` : route.kind === 'gallery' ? 'src/preview-styles.ts' : undefined;
+  const entry = route.kind === 'home' ? 'src/islands/hero.tsx' : route.kind === 'component' ? `src/islands/${route.name}.tsx` : route.kind === 'themes' ? 'src/islands/themes.tsx' : route.kind === 'gallery' ? 'src/preview-styles.ts' : undefined;
   const styles = entry ? islandStyles(entry).map(file => `<link rel="stylesheet" href="${base}${file}">`).join('') : '';
   await writeFile(file, renderPage(route, template.replace('</head>', styles + '</head>'), base));
 }

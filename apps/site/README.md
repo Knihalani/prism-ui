@@ -9,8 +9,9 @@ bun run --cwd apps/site preview
 
 Set `SITE_BASE=/prism-ui/` for a GitHub Pages project deployment. The default is `/`.
 The build writes a real HTML document per route into `dist`, including `404.html`.
-No SPA fallback or server runtime is required. Deploy the playground separately at
-`<base>playground/` to enable the theme-editor link.
+No SPA fallback or server runtime is required. The Pages workflow builds the
+playground into `dist/playground` to enable the theme-editor link. When previewing
+a project-path build, pass the same `SITE_BASE` to the preview command.
 
 `src/routes.ts` imports the actual component registry on the server. Top-level
 `docs/*.md` files become documentation routes; Markdown and syntax highlighting run
@@ -46,10 +47,22 @@ The index uses script-disabled sandbox frames for static HTML/SVG media previews
 derived through the real fence plugins; neither media preview runs JavaScript.
 
 Component references derive props, nested types, parts, strings and examples from
-the registry. Source highlighting runs at build time. The five-theme comparison
-page remains a scaffold for the next stage.
+the registry. JSON authoring payloads are formatted without changing their values.
+The index contextualizes sparse examples and uses the Mockup wireframe engine for
+a real script-free preview. Oversized thumbnails are scaled instead of faded.
+
+The themes island renders the same reply under all five themes, with a shared
+mode control, independent stores and deferred font stylesheets. It is the only
+page that automatically requests all theme fonts. Component references still
+load only the selected theme's fonts on demand.
+
+Markdown conversion and highlighting stay on the build path. Docs include stable
+heading anchors, a responsive on-page TOC, copyable code blocks and sequential
+navigation. Relative documentation links preserve fragments; source links point
+to the repository on main.
 
 `bun test` automatically discovers `test/*.test.*`. Route and server-rendering
 coverage always runs. The built-HTML link check additionally runs when `dist`
 exists; build first to include that check. It verifies CSS/scripts and local
-navigation, except the separately deployed playground editor URL.
+navigation and heading anchors. It checks the editor target too when the combined
+playground output is present.

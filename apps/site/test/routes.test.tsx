@@ -53,6 +53,16 @@ test('every registered component and top-level Markdown document has a unique pr
   for (const name of names) expect(gallery.replaceAll('<!-- -->', '')).toContain(`Open ${name} reference`);
   expect(gallery.match(/class="gallery-preview/g)?.length).toBe(names.length);
   expect(gallery).not.toContain('data-island=');
+  for (const [index, route] of routes.entries()) if (route.kind === 'doc') {
+    expect(pages[index]).toContain('class="prose"');
+    expect(pages[index]).toContain('class="doc-toc"');
+    expect(pages[index]).toContain('class="heading-anchor"');
+    if (readFileSync(resolve(docsDirectory, route.file!), 'utf8').includes('```')) expect(pages[index]).toContain('data-copy="doc-code-0"');
+    else expect(pages[index]).not.toContain('data-copy="doc-code-0"');
+  }
+  const themes = pages[routes.findIndex(route => route.kind === 'themes')];
+  expect(themes.match(/class="theme-column"/g)?.length).toBe(5);
+  expect(themes).toContain('playground/themes.html?editor=1');
 });
 
 test.skipIf(!existsSync(resolve(dist, 'index.html')))('every internal link and asset in built HTML resolves under its deployment base', () => {
@@ -65,7 +75,7 @@ test.skipIf(!existsSync(resolve(dist, 'index.html')))('every internal link and a
       if (url.origin !== 'https://site.example') continue;
       expect(url.pathname.startsWith(base)).toBe(true);
       const path = decodeURIComponent(url.pathname.slice(base.length));
-      if (path === 'playground/themes.html') continue;
+      if (path === 'playground/themes.html' && !existsSync(resolve(dist, path))) continue;
       const target = resolve(dist, path.endsWith('/') || !path ? path + 'index.html' : path);
       expect(existsSync(target), `${file} → ${match[1]}`).toBe(true);
       if (url.hash && target.endsWith('.html')) expect(readFileSync(target, 'utf8'), `${file} → ${match[1]}`).toContain(`id="${decodeURIComponent(url.hash.slice(1))}"`);

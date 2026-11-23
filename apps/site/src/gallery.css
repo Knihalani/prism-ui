@@ -14,13 +14,22 @@
 .gallery-group > h2 { font-size: 24px; margin-bottom: 24px; }
 .gallery-grid { display: grid; gap: 32px; }
 .gallery-card { min-width: 0; position: relative; }
-.gallery-preview { height: 220px; overflow: hidden; padding: 18px; background: var(--soft); border: 1px solid var(--line); border-radius: 8px; pointer-events: none; font-size: 13px; mask-image: linear-gradient(#000 0 76%, transparent 100%); }
+.gallery-preview { height: 240px; overflow: auto; padding: 18px; background: var(--soft); border: 1px solid var(--line); border-radius: 8px; pointer-events: none; font-size: 13px; scrollbar-width: none; }
 .gallery-preview > .prism-root { font-size: 13px; }
 .gallery-preview.static-preview .prism-root { color-scheme: inherit; }
+.gallery-preview .prism-root .prism-datatable__root { color-scheme: inherit; }
 .gallery-media-preview { display: block; width: 100%; height: 160px; border: 0; }
 .gallery-preview .prism-root .prism-datatable__root :is(.prism-datatable__heading, .prism-datatable__selection-heading, .prism-datatable__selection-cell, .prism-datatable__cell) { background: var(--soft); }
 .gallery-preview:has(.prism-num__root, .prism-calc__root, .prism-badge__root) { display: grid; place-items: center; }
-.gallery-preview:has(.prism-num__root, .prism-calc__root, .prism-badge__root) > .prism-root { font-size: 22px; width: 100%; text-align: center; }
+.gallery-preview:has(.prism-num__root, .prism-calc__root, .prism-badge__root) > .prism-root { font-size: 16px; width: 100%; line-height: 2; }
+.gallery-preview .prism-grid__body { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.gallery-preview .prism-grid__body > * { padding: 8px; background: var(--page); border-radius: 4px; }
+.gallery-preview .prism-root { zoom: .8; }
+.hero-reply .prism-root .prism-ask__segments { font-style: normal; flex: none; width: auto; gap: 8px; }
+.hero-reply .prism-root .prism-ask__segment { flex: none; border: 1px solid var(--line); padding: 6px 14px; color: var(--ink); }
+.hero-reply .prism-root .prism-ask__segment[aria-checked="true"] { color: var(--page); background: var(--ink); border-color: var(--ink); }
+.hero-reply .prism-root .prism-ask__suggested { margin-inline-start: 4px; }
+.hero-reply .prism-root .prism-ask__actions { justify-content: flex-start; }
 .gallery-preview .prism-paragraph__root { margin-block: 0 12px; }
 .gallery-link { display: block; margin-top: 12px; text-decoration: none; }
 .gallery-link::after { content: ''; position: absolute; inset: 0; border-radius: 8px; }
@@ -31,7 +40,7 @@
 .component-notes { max-width: 840px; margin-block: 28px; font-size: 14px; }
 .component-notes summary { cursor: pointer; color: var(--accent); }
 .component-notes p { margin-top: 16px; color: var(--muted); white-space: pre-line; overflow-wrap: anywhere; }
-.example-section { max-width: 840px; margin-block: 40px 60px; }
+.example-section { width: 100%; margin-block: 40px 60px; }
 .example-section > h2 { font-size: 23px; margin-bottom: 22px; }
 .example-controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin-bottom: 24px; font-size: 12px; }
 .example-controls label { display: flex; gap: 8px; align-items: center; color: var(--muted); }
@@ -41,6 +50,10 @@
 .example-switch button { background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 5px 9px; font-size: 12px; }
 .example-switch [aria-pressed="true"] { background: var(--ink); color: var(--page); }
 .live-example { min-width: 0; padding-block: 12px; container-type: inline-size; }
+.live-example > .prism-root { width: 100%; max-width: none; max-inline-size: none; margin: 0; }
+.live-example .prism-root[data-prism-presentation] { --prism-prose-measure: 100%; --prism-prose-measure-wide: 100%; }
+.live-example .prism-root[data-prism-presentation] > [data-prism-flow] > .prism-frame__root[data-variant="card"] { border: 0; border-radius: 0; padding: 0; background: transparent; box-shadow: none; }
+.live-example > .prism-root[data-prism-presentation] > .prism-frame__root[data-variant="card"] { border: 0; border-radius: 0; padding: 0; background: transparent; box-shadow: none; }
 .live-example .prism-datatable__table:not([data-virtual]) .prism-datatable__spacer-row { display: none; }
 .reference-section { border-top: 1px solid var(--line); padding-top: 32px; margin-block: 44px; }
 .reference-section > h2 { font-size: 24px; margin-bottom: 12px; }
