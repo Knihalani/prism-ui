@@ -203,6 +203,25 @@ input.prism-check:indeterminate::after { content: ""; inline-size: 8px; block-si
 [data-sent] .prism-check-mark path { animation-duration: var(--prism-motion-spring-bouncy-duration); }
 @keyframes prism-draw-check { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
 @media (forced-colors: active) {
+  .prism-root[data-prism-presentation] :is(button, select, textarea, input:not([type="checkbox"], [type="radio"]), [role="slider"]) { border-color: ButtonText; }
+  .prism-root[data-prism-presentation] :is(button, .prism-chip, .prism-stepper, .prism-view__checkBox, .prism-view__switch, .prism-mockup__popover) { outline: 1px solid ButtonText; outline-offset: -1px; }
+  .prism-root[data-prism-presentation] :focus-visible,
+  .prism-root[data-prism-presentation] .prism-view__control:focus-visible { outline: 2px solid Highlight !important; outline-offset: 3px; }
+  .prism-root[data-prism-presentation] .prism-view__checkInput:focus-visible + .prism-view__checkBox { outline: 2px solid Highlight; outline-offset: 3px; }
+  .prism-root[data-prism-presentation] :is(button[aria-pressed="true"], button[aria-checked="true"], button[aria-selected="true"], .prism-chip[data-active], .prism-mockup__marker[data-active]) { forced-color-adjust: none; background: Highlight !important; color: HighlightText !important; outline: 2px solid Highlight; outline-offset: -2px; }
+  .prism-root[data-prism-presentation] :is(button:disabled, input:disabled, [aria-disabled="true"]):not([data-sent]) { color: GrayText !important; border-color: GrayText; opacity: 1 !important; outline-color: GrayText; }
+  .prism-root[data-prism-presentation] .prism-view__thumb { forced-color-adjust: none; background: Canvas; border: 1px solid CanvasText; }
+  .prism-root[data-prism-presentation] .prism-pick__pip { border: 1px solid currentColor; background: transparent; }
+  .prism-root[data-prism-presentation] .prism-pick__pip[data-state="on"] { background: currentColor; }
+  .prism-root[data-prism-presentation] .prism-view__checkbox[data-checked] .prism-view__checkBox { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+  .prism-root[data-prism-presentation] :is(.prism-view__sliderTrack, .prism-view__sliderThumb) { border: 1px solid ButtonText; }
+  .prism-root[data-prism-presentation] .prism-view__slider::-webkit-slider-runnable-track { background: CanvasText; }
+  .prism-root[data-prism-presentation] .prism-view__slider::-moz-range-track { background: CanvasText; }
+  .prism-root[data-prism-presentation] .prism-view__slider::-webkit-slider-thumb { background: Highlight; border-color: ButtonText; }
+  .prism-root[data-prism-presentation] .prism-view__slider::-moz-range-thumb { background: Highlight; border-color: ButtonText; }
+  .prism-root[data-prism-presentation] .prism-mockup__region-outline { stroke: Highlight; }
+  .prism-root[data-prism-presentation] .prism-mockup__marker[data-kind="region"] { background: transparent !important; border: 2px solid Highlight; }
+  .prism-root[data-prism-presentation] .prism-mockup__marker[data-kind="region"] > span { forced-color-adjust: none; background: Highlight; color: HighlightText; }
   :is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"]),
   .prism-root input.prism-estimate__checkbox:not([role="switch"]) { appearance: auto; }
   :is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"])::after,
