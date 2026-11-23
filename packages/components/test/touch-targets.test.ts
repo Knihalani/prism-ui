@@ -3,6 +3,7 @@ import { expect, test } from 'bun:test';
 test('shared coarse targets reserve spacing, preserve decorative pseudos and give primary actions real height', async () => {
   const css = await Bun.file(new URL('../src/shared/controls.css', import.meta.url)).text();
   expect(css).toContain('@media (pointer: coarse)');
+  expect(css).toContain('.prism-touch-target::before');
   expect(css).toContain('.prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover))');
   for (const name of ['prism-pill', 'prism-icon-btn', 'prism-chip', 'prism-stepper', 'prism-switch', 'prism-check']) expect(css).toContain(name);
   expect(css).toContain('inline-size: max(100%, 46px)');

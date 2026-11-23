@@ -88,13 +88,16 @@
 button.prism-chip { min-block-size: 30px; padding-inline: 10px; cursor: pointer; }
 
 @media (pointer: coarse) {
+  .prism-touch-target,
   .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :where(button:not(.prism-mockup__marker), summary, [role="tab"], .prism-num__root) { position: relative; }
+  .prism-touch-target,
   .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :is(button, summary, [role="tab"], .prism-num__root):where(:not(.prism-pill):not(.prism-mockup__marker):not([role="switch"])) {
     min-inline-size: 28px !important;
     min-block-size: 28px !important;
     margin: 9px !important;
     overflow: visible;
   }
+  .prism-touch-target::before,
   .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :is(button, summary, [role="tab"], .prism-num__root):not(.prism-pill)::before,
   .prism-root:where([data-prism-presentation], .prism-inline-feedback__popover-layer:has(.prism-mockup__popover)) :is(.prism-switch, .prism-check, input[type="checkbox"])::before {
     content: "";
