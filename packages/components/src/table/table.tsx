@@ -1,7 +1,6 @@
 import { componentStrings } from '../strings';
-import { Children, createElement, createContext, forwardRef, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ElementType, type ReactNode } from 'react';
+import { Children, createElement, createContext, forwardRef, useContext, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ElementType, type ReactNode } from 'react';
 import type { Node } from '@prism-ui/core';
-import { compile, type Formula } from '@prism-ui/state';
 import { useStrings, useTheme, Icon, useSlot, PrismContext, useComponentState, usePart, usePresentation, usePrism, type MarkdownProps, type PrismComponentProps } from '@prism-ui/react';
 import { interpolate } from '../interpolate';
 import { createFlip } from '../lib/flip';
@@ -13,39 +12,6 @@ export interface TableProps { id?: string; label?: string; title?: string; colum
 export type TableRow = Node;
 export type TableSort = { column: number; dir: 'asc' | 'desc' } | null;
 function text(node: Node): string { return node.value ?? (node.children ?? []).map(text).join(''); }
-function formulaText(node: Node): string {
-  const value = node.children?.map(formulaText).join('') ?? node.value ?? '';
-  return node.type === 'emphasis' ? `*${value}*` : node.type === 'strong' ? `**${value}**` : value;
-}
-function useCellText(node: Node) {
-  const { store, registry } = usePrism(), calc = registry.get('calc');
-  const formulas = useMemo(() => {
-    const result = new Map<Node, Formula | null>();
-    function visit(node: Node) {
-      if (calc && node.type === 'component' && node.name === 'calc') {
-        try { result.set(node, compile(String(node.props?.expr ?? formulaText(node)))); }
-        catch { result.set(node, null); }
-      } else node.children?.forEach(visit);
-    }
-    visit(node); return result;
-  }, [node, calc]);
-  const subscribe = useCallback((notify: () => void) => {
-    const deps = new Set([...formulas.values()].flatMap(formula => formula?.deps ?? []));
-    const off = [...deps].map(path => store.subscribe(path, notify));
-    return () => off.forEach(unsubscribe => unsubscribe());
-  }, [store, formulas]);
-  const snapshot = useCallback(() => store.get(), [store]);
-  useSyncExternalStore(subscribe, snapshot, snapshot);
-  function resolved(node: Node): string {
-    if (formulas.has(node)) {
-      let value = NaN;
-      try { value = formulas.get(node)?.(store.get) ?? NaN; } catch {}
-      return Number.isFinite(value) ? String(value) : String(node.props?.errorLabel ?? '—');
-    }
-    return node.value ?? (node.children ?? []).map(resolved).join('');
-  }
-  return resolved;
-}
 function numeric(value: string): number | undefined {
   const clean = value.trim().replace(/[\p{Sc}%,\s]/gu, '').replace(/^\((.*)\)$/, '-$1');
   return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(clean) && Number.isFinite(Number(clean)) ? Number(clean) : undefined;
@@ -82,7 +48,6 @@ function fallbackRows(props: TableProps, key: string, locale: string | undefined
 export function useTable(props: TableProps, ctx: Pick<PrismComponentProps, 'node' | 'children' | 'complete'>) {
   const { format, animate } = usePrism(), strings = useStrings('table', tableStrings), [stored, setSort] = useComponentState<TableSort>('sort', null), presentation = usePresentation();
   const markdown = ctx.node.type === 'table', definitions = markdown ? [] : fallbackColumns(props), rows = markdown ? ctx.node.children ?? [] : fallbackRows(props, ctx.node.key, format.locale, format.currencyCode, definitions);
-  const cellText = useCellText(ctx.node);
   const [page, setPage] = useState(0);
   const headers = rows[0]?.children ?? [], data = rows.slice(1);
   const streaming = ctx.node.complete === false || !ctx.complete || markdown && ctx.node.complete === undefined && !Object.isFrozen(ctx.node);
@@ -91,12 +56,12 @@ export function useTable(props: TableProps, ctx: Pick<PrismComponentProps, 'node
   const align = headers.map((_, index) => {
     const explicit = markdown ? ctx.node.align?.[index] : definitions[index]?.align;
     if (explicit) return explicit;
-    const values = data.map(row => cellText(row.children?.[index] ?? { type: 'text', key: '', value: '' })).filter(value => value.trim());
+    const values = data.map(row => text(row.children?.[index] ?? { type: 'text', key: '', value: '' })).filter(value => value.trim());
     return values.length && values.filter(value => numeric(value) !== undefined).length / values.length >= .8 ? 'right' : 'left';
   });
   const order = data.map((_, index) => index);
   if (sort && !streaming) order.sort((a, b) => {
-    const first = cellText(data[a].children?.[sort.column] ?? { type: 'text', key: '' }), second = cellText(data[b].children?.[sort.column] ?? { type: 'text', key: '' });
+    const first = text(data[a].children?.[sort.column] ?? { type: 'text', key: '' }), second = text(data[b].children?.[sort.column] ?? { type: 'text', key: '' });
     return compare(first, second, format.locale) * (sort.dir === 'asc' ? 1 : -1) || a - b;
   });
   const paginated = !markdown && typeof props.pageSize === 'number' && Number.isFinite(props.pageSize) && props.pageSize > 0;
