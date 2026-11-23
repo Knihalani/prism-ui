@@ -2,7 +2,7 @@ import '../../../react/test/setup';
 import { afterEach, expect, spyOn, test } from 'bun:test';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { createRegistry, defineTheme, Prism, type Action } from '@prism-ui/react';
+import { createRegistry, createSystemPrompt, defineTheme, Prism, type Action } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { ArtifactProvider, artifact, artifactPlugin } from './index';
 import { fence } from './fixtures';
@@ -18,9 +18,9 @@ const snippet = fence('html', 'title="Read-only report" id=report height=180px',
 test('artifacts default to inline, with adaptive runtime and model instructions', () => {
   expect(artifact.schema!.coerce({ kind: 'html', source: '' }).value?.variant).toBe('inline');
   expect(artifact.feedback).toBe(true);
-  const docs = registry.docs();
-  expect(docs).toContain('@container'); expect(docs).toContain('window.prism.emit');
-  expect(docs).toContain('host-granted'); expect(docs).toContain('--prism-on-accent');
+  const docs = createSystemPrompt({ registry, artifacts: { statePaths: ['planning'] } });
+  expect(docs).toContain('@container'); expect(docs).toContain('prism.emit');
+  expect(docs).toContain('Granted read/write paths'); expect(docs).toContain('--prism-on-accent');
 });
 
 test('narrow inline toolbars reserve document flow space rather than covering the preview', async () => {
