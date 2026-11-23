@@ -4,13 +4,15 @@ import { Prism, createRegistry } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { num, calc } from '@prism-ui/components/num';
 import { chartDefinition } from '@prism-ui/components/chart';
+import { askDefinition } from '@prism-ui/components/ask';
 import { heroInitial, heroSource } from '../hero-source';
 import { createReplay } from '../replay';
 import '@prism-ui/components/styles.css';
 import '@prism-ui/components/num.css';
 import '@prism-ui/components/chart.css';
+import '@prism-ui/components/ask.css';
 
-const registry = createRegistry([num, calc, chartDefinition]);
+const registry = createRegistry([num, calc, chartDefinition, askDefinition]);
 
 export function Hero() {
   const [store] = useState(() => createStore({ initial: heroInitial }));
@@ -40,10 +42,12 @@ export function Hero() {
     if (current.current === next) { setSource(heroSource); setPlaying(false); }
   }
   return <>
-    <div className="reply-context"><span className="reply-avatar" aria-hidden="true">P</span><span>Prism <span className="reply-role">/ a reply, not a widget</span></span><button className="text-button replay" type="button" onClick={replay} disabled={!ready} aria-label={playing ? 'Restart reply' : 'Replay reply'}><span aria-hidden="true">↻</span> {playing ? 'Restart' : 'Replay'}</button></div>
+    <h2 className="sr-only">A team plan, in an assistant reply</h2>
+    <p className="user-prompt">What would it cost to bring my team on board?</p>
     <div className="hero-reply" ref={reply} aria-label="Interactive assistant reply" aria-busy={playing}>
       <Prism registry={registry} store={store} scope="site-hero" source={source} done={!playing} animate={false} mode={mode} />
     </div>
+    <button className="text-button replay" type="button" onClick={replay} disabled={!ready} aria-label={playing ? 'Restart reply' : 'Replay reply'}><span aria-hidden="true">↻</span> {playing ? 'Restart' : 'Replay'}</button>
     <div className="reply-note"><span aria-hidden="true">↔</span> Try changing the underlined number. Everything stays connected.</div>
     <span className="sr-only" role="status">{playing ? 'Reply streaming. Replay again to restart.' : 'Reply ready to explore.'}</span>
   </>;

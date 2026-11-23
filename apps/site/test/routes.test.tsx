@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { SiteRoute } from '../src/routes';
 import { normalizeBase, sitePath } from '../src/paths';
+import { exampleLoaders } from '../src/islands/loaders';
 
 const dist = fileURLToPath(new URL('../dist/', import.meta.url));
 const docsDirectory = fileURLToPath(new URL('../../../docs/', import.meta.url));
@@ -12,11 +13,24 @@ const result = Bun.spawnSync(['bun', '-e', `
   import { getRoutes } from './src/routes';
   import { renderPage } from './scripts/render';
   const routes = getRoutes();
-  console.log(JSON.stringify({ routes, names: defaultRegistry.list().map(def => def.name),
-    pages: routes.map(route => renderPage(route, '<html lang="en"><head><title>Prism</title></head><body><!--site--></body></html>', '/prism-ui/')) }));
+  const names = defaultRegistry.list().map(def => def.name);
+  const template = '<html lang="en"><head><title>Prism</title></head><body><!--site--></body></html>';
+  const pages = routes.map(route => renderPage(route, template, '/prism-ui/'));
+  defaultRegistry.register({ name: 'empty-fixture', component: () => null, docs: 'Literal $& replacement text', examples: [], parts: [], strings: {} });
+  const emptyPage = renderPage({ kind: 'component', path: '/components/empty-fixture/', name: 'empty-fixture', title: 'Empty' }, template, '/');
+  console.log(JSON.stringify({ routes, names, pages, emptyPage }));
 `], { cwd: fileURLToPath(new URL('../', import.meta.url)) });
 if (result.exitCode !== 0) throw new Error(result.stderr.toString());
-const { routes, names, pages } = JSON.parse(result.stdout.toString()) as { routes: SiteRoute[]; names: string[]; pages: string[] };
+const { routes, names, pages, emptyPage } = JSON.parse(result.stdout.toString()) as { routes: SiteRoute[]; names: string[]; pages: string[]; emptyPage: string };
+
+test('empty references render readable fallbacks and literal replacement characters', () => {
+  expect(emptyPage).toContain('Literal $&amp; replacement text');
+  expect(emptyPage).not.toContain('<!--site-->');
+  expect(emptyPage).toContain('No authoring example is registered.');
+  expect(emptyPage).toContain('No declared props.');
+  expect(emptyPage).toContain('No replaceable parts declared.');
+  expect(emptyPage).toContain('No registered string defaults.');
+});
 
 test('every registered component and top-level Markdown document has a unique prerendered route', () => {
   const paths = routes.map(route => route.path);
@@ -29,6 +43,16 @@ test('every registered component and top-level Markdown document has a unique pr
     expect(html).not.toContain('<!--site-->');
     expect(html).toContain('href="/prism-ui/components/"');
   }
+  for (const [index, route] of routes.entries()) if (route.kind === 'component') {
+    expect(pages[index]).toContain('data-props-table=""');
+    expect(pages[index]).toContain('data-parts-list=""');
+    expect(pages[index]).toContain(`data-component="${route.name}"`);
+    expect(Object.keys(exampleLoaders)).toContain(route.name!);
+  }
+  const gallery = pages[routes.findIndex(route => route.kind === 'gallery')];
+  for (const name of names) expect(gallery.replaceAll('<!-- -->', '')).toContain(`Open ${name} reference`);
+  expect(gallery.match(/class="gallery-preview/g)?.length).toBe(names.length);
+  expect(gallery).not.toContain('data-island=');
 });
 
 test.skipIf(!existsSync(resolve(dist, 'index.html')))('every internal link and asset in built HTML resolves under its deployment base', () => {
