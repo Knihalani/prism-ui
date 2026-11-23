@@ -1,5 +1,5 @@
 import { Children, Component, cloneElement, isValidElement, useState, type ButtonHTMLAttributes, type HTMLAttributes, type ReactNode } from 'react';
-import { Prism, useComponentState, type Action } from '@prism-ui/react';
+import { Prism, createTheme, useTheme, useComponentState, type Action } from '@prism-ui/react';
 import type { Store } from '@prism-ui/state';
 import { ArtifactProvider } from '@prism-ui/components/artifact';
 import { adaptiveArtifactOptions } from '../adaptive-source';
@@ -21,10 +21,12 @@ function EstimateActions({ children, ...props }: HTMLAttributes<HTMLDivElement>)
 const slots = { estimate: { actions: EstimateActions } };
 export function AssistantTurn({ scope, text, streaming, error, store, theme, animate, onAction, regenerate, last, continued }: { scope: string; text: string; streaming: boolean; error?: string; store: Store; theme: 'light' | 'dark'; animate: boolean; onAction(action: Action): void; regenerate?: () => void; last: boolean; continued?: boolean }) {
   const [copied, setCopied] = useState(false), [copyError, setCopyError] = useState(false);
+  const { theme: design } = useTheme();
+  const previewStyle = design.name === 'playground-draft' ? createTheme({ ...design.tokens, ...(theme === 'dark' ? design.dark : {}) }) : undefined;
   return <article className={'assistant-turn' + (last ? ' last-turn' : '')} data-message="assistant" data-state={streaming ? 'streaming' : 'ready'} aria-label="Assistant reply" aria-busy={streaming}>
     <MessageBoundary>
       {!text && streaming ? <div className="thinking" aria-label="Thinking"><span>Thinking</span></div> : <div className="reply-content">
-        <ArtifactProvider options={adaptiveArtifactOptions}><Prism scope={scope} source={text} done={!streaming} store={store} plugins={playgroundPlugins} mode={theme} animate={animate} onAction={onAction} slots={slots} /></ArtifactProvider>
+        <ArtifactProvider options={adaptiveArtifactOptions}><Prism scope={scope} source={text} done={!streaming} store={store} plugins={playgroundPlugins} mode={theme} animate={animate} onAction={onAction} slots={slots} style={previewStyle} /></ArtifactProvider>
       </div>}
     </MessageBoundary>
     {error && <p className="turn-error" role="alert">{error}</p>}

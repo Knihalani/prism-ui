@@ -23,6 +23,10 @@ test('reply height skips first/small measures, retargets the visual height and c
     size = 320; act(resize);
     expect(animations[0].cancel).not.toHaveBeenCalled();
     expect(animations[0].effect.setKeyframes).toHaveBeenLastCalledWith([{ height: '140px' }, { height: '320px' }]);
+    animations[0].cancel.mockImplementation(() => {
+      expect(root.animate).toHaveBeenCalledTimes(2);
+      expect(root.style.overflowY).toBe('clip'); expect(root.style.overflowX).toBe('visible');
+    });
     visual = 190; size = 400; act(resize);
     expect(animations[0].cancel).toHaveBeenCalled();
     expect(root.animate).toHaveBeenLastCalledWith([{ height: '190px' }, { height: '400px' }], { duration: 350, easing: 'ease-in-out', fill: 'both' });

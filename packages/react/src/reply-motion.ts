@@ -31,13 +31,14 @@ export function useSmoothHeight(enabled = true, threshold = 24) {
         (animation.effect as KeyframeEffect | null)?.setKeyframes([{ height: `${start}px` }, { height: `${next - offset}px` }]);
         return;
       }
-      clear();
-      if (delta <= Math.max(threshold, line * 1.1) || !duration || typeof root.animate !== 'function') return;
+      if (delta <= Math.max(threshold, line * 1.1) || !duration || typeof root.animate !== 'function') { clear(); return; }
       start = from - offset;
       root.style.overflowY = 'clip'; root.style.overflowX = 'visible';
+      const previousAnimation = animation;
       animation = root.animate([{ height: `${start}px` }, { height: `${next - offset}px` }], {
         duration, easing: style.getPropertyValue('--prism-motion-ease').trim() || 'cubic-bezier(.23,1,.32,1)', fill: 'both',
       });
+      previousAnimation?.cancel();
       const running = animation;
       animation.onfinish = () => { if (animation === running) clear(); };
     });

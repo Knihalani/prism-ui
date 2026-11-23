@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "types": ["bun"], "allowImportingTsExtensions": true },
+  "include": [".snippets/**/*.ts", ".snippets/**/*.tsx", "test/**/*.ts"],
+  "exclude": []
+}

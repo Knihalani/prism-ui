@@ -1,4 +1,5 @@
 import { artifactFontBootstrap } from './artifact-fonts';
+import { artifactStatePaths } from './agent/policy';
 
 const common = `<style>
 main{animation:artifact-arrive var(--prism-motion-base,240ms) var(--prism-motion-ease,ease-out) both}
@@ -20,7 +21,7 @@ buttons.forEach((button,index)=>button.onclick=()=>{const value={index,label:but
 </script>`;
 const fence = (id: string, source: string) => '```artifact:html {id=' + id + ' height=auto}\n' + source + '\n```';
 export const agentSource = 'Here’s your team’s week at a glance. Choose where to focus next.\n\n' + fence('adaptive-dashboard', dashboard) + '\n\nLet’s turn that into a decision.\n\n' + fence('adaptive-input', input);
-export const adaptiveArtifactOptions = { statePaths: ['planning'] };
+export const adaptiveArtifactOptions = { statePaths: artifactStatePaths };
 
 export function scopedAgentSource(scope: string) {
   return agentSource.replaceAll('{id=adaptive-', '{id=' + scope + '-adaptive-');

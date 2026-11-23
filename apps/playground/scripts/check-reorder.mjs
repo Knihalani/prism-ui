@@ -22,7 +22,9 @@ try {
           const entry = api.demos.find(entry => entry.id === demo);
           let source = api.demoSource(entry, `reorder-${demo}`);
           if (demo === 'table') source = source.replace('"pageSize":4', '"pageSize":10');
-          api.flushSync(() => api.createRoot(host).render(api.React.createElement(api.Prism, { source, animate: mode !== 'disabled', plugins: api.playgroundPlugins, renderers: api.motionRenderers, locale: 'en-US' })));
+          const root = api.createRoot(host), props = { animate: mode !== 'disabled', plugins: api.playgroundPlugins, renderers: api.motionRenderers, locale: 'en-US' };
+          api.flushSync(() => root.render(api.React.createElement(api.Prism, { ...props, source: '', done: false })));
+          api.flushSync(() => root.render(api.React.createElement(api.Prism, { ...props, source })));
           window.reorderProbe = { selector: demo === 'pick' ? '.prism-pick__item' : '.prism-datatable__row' };
           window.reorderProbe.nodes = [...document.querySelectorAll(window.reorderProbe.selector)];
         }, { demo, mode });
