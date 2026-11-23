@@ -42,6 +42,11 @@ test('narrow inline toolbars reserve document flow space rather than covering th
   expect(header).toMatch(/margin-block-end:\s*var\(--prism-space-2\)/);
 });
 
+test('inline toolbar hover and focus override the complete resting selector', async () => {
+  const css = await Bun.file(new URL('./artifact.css', import.meta.url)).text();
+  expect(css).toContain('.prism-root .prism-artifact__shell[data-variant="inline"]:is(:hover,:focus-within) .prism-artifact__header { opacity: 1; transform: none; pointer-events: auto; }');
+});
+
 test('automatic content height can shrink after completion but never collapses while streaming', async () => {
   const restore = observeFrames();
   const store = createStore(), text = '```artifact:html {id=autofit}\n<p>Hello</p>';

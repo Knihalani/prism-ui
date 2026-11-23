@@ -136,7 +136,7 @@
 .prism-artifact__shell[data-variant="inline"] .prism-artifact__preview { background: transparent; }
 .prism-root .prism-artifact__shell[data-variant="inline"] .prism-artifact__header { position: absolute; inset: 4px 36px auto auto; max-width: calc(100% - 44px); z-index: 5; border: 1px solid var(--prism-border); border-radius: var(--prism-radius-pill); padding: 3px; background: var(--prism-surface-raised); box-shadow: var(--prism-elevation-1); opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity var(--prism-motion-fast) var(--prism-motion-ease), transform var(--prism-motion-base) var(--prism-motion-ease); }
 .prism-artifact__shell[data-variant="inline"] .prism-artifact__title { display: none; }
-.prism-artifact__shell[data-variant="inline"]:is(:hover,:focus-within) .prism-artifact__header { opacity: 1; transform: none; pointer-events: auto; }
+.prism-root .prism-artifact__shell[data-variant="inline"]:is(:hover,:focus-within) .prism-artifact__header { opacity: 1; transform: none; pointer-events: auto; }
 @media (hover: none) { .prism-root .prism-artifact__shell[data-variant="inline"] .prism-artifact__header { opacity: 1; transform: none; pointer-events: auto; } }
 @container (max-width: 400px) {
   .prism-root .prism-artifact__shell[data-variant="inline"] .prism-artifact__header { position: relative; inset: auto; justify-self: end; margin-inline-end: 36px; margin-block-end: var(--prism-space-2); }
