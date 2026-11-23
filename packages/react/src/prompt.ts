@@ -1,4 +1,5 @@
 import type { Action } from './context';
+import { s } from '@prism-ui/schema';
 import { defaultRegistry, toPromptDocs, type ComponentDef, type Registry } from './registry';
 import { tokenVariable, type Tokens } from './theme';
 
@@ -74,7 +75,10 @@ export function createSystemPrompt({ registry = defaultRegistry, instructions, a
   ];
   if (enabled) {
     const paths = policy.statePaths ?? [];
-    sections.push('## Adaptive inline artifacts\nUse only these fence languages: ' + renderers.map(kind => 'artifact:' + kind).join(', ') + '. Put the complete source in the fence body, not JSON metadata. React needs a default component export and host-allowlisted imports; JS is a module with an #app mount point. HTML scripts execute after the fence closes.\n' +
+    sections.push('## Adaptive inline artifacts\nUse only these fence languages: ' + renderers.map(kind => 'artifact:' + kind).join(', ') + '. Put the complete source in the fence body, not JSON metadata.' +
+      (renderers.includes('react') ? ' React needs a default component export and host-allowlisted imports.' : '') +
+      (renderers.includes('js') ? ' JS is a module with an #app mount point.' : '') +
+      (renderers.includes('html') ? ' HTML scripts execute after the fence closes.' : '') + '\n' +
       'Use host tokens, never hard-code a palette or fonts. CSS variables:\n' +
       Object.entries(tokenGroups).map(([group, keys]) => group + ': ' + keys.map(tokenVariable).join(', ')).join('\n') +
       '\nAn inline-size container already surrounds the body. Use @container queries, width:100%, min-width:0, flexible grids and wrapping; no fixed widths, viewport units or fixed-position page shells. At 320px and below stack controls, as in the example. Use height=auto; prism.resize() requests a new measurement after custom drawing.\n' +
@@ -85,8 +89,11 @@ export function createSystemPrompt({ registry = defaultRegistry, instructions, a
       (renderers.includes('html') ? 'Example (store the room in a child key of the granted namespace):\n' + artifactExample(paths[0] ? paths[0] + '.room' : undefined) : 'The HTML example is omitted because HTML is not enabled.'));
   }
   if (surface === 'panel') sections.push('## Panel surface\nDesign for a narrow 280–400px side panel. Prefer stacked layouts, short labels, compact spacing and wrapping over wide tables or multi-column compositions. Keep the primary action easy to reach.');
-  const documented = catalogue.map(def => def.name === 'artifact' && !renderers.includes('html')
-    ? { ...def, examples: ['Use an enabled fence language from the Adaptive inline artifacts section.'] }
+  const documented = catalogue.map(def => def.name === 'artifact'
+    ? { ...def,
+      schema: s.object({ ...def.schema?.shape, kind: s.enum(renderers).describe('Selected by the fence language, not JSON metadata.') }),
+      examples: renderers.includes('html') ? def.examples : ['Use an enabled fence language from the Adaptive inline artifacts section.'],
+    }
     : def);
   sections.push('## Component catalogue\n' + (toPromptDocs(documented) || 'No components registered.'));
   return sections.filter(Boolean).join('\n\n');

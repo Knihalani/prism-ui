@@ -40,6 +40,23 @@ test('all tagged model outputs parse and render through the actual registry', ()
   }
 });
 
+test('renderer restrictions reach the artifact catalogue without mutating its registered schema', () => {
+  const schema = defaultRegistry.get('artifact')!.schema!;
+  const kinds = ['html', 'react', 'svg', 'js', 'markdown'] as const;
+  for (const renderers of [['react'], ['svg', 'markdown'], ['html']] as const) {
+    const prompt = createSystemPrompt({ artifacts: { renderers } });
+    const catalogue = prompt.split('## Component catalogue')[1].split('### artifact')[1];
+    const kind = catalogue.split('\n').find(line => line.startsWith('- `kind`'))!;
+    expect(kind).toContain(renderers.map(renderer => JSON.stringify(renderer)).join(' | '));
+    for (const denied of kinds.filter(kind => !(renderers as readonly string[]).includes(kind))) {
+      expect(kind).not.toContain(JSON.stringify(denied));
+      expect(prompt).not.toContain('artifact:' + denied);
+    }
+  }
+  expect(defaultRegistry.get('artifact')!.schema).toBe(schema);
+  expect(schema.shape!.kind.type).toContain('"html" | "react" | "svg" | "js" | "markdown"');
+});
+
 test('artifact examples obey grants, adaptive/token policy and execute their local/action bridge', () => {
   const generated = createSystemPrompt({ artifacts: { statePaths: grants } });
   const sources = [...examples.map(match => match[2]), generated.split('## Component catalogue')[0]];

@@ -20,6 +20,11 @@ Prism. An omitted/empty statePaths list means no host state access. The example
 then uses local state only. Preserve the existing data shape at granted paths.
 Unknown renderer names are rejected by TypeScript; an empty renderer list disables
 artifact guidance. With HTML disabled the HTML example is omitted.
+The renderers option restricts prompt guidance and catalogue kinds only, not
+runtime permissions. ArtifactProvider currently has no per-kind allowlist:
+statePaths is enforced, imports restrict module imports, and enabled:false
+disables all previews. Per-kind runtime enforcement requires a host-side filter
+or custom renderer; a prompt is not a security boundary.
 
 An isolated, built-in-only panel:
 
