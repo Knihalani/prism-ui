@@ -3,16 +3,19 @@ import { createPortal } from 'react-dom';
 import type { AgentConfig } from '../agent/config';
 import { modelPresets, type Provider } from '../agent/policy';
 
-export function Settings({ config, anchor, onSave, onForget, onClose }: { config: AgentConfig; anchor: RefObject<HTMLButtonElement | null>; onSave(config: AgentConfig): boolean; onForget(provider: Provider): boolean; onClose(): void }) {
+export function Settings({ config, anchor, onSave, onForget, onClose }: { config: AgentConfig; anchor: RefObject<HTMLButtonElement | null>; onSave(config: AgentConfig, baseline: AgentConfig): boolean; onForget(provider: Provider): boolean; onClose(): void }) {
+  const baseline = useRef<AgentConfig>({ ...config, keys: { ...config.keys }, models: Object.fromEntries((Object.keys(modelPresets) as Provider[]).map(name => [name, config.models?.[name] || (name === config.provider ? config.model : undefined) || modelPresets[name][0]])) });
   const [provider, setProvider] = useState(config.provider ?? 'openai');
   const presets: readonly string[] = provider === 'scripted' ? [] : modelPresets[provider];
-  const [keys, setKeys] = useState(config.keys ?? {});
-  const [model, setModel] = useState(config.model || (provider === 'scripted' ? '' : modelPresets[provider][0]));
-  const [custom, setCustom] = useState(!!config.model && !presets.includes(config.model));
+  const [keys, setKeys] = useState(baseline.current.keys ?? {});
+  const [models, setModels] = useState(baseline.current.models ?? {});
+  const model = provider === 'scripted' ? '' : models[provider] ?? modelPresets[provider][0];
+  const [custom, setCustom] = useState(!presets.includes(model));
   const [show, setShow] = useState(false), [error, setError] = useState('');
   const ref = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<CSSProperties>({ visibility: 'hidden' });
   const apiKey = provider === 'scripted' ? '' : keys[provider] ?? '';
+  function setModel(value: string) { if (provider !== 'scripted') setModels({ ...models, [provider]: value }); }
   useLayoutEffect(() => {
     const place = () => {
       const chip = anchor.current; if (!chip || !ref.current) return;
@@ -43,13 +46,13 @@ export function Settings({ config, anchor, onSave, onForget, onClose }: { config
   }, [anchor, onClose]);
   function save(nextKeys = keys) {
     setError('');
-    if (!onSave({ provider, keys: nextKeys, apiKey: provider === 'scripted' ? '' : nextKeys[provider] ?? '', model: model.trim() })) setError('Browser storage is unavailable. Nothing was saved.');
+    if (!onSave({ provider, keys: nextKeys, apiKey: provider === 'scripted' ? '' : nextKeys[provider] ?? '', model: model.trim(), models }, baseline.current)) setError('Browser storage is unavailable. Nothing was saved.');
   }
   const target = anchor.current?.closest('.chat-app') ?? document.body;
   return createPortal(<div ref={ref} id="model-settings" className="model-popover" role="dialog" aria-label="Connect a model" style={position}>
     <header><div><strong>Your model, your key</strong><span>Stream replies from your own model</span></div><button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>×</button></header>
     <form onSubmit={event => { event.preventDefault(); save(); }}>
-      <div className="provider-segments" role="group" aria-label="Assistant">{(['scripted', 'openai', 'anthropic', 'openrouter'] as const).map(name => <button key={name} type="button" aria-label={name === 'scripted' ? 'Scripted' : name === 'openai' ? 'OpenAI' : name === 'anthropic' ? 'Anthropic' : 'OpenRouter'} aria-pressed={provider === name} onClick={() => { setProvider(name); setModel(name === 'scripted' ? '' : modelPresets[name][0]); setCustom(false); setShow(false); }}>{name === 'scripted' ? 'Scripted' : name === 'openai' ? 'OpenAI' : name === 'anthropic' ? 'Claude' : 'OpenRouter'}</button>)}</div>
+      <div className="provider-segments" role="group" aria-label="Assistant">{(['scripted', 'openai', 'anthropic', 'openrouter'] as const).map(name => <button key={name} type="button" aria-label={name === 'scripted' ? 'Scripted' : name === 'openai' ? 'OpenAI' : name === 'anthropic' ? 'Anthropic' : 'OpenRouter'} aria-pressed={provider === name} onClick={() => { setProvider(name); setCustom(name !== 'scripted' && !(modelPresets[name] as readonly string[]).includes(models[name] ?? modelPresets[name][0])); setShow(false); }}>{name === 'scripted' ? 'Scripted' : name === 'openai' ? 'OpenAI' : name === 'anthropic' ? 'Claude' : 'OpenRouter'}</button>)}</div>
       {provider !== 'scripted' && <><label htmlFor="model-api-key">API key</label><div className="model-key"><input id="model-api-key" type={show ? 'text' : 'password'} autoComplete="off" spellCheck={false} value={apiKey} placeholder="Paste your provider key" onChange={event => setKeys({ ...keys, [provider]: event.target.value })} /><button type="button" aria-label={show ? 'Hide key' : 'Show key'} aria-pressed={show} onClick={() => setShow(!show)}>{show ? 'Hide' : 'Show'}</button></div>
       <label>Model preset<select aria-label="Model preset" value={custom ? 'custom' : model} onChange={event => { setCustom(event.target.value === 'custom'); setModel(event.target.value === 'custom' ? '' : event.target.value); }}>{presets.map(value => <option key={value}>{value}</option>)}<option value="custom">Custom model…</option></select></label>
       {custom && <input aria-label="Model" value={model} placeholder="Model ID" onChange={event => setModel(event.target.value)} />}</>}
@@ -57,7 +60,7 @@ export function Settings({ config, anchor, onSave, onForget, onClose }: { config
       {error && <p role="status" className="model-storage-error">{error}</p>}
       <footer><button type="button" className="forget-key" disabled={!apiKey} onClick={() => {
         if (provider === 'scripted') return;
-        if (onForget(provider)) { const next = { ...keys }; delete next[provider]; setKeys(next); setError(''); }
+        if (onForget(provider)) { const next = { ...keys }, before = { ...baseline.current.keys }; delete next[provider]; delete before[provider]; baseline.current = { ...baseline.current, keys: before }; setKeys(next); setError(''); }
         else setError('Browser storage is unavailable. Nothing was saved.');
       }}>Forget key</button><button className="save-model" type="submit">Save changes</button></footer>
     </form>

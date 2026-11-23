@@ -252,5 +252,5 @@ test('config safely loads local settings, ignores malformed JSON, chooses agent 
   expect(createAgent({ provider: 'openai', apiKey: 'test-only' }).id).toBe('openai');
   localStorage.setItem('prism-agent', '{bad'); expect(() => loadAgentConfig()).not.toThrow();
   localStorage.setItem('prism-agent', JSON.stringify({ provider: 'anthropic', apiKey: 'test-only', model: 'custom' }));
-  expect(loadAgentConfig()).toEqual({ provider: 'anthropic', apiKey: 'test-only', model: 'custom', keys: { anthropic: 'test-only' } });
+  expect(loadAgentConfig()).toEqual({ provider: 'anthropic', apiKey: 'test-only', model: 'custom', models: { anthropic: 'custom' }, keys: { anthropic: 'test-only' } });
 });

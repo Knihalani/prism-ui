@@ -150,7 +150,7 @@ test('Forget removes only the selected key without saving or discarding unrelate
   fireEvent.change(view.getByLabelText('Model preset'), { target: { value: 'custom' } });
   change(view.getByLabelText('Model'), 'unsaved-model');
   fireEvent.click(view.getByRole('button', { name: 'Forget key' }));
-  expect(loadAgentConfig()).toEqual({ provider: 'openai', model: 'saved-model', apiKey: 'active-key', keys: { openai: 'active-key' } });
+  expect(loadAgentConfig()).toEqual({ provider: 'openai', model: 'saved-model', models: { openai: 'saved-model' }, apiKey: 'active-key', keys: { openai: 'active-key' } });
   expect(view.getByRole('dialog')).toBeDefined();
   expect((view.getByLabelText('Model') as HTMLInputElement).value).toBe('unsaved-model');
   expect((view.getByLabelText('API key') as HTMLInputElement).value).toBe('');
@@ -170,6 +170,39 @@ test('failed Forget leaves the key and drafts unchanged and reports only safe fe
     expect(view.container.textContent).not.toContain('private-storage-error');
   } finally { restore(); }
   expect(loadAgentConfig().apiKey).toBe('stored-key');
+});
+
+test('Save keeps edited keys and models for multiple providers while preserving untouched other-tab updates', () => {
+  const view = render(<App />);
+  fireEvent.click(view.getByRole('button', { name: /Connect a model/ }));
+  change(view.getByLabelText('API key'), 'edited-a');
+  fireEvent.change(view.getByLabelText('Model preset'), { target: { value: 'custom' } });
+  change(view.getByLabelText('Model'), 'edited-model-a');
+  fireEvent.click(view.getByRole('button', { name: 'Anthropic' }));
+  change(view.getByLabelText('API key'), 'edited-b');
+  fireEvent.change(view.getByLabelText('Model preset'), { target: { value: 'custom' } });
+  change(view.getByLabelText('Model'), 'edited-model-b');
+  saveAgentConfig({ provider: 'openrouter', keys: { openrouter: 'other-tab-key' }, model: 'other-tab-model' });
+  fireEvent.click(view.getByRole('button', { name: 'Save changes' }));
+  expect(loadAgentConfig()).toEqual({ provider: 'anthropic', keys: { openai: 'edited-a', anthropic: 'edited-b', openrouter: 'other-tab-key' }, models: { openai: 'edited-model-a', anthropic: 'edited-model-b', openrouter: 'other-tab-model' }, model: 'edited-model-b', apiKey: 'edited-b' });
+  fireEvent.click(view.getByRole('button', { name: /Live · edited-model-b/ }));
+  fireEvent.click(view.getByRole('button', { name: 'OpenAI' }));
+  expect((view.getByLabelText('API key') as HTMLInputElement).value).toBe('edited-a');
+  expect((view.getByLabelText('Model') as HTMLInputElement).value).toBe('edited-model-a');
+});
+
+test('Save after Forget does not delete a key subsequently added by another tab', () => {
+  saveAgentConfig({ provider: 'openrouter', keys: { openrouter: 'old-router' } });
+  saveAgentConfig({ provider: 'openai', keys: { openai: 'old-a' } });
+  const view = render(<App />);
+  fireEvent.click(view.getByRole('button', { name: /Live ·/ }));
+  change(view.getByLabelText('API key'), 'edited-a');
+  fireEvent.click(view.getByRole('button', { name: 'OpenRouter' }));
+  fireEvent.click(view.getByRole('button', { name: 'Forget key' }));
+  saveAgentConfig({ provider: 'openrouter', keys: { openrouter: 'new-router' } });
+  fireEvent.click(view.getByRole('button', { name: 'OpenAI' }));
+  fireEvent.click(view.getByRole('button', { name: 'Save changes' }));
+  expect(loadAgentConfig().keys).toEqual({ openai: 'edited-a', openrouter: 'new-router' });
 });
 
 test('a live action reaches the next request and a ui:state reply updates the shared store', async () => {

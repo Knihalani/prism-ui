@@ -161,7 +161,7 @@ export function usePlaygroundController({ pace = realistic, agentFactory }: AppP
   const live = config.current.provider !== 'scripted' && !!config.current.apiKey?.trim();
   const providerName = config.current.provider === 'anthropic' ? 'Anthropic' : config.current.provider === 'openrouter' ? 'OpenRouter' : 'OpenAI';
   function chooseMode(value: 'light' | 'dark' | 'system') { setThemeChoice(value); try { localStorage.setItem('prism-theme', value); } catch {} }
-  function saveSettings(value: AgentConfig) { if (!saveAgentConfig(value)) return false; config.current = loadAgentConfig(); revision.current++; closeOverlay(); notify(); return true; }
+  function saveSettings(value: AgentConfig, baseline: AgentConfig) { if (!saveAgentConfig(value, baseline)) return false; config.current = loadAgentConfig(); revision.current++; closeOverlay(); notify(); return true; }
   function forgetKey(provider: Provider) { if (!forgetAgentKey(provider)) return false; config.current = loadAgentConfig(); revision.current++; notify(); return true; }
   return { current, currentId, ownChats, earlierScenarios, busy, empty, lastAssistant, live, providerName, scroll, textarea, sidebarRef, sidebarToggle, sidebar, setSidebar, drawer, setDrawer, overlay, openOverlay, closeOverlay, themeChoice, setThemeChoice, chooseMode, mode: theme, reduced, mobile, notify, send, stop, onAction, switchTo, newChat, openScenario, regenerate, config: config.current, saveSettings, forgetKey };
 }
