@@ -20,8 +20,11 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const enabled = options.enabled !== false;
   const complete = component?.node.complete !== false, kind = props.kind ?? 'html', framed = kind === 'html' || kind === 'wire';
   const labels = useMockupStrings(props), title = labels.title, source = props.source ?? '';
-  const path = `${component!.id}.feedback`;
-  const draft = useStoreValue<(FeedbackState & { submitted?: boolean }) | undefined>(path);
+  const legacyPath = `${component!.id}.feedback`, separate = options.inline && component!.def?.inline;
+  const path = separate ? `__prism.feedback.${component!.id}` : legacyPath;
+  const stored = useStoreValue<(FeedbackState & { submitted?: boolean }) | undefined>(path);
+  const legacy = useStoreValue<(FeedbackState & { submitted?: boolean }) | undefined>(legacyPath);
+  const draft = stored ?? legacy;
   const savedSubmitted = useStoreValue<boolean | undefined>(options.inline ? `${path}.submitted` : `${component!.id}.submitted`);
   const [localDevice, writeDevice] = useState<MockupDevice>(props.device ?? 'desktop'), [localZoom, writeZoom] = useState(1), [editSubmitted, setEditSubmitted] = useState(false);
   const submitted = !!(draft?.submitted ?? savedSubmitted) && !editSubmitted, setSubmitted = (value: boolean) => setEditSubmitted(!value);
@@ -72,6 +75,7 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   function commit(change: (value: FeedbackState) => FeedbackState, sent = false) {
     let result!: FeedbackState;
     ctx.store.update(path, (saved: (FeedbackState & { submitted?: boolean }) | undefined) => {
+      saved ??= draft;
       result = createFeedback(change(createFeedback({ ...saved, mockup: title, variant: props.variant, device }).toJSON())).toJSON();
       const next = { ...result, submitted: sent };
       return JSON.stringify(saved) === JSON.stringify(next) ? saved : next;

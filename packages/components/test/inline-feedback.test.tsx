@@ -8,6 +8,19 @@ import '../src/feedback';
 import '../src/num';
 
 afterEach(cleanup);
+
+test('saving numeric inline feedback preserves the scalar value and dependent formula', () => {
+  const store = createStore();
+  const view = render(<Prism store={store} feedback animate={false} source={':num[1200]{id=rent} Annual cost: :calc[rent*12]'} onAction={() => {}} />);
+  expect(store.get('rent')).toBe(1200);
+  fireEvent.click(view.getAllByRole('button', { name: 'Give feedback' })[0]);
+  const overall = view.getByRole('textbox', { name: 'Overall feedback' });
+  change(overall, 'Keep this budget'); fireEvent.blur(overall);
+  expect(store.get('rent')).toBe(1200);
+  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  expect(store.get('rent')).toBe(1200);
+  expect(view.getByRole('math').textContent).toBe('14,400');
+});
 test('inline numeric feedback is a sibling control in a reserved end gutter', async () => {
   const view = render(<Prism feedback source={':num[1200]{id=budget}'} animate={false} />);
   const slider = view.getByRole('slider'), bubble = view.getByRole('button', { name: 'Give feedback' });
