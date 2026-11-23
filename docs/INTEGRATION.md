@@ -11,7 +11,8 @@ bun add react react-dom @prism-ui/react @prism-ui/components @prism-ui/state
 
 Import `@prism-ui/components` to register built-ins and its shared CSS once.
 Keep `[artifactPlugin]` stable. Use one store per conversation, shared by every
-reply, with `scope={message.id}`. Generate the prompt with the same registry and
+reply, with `key={message.id}` and `scope={message.id}`. A new key gives each reply
+its own parser and patch deduplication lifecycle. Generate the prompt with the same registry and
 capabilities you render. See [PROMPTING](PROMPTING.md) for the authoring contract.
 
 Each named snippet below is a complete file; save it under the name shown.
@@ -388,7 +389,7 @@ export function AssistantPanel({ message, sendToModel, close, store }: {
       if (event.key === 'Escape' && !event.defaultPrevented) { event.stopPropagation(); close(); }
     }}>
     <style>{'.panel-compose{display:flex;gap:8px}.panel-compose input{min-width:0}@container(max-width:320px){.panel-compose{flex-direction:column}}'}</style>
-    <Prism scope={message.id} source={message.text} done={message.done} store={store}
+    <Prism key={message.id} scope={message.id} source={message.text} done={message.done} store={store}
       plugins={plugins} density="compact" theme={host} onAction={onAction} />
     <form className="panel-compose" onSubmit={event => {
       event.preventDefault(); const form = event.currentTarget;
@@ -450,7 +451,7 @@ export function ThemedChat({ sendToModel, message, store }: {
   const [dark, setDark] = useState(false);
   return <section className={dark ? 'dark' : ''}>
     <button onClick={() => setDark(value => !value)}>Toggle dark</button>
-    <Prism source={message.text} done={message.done} scope={message.id} store={store} plugins={plugins}
+    <Prism key={message.id} source={message.text} done={message.done} scope={message.id} store={store} plugins={plugins}
       theme={shadcn} mode={dark ? 'dark' : 'light'}
       onAction={action => { if (action.type !== 'copy') sendToModel(actionToMessage(action)); }} />
   </section>;

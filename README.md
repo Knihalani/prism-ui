@@ -20,17 +20,17 @@ import { artifactPlugin } from '@prism-ui/components';
 import '@prism-ui/components/styles.css';
 
 const plugins = [artifactPlugin];
-export function Reply({ text, streaming, onAction }: {
-  text: string; streaming: boolean; onAction(action: Action): void;
+export function Reply({ id, text, streaming, onAction }: {
+  id: string; text: string; streaming: boolean; onAction(action: Action): void;
 }) {
   const [store] = useState(() => createStore());
-  return <Prism source={text} done={!streaming} store={store}
-    scope="reply-1" plugins={plugins} onAction={onAction} />;
+  return <Prism key={id} source={text} done={!streaming} store={store}
+    scope={id} plugins={plugins} onAction={onAction} />;
 }
 ```
 
-Append incoming text to `text`; keep this component mounted. For multiple replies,
-lift the store into the conversation and give each reply its message ID as scope.
+Append incoming text to `text`; use a stable message ID as `id`. For multiple replies,
+lift the store into the conversation and use each message ID as both key and scope.
 Component-package imports register built-ins; native artifact fences need the
 plugin. Generate model instructions with `createSystemPrompt`, and send actions
 back as user data with `actionToMessage`.
