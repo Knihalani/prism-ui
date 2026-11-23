@@ -86,8 +86,9 @@ export interface OdometerProps extends SpanProps {
 const isDigit = (character: string) => /\p{Decimal_Number}/u.test(character);
 export function Odometer({ value, format = String, animate = true, className, ...props }: OdometerProps) {
   const text = format(value);
+  const unstyled = useContext(PrismContext)?.unstyled;
   const reduced = useReducedMotion();
-  if (!animate || reduced) {
+  if (unstyled || !animate || reduced) {
     return <PrismPart as="span" {...props} className={cx('prism-odometer', className)}>{text}</PrismPart>;
   }
   const next = Array.from(text);
