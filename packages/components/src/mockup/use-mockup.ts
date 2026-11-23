@@ -25,6 +25,13 @@ export function useMockup(props: MockupProps, ctx: PrismContextValue, options: M
   const stored = useStoreValue<(FeedbackState & { submitted?: boolean }) | undefined>(path);
   const legacy = useStoreValue<(FeedbackState & { submitted?: boolean }) | undefined>(legacyPath);
   const draft = stored ?? legacy;
+  useLayoutEffect(() => {
+    if (!separate || stored !== undefined || legacy === undefined) return;
+    ctx.store.batch(() => {
+      ctx.store.move(legacyPath, path);
+      if (ctx.store.get(path) === undefined) ctx.store.set(path, legacy, { history: false });
+    }, { history: false });
+  }, [ctx.store, separate, stored, legacy, legacyPath, path]);
   const savedSubmitted = useStoreValue<boolean | undefined>(options.inline ? `${path}.submitted` : `${component!.id}.submitted`);
   const [localDevice, writeDevice] = useState<MockupDevice>(props.device ?? 'desktop'), [localZoom, writeZoom] = useState(1), [editSubmitted, setEditSubmitted] = useState(false);
   const submitted = !!(draft?.submitted ?? savedSubmitted) && !editSubmitted, setSubmitted = (value: boolean) => setEditSubmitted(!value);

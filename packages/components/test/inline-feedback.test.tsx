@@ -32,6 +32,54 @@ test('saving numeric inline feedback preserves the scalar value and dependent fo
   expect(store.get('rent')).toBe(1200);
   expect(view.getByRole('math').textContent).toBe('14,400');
 });
+
+for (const name of ['num', 'calc']) test(`saved ${name} feedback survives streamed explicit-id finalization and reload`, () => {
+  const store = createStore(), actions: Action[] = [];
+  const ui = (done: boolean) => <Prism scope="feedback-stream" store={store} feedback animate={false} source={`:${name}[1200]{id="amount"}`} done={done} onAction={action => actions.push(action)} />;
+  const view = render(ui(false));
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+  change(view.getByPlaceholderText('Add a comment…'), 'Saved during streaming');
+  fireEvent.click(view.getByRole('button', { name: 'Save' }));
+  expect(view.getByRole('button', { name: 'Comment 1: Saved during streaming' })).toBeTruthy();
+  view.rerender(ui(true));
+  expect(view.getByRole('button', { name: 'Comment 1: Saved during streaming' })).toBeTruthy();
+  expect(store.get('__prism.feedback.amount.items')).toHaveLength(1);
+  if (name === 'num') expect(store.get('amount')).toBe(1200);
+  fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+  expect(actions.at(-1)?.payload).toMatchObject({ target: { id: 'amount' }, items: [{ comment: 'Saved during streaming' }] });
+  view.unmount();
+  const restored = render(ui(true));
+  fireEvent.click(restored.getByRole('button', { name: 'Give feedback' }));
+  expect(restored.getByText('Edit feedback')).toBeTruthy();
+  expect(store.get('__prism.feedback.amount.submitted')).toBe(true);
+});
+
+for (const name of ['num', 'calc']) for (const operation of ['submit', 'submit-overall', 'delete']) test(`legacy ${name} annotations ${operation} consistently`, () => {
+  const saved = createFeedback({ overall: operation === 'submit-overall' ? 'Legacy overall' : '' }); saved.addPin({ x: 20, y: 30, comment: 'Legacy annotation' });
+  const store = createStore({ initial: { amount: { feedback: saved.toJSON() } } }), actions: Action[] = [];
+  const ui = () => <Prism store={store} feedback animate={false} source={`:${name}[1200]{id="amount"}`} onAction={action => actions.push(action)} />;
+  const view = render(ui());
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  const marker = view.getByRole('button', { name: 'Comment 1: Legacy annotation' });
+  if (name === 'num') expect(view.getByRole('slider').getAttribute('aria-valuenow')).toBe('1200');
+  if (operation !== 'delete') {
+    expect((view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
+    expect(actions.at(-1)?.payload).toMatchObject({ items: [{ comment: 'Legacy annotation' }] });
+    expect(store.get('__prism.feedback.amount.items')).toHaveLength(1);
+  } else {
+    fireEvent.click(marker); fireEvent.click(view.getByRole('button', { name: 'Delete' }));
+    expect(store.get('__prism.feedback.amount.items')).toEqual([]);
+    act(() => store.undo('__prism.feedback.amount'));
+    expect(view.getByRole('button', { name: 'Comment 1: Legacy annotation' })).toBeTruthy();
+    act(() => store.redo('__prism.feedback.amount'));
+    view.unmount();
+    const restored = render(ui());
+    fireEvent.click(restored.getByRole('button', { name: 'Give feedback' }));
+    expect(restored.queryByRole('button', { name: 'Comment 1: Legacy annotation' })).toBeNull();
+  }
+});
 test('inline numeric feedback is a sibling control in a reserved end gutter', async () => {
   const view = render(<Prism feedback source={':num[1200]{id=budget}'} animate={false} />);
   const slider = view.getByRole('slider'), bubble = view.getByRole('button', { name: 'Give feedback' });

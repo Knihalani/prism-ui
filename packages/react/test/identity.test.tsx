@@ -203,6 +203,23 @@ test('components without an explicit id keep key state when complete', () => {
   expect(store.snapshot()).toEqual({ 'test:counter:0': { count: 3 } });
 });
 
+test('identity migration moves scalar values and separate feedback atomically with undo history', () => {
+  const store = createStore();
+  store.set('pending', 1200, { history: false });
+  store.set('__prism.feedback.pending', { overall: 'First draft', items: [] }, { history: false });
+  store.set('__prism.feedback.pending.overall', 'Saved revision');
+  const seen: object[] = [];
+  store.subscribe('*', () => seen.push(store.snapshot()));
+  migrateComponentState(store, 'pending', 'final');
+  expect(seen).toEqual([{ final: 1200, __prism: { feedback: { final: { overall: 'Saved revision', items: [] } } } }]);
+  expect(store.get('__prism.feedback.pending')).toBeUndefined();
+  store.undo('__prism.feedback.final');
+  expect(store.get('__prism.feedback.final.overall')).toBe('First draft');
+  expect(store.get('final')).toBe(1200);
+  store.redo('__prism.feedback.final');
+  expect(store.get('__prism.feedback.final.overall')).toBe('Saved revision');
+});
+
 test('inline and leaf attributes never persist a truncated id while their block is open', () => {
   function Counter() { const [count] = useComponentState('count', 3); return <span>{count}</span>; }
   const registry = createRegistry([{ name: 'counter', component: Counter }]);
