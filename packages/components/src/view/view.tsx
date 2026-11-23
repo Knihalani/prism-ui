@@ -1,7 +1,7 @@
 import { createContext, memo, useCallback, useContext, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentType, type KeyboardEvent, type ReactNode } from 'react';
 import { parse, type Node } from '@prism-ui/core';
 import { s, type Infer } from '@prism-ui/schema';
-import { PrismPart, ComponentContext, StreamSkeleton, cx, defaultRenderers, defineComponent, registerComponent, usePart, usePrism, useSent, useTheme, useStrings, useFlash, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
+import { PrismPart, ComponentContext, StreamSkeleton, cx, defaultRenderers, defineComponent, registerComponent, usePart, usePrism, useSent, useTheme, useStrings, useFlash, useValueAnnouncement, type Format, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
 import { Odometer, SentContent } from '../shared/controls';
 import { useFlip } from '../lib/use-flip';
@@ -234,6 +234,7 @@ function Stat(p: PrimitiveProps) {
   const view = useContext(ViewContext)!;
   const { props } = p;
   const value = typeof props.value === 'number' || props.format ? view.format(props.value, props.format) : text(props.value);
+  useValueAnnouncement(value ? [text(props.label), value, text(props.unit)].filter(Boolean).join(' ') : '', !view.streaming && !p.open);
   const delta = props.delta;
   const d = typeof delta === 'number' ? delta : undefined;
   const trend = pick(props.trend, new Set(['up', 'down', 'flat'])) ?? (d === undefined ? undefined : d > 0 ? 'up' : d < 0 ? 'down' : 'flat');

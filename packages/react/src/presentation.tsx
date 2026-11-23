@@ -2,7 +2,7 @@ import { useCallback, useContext, useMemo, useRef, useSyncExternalStore, type HT
 import { ComponentContext, PrismPart, usePrism, type Action } from './context';
 import { useActionDispatch } from './hooks';
 import { ReplyEntryContext } from './reply-entry';
-export { useSentAnnouncement } from './announcements';
+export { useSentAnnouncement, useValueAnnouncement } from './announcements';
 
 export type PresentationState = 'streaming' | 'ready' | 'sent';
 

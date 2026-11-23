@@ -12,7 +12,7 @@ export type { SystemPromptOptions } from './prompt';
 export { PrismContext, ComponentContext, PrismPart, usePrism, usePart, useSlot, useStrings, cx, useStore, useFormat, message } from './context';
 export type { Action, Middleware, PrismContextValue, Components, Slots, ClassNames, Styles } from './context';
 export { useStoreValue, useComponentState, useFormula, useEmit } from './hooks';
-export { usePresentation, useSettled, useSent, useSentAnnouncement, StreamCaret, StreamSkeleton } from './presentation';
+export { usePresentation, useSettled, useSent, useSentAnnouncement, useValueAnnouncement, StreamCaret, StreamSkeleton } from './presentation';
 export { useFlash, useLocalWrite } from './flash';
 export { spring, useReducedMotion, useSpringValue, useCollapse, createFlip } from './motion';
 export type { SpringOptions, SpringValueOptions, FlipOptions, FlipElements } from './motion';

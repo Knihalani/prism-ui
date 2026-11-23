@@ -80,6 +80,28 @@ export function AnnouncementBoundary({ nodes, done, identity, enabled, registry,
   </AnnouncementContext.Provider>;
 }
 
+/** Announce changed final values after they settle, never initial or streaming values. */
+export function useValueAnnouncement(value: string, complete: boolean) {
+  const announce = useContext(AnnouncementContext), previous = useRef<{ value: string; complete: boolean } | null>(null);
+  useEffect(() => {
+    if (!previous.current) {
+      let active = true;
+      queueMicrotask(() => { if (active) previous.current = { value, complete }; });
+      return () => { active = false; };
+    }
+    if (!complete || !previous.current.complete) {
+      previous.current = { value, complete };
+      return;
+    }
+    if (value === previous.current.value) return;
+    const timer = setTimeout(() => {
+      previous.current = { value, complete };
+      announce?.(value);
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [value, complete, announce]);
+}
+
 /** Announce a receipt only on a transition, never when mounting saved sent state. */
 export function useSentAnnouncement(sent: boolean, label: string) {
   const announce = useContext(AnnouncementContext), previous = useRef(sent);

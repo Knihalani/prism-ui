@@ -12,10 +12,16 @@ import { Odometer } from '../src/shared';
 import { SentContent } from '../src/shared/controls';
 import { MockupFooter } from '../src/mockup/chrome';
 import { mockupLabels } from '../src/mockup/use-mockup';
+import { pricing } from '../src/view/fixtures';
 
 afterEach(cleanup);
 const pause = (ms = 750) => act(() => new Promise<void>(resolve => setTimeout(resolve, ms)));
 const fence = (name: string, props: object) => '```ui:' + name + '\n' + JSON.stringify(props) + '\n```';
+function change(element: HTMLElement, value: string) {
+  act(() => element.focus());
+  fireEvent.change(element, { target: { value } });
+  fireEvent.keyUp(element, { key: 'Unidentified' });
+}
 
 test('Odometer exposes the final label once; animated reels never mutate live text', async () => {
   const view = render(<div aria-live="polite"><Odometer value={1} /></div>);
@@ -38,6 +44,42 @@ test('Num and View stats expose final values without live tween regions', () => 
   expect(view.getByRole('slider').getAttribute('aria-valuetext')).toContain('42');
   expect(view.container.querySelector('.prism-view__statValue')!.hasAttribute('aria-live')).toBe(false);
   expect(view.container.querySelector('.prism-view__statValue [aria-hidden="true"]')).not.toBeNull();
+});
+
+test('pricing announces only the final settled total after seat and billing changes', async () => {
+  const view = render(<Prism source={fence('view', pricing)} />);
+  const output = view.container.querySelector('[data-prism-announcer]')!;
+  const values: string[] = [], observer = new MutationObserver(() => values.push(output.textContent!));
+  observer.observe(output, { childList: true, subtree: true, characterData: true });
+  await pause(1500); expect(values).toEqual([]);
+  change(view.getByRole('slider', { name: 'Seats' }), '6');
+  expect(view.container.querySelector('.prism-view__statValue')!.textContent).toContain('$96.00');
+  await pause(100);
+  change(view.getByRole('slider', { name: 'Seats' }), '7');
+  fireEvent.click(view.getByRole('radio', { name: 'Monthly' }));
+  await pause(750); expect(values).toEqual([]);
+  await pause(750); expect(values).toEqual(['Total per month $140.00']);
+  await pause(100); expect(values).toEqual(['Total per month $140.00']);
+  observer.disconnect();
+});
+
+test('streaming stats stay silent until block completion and do not repeat the final summary', async () => {
+  const source = (value: number) => fence('view', { title: 'Progress', children: [{ type: 'stat', label: 'Completed', value }] });
+  const view = render(<Prism source={source(1).slice(0, -4)} done={false} />);
+  const output = view.container.querySelector('[data-prism-announcer]')!;
+  view.rerender(<Prism source={source(123).slice(0, -4)} done={false} />);
+  await pause(1500); expect(output.textContent).toBe('');
+  view.rerender(<Prism source={source(123)} />);
+  expect(output.textContent).toBe('Progress. Completed 123');
+  await pause(1500); expect(output.textContent).toBe('Progress. Completed 123');
+});
+
+test('pricing total changes respect announcement opt-out', async () => {
+  const view = render(<Prism source={fence('view', pricing)} announce={false} />);
+  await pause(0);
+  change(view.getByRole('slider', { name: 'Seats' }), '6');
+  expect(view.container.querySelector('.prism-view__statValue')!.textContent).toContain('$96.00');
+  await pause(1500); expect(view.container.querySelector('[data-prism-announcer]')).toBeNull();
 });
 
 test('chart live values are final data, stable during domain animation and off during streaming', async () => {
