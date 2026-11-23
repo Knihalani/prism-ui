@@ -55,13 +55,17 @@ test('P/R/D select explicit tools, announce them and leave text fields and modif
 
 test('Escape cancels the gesture, then composer, then returns to pin without writing a draft', () => {
   const x = setup(); act(() => x.model.setTool('draw'));
+  act(() => x.canvas.focus());
+  const escape = () => fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
   fireEvent.keyDown(x.canvas, { key: 'Enter' });
   change(x.view.getByRole('textbox', { name: 'Add a comment…' }), 'Pending');
   x.pointer('pointerdown', 100, 50); x.pointer('pointermove', 400, 200);
-  fireEvent.keyDown(x.canvas, { key: 'Escape' }); expect(x.model.rubber).toHaveLength(0); expect(x.model.editing).not.toBeNull(); expect(x.model.tool).toBe('draw');
+  escape(); expect(x.model.rubber).toHaveLength(0); expect(x.model.editing).not.toBeNull(); expect(x.model.tool).toBe('draw');
+  expect(document.activeElement).toBe(x.canvas);
   x.pointer('pointerup', 400, 200); expect(x.model.state.items).toHaveLength(1);
-  fireEvent.keyDown(x.canvas, { key: 'Escape' }); expect(x.model.editing).toBeNull(); expect(x.model.tool).toBe('draw');
-  fireEvent.keyDown(x.canvas, { key: 'Escape' }); expect(x.model.tool).toBe('pin'); expect(x.store.get('review.feedback')).toBeUndefined();
+  escape(); expect(x.model.editing).toBeNull(); expect(x.model.tool).toBe('draw');
+  expect(document.activeElement).toBe(x.canvas);
+  escape(); expect(x.model.tool).toBe('pin'); expect(x.store.get('review.feedback')).toBeUndefined();
 });
 
 for (const modifier of ['ctrlKey', 'metaKey']) test(`${modifier}+Enter submits a pending composer, including its unsaved text`, () => {
