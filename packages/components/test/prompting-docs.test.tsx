@@ -9,7 +9,7 @@ import { allowedPath, importMap } from '../src/artifact/policy';
 
 const doc = await Bun.file(new URL('../../../docs/PROMPTING.md', import.meta.url)).text();
 const examples = [...doc.matchAll(/<!-- prism-example:(\w+) -->\s*````md\n([\s\S]*?)\n````/g)];
-const plugins = [artifactPlugin], grants = ['planning.room'];
+const plugins = [artifactPlugin], grants = ['planning'];
 function components(node: Node): Node[] { return [...(node.type === 'component' ? [node] : []), ...(node.children ?? []).flatMap(components)]; }
 
 test('default prompt and registry-only variant stay within size budgets', () => {
@@ -61,7 +61,7 @@ test('artifact examples obey grants, adaptive/token policy and execute their loc
     container.innerHTML = html;
     const input = container.querySelector('select')!;
     expect(container.querySelector('label')!.htmlFor).toBe(input.id);
-    const store = createStore({ initial: { planning: { room: 'south' } } });
+    const store = createStore({ initial: { planning: { room: 'south', budget: 100 } } });
     const actions: unknown[] = [], cleanups: (() => void)[] = [];
     const bridge = {
       state: { get: store.get, set: store.set, subscribe(path: string, fn: (value: unknown) => void) { return store.subscribe(path, () => fn(store.get(path))); } },
@@ -71,6 +71,7 @@ test('artifact examples obey grants, adaptive/token policy and execute their loc
     expect(input.value).toBe('south');
     input.value = 'north'; fireEvent.change(input);
     expect(store.get(path)).toBe('north');
+    expect(store.get('planning')).toEqual({ room: 'north', budget: 100 });
     fireEvent.click(container.querySelector('button')!);
     expect(actions).toEqual([{ type: 'discuss-room', payload: { room: 'north' } }]);
     cleanups.forEach(fn => fn());

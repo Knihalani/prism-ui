@@ -82,7 +82,7 @@ export function createSystemPrompt({ registry = defaultRegistry, instructions, a
       (paths.length ? 'Granted read/write paths (including descendants): ' + paths.map(path => JSON.stringify(path)).join(', ') + '. Reads and writes outside these grants are unavailable; writes fail.' : 'No state paths are granted. Do not read or write host state; use frame-local state. Writes outside grants fail.') +
       '\nUse prism.state.set for local state edits; prism.emit(type,payload) for model-facing actions. send is an alias for emit. Use JSON-serializable payloads. Do not emit on every keystroke. prism.theme exposes live CSS token values; document emits prism:theme when the theme changes (redraw canvas then).\n' +
       'Use native keyboard-accessible controls, visible focus, associated labels and appropriate aria attributes. Respect prefers-reduced-motion. Default to small, quiet, compact UI, short labels and one clear action.\n' +
-      (renderers.includes('html') ? 'Example (use only granted paths with a compatible scalar value):\n' + artifactExample(paths[0]) : 'The HTML example is omitted because HTML is not enabled.'));
+      (renderers.includes('html') ? 'Example (store the room in a child key of the granted namespace):\n' + artifactExample(paths[0] ? paths[0] + '.room' : undefined) : 'The HTML example is omitted because HTML is not enabled.'));
   }
   if (surface === 'panel') sections.push('## Panel surface\nDesign for a narrow 280–400px side panel. Prefer stacked layouts, short labels, compact spacing and wrapping over wide tables or multi-column compositions. Keep the primary action easy to reach.');
   const documented = catalogue.map(def => def.name === 'artifact' && !renderers.includes('html')

@@ -10,7 +10,7 @@ import { createSystemPrompt } from '@prism-ui/react';
 export const system = createSystemPrompt({
   instructions: 'You help teams make thoughtful decisions.',
   surface: 'chat',
-  artifacts: { statePaths: ['planning.room'], renderers: ['html'] },
+  artifacts: { statePaths: ['planning'], renderers: ['html'] },
 });
 ```
 
@@ -77,7 +77,7 @@ Three seats keep the first rollout small. Adjust the quantity before continuing.
 
 Request: “Show the studio floor plan, let me highlight a meeting room, then discuss
 it.” The spatial diagram is bespoke; a plain choice without a floor plan should
-use pick or ask instead. The host grants planning.room as a scalar string.
+use pick or ask instead. The host grants the planning namespace; planning.room is a scalar string.
 
 <!-- prism-example:artifact -->
 ````md

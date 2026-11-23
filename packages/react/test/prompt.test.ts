@@ -40,6 +40,16 @@ test('prompt variables exactly cover the semantic Tokens contract', async () => 
   expect(prompt).toContain('const path = null');
 });
 
+test('artifact example reads and writes a child key without replacing the granted namespace', () => {
+  for (const grant of ['planning', 'planning.workspace']) {
+    const prompt = createSystemPrompt({ registry: definitions, artifacts: { statePaths: [grant] } });
+    expect(prompt).toContain('const path = ' + JSON.stringify(grant + '.room'));
+    expect(prompt).not.toContain('const path = ' + JSON.stringify(grant) + ';');
+    expect(prompt).toContain('prism.state.get(path)');
+    expect(prompt).toContain('prism.state.set(path, input.value)');
+  }
+});
+
 test('action messages retain full JSON with a readable single-line summary', () => {
   const action: Action = { type: 'select', component: 'pick', id: 'choice', payload: { text: 'A "quoted" \\ value\n' + 'x'.repeat(500) }, context: { component: 'pick', props: {}, state: { selected: 1 } }, message: 'Choose\nthis option' };
   const message = actionToMessage(action);
