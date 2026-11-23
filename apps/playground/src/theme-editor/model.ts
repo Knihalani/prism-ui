@@ -35,8 +35,8 @@ export const tokenCatalogue: readonly TokenDefinition[] = [
 
 export const tokenDefaults: Record<keyof Tokens, string | undefined> = {
   bg: 'transparent', surface: 'color-mix(in srgb, currentColor 3%, transparent)', surfaceRaised: 'Canvas', text: 'currentColor',
-  textMuted: 'color-mix(in srgb, currentColor 65%, transparent)', textSubtle: 'color-mix(in srgb, currentColor 50%, transparent)',
-  border: 'color-mix(in srgb, currentColor 15%, transparent)', borderStrong: 'color-mix(in srgb, currentColor 30%, transparent)',
+  textMuted: 'color-mix(in srgb, currentColor 72%, transparent)', textSubtle: 'color-mix(in srgb, currentColor 65%, transparent)',
+  border: 'color-mix(in srgb, currentColor 10%, transparent)', borderStrong: 'color-mix(in srgb, currentColor 30%, transparent)',
   accent: undefined, accentText: 'var(--prism-accent, #525252)', onAccent: '#fff', positive: '#20805b', warning: '#a56910', danger: '#c43d38', info: '#327394', focus: 'var(--prism-accent, #525252)',
   fontBody: 'inherit', fontDisplay: 'inherit', fontMono: 'ui-monospace, SFMono-Regular, Consolas, monospace', fontNumeric: 'inherit',
   textXs: '.75rem', textSm: '.875rem', textBase: '1rem', textLg: '1.125rem', textXl: '1.375rem', text2xl: '2rem', text3xl: '2.75rem',
