@@ -7,6 +7,27 @@ import { pick } from '../src/pick';
 
 afterEach(cleanup);
 
+test('undo and state patches restore matching choices; only user weight edits clear them', () => {
+  const view = setup({ criteria: [{ id: 'reach', label: 'Reach' }], options: [{ id: 'basic', title: 'Basic', scores: { reach: 1 } }] });
+  fireEvent.click(view.getByRole('button', { name: 'Choose' }));
+  expect(view.store.get('plans.chosen')).toBe('basic');
+  fireEvent.click(view.getByRole('button', { name: 'Reach, weight 1 of 3' }));
+  expect(view.store.get('plans.chosen')).toBeUndefined();
+  act(() => view.store.undo());
+  expect(view.store.get('plans.weights.reach')).toBe(1);
+  expect(view.store.get('plans.chosen')).toBe('basic');
+  expect((view.getByRole('button', { name: 'Chosen' }) as HTMLButtonElement).disabled).toBe(true);
+  act(() => view.store.redo());
+  expect(view.store.get('plans.chosen')).toBeUndefined();
+  act(() => view.store.apply({ set: { 'plans.weights.reach': 3, 'plans.chosen': 'basic' } }));
+  expect(view.store.get('plans.chosen')).toBe('basic');
+  const chip = view.getByRole('button', { name: 'Reach, weight 3 of 3' });
+  fireEvent.keyDown(chip, { key: 'ArrowUp' });
+  expect(view.store.get('plans.chosen')).toBe('basic');
+  fireEvent.keyDown(chip, { key: 'ArrowDown' });
+  expect(view.store.get('plans.chosen')).toBeUndefined();
+});
+
 test('numeric and dotted criterion ids preserve named weights through updates and undo', () => {
   const criteria = [{ id: '0', label: 'Cost' }, { id: 'quality', label: 'Quality' }, { id: 'speed.0.value', label: 'Speed' }];
   const view = setup({ criteria, weights: { '0': 1, quality: 2, 'speed.0.value': 3 }, options: [{ id: 'basic', title: 'Basic', scores: { '0': 1, quality: 1, 'speed.0.value': 1 } }] });

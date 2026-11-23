@@ -20,10 +20,6 @@ export function usePick(props: PickProps, ctx: PrismComponentProps<PickProps>) {
   const saved = useStoreValue(`${id}.weights`), chosen = useStoreValue<string | undefined>(`${id}.chosen`);
   const readWeight = (criterion: string): unknown => store.get(`${id}.weights.${criterion}`);
   const weights = useMemo(() => weightsFor(props, readWeight), [props, saved, store, id]);
-  const signature = JSON.stringify(weights), previous = useRef(signature);
-  useLayoutEffect(() => {
-    if (previous.current !== signature) { previous.current = signature; store.set(`${id}.chosen`, undefined, { history: false }); }
-  }, [signature, store, id]);
   useLayoutEffect(() => {
     if (!ctx.complete) return;
     store.batch(() => {
@@ -32,7 +28,11 @@ export function usePick(props: PickProps, ctx: PrismComponentProps<PickProps>) {
   }, [store, id, weights, ctx.complete]);
   const [focused, setFocused] = useState<string>(), chips = useRef(new Map<string, HTMLButtonElement>());
   const criteria = props.criteria.filter(c => c.id), active = criteria.some(c => c.id === focused) ? focused : criteria[0]?.id;
-  const setWeight = (criterion: string, value: number) => setRecordPath(store, `${id}.weights`, criterion, clamp(value, 1));
+  const setWeight = (criterion: string, value: number) => {
+    const next = clamp(value, 1);
+    if (next === weightsFor(props, readWeight)[criterion]) return;
+    store.batch(() => { setRecordPath(store, `${id}.weights`, criterion, next); store.set(`${id}.chosen`, undefined); });
+  };
   const cycle = (criterion: string) => { const current = weightsFor(props, readWeight); setWeight(criterion, (current[criterion] + 1) % 4); };
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const criterion = criteria[index];
