@@ -7,7 +7,7 @@ export function useInlineReadout(visible: boolean, value: string) {
     const anchor = root.current, overlay = readout.current;
     if (!visible || !anchor || !overlay) return;
     let container = anchor.parentElement;
-    while (container?.parentElement && getComputedStyle(container).display === 'inline') container = container.parentElement;
+    while (container?.parentElement && (getComputedStyle(container).display.startsWith('inline') || container.classList.contains('prism-inline-feedback__target'))) container = container.parentElement;
     if (!container) return;
     const boundary = container;
     const update = () => {

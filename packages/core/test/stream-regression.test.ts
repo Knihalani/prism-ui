@@ -2,6 +2,24 @@ import { expect, test } from 'bun:test';
 import { createParser, parse, type Node, type Plugin } from '../src';
 import { mixedStream } from './stream-fixture';
 
+test('streaming holds incomplete inline directive names, labels and attributes without leaking syntax', () => {
+  const text = (node: Node): string => node.value ?? (node.children ?? []).map(text).join('');
+  for (const plugins of [undefined, [{ name: 'inline', inline: [{ trigger: '@', parse: () => null }] }]]) {
+    for (const tail of [':', ':c', ':badge[New', ':badge[New]{tone=su', ':badge[New]{title="a } b" tone=su']) {
+      const parser = createParser({ plugins });
+      for (const char of 'Status ' + tail) { parser.push(char); expect(text(parser.root)).not.toContain(':'); }
+      parser.end(); expect(parser.root).toEqual(parse('Status ' + tail, { plugins }));
+    }
+    for (const source of ['At 12:30', 'https://example.com', '`literal :c`', '\\:badge[New]']) {
+      const parser = createParser({ plugins }); parser.push(source);
+      expect(text(parser.root)).toBe(text(parse(source, { plugins })));
+    }
+    const parser = createParser({ plugins }); parser.push('Status :badge[New]{tone=su');
+    parser.push('ccess} '); expect(parser.root.children[0].children?.some(n => n.name === 'badge' && n.props?.tone === 'success')).toBe(true);
+    parser.end(); expect(parser.root).toEqual(parse('Status :badge[New]{tone=success} ', { plugins }));
+  }
+});
+
 function checkKeys(node: Node) {
   const children = node.children ?? [];
   expect(new Set(children.map(child => child.key)).size).toBe(children.length);

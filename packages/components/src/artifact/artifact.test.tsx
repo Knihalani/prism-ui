@@ -15,6 +15,16 @@ const plugins = [artifactPlugin], registry = createRegistry([artifact]);
 const html = '<p>First version</p>';
 const snippet = fence('html', 'title="Read-only report" id=report height=180px', html);
 
+test('serialized worker and iframe imports stay native instead of capturing Vite host helpers', async () => {
+  for (const file of ['compiler.ts', 'runtime.ts']) {
+    const source = await Bun.file(new URL(file, import.meta.url)).text();
+    const start = source.indexOf('function '), runtime = source.slice(start, source.indexOf('\nexport ', start));
+    expect(runtime).toContain('function ');
+    expect(runtime).not.toMatch(/import\((url|specifier)\)/);
+    expect(source).toContain('specifier => import(specifier)');
+  }
+});
+
 test('artifacts default to inline, with adaptive runtime and model instructions', () => {
   expect(artifact.schema!.coerce({ kind: 'html', source: '' }).value?.variant).toBe('inline');
   expect(artifact.feedback).toBe(true);
@@ -30,6 +40,11 @@ test('narrow inline toolbars reserve document flow space rather than covering th
   expect(header).toMatch(/position:\s*(relative|static)\s*;/);
   expect(header).toMatch(/inset:\s*auto\s*;/);
   expect(header).toMatch(/margin-block-end:\s*var\(--prism-space-2\)/);
+});
+
+test('inline toolbar hover and focus override the complete resting selector', async () => {
+  const css = await Bun.file(new URL('./artifact.css', import.meta.url)).text();
+  expect(css).toContain('.prism-root .prism-artifact__shell[data-variant="inline"]:not(:hover,:focus-within) .prism-artifact__header { opacity: 0; translate: 0 min(2px, var(--prism-motion-distance)); pointer-events: none; }');
 });
 
 test('automatic content height can shrink after completion but never collapses while streaming', async () => {

@@ -59,8 +59,9 @@ export class InlineState {
     for (let i = 0; i < source.length; i++) {
       const c = source[i]; const code = source.charCodeAt(i);
       if (this.tokenKind) {
+        if (this.tokenKind === 'directive' && this.token.length === 1 && !/[a-zA-Z]/.test(c)) { this.finishToken(); i--; continue; }
         if (this.tokenKind === 'word' && code <= 32) { this.finishToken(); i--; continue; }
-        this.token += c; this.tokenNode!.value = this.token;
+        this.token += c; this.tokenNode!.value = this.tokenKind === 'directive' ? '' : this.token;
         if (this.tokenKind === 'angle' && c === '>') this.finishToken();
         else if (this.tokenKind === 'bracket') {
           if (this.quote) { if (this.previous !== '\\' && c === this.quote) this.quote = ''; }
@@ -95,7 +96,7 @@ export class InlineState {
         this.syntax = true;
         buffer = this.flush(buffer); this.token = c; this.tokenKind = c === '<' ? 'angle' : c === ':' ? 'directive' : c === 'h' ? 'word' : 'bracket';
         this.depth = c === '[' ? 1 : 0;
-        this.tokenNode = { type: 'text', key: '', value: c }; this.add(this.tokenNode); this.tokenTarget = this.target();
+        this.tokenNode = { type: 'text', key: '', value: c === ':' ? '' : c }; this.add(this.tokenNode); this.tokenTarget = this.target();
       } else if (c === '\n') {
         this.syntax = true;
         buffer = this.flush(buffer); const target = this.target(); const last = target[target.length - 1];

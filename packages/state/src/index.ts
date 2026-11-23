@@ -15,12 +15,12 @@ function clean(v: any): any {
 }
 const copy = (v: any) => JSON.parse(JSON.stringify(v));
 const read = (v: any, path: string[]) => path.reduce((v, k) => v != null && safe(k) && Object.hasOwn(v, k) ? v[k] : undefined, v);
-function write(v: any, keys: string[], value: any, remove = false): any {
+function write(v: any, keys: string[], value: any, remove = false, record = false): any {
   const [key, ...rest] = keys;
   const old = v != null && Object.hasOwn(v, key) ? v[key] : undefined;
-  const next = rest.length ? write(old, rest, value, remove) : value;
-  if (Object.is(old, next) && !(remove && !rest.length && v != null && Object.hasOwn(v, key))) return v;
-  const out: any = Array.isArray(v) ? v.slice() : v == null && /^\d+$/.test(key) ? [] : { ...(v && typeof v === 'object' ? v : {}) };
+  const next = rest.length ? write(old, rest, value, remove, record) : value;
+  if (Object.is(old, next) && !(remove && !rest.length && v != null && Object.hasOwn(v, key)) && !(record && Array.isArray(v))) return v;
+  const out: any = !record && Array.isArray(v) ? v.slice() : !record && v == null && /^\d+$/.test(key) ? [] : { ...(v && typeof v === 'object' ? v : {}) };
   if (remove && !rest.length) delete out[key];
   else out[key] = next;
   return out;
@@ -36,7 +36,7 @@ function fillMissing(source: any, destination: any): any {
   if (!plain(source) || !plain(destination)) return destination;
   return Object.fromEntries([...new Set([...Object.keys(source), ...Object.keys(destination)])].map(key => [key, fillMissing(source[key], destination[key])]));
 }
-function moveTree(tree: any, from: string, to: string) {
+function moveTree(tree: any, from: string, to: string, record = false) {
   const source = read(tree, from.split('.'));
   if (source === undefined) return tree;
   const nested = to.startsWith(from + '.'), destination = read(tree, to.split('.'));
@@ -48,7 +48,7 @@ function moveTree(tree: any, from: string, to: string) {
     if (!value || typeof value !== 'object' || Object.keys(value).length) break;
     tree = write(tree, parents, undefined, true);
   }
-  return write(tree, to.split('.'), fillMissing(source, nested ? destination : read(tree, to.split('.'))));
+  return write(tree, to.split('.'), fillMissing(source, nested ? destination : read(tree, to.split('.'))), false, record);
 }
 function changedPaths(previous: any, next: any, paths: Set<string>, path = '') {
   if (Object.is(previous, next)) return;
@@ -88,20 +88,20 @@ export function createStore({ persist, namespace = '', initial = {} }: { persist
     redo(scope?: string) { travel(future, past, scope); },
     canUndo(scope?: string) { return past.some(step => scope === undefined || step.paths.some(path => within(path, scope))); },
     canRedo(scope?: string) { return future.some(step => scope === undefined || step.paths.some(path => within(path, scope))); },
-    move(from: string, to: string) {
+    move(from: string, to: string, options: { record?: boolean } = {}) {
       if (from === to || ![...from.split('.'), ...to.split('.')].every(safe)) return;
       const rename = (path: string) => within(path, from) ? [to + path.slice(from.length)] : within(from, path) ? [path, to] : [path];
       if (depth) {
-        before = moveTree(before, from, to);
+        before = moveTree(before, from, to, options.record);
         const paths = [...changed].flatMap(rename); changed.clear(); paths.forEach(path => changed.add(path));
       }
       store.batch(() => {
-        const previous = state; state = moveTree(state, from, to);
+        const previous = state; state = moveTree(state, from, to, options.record);
         let moved = previous !== state;
         for (const step of [...past, ...future]) {
           const paths = step.paths.flatMap(rename);
           moved ||= paths.length !== step.paths.length || paths.some((path, index) => path !== step.paths[index]);
-          step.paths = [...new Set(paths)]; step.state = moveTree(step.state, from, to);
+          step.paths = [...new Set(paths)]; step.state = moveTree(step.state, from, to, options.record);
         }
         if (moved) { changed.add(from); changed.add(to); }
       }, { history: false });

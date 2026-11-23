@@ -94,11 +94,12 @@ export function useNum(props: NumProps, ctx: PrismComponentProps<NumProps>) {
 
 export function Num(ctx: PrismComponentProps<NumProps>) {
   const num = useNum(ctx.props, ctx), model = { num };
+  const readout = interpolate(num.strings.readoutLabel, { label: num.label, value: '\ufff0' }).split('\ufff0');
   return <PrismPart as="span" {...num.rootProps} slotProps={model}>
     {num.editing ? <PrismPart as="input" {...num.inputProps} slotProps={model} /> : <PrismPart as="span" {...num.parts.value} slotProps={model} data-prism-skeleton={!num.ready ? '' : undefined}><Odometer value={num.value} format={() => num.formatted} /></PrismPart>}
-    {num.readoutVisible && <PrismPart as="span" {...num.parts.readout} slotProps={model} ref={num.layout.readout} style={{ ...num.parts.readout.style, ...num.layout.style }} data-side={num.layout.below ? 'below' : 'above'} aria-hidden="true">
+    {num.readoutVisible && <PrismPart as="span" {...num.parts.readout} slotProps={model} ref={num.layout.readout} style={{ ...num.parts.readout.style, ...num.layout.style }} data-side={num.layout.below ? 'below' : 'above'} data-scrubbing={num.scrubbing || undefined} aria-hidden="true">
       <PrismPart as={Icon} {...num.parts.icon} slotProps={model} name="chevron-left" />
-      {num.scrubbing ? <PrismPart as="span" {...num.parts.readoutValue} slotProps={model}>{interpolate(num.strings.readoutLabel, { label: num.label, value: num.formatted })}</PrismPart> : <PrismPart as="span" {...num.parts.readoutHint} slotProps={model}>{num.strings.dragHint}</PrismPart>}
+      {num.scrubbing ? <PrismPart as="span" {...num.parts.readoutValue} slotProps={model}>{readout.map((text, index) => <span key={index} style={{ display: 'contents' }}>{index > 0 && <span data-readout-amount="">{num.formatted}</span>}<span data-readout-label="">{text}</span></span>)}</PrismPart> : <PrismPart as="span" {...num.parts.readoutHint} slotProps={model}>{num.strings.dragHint}</PrismPart>}
       <PrismPart as={Icon} {...num.parts.icon} slotProps={model} name="chevron-right" />
     </PrismPart>}
   </PrismPart>;

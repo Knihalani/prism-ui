@@ -20,6 +20,8 @@ test('successive moves during one held drag update the value, readout and depend
     await waitFor(() => expect(store.get('rent')).toBe(value));
     expect(slider.getAttribute('data-status')).toBe('scrubbing'); expect(slider.getAttribute('aria-valuenow')).toBe(String(value));
     expect(view.container.querySelector('[data-part="readout-value"]')?.textContent).toContain(value.toLocaleString('en-US', { style: 'currency', currency: 'USD' }));
+    expect(view.container.querySelector('[data-readout-amount]')?.textContent).toBe(value.toLocaleString('en-US', { style: 'currency', currency: 'USD' }));
+    expect(view.container.querySelector('[data-readout-label]')?.textContent).toBe('Monthly rent: ');
     expect(view.container.querySelector('[data-prism="calc"][data-part="value"]')?.textContent).toBe(annual);
     expect(actions).toHaveLength(0);
   }
@@ -71,7 +73,7 @@ test('translated strings, icons and typed model slots preserve editing, scrubbin
   expect(document.activeElement).toBe(view.getByRole('slider'));
   expect(view.getByText('Glisser doucement')).toBeDefined();
   const next = view.getByRole('slider'); fireEvent.pointerDown(next, { button: 0, pointerId: 3, clientX: 0 }); fireEvent.pointerMove(next, { pointerId: 3, clientX: 16 });
-  expect(view.queryByText('Glisser doucement')).toBeNull(); expect(view.getByText('-500 — Nombre n')).toBeDefined(); expect(view.container.querySelector('[data-custom-icon]')).not.toBeNull();
+  expect(view.queryByText('Glisser doucement')).toBeNull(); expect(view.container.querySelector('[data-part="readout-value"]')?.textContent).toBe('-500 — Nombre n'); expect(view.container.querySelector('[data-custom-icon]')).not.toBeNull();
   fireEvent.pointerCancel(next, { pointerId: 3 }); expect(store.get('n')).toBe(-500);
   view.rerender(<Prism source=':calc[0/0]' theme={theme} animate={false} />); expect(view.getByText('Indisponible').getAttribute('title')).toBe('Expression 0/0');
 });
