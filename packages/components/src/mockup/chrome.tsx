@@ -22,7 +22,7 @@ export function MockupToolbar({ vm, model }: { model: MockupModel | MockupGroupM
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
-  return <Actions {...actions} ref={root} model={model} className={[toolbar.className, actions.className].filter(Boolean).join(' ')}>
+  return <Actions {...actions} ref={root} model={model} data-prism-reveal="" className={[toolbar.className, actions.className].filter(Boolean).join(' ')}>
     <MockupPenTools vm={vm} model={model} colors={false} />
     {!narrow && <SecondaryTools vm={vm} model={model} location="toolbar" />}
     <FrameOverflow component="mockup" model={model}>{narrow && <SecondaryTools vm={vm} model={model} location="overflow" />}{vm.framed && <PrismPart slotProps={{ model }} as="button" {...button} aria-label={vm.labels.tablet} title={vm.labels.tablet} aria-pressed={vm.device === 'tablet'} onClick={() => vm.setDevice('tablet')}><Icon name="tablet" /></PrismPart>}<PrismPart slotProps={{ model }} as="button" {...button} title={vm.labels.fullscreen} aria-label={vm.labels.fullscreen} onClick={vm.fullscreen}><Icon name="fullscreen" /></PrismPart><PrismPart slotProps={{ model }} as="button" {...button} title={vm.labels.source} aria-label={vm.labels.source} aria-pressed={vm.showSource} onClick={() => vm.setShowSource(!vm.showSource)}><Icon name="source" /></PrismPart></FrameOverflow>
@@ -69,8 +69,8 @@ export function MockupFooter(vm: MockupFooterModel) {
   const oldReceipt = labels[one ? 'sentOne' : 'sentOther'];
   const receipt = oldReceipt !== mockupLabels[one ? 'sentOne' : 'sentOther'] ? oldReceipt.replace('{n}', String(count)) : labels[one ? 'receiptOne' : 'receiptOther'].replace('{n}', String(count));
   return <PrismPart slotProps={{ model }} as="span" {...footer} role={submitted ? 'status' : undefined}>
-    <PrismPart slotProps={{ model }} as="button" {...button} hidden={submitted} data-secondary="" disabled={!canUndo} onClick={undo}><Icon name="undo" />{labels.undo}</PrismPart>
-    <PrismPart slotProps={{ model }} as="button" {...button} hidden={submitted} data-secondary="" disabled={!canRedo} onClick={redo}><Icon name="redo" />{labels.redo}</PrismPart>
+    <PrismPart slotProps={{ model }} as="button" {...button} hidden={submitted} data-secondary="" data-prism-reveal="" disabled={!canUndo} onClick={undo}><Icon name="undo" />{labels.undo}</PrismPart>
+    <PrismPart slotProps={{ model }} as="button" {...button} hidden={submitted} data-secondary="" data-prism-reveal="" disabled={!canRedo} onClick={redo}><Icon name="redo" />{labels.redo}</PrismPart>
     <PrismPart slotProps={{ model }} as="span" {...countPart} hidden aria-hidden="true">{commentCount(labels, locale, count)}</PrismPart>
     <Primary model={model} as="button" {...primary} data-feedback-submit="" data-sent={submitted ? '' : undefined} sent={submitted} receipt={receipt} aria-label={submitted ? receipt : ready} disabled={submitted || !canSubmit} aria-disabled={submitted || !canSubmit} onBlur={() => vm.commitOverall?.()} onClick={submit}>{ready}</Primary>
     {submitted && <PrismPart slotProps={{ model }} as="button" {...button} onClick={edit}>{labels.editFeedback}</PrismPart>}

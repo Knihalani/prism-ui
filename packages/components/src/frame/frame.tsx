@@ -91,7 +91,7 @@ export function FrameOverflow({ component, model, children }: { component: strin
   const overflow = useFrameOverflow(), strings = useStrings('frame', frameStrings), collapse = useCollapse(overflow.open);
   const content = useFramePart(component, 'overflowContent');
   const Root = useFrameSlot(component, 'overflow'), Trigger = useFrameSlot(component, 'overflowTrigger'), Content = useFrameSlot(component, 'overflowContent');
-  return <Root as="div" {...useFramePart(component, 'overflow')} model={model} overflow={overflow} onKeyDown={overflow.onKeyDown} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) overflow.setOpen(false); }}>
+  return <Root as="div" {...useFramePart(component, 'overflow')} model={model} overflow={overflow} data-open={overflow.open ? '' : undefined} onKeyDown={overflow.onKeyDown} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) overflow.setOpen(false); }}>
     <Trigger as="button" {...useFramePart(component, 'overflowTrigger')} model={model} overflow={overflow} ref={overflow.trigger} type="button" aria-label={strings.moreLabel} title={strings.moreLabel} aria-expanded={overflow.open} aria-controls={overflow.id} onClick={() => overflow.setOpen(!overflow.open)}><Icon name="more" strokeLinecap="round" strokeWidth={4} /></Trigger>
     <Content as="div" {...content} {...collapse} style={{ ...content.style, ...collapse.style }} model={model} overflow={overflow} id={overflow.id}>{children}</Content>
   </Root>;

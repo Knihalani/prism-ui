@@ -90,8 +90,10 @@ button, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .assistant-turn:has(+ .assistant-turn) { margin-bottom: 1.35em; }
 .reply-content { min-height: 26px; overflow-wrap: anywhere; }
 .reply-content > .prism-root[data-prism-theme-name="host"] { padding: 0; background: transparent; font: inherit; font-family: var(--prism-font-body, inherit); color: var(--prism-text, inherit); }
-.reply-content > .prism-root[data-prism-theme-name="host"] > :first-child { margin-top: 0; }
-.reply-content > .prism-root[data-prism-theme-name="host"] > :last-child { margin-bottom: 0; }
+.reply-content > .prism-root[data-prism-theme-name="host"] > :first-child,
+.reply-content > .prism-root[data-prism-theme-name="host"] > [data-prism-flow] > :first-child { margin-top: 0; }
+.reply-content > .prism-root[data-prism-theme-name="host"] > :last-child,
+.reply-content > .prism-root[data-prism-theme-name="host"] > [data-prism-flow] > :last-child { margin-bottom: 0; }
 .reply-content .prism-root [data-prism="frame"][data-part="root"] { max-width: 100%; }
 .reply-content .prism-root pre { max-width: 100%; }
 .thinking { height: 26px; line-height: 26px; color: var(--app-muted); font-size: 14px; }

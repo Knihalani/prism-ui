@@ -154,8 +154,10 @@ test('one ResizeObserver updates viewBox and disconnects on unmount', () => {
   const previous = globalThis.ResizeObserver;
   let callback: ResizeObserverCallback | undefined, observed = 0, disconnected = 0;
   class Observer {
-    constructor(fn: ResizeObserverCallback) { callback = fn; }
-    observe() { observed++; } disconnect() { disconnected++; } unobserve() {}
+    private chart = false;
+    constructor(private fn: ResizeObserverCallback) {}
+    observe(target: Element) { if (target.getAttribute('data-prism') === 'chart' && target.getAttribute('data-part') === 'viewport') { this.chart = true; callback = this.fn; observed++; } }
+    disconnect() { if (this.chart) disconnected++; } unobserve() {}
   }
   globalThis.ResizeObserver = Observer as unknown as typeof ResizeObserver;
   try {

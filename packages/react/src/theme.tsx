@@ -108,13 +108,14 @@ function ThemeCss({ name, css }: { name: string; css: string }) {
   return server ? <style data-prism-theme-css={name}>{css}</style> : null;
 }
 export function useMotion(animate = true): boolean {
+  const parent = useContext(MotionContext);
   const [reduced, setReduced] = useState(() => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(() => {
     if (typeof matchMedia !== 'function') return;
     const media = matchMedia('(prefers-reduced-motion: reduce)'), update = () => setReduced(media.matches);
     update(); media.addEventListener('change', update); return () => media.removeEventListener('change', update);
   }, []);
-  return animate && !reduced;
+  return parent && animate && !reduced;
 }
 export interface ThemeScopeProps {
   theme?: Theme; mode?: Mode; density?: Density; animate?: boolean; as?: ElementType; className?: string;

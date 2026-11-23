@@ -59,9 +59,21 @@ test('feedback motion uses transitions and leaves region geometry out of transit
   expect(css).toContain('scale var(--prism-motion-spring-bouncy-duration) var(--prism-motion-spring-bouncy)');
   expect(css).toContain('transition-timing-function: var(--prism-motion-ease-exit)');
   expect(css).toContain('transition-delay: var(--prism-motion-slow)');
+  expect(css).toContain('filter var(--prism-motion-spring-duration) var(--prism-motion-spring)');
+  expect(css).toContain('transition-duration: var(--prism-motion-instant), var(--prism-motion-instant), calc(var(--prism-motion-instant) * 0)');
+  expect(css).toContain('filter: blur(var(--prism-motion-blur))');
   expect(css).toContain('transition: stroke-dashoffset var(--prism-motion-fast)');
   expect(css).not.toMatch(/transition:\s*(?:all|width|height|left|top)\b/);
   expect(css.match(/\.prism-mockup__(?:popover|marker)[^{]*\{[^}]*\}/g)?.filter(rule => !rule.includes('[data-created]') && !rule.includes('animation: none')).every(rule => !rule.includes('animation:'))).toBe(true);
+});
+
+test('reveals use delayed hover entry, instant exit and undelayed focus/open states', async () => {
+  const css = await Bun.file(new URL('../../react/src/motion.css', import.meta.url)).text();
+  expect(css).toContain('transition-delay: calc(var(--prism-motion-instant) * 2 / 3)');
+  expect(css).toContain('transition-duration: var(--prism-motion-instant)');
+  expect(css).toContain('transition-timing-function: var(--prism-motion-ease-exit)');
+  expect(css).toContain(':is(:focus-within, [data-open], [data-feedback-open], :has([data-open]))');
+  expect(css.split(':is(:focus-within, [data-open], [data-feedback-open], :has([data-open]))')[1]).toContain('transition-delay: calc(var(--prism-motion-instant) * 0)');
 });
 
 test('native text undo wins over feedback history for focused fields and dirty drafts', () => {

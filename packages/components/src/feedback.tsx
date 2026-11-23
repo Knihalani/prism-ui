@@ -14,14 +14,14 @@ const FeedbackTarget = createContext<((target: HTMLDivElement | null) => void) |
 export function useFeedbackTarget() { return useContext(FeedbackTarget); }
 
 export function InlineFeedback({ children, targetKey }: FeedbackSurfaceProps) {
-  const component = useContext(ComponentContext)!, inline = usePrism().registry.get(component.name)?.inline;
+  const prism = usePrism(), component = useContext(ComponentContext)!, inline = prism.registry.get(component.name)?.inline;
   const [open, setOpen] = useState(false), [activated, setActivated] = useState(false), trigger = useRef<HTMLButtonElement>(null);
   const root = useRef<HTMLDivElement>(null), fallback = useRef<HTMLDivElement>(null), viewport = useRef<HTMLDivElement>(null);
   const [target, setTarget] = useState<HTMLDivElement | null>(null);
   viewport.current = target ?? fallback.current;
   const labels = useStrings('feedback', { open: 'Give feedback', close: 'Close feedback' });
   const close = () => { setOpen(false); trigger.current?.focus(); };
-  return <PrismPart as="span" className="prism-inline-feedback" data-prism-reveal-host="" ref={root} style={{ '--prism-mockup-scale': 1, '--prism-mockup-inverse-scale': 1 } as CSSProperties} data-inline={inline || undefined} data-feedback-open={open || undefined}>
+  return <PrismPart as="span" className="prism-inline-feedback" data-prism-reveal-host="" data-prism-theme-name={prism.unstyled ? prism.resolvedTheme.name : undefined} data-animate={prism.unstyled || !prism.animate ? 'false' : undefined} ref={root} style={{ '--prism-mockup-scale': 1, '--prism-mockup-inverse-scale': 1 } as CSSProperties} data-inline={inline || undefined} data-feedback-open={open || undefined}>
     <button ref={trigger} type="button" className="prism-inline-feedback__trigger" data-prism-reveal="" data-prism-press="" aria-label={open ? labels.close : labels.open} title={labels.open} aria-expanded={open} onKeyDown={event => { if (event.key === 'Escape') close(); }} onClick={() => { setActivated(true); open ? close() : setOpen(true); }}><Icon name={open ? 'close' : 'ask'} /></button>
     <PrismPart as="span" className="prism-inline-feedback__target" ref={fallback}>
       <FeedbackTarget.Provider value={setTarget}>{children}</FeedbackTarget.Provider>
@@ -44,7 +44,7 @@ function FeedbackEditor({ open, close, surface }: { open: boolean; close(): void
     </PrismPart>;
 }
 function FeedbackPopover({ vm, surface, open }: { vm: MockupModel; surface: NonNullable<import('./mockup/use-mockup').MockupOptions['surface']>; open: boolean }) {
-  const theme = useTheme();
+  const theme = useTheme(), prism = usePrism();
   const [portal, setPortal] = useState<Element>(document.body);
   useLayoutEffect(() => {
     const sync = () => { const full = document.fullscreenElement, target = surface.viewport.current; setPortal(full && target && full.contains(target) ? full : document.body); };
@@ -83,6 +83,6 @@ function FeedbackPopover({ vm, surface, open }: { vm: MockupModel; surface: NonN
     if (surface.root.current) observer?.observe(surface.root.current);
     return () => { observer?.disconnect(); window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
   }, [surface, vm.editing?.id, vm.state]);
-  return createPortal(<span ref={layer} className="prism-root prism-inline-feedback__popover-layer" data-animate={usePrism().animate ? undefined : 'false'} data-prism-theme-name={appearance.name} data-prism-theme={appearance.mode} style={{ ...appearance.style, ...position, padding: 0, margin: 0, border: 0, boxShadow: 'none', background: 'transparent', minWidth: 0, minHeight: 0, containerType: 'normal', position: 'fixed', display: 'block', pointerEvents: 'none', zIndex: 1000, maxHeight: 'calc(100dvh - 24px)', overflow: 'visible' }}><MockupComment vm={vm} open={open} style={{ ...position, position: 'relative', display: 'block', left: 0, top: 0, width: '100%', transformOrigin: position.transformOrigin, maxHeight: 'calc(100dvh - 24px)', overflow: 'auto' }} /></span>, portal);
+  return createPortal(<span ref={layer} className="prism-root prism-inline-feedback__popover-layer" data-animate={prism.animate && !prism.unstyled ? undefined : 'false'} data-prism-theme-name={appearance.name} data-prism-theme={appearance.mode} style={{ ...appearance.style, ...position, padding: 0, margin: 0, border: 0, boxShadow: 'none', background: 'transparent', minWidth: 0, minHeight: 0, containerType: 'normal', position: 'fixed', display: 'block', pointerEvents: 'none', zIndex: 1000, maxHeight: 'calc(100dvh - 24px)', overflow: 'visible' }}><MockupComment vm={vm} open={open} style={{ ...position, position: 'relative', display: 'block', left: 0, top: 0, width: '100%', transformOrigin: position.transformOrigin, maxHeight: 'calc(100dvh - 24px)', overflow: 'auto' }} /></span>, portal);
 }
 registerFeedbackSurface(InlineFeedback);
