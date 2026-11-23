@@ -26,12 +26,13 @@ async function auditFrames(page) {
 
 async function settle(page) {
   await page.evaluate(() => document.fonts.ready);
-  const previews = page.locator('[data-artifact-shell], .prism-mockup__viewport');
-  for (let index = 0; index < await previews.count(); index++) {
-    const target = previews.nth(index);
-    if (!await target.isVisible()) continue;
-    await target.evaluate(node => node.scrollIntoView({ block: 'center', behavior: 'instant' }));
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const previews = await page.locator('[data-artifact-shell], .prism-mockup__viewport').elementHandles();
+  for (const target of previews) {
+    try {
+      if (!await target.isVisible()) continue;
+      await target.evaluate(node => { if (node.isConnected) node.scrollIntoView({ block: 'center', behavior: 'instant' }); });
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    } finally { await target.dispose(); }
   }
   await page.waitForFunction(() => !document.querySelector('[data-artifact-shell] [aria-busy="true"]'), undefined, { timeout: 15000 });
   await page.waitForFunction(() => document.getAnimations().every(a => a.effect?.getTiming().iterations === Infinity || a.playState === 'finished'), undefined, { timeout: 10000 });

@@ -75,6 +75,7 @@ try {
         await page.evaluate(() => window.motionProbe.sample('feedback/pin-enter'));
         await page.getByRole('button', { name: 'Save', exact: true }).click();
         await page.evaluate(() => window.motionProbe.sample('feedback/pin-exit'));
+        await page.getByRole('button', { name: 'Region', exact: true }).click();
         const bounds = await canvas.boundingBox();
         if (!bounds) throw Error('Missing feedback canvas');
         await page.mouse.move(bounds.x + bounds.width * .2, bounds.y + bounds.height * .3);
