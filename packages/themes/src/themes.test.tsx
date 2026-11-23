@@ -30,6 +30,14 @@ test('Print and Objects expose named themes and dark tokens', () => {
   expect('components' in objects).toBe(true);
 });
 
+test('Print solid badges preserve six distinct semantic inks in light and dark', () => {
+  const tones = ['neutral', 'accent', 'info', 'success', 'warning', 'danger'];
+  const view = render(<Prism theme={print} source={tones.map(tone => `:badge[${tone}]{tone=${tone} variant=solid}`).join(' ')} animate={false} />);
+  expect([...view.container.querySelectorAll('[data-variant="solid"]')].map(el => el.getAttribute('data-tone'))).toEqual(tones);
+  for (const palette of [print.tokens!, { ...print.tokens, ...print.dark }]) expect(new Set([palette.text, palette.accent, palette.info, palette.positive, palette.warning, palette.danger]).size).toBe(6);
+  expect(print.css).toContain('background:var(--prism-badge-color); color:var(--prism-bg);');
+});
+
 test('Instrument tabs keep whole labels in a scrollable strip with narrow chassis padding', () => {
   const view = render(<Prism theme={instrument} source={'::::tabs{title="Be available"}\n:::tab{label="Before"}\nFirst\n:::\n:::tab{label="During"}\nSecond\n:::\n::::'} animate={false} />);
   expect(within(view.container).getByRole('tab', { name: 'Before' }).textContent).toBe('Before');

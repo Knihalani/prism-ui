@@ -91,12 +91,13 @@ export const print = defineTheme({
   tokens: {
     bg: '#fff', surface: 'transparent', surfaceRaised: '#fff', text: '#151515', textMuted: '#555', textSubtle: '#666',
     border: '#aaa', borderStrong: '#151515', accent: '#d92e24', accentText: '#d92e24', onAccent: '#fff', focus: '#d92e24',
+    info: '#275a78', positive: '#276449', warning: '#845300', danger: '#a21d36',
     fontBody: '"Inter Tight", "Arial Narrow", Arial, sans-serif', fontDisplay: '"Inter Tight", "Arial Narrow", Arial, sans-serif',
     fontMono: '"IBM Plex Mono", ui-monospace, monospace', fontNumeric: '"Inter Tight", Arial, sans-serif',
     radiusSm: '0px', radiusMd: '0px', radiusLg: '0px', radiusPill: '0px', elevation1: 'none', elevation2: 'none', elevation3: 'none',
     textBase: '14px', textSm: '12px', textXs: '10px', text3xl: '67px', weightBold: '900', motionFast: '100ms', motionBase: '150ms', motionSlow: '200ms',
   },
-  dark: { bg: '#151515', surface: 'transparent', surfaceRaised: '#202020', text: '#f5f3ef', textMuted: '#c2beb7', textSubtle: '#aaa69f', border: '#6d6a65', borderStrong: '#f5f3ef', accent: '#ef4438', accentText: '#ef4438', onAccent: '#151515', focus: '#ef4438' },
+  dark: { bg: '#151515', surface: 'transparent', surfaceRaised: '#202020', text: '#f5f3ef', textMuted: '#c2beb7', textSubtle: '#aaa69f', border: '#6d6a65', borderStrong: '#f5f3ef', accent: '#ef4438', accentText: '#ef4438', onAccent: '#151515', focus: '#ef4438', info: '#a0bfd0', positive: '#91b89d', warning: '#efbb63', danger: '#ef8ea3' },
   components: {
     frame: { slots: { header: Header, undo: Tool, ask: Tool, overflowTrigger: Tool }, strings: { undoLabel: 'Undo', askLabel: 'Ask', moreLabel: 'Tools' } },
     estimate: { slots: { root: EstimateRoot, body: EstimateBody, item: EstimateItem, label: EstimateLabel, checkbox: Switch, total: Total }, strings: { title: 'Week-one estimate', sectionIndex: '01 / ESTIMATE', submit: 'Send estimate ↗', sentLabel: 'Estimate sent ✓', totalLabel: 'Total', footnote: '{notes} · {currency}' } },
@@ -256,7 +257,8 @@ export const print = defineTheme({
     :scope .prism-tabs__indicator { display:none; }
     :scope .prism-tab__body { padding:18px 0; }
     :scope .prism-badge__root { font:10px/1.6 var(--prism-font-mono); text-transform:uppercase; color:var(--prism-text); }
-    :scope .prism-badge__root[data-variant="solid"] { background:var(--prism-accent); color:var(--prism-on-accent); }
+    :scope .prism-badge__root[data-tone="neutral"] { --prism-badge-color:var(--prism-text); }
+    :scope .prism-badge__root[data-variant="solid"] { background:var(--prism-badge-color); color:var(--prism-bg); }
     :scope .prism-grid__body { gap:20px; }
     :scope .prism-grid__body > .prism-card__root { margin:0; }
     :scope .prism-grid__body > .prism-card__root::before { display:none; }
