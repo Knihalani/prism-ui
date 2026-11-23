@@ -73,3 +73,12 @@ test('an unchanged empty key draft preserves a key later added in another tab', 
   expect(saveAgentConfig({ ...baseline, keys: { openai: '' } }, baseline)).toBe(true);
   expect(loadAgentConfig().apiKey).toBe('other-tab-key');
 });
+
+test.each(['openai', 'anthropic'] as const)('blank model drafts preserve the newest saved model while saving %s', provider => {
+  saveAgentConfig({ provider: 'openai', keys: { openai: 'saved-key' }, model: 'original-model' });
+  const baseline = loadAgentConfig();
+  saveAgentConfig({ ...baseline, model: 'newer-model', models: { openai: 'newer-model' } });
+  expect(saveAgentConfig({ ...baseline, provider, model: ' \t\n ', models: { ...baseline.models, openai: ' \t\n ' } }, baseline)).toBe(true);
+  expect(loadAgentConfig().models).toEqual({ openai: 'newer-model' });
+  expect(loadAgentConfig().model).toBe(provider === 'openai' ? 'newer-model' : '');
+});

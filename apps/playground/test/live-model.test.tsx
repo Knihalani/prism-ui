@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react
 import { App } from '../src/App';
 import { createAgent, loadAgentConfig, saveAgentConfig } from '../src/agent/config';
 import { createLlmAgent, systemPrompt } from '../src/agent/llm';
-import { artifactStatePaths, boundedSnapshot } from '../src/agent/policy';
+import { artifactStatePaths, boundedSnapshot, modelPresets } from '../src/agent/policy';
 import { adaptiveArtifactOptions } from '../src/adaptive-source';
 import { serialiseLocation } from '../src/url-state';
 import type { Agent, AgentEvent, AgentInput } from '../src/agent/types';
@@ -203,6 +203,32 @@ test('Save after Forget does not delete a key subsequently added by another tab'
   fireEvent.click(view.getByRole('button', { name: 'OpenAI' }));
   fireEvent.click(view.getByRole('button', { name: 'Save changes' }));
   expect(loadAgentConfig().keys).toEqual({ openai: 'edited-a', openrouter: 'new-router' });
+});
+
+test('saving another provider leaves a blank inactive custom-model draft unchanged', () => {
+  saveAgentConfig({ provider: 'openai', keys: { openai: 'saved-a' }, model: 'saved-model-a' });
+  const view = render(<App />);
+  fireEvent.click(view.getByRole('button', { name: /Live ·/ }));
+  change(view.getByLabelText('Model'), ' \t ');
+  fireEvent.click(view.getByRole('button', { name: 'Anthropic' }));
+  change(view.getByLabelText('API key'), 'saved-b');
+  fireEvent.click(view.getByRole('button', { name: 'Save changes' }));
+  expect(loadAgentConfig().models?.openai).toBe('saved-model-a');
+  expect(loadAgentConfig().provider).toBe('anthropic');
+  fireEvent.click(view.getByRole('button', { name: /Live ·/ }));
+  fireEvent.click(view.getByRole('button', { name: 'OpenAI' }));
+  expect((view.getByLabelText('Model') as HTMLInputElement).value).toBe('saved-model-a');
+});
+
+test.each(['saved-model-a', undefined])('a blank active model draft keeps the saved model (%s) or provider default', savedModel => {
+  saveAgentConfig({ provider: 'openai', keys: { openai: 'saved-a' }, model: savedModel });
+  const view = render(<App />);
+  fireEvent.click(view.getByRole('button', { name: /Live ·/ }));
+  if (!savedModel) fireEvent.change(view.getByLabelText('Model preset'), { target: { value: 'custom' } });
+  change(view.getByLabelText('Model'), ' \t ');
+  fireEvent.click(view.getByRole('button', { name: 'Save changes' }));
+  expect(loadAgentConfig().model).toBe(savedModel ?? '');
+  expect(view.getByRole('button', { name: `Live · ${savedModel ?? modelPresets.openai[0]}` })).toBeDefined();
 });
 
 test('a live action reaches the next request and a ui:state reply updates the shared store', async () => {

@@ -56,7 +56,8 @@ function updateAgentConfig(config?: AgentConfig, forgotten?: Provider, baseline?
         }
         const model = config.models?.[name] ?? (name === provider ? config.model : undefined);
         const before = baseline?.models?.[name] ?? (name === baseline?.provider ? baseline.model : undefined);
-        if ((baseline ? model !== before : name === provider) && model !== undefined) models[name] = model.trim();
+        const nextModel = model?.trim();
+        if ((baseline ? model !== before : name === provider) && nextModel) models[name] = nextModel;
       }
     }
     const model = config ? provider === 'scripted' ? config.model : models[provider] : stored.model;
