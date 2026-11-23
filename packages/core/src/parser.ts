@@ -9,7 +9,7 @@ const fence = (s: string) => /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(s);
 const directive = (s: string) => /^ {0,3}(:{2,})([\w-]+)[ \t]*(?:\{(.*)\})?\s*$/.exec(s);
 const item = (s: string) => /^( *)([-+*]|\d+[.)])\s+(.*)$/.exec(s);
 const thematic = (s: string) => /^ {0,3}(?:(?:\*\s*){3,}|(?:-\s*){3,}|(?:_\s*){3,})$/.test(s);
-const cells = (s: string) => s.trim().replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map(s => s.trim().replace(/\\\|/g, '|'));
+export const cells = (s: string) => s.trim().replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map(s => s.trim().replace(/\\\|/g, '|'));
 const tableDelimiter = (s: string) => s.includes('-') && cells(s).every(c => /^:?-{3,}:?$/.test(c));
 const starts = (s: string) => !!(fence(s) || directive(s) || item(s) || /^ {0,3}(?:#{1,6}\s|>)/.test(s) || thematic(s));
 
