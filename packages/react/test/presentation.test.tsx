@@ -53,6 +53,26 @@ test('removed parents preserve styled sibling skeletons in one inert snapshot', 
   await waitFor(() => expect(ghost.isConnected).toBe(false));
 });
 
+test('skeleton snapshots preserve computed declarations with quotes, semicolons and custom properties', async () => {
+  const view = render(skeletonHost(<StreamSkeleton style={{ '--prism-motion-fast': '20ms' } as CSSProperties}>
+    <span style={{ color: 'rebeccapurple', padding: '2px 4px', backgroundImage: 'url("data:image/svg+xml;a,b")', '--caption': '"one; two: three"', '--empty': '' } as CSSProperties}>Loading</span>
+    <svg><rect style={{ fill: 'red', strokeWidth: '2px' }} /></svg>
+  </StreamSkeleton>));
+  measured(view.container.querySelector('[data-prism-skeleton]')!);
+  const expected = ['span', 'rect'].map(selector => {
+    const style = getComputedStyle(view.container.querySelector(selector)!);
+    return Array.from({ length: style.length }, (_, index) => {
+      const name = style.item(index); return [name, style.getPropertyValue(name)] as const;
+    });
+  });
+  await act(async () => { view.rerender(skeletonHost(<p>Ready</p>)); });
+  const ghost = view.container.querySelector('[data-prism-skeleton-exit]')!;
+  ['span', 'rect'].forEach((selector, index) => {
+    const style = (ghost.querySelector(selector)! as HTMLElement | SVGElement).style;
+    for (const [name, value] of expected[index]) expect(style.getPropertyValue(name)).toBe(value);
+  });
+});
+
 test('nested raw skeletons do not duplicate a StreamSkeleton exit', async () => {
   const view = render(skeletonHost(<StreamSkeleton><PrismPart as="i" data-part="skeleton-line" /></StreamSkeleton>));
   measured(view.container.querySelector('[data-prism-skeleton]')!);
