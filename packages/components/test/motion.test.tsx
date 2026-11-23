@@ -8,6 +8,15 @@ import { useFlip } from '../src/lib/use-flip';
 
 afterEach(cleanup);
 
+test('estimate native checkboxes participate in token-driven shared press feedback', async () => {
+  const css = await Bun.file(new URL('../src/styles/motion.css', import.meta.url)).text();
+  const press = css.match(/[^{}]+:active:not\(:disabled\)\s*\{[^}]+\}/)?.[0];
+  expect(press).toContain('.prism-estimate__checkbox:where(:not([role="switch"]))');
+  expect(press).toContain('scale: var(--prism-motion-scale)');
+  expect(press).toContain('transition-duration: var(--prism-motion-instant)');
+  expect(css).toContain('border-color var(--prism-motion-fast) var(--prism-motion-ease), scale var(--prism-motion-spring-duration) var(--prism-motion-spring)');
+});
+
 test('summary and view checkboxes share fast fill, delayed draw and fade-only uncheck timing', async () => {
   const css = await Bun.file(new URL('../src/shared/controls.css', import.meta.url)).text();
   expect(css).toContain(':is(input.prism-check, .prism-summary__checkbox, .prism-listItem__root > input[type="checkbox"])::after');
