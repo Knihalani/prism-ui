@@ -1,5 +1,5 @@
 import { PrismPart, usePart, useSlot } from '@prism-ui/react';
-import { useLayoutEffect, useRef, useState, type ElementType, type HTMLAttributes, type Ref } from 'react';
+import { forwardRef, useLayoutEffect, useRef, useState, type ElementType, type HTMLAttributes } from 'react';
 import { FrameOverflow } from '../frame';
 import { Pill, type PillProps } from '../shared/controls';
 import { MockupIcon as Icon } from './icon';
@@ -7,7 +7,7 @@ import type { MockupGroupModel } from './group';
 import type { MockupModel } from './use-mockup';
 import { mockupLabels } from './use-mockup';
 
-function Box({ model, ...props }: HTMLAttributes<HTMLDivElement> & { model?: unknown; ref?: Ref<HTMLDivElement> }) { return <div {...props} />; }
+const Box = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement> & { model?: unknown }>(function Box({ model, ...props }, ref) { return <div {...props} ref={ref} />; });
 function FeedbackPill({ model, as, ...props }: PillProps & { model?: unknown; as?: ElementType }) { return <Pill {...props} />; }
 export function MockupToolbar({ vm, model }: { model: MockupModel | MockupGroupModel; vm: Pick<MockupModel, 'labels' | 'framed' | 'device' | 'setDevice' | 'zoom' | 'setZoom' | 'fullscreen' | 'showSource' | 'setShowSource' | 'tool' | 'setTool' | 'color' | 'setColor'> }) {
   const actions = usePart('mockup', 'headerActions'), toolbar = usePart('mockup', 'tools'), button = usePart('mockup', 'button'), Actions = useSlot('mockup', 'headerActions', Box);
