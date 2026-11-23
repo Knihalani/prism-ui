@@ -51,13 +51,13 @@ Resolution is `components[name or type]` → registry definition → built-in ma
 
 ```tsx
 import { createTheme, ThemeScope } from '@prism-ui/react';
-const theme = createTheme({ accent: '#2563eb', accentSoft: '#dbeafe', radiusMd: '12px' });
+const theme = createTheme({ accent: '#2563eb', onAccent: '#ffffff', radiusMd: '12px' });
 <ThemeScope theme={theme} density="compact" animate={false} as="section">…</ThemeScope>;
 <Prism source={text} theme={theme} classNames={{ card: { root: 'my-card' } }}
   styles={{ card: { root: { borderWidth: 2 } } }} slots={{ card: { title: MyTitle } }} />;
 ```
 
-`createTheme(partialTokens, base?)` merges a token base or an existing CSS-variable style object. Camel-case tokens become `--prism-kebab-case` variables. `ThemeTokens` lists colors (`bg`, `surface`, `border`, `text`, `muted`, `accent`, `success`, `warning`, `danger`, `info`, plus `Soft` variants), `radiusSm/Md/Lg`, `space1`–`space8`, `fontSans/Mono`, `textXs/Sm/Base/Lg/Xl`, `shadowSm/Md/Lg`, `durationFast/Base/Slow`, and `ease`. Values are CSS strings. Prism imports a small presentation stylesheet. The consuming theme and component library supply the rest of the visual styles.
+`createTheme(partialTokens, base?)` merges a token base or an existing CSS-variable style object. Camel-case tokens become `--prism-kebab-case` variables. `Tokens` includes colours such as `textMuted`, `accent`, `onAccent`, `positive`; `fontBody/Display/Mono/Numeric`; type sizes and weights; radius and spacing; `elevation1/2/3`; and `motionFast/Base/Slow`, easing and spring roles. Values are CSS strings. See [THEMING](../../docs/THEMING.md) for the full contract. Prism imports a small presentation stylesheet. The consuming theme and component library supply the rest of the visual styles.
 
 ThemeScope emits `data-prism-theme`, `data-density`, and `data-animate="false"` when disabled. Reduced-motion preference also disables motion. Prism's wrapper always has `prism-root`, including in unstyled mode.
 
