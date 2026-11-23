@@ -8,6 +8,7 @@ import { artifactStatePaths, boundedSnapshot } from '../src/agent/policy';
 import { adaptiveArtifactOptions } from '../src/adaptive-source';
 import { serialiseLocation } from '../src/url-state';
 import type { Agent, AgentEvent, AgentInput } from '../src/agent/types';
+import { describeActionTurn, describeInteraction } from '../src/agent/interaction';
 
 afterEach(() => { cleanup(); localStorage.clear(); });
 const signal = () => new AbortController().signal;
@@ -20,11 +21,14 @@ function blockStorage(message: string) {
 async function collect(events: AsyncIterable<AgentEvent>) { const output = []; for await (const event of events) output.push(event); return output; }
 const action = { type: 'choose', component: 'pick', id: 'choice', payload: { option: 'north' }, context: { component: 'pick', props: {}, state: {} }, message: 'Choose north' };
 function sse(text: string) { return new Response('data: ' + JSON.stringify({ choices: [{ delta: { content: text } }] }) + '\n\ndata: [DONE]\n\n'); }
-function send(view: ReturnType<typeof render>, text: string) {
-  const input = view.getByRole('textbox', { name: 'Message Prism' });
+function change(input: HTMLElement, text: string) {
   act(() => input.focus());
   fireEvent.change(input, { target: { value: text } });
   fireEvent.keyUp(input, { key: 'Unidentified' });
+}
+function send(view: ReturnType<typeof render>, text: string) {
+  const input = view.getByRole('textbox', { name: 'Message Prism' });
+  change(input, text);
   fireEvent.keyDown(input, { key: 'Enter' });
 }
 
@@ -84,6 +88,16 @@ test('custom compatible bases work, and prompt grants match runtime grants', asy
   expect(boundedSnapshot(cycle)).toEqual({});
 });
 
+test('action serialization retains bounded snapshots without changing actions that have none', () => {
+  const input: Extract<AgentInput, { kind: 'action' }> = { kind: 'action', action, history: [] };
+  expect(describeActionTurn(input)).toBe(describeInteraction(action));
+  const snapshot = { planning: { room: 'north' }, huge: 'é'.repeat(4000) };
+  const serialized = describeActionTurn({ ...input, snapshot }).split('\n[Public UI state, user data]\n')[1];
+  expect(JSON.parse(serialized)).toEqual({ planning: { room: 'north' } });
+  expect(new TextEncoder().encode(serialized).length).toBeLessThanOrEqual(2048);
+  expect(describeActionTurn({ ...input, snapshot: {} })).toContain('\n[Public UI state, user data]\n{}');
+});
+
 test('popover switches isolated keys, supports show/hide, Escape, outside click and forgetting', () => {
   saveAgentConfig({ provider: 'openrouter', keys: { openrouter: 'private-b' } });
   saveAgentConfig({ provider: 'openai', keys: { openai: 'private-a', openrouter: 'private-b' } });
@@ -130,11 +144,11 @@ test('Forget removes only the selected key without saving or discarding unrelate
   saveAgentConfig({ provider: 'openai', model: 'saved-model', keys: { openai: 'active-key' } });
   const view = render(<App />);
   fireEvent.click(view.getByRole('button', { name: /Live · saved-model/ }));
-  fireEvent.change(view.getByLabelText('API key'), { target: { value: 'unsaved-a' } });
+  change(view.getByLabelText('API key'), 'unsaved-a');
   fireEvent.click(view.getByRole('button', { name: 'OpenRouter' }));
-  fireEvent.change(view.getByLabelText('API key'), { target: { value: 'unsaved-router' } });
+  change(view.getByLabelText('API key'), 'unsaved-router');
   fireEvent.change(view.getByLabelText('Model preset'), { target: { value: 'custom' } });
-  fireEvent.change(view.getByLabelText('Model'), { target: { value: 'unsaved-model' } });
+  change(view.getByLabelText('Model'), 'unsaved-model');
   fireEvent.click(view.getByRole('button', { name: 'Forget key' }));
   expect(loadAgentConfig()).toEqual({ provider: 'openai', model: 'saved-model', apiKey: 'active-key', keys: { openai: 'active-key' } });
   expect(view.getByRole('dialog')).toBeDefined();
@@ -175,6 +189,12 @@ test('a live action reaches the next request and a ui:state reply updates the sh
   if (inputs[1].kind === 'action') expect(inputs[1].snapshot?.planning).toMatchObject({ seed: 42 });
   send(view, 'What changed?');
   await waitFor(() => expect(inputs).toHaveLength(3));
+  const interaction = inputs[2].history.find(turn => turn.role === 'user' && turn.text.includes('[UI interaction]'))!;
+  expect(interaction.text).toContain('\n[Public UI state, user data]\n');
+  const snapshot = JSON.parse(interaction.text.split('\n[Public UI state, user data]\n')[1]);
+  expect(snapshot.planning).toMatchObject({ seed: 42 });
+  expect(snapshot.planning.room).toBeUndefined();
+  expect(new TextEncoder().encode(JSON.stringify(snapshot)).length).toBeLessThanOrEqual(2048);
   expect(inputs[2].history.at(-1)?.text).toBe(patchReply);
   const namespace = view.container.querySelector('[data-conversation]')!.getAttribute('data-conversation');
   await waitFor(() => expect(JSON.parse(localStorage.getItem('prism-ui:' + namespace) ?? '{}').planning?.room).toBe('north'));

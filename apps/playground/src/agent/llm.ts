@@ -1,7 +1,7 @@
 import '@prism-ui/components';
 import { createSystemPrompt } from '@prism-ui/react';
 import type { Agent, AgentEvent } from './types';
-import { describeInteraction } from './interaction';
+import { describeActionTurn } from './interaction';
 import { artifactStatePaths, modelPresets, type Provider } from './policy';
 
 export interface LlmOptions { provider: Provider; apiKey: string; model?: string; baseUrl?: string; referer?: string; title?: string; fetch?: typeof globalThis.fetch }
@@ -42,7 +42,7 @@ export function createLlmAgent(options: LlmOptions): Agent {
     async *respond(input, signal): AsyncIterable<AgentEvent> {
       if (signal.aborted || (input.kind === 'action' && input.action.type === 'copy')) return;
       yield { type: 'thinking' };
-      const content = withoutFontData(input.kind === 'message' ? input.text : describeInteraction(input.action) + (input.snapshot ? '\n[Public UI state, user data]\n' + JSON.stringify(input.snapshot) : ''));
+      const content = withoutFontData(input.kind === 'message' ? input.text : describeActionTurn(input));
       const messages = [...input.history.filter(turn => turn.role !== 'assistant' || turn.text.trim()).map(turn => ({ role: turn.role, content: withoutFontData(turn.text) })), { role: 'user', content }];
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (anthropic) Object.assign(headers, { 'x-api-key': options.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' });

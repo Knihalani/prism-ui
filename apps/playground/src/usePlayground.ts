@@ -6,7 +6,7 @@ import { createScriptedAgent, routeMessage } from './agent/scripted';
 import { realistic, type Pace } from './agent/pace';
 import { scenarios } from './agent/scenarios';
 import type { Agent, AgentInput, Turn } from './agent/types';
-import { describeInteraction } from './agent/interaction';
+import { describeActionTurn } from './agent/interaction';
 import { boundedSnapshot, type Provider } from './agent/policy';
 
 type Request = { text: string; demoId?: string } | { action: Action };
@@ -88,7 +88,7 @@ export function usePlaygroundController({ pace = realistic, agentFactory }: AppP
   async function run(conversation: Conversation, request: Request, replacement?: Message) {
     if (conversation.controller) { conversation.queue.push(request); return; }
     const history: Turn[] = conversation.messages.filter(message => message !== replacement).flatMap(message => [
-      ...(message.input?.kind === 'action' ? [{ role: 'user' as const, text: describeInteraction(message.input.action) }] : []),
+      ...(message.input?.kind === 'action' ? [{ role: 'user' as const, text: describeActionTurn(message.input) }] : []),
       ...(!message.error && !message.aborted && (message.role !== 'assistant' || message.text.trim()) ? [{ role: message.role, text: message.text }] : []),
     ]);
     const input: AgentInput = replacement?.input ?? ('action' in request ? { kind: 'action', action: request.action, history, snapshot: boundedSnapshot(conversation.store.snapshot()) } : { kind: 'message', text: request.demoId ? 'gallery:' + request.demoId : request.text, history });
