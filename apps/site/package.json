@@ -1,0 +1,24 @@
+{
+  "name": "@prism-ui/site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run scripts/dev.ts",
+    "build": "tsc --noEmit && vite build && bun run scripts/prerender.tsx",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@prism-ui/core": "workspace:*",
+    "@prism-ui/react": "workspace:*",
+    "@prism-ui/state": "workspace:*",
+    "@prism-ui/components": "workspace:*",
+    "@prism-ui/themes": "workspace:*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "vite": "^6.1.0"
+  }
+}
