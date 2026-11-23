@@ -13,6 +13,7 @@
 .prism-inline-feedback :is(.prism-inline-feedback__target,[data-feedback-target]) > :is(.prism-mockup__marker,.prism-mockup__stroke) { z-index: 7; }
 .prism-inline-feedback :is(.prism-inline-feedback__target,[data-feedback-target]) > .prism-mockup__popover { z-index: 9; }
 .prism-inline-feedback [data-feedback-target] { overflow: clip; }
+.prism-inline-feedback[data-feedback-open]:has(.prism-mockup__canvas:not([data-disabled])) iframe { pointer-events: none; }
 .prism-inline-feedback__live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 @media (prefers-reduced-motion: reduce) { .prism-inline-feedback__trigger { translate: none !important; scale: 1 !important; } }
 [data-animate="false"] .prism-inline-feedback__trigger { transition: none; }

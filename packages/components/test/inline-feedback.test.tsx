@@ -30,6 +30,22 @@ test('portal composer clamps to visualViewport bounds and updates when the keybo
 });
 const source = '```ui:feedback-test\n{"id":"target"}\n```';
 const View = () => <button>Actual input</button>;
+test('embedded frame hit-testing is excluded only while inline feedback is open', async () => {
+  const css = await Bun.file(new URL('../src/feedback.css', import.meta.url)).text();
+  const selector = '.prism-inline-feedback[data-feedback-open]:has(.prism-mockup__canvas:not([data-disabled])) iframe';
+  expect(css).toContain(`${selector} { pointer-events: none; }`);
+  const saved = createFeedback(); saved.addPin({ x: 30, y: 30, comment: 'Saved' });
+  const store = createStore({ initial: { target: { feedback: saved.toJSON() } } });
+  const view = render(<Prism feedback source={source} store={store} renderers={{ 'feedback-test': () => <iframe title="Preview" /> }} />);
+  const frame = view.getByTitle('Preview');
+  expect(frame.matches(selector)).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' })); expect(frame.matches(selector)).toBe(true);
+  fireEvent.keyDown(view.getByRole('application'), { key: 'Enter', ctrlKey: true });
+  expect(view.getByRole('application').hasAttribute('data-disabled')).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Edit feedback' }));
+  expect(view.getByRole('application').hasAttribute('data-disabled')).toBe(false);
+  fireEvent.click(view.getByRole('button', { name: 'Close feedback' })); expect(frame.matches(selector)).toBe(false);
+});
 for (const release of [false, true]) test(`closing inline feedback restores the preview after a pinch (released: ${release})`, () => {
   function Target() { const ref = useFeedbackTarget(); return <div ref={ref} data-test-preview="" style={{ width: '80%' }}><span>Preview</span></div>; }
   const view = render(<Prism feedback animate={false} source={source} renderers={{ 'feedback-test': Target }} />);
