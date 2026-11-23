@@ -42,6 +42,29 @@ test('sent groups ignore duplicate submit shortcuts until explicitly edited', ()
   fireEvent.keyDown(tab, { key: 'Enter', metaKey: true });
   expect(x.actions).toHaveLength(2);
 });
+for (const tool of ['Draw', 'Region']) for (const origin of ['tool', 'menu']) test(`group Escape ownership from ${origin} with ${tool} selected`, () => {
+  const x = setup(a + b + '</h1>\n```', true);
+  const button = x.view.getByRole('button', { name: tool });
+  fireEvent.click(button); act(() => button.focus());
+  let focused = button;
+  if (origin === 'menu') {
+    const trigger = x.view.getByRole('button', { name: 'More tools' });
+    fireEvent.click(trigger); act(() => x.view.getByRole('button', { name: 'View source' }).focus());
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    focused = trigger;
+  }
+  fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+  expect(x.view.getByRole('button', { name: 'Pin' }).getAttribute('aria-pressed')).toBe('true');
+  expect(document.activeElement === focused).toBe(true);
+  for (const [key, selected] of [['r', 'Region'], ['d', 'Draw'], ['p', 'Pin']]) {
+    fireEvent.keyDown(document.activeElement!, { key });
+    expect(x.view.getByRole('button', { name: selected }).getAttribute('aria-pressed')).toBe('true');
+  }
+  fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+  expect(document.activeElement === focused).toBe(false);
+});
 test('sent group drawings release their hit region and regain it when edited', () => {
   const x = setup(a + b + '</h1>\n```', true);
   const canvas = x.view.getByRole('application');

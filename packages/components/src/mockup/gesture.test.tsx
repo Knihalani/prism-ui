@@ -53,6 +53,38 @@ test('P/R/D select explicit tools, announce them and leave text fields and modif
   expect(x.view.container.querySelector('[data-part="tool"][title="Draw (D)"]')).toBeTruthy();
 });
 
+for (const tool of ['draw', 'region'] as const) test(`Escape from the selected ${tool} button retains focus and shortcuts`, () => {
+  const x = setup(), button = x.view.getByRole('button', { name: tool === 'draw' ? 'Draw' : 'Region' });
+  fireEvent.click(button); act(() => button.focus());
+  fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+  expect(x.model.tool).toBe('pin');
+  expect(document.activeElement === button).toBe(true);
+  for (const [key, selected] of [['r', 'region'], ['d', 'draw'], ['p', 'pin']] as const) {
+    fireEvent.keyDown(document.activeElement!, { key }); expect(x.model.tool).toBe(selected);
+  }
+  fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+  expect(document.activeElement === button).toBe(false);
+});
+
+for (const tool of ['draw', 'region'] as const) test(`closed overflow yields Escape to the ${tool} mockup before frame blur`, () => {
+  const x = setup(); act(() => x.model.setTool(tool));
+  const trigger = x.view.getByRole('button', { name: 'More tools' });
+  fireEvent.click(trigger);
+  act(() => x.view.getByRole('button', { name: 'View source' }).focus());
+  fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+  expect(trigger.getAttribute('aria-expanded')).toBe('false');
+  expect(x.model.tool).toBe(tool);
+  expect(document.activeElement === trigger).toBe(true);
+  fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+  expect(x.model.tool).toBe('pin');
+  expect(document.activeElement === trigger).toBe(true);
+  for (const [key, selected] of [['r', 'region'], ['d', 'draw'], ['p', 'pin']] as const) {
+    fireEvent.keyDown(document.activeElement!, { key }); expect(x.model.tool).toBe(selected);
+  }
+  fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+  expect(document.activeElement === trigger).toBe(false);
+});
+
 for (const tool of ['draw', 'region'] as const) test(`overflow Escape closes the menu before changing the ${tool} tool`, () => {
   const x = setup(); act(() => x.model.setTool(tool));
   const trigger = x.view.getByRole('button', { name: 'More tools' });
@@ -73,6 +105,30 @@ for (const tool of ['draw', 'region'] as const) test(`overflow Escape closes the
   fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
   expect(x.model.tool).toBe('pin');
   expect(document.activeElement === x.canvas).toBe(true);
+});
+
+for (const origin of ['tool', 'menu'] as const) test(`Escape from ${origin} dismisses the innermost layer before frame blur`, () => {
+  const x = setup(); act(() => x.model.setTool('draw'));
+  act(() => x.canvas.focus()); fireEvent.keyDown(x.canvas, { key: 'Enter' });
+  change(x.view.getByPlaceholderText('Add a comment…'), 'Pending');
+  x.pointer('pointerdown', 100, 50); x.pointer('pointermove', 400, 200);
+  const escape = () => fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+  if (origin === 'menu') {
+    const trigger = x.view.getByRole('button', { name: 'More tools' });
+    fireEvent.click(trigger);
+    act(() => x.view.getByRole('button', { name: 'View source' }).focus());
+    escape();
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement === trigger).toBe(true);
+    expect(x.model.rubber.length).toBeGreaterThan(0);
+  } else act(() => x.view.getByRole('button', { name: 'Draw' }).focus());
+  const focused = document.activeElement;
+  escape(); expect(x.model.rubber).toHaveLength(0); expect(x.model.editing).not.toBeNull(); expect(x.model.tool).toBe('draw');
+  expect(document.activeElement === focused).toBe(true);
+  escape(); expect(x.model.editing).toBeNull(); expect(x.model.tool).toBe('draw');
+  expect(document.activeElement === x.canvas).toBe(true);
+  escape(); expect(x.model.tool).toBe('pin'); expect(document.activeElement === x.canvas).toBe(true);
+  escape(); expect(document.activeElement === x.canvas).toBe(false);
 });
 
 test('Escape cancels the gesture, then composer, then returns to pin without writing a draft', () => {
