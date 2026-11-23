@@ -28,6 +28,20 @@ function comment(canvas: HTMLElement, text: string, view: ReturnType<typeof rend
   fireEvent.keyDown(canvas, { key: 'Enter' });
   const area = view.getByRole('textbox', { name: 'Add a comment…' }); act(() => area.focus()); fireEvent.change(area, { target: { value: text } }); fireEvent.keyUp(area, { key: 'Unidentified' }); fireEvent.click(view.getByRole('button', { name: 'Save' }));
 }
+test('sent groups ignore duplicate submit shortcuts until explicitly edited', () => {
+  const x = setup(a + b + '</h1>\n```', true);
+  const tab = x.view.getByRole('tab', { name: 'A' });
+  fireEvent.keyDown(tab, { key: 'Enter', ctrlKey: true });
+  expect(x.actions).toHaveLength(0);
+  comment(x.view.getByRole('application'), 'One reply only', x.view);
+  fireEvent.keyDown(tab, { key: 'Enter', ctrlKey: true });
+  expect(x.actions).toHaveLength(1);
+  for (const modifier of ['ctrlKey', 'metaKey']) fireEvent.keyDown(tab, { key: 'Enter', [modifier]: true });
+  expect(x.actions).toHaveLength(1);
+  fireEvent.click(x.view.getByRole('button', { name: 'Edit feedback' }));
+  fireEvent.keyDown(tab, { key: 'Enter', metaKey: true });
+  expect(x.actions).toHaveLength(2);
+});
 test('group Redo stays subscribed to the streaming feedback model after completion', () => {
   const x = setup();
   fireEvent.click(x.view.getByRole('tab', { name: 'B' }));

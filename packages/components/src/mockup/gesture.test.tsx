@@ -71,6 +71,8 @@ for (const modifier of ['ctrlKey', 'metaKey']) test(`${modifier}+Enter submits a
   fireEvent.keyDown(input, { key: 'Enter', [modifier]: true });
   expect(x.actions).toHaveLength(1); expect(x.actions[0].payload).toMatchObject({ items: [{ comment: 'Make this clearer' }] });
   expect(x.model.submitted).toBe(true);
+  fireEvent.keyDown(x.canvas, { key: 'Enter', [modifier]: true });
+  expect(x.actions).toHaveLength(1);
 });
 
 test('plain Enter saves only, Shift+Enter remains multiline and empty submit is inert', () => {

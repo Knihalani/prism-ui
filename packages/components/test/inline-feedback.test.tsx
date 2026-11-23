@@ -22,6 +22,24 @@ test('the feedback trigger retains its hit region while reveal chrome is transpa
 });
 function change(element: HTMLElement, value: string) { act(() => element.focus()); fireEvent.focus(element); fireEvent.change(element, { target: { value } }); fireEvent.keyUp(element, { key: 'Unidentified' }); }
 
+test('sent inline feedback ignores repeated submit shortcuts and can be explicitly edited', () => {
+  const actions: Action[] = [];
+  const view = render(<Prism feedback source={source} renderers={{ 'feedback-test': View }} onAction={action => actions.push(action)} />);
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  const canvas = view.getByRole('application');
+  fireEvent.keyDown(canvas, { key: 'Enter', ctrlKey: true });
+  expect(actions).toHaveLength(0);
+  fireEvent.keyDown(canvas, { key: 'Enter' });
+  change(view.getByPlaceholderText('Add a comment…'), 'Send once');
+  fireEvent.keyDown(view.getByPlaceholderText('Add a comment…'), { key: 'Enter', ctrlKey: true });
+  expect(actions).toHaveLength(1);
+  for (const modifier of ['ctrlKey', 'metaKey']) fireEvent.keyDown(canvas, { key: 'Enter', [modifier]: true });
+  expect(actions).toHaveLength(1);
+  fireEvent.click(view.getByRole('button', { name: 'Edit feedback' }));
+  fireEvent.keyDown(canvas, { key: 'Enter', metaKey: true });
+  expect(actions).toHaveLength(2);
+});
+
 test('saved feedback is store-owned through revisions, local cancellation, finalization, history and explicit commits', () => {
   const original = createFeedback({ overall: 'Saved overall' });
   original.addPin({ x: 20, y: 30, comment: 'Saved annotation' });

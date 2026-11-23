@@ -51,7 +51,7 @@ export function useMockupGroup(members: readonly Member[]) {
   const count = [...models.current.values()].reduce((n, model) => { const vm = model.current; return n + (vm?.feedback.getState().items.filter(item => item.kind === 'drawing' || (vm.editing?.id === item.id ? vm.comment : item.comment).trim()).length ?? 0); }, 0);
   const canSubmit = !!overall.trim() || [...models.current.values()].some(model => model.current && (model.current.feedback.canSubmit || (model.current.editing && model.current.comment.trim()))) || preferred !== undefined;
   function submit() {
-    if (!canSubmit) return;
+    if (submitted || !canSubmit) return;
     for (const model of models.current.values()) model.current?.save();
     const entries = payloads();
     const selected = entries.find(entry => entry.member.key === active.key)!.payload;
