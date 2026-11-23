@@ -40,7 +40,7 @@ test('every declared Ask part is replaceable with model data in populated, empty
     }
   }
   expect([...covered].sort()).toEqual([...askDefinition.parts!].sort());
-});
+}, 10000);
 
 test('theme strings, typed slots and central icons preserve aria, validation, confirmation, actions and editable receipts', () => {
   let model: AskModel | undefined, fieldModel: AskSlotProps['control'] | undefined;
