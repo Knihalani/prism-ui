@@ -1,5 +1,5 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties, type ComponentPropsWithRef, type ElementType } from 'react';
-import { PrismPart, defineComponent, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ComponentPropsWithRef, type ElementType } from 'react';
+import { PrismPart, defineComponent, useCollapse, usePart, usePrism, useSlot, type PrismComponentProps } from '@prism-ui/react';
 import { s } from '@prism-ui/schema';
 import { ComponentFrame } from '../frame';
 import { MockupToolbar, MockupSource, MockupFooter } from './chrome';
@@ -9,13 +9,52 @@ import { GroupedMockup } from './group';
 import { mockupLabels, useMockup, type MockupModel, type MockupProps } from './use-mockup';
 
 export type MockupSlotProps<T extends ElementType = 'div'> = ComponentPropsWithRef<T> & { as?: T; model: MockupModel; vm?: MockupModel; item?: FeedbackItem };
+function motionTime(value: string, fallback: number) {
+  const number = Number.parseFloat(value);
+  return Number.isFinite(number) ? Math.max(0, number * (value.trim().endsWith('ms') ? 1 : 1000)) : fallback;
+}
 function Empty({ model: vm, ...part }: MockupSlotProps<'p'>) { return <p {...part}>{vm.labels.empty}</p>; }
 function Item({ item, model: vm, ...attributes }: MockupSlotProps & { item: FeedbackItem }) {
   const row = usePart('mockup', 'item'), badge = usePart('mockup', 'badge'), chip = usePart('mockup', 'target'), button = usePart('mockup', 'button');
   return <div {...row} {...attributes} data-active={vm.active === item.id || undefined} data-resolved={item.resolved || undefined} onMouseEnter={() => vm.setActive(item.id)} onMouseLeave={() => vm.setActive(null)} onFocus={() => vm.setActive(item.id)} onBlur={() => vm.setActive(null)}>
     <PrismPart slotProps={{ model: vm }} as="span" {...badge}>{item.resolved ? <Icon name="check" /> : item.n}</PrismPart><span aria-hidden="true"><Icon name={item.kind === 'pin' ? 'pin' : item.kind === 'region' ? 'region' : 'pen'} /></span><div><span>{item.comment || vm.labels.placeholder}</span>{item.target?.text && <PrismPart slotProps={{ model: vm }} as="span" {...chip}>{item.target.text}</PrismPart>}</div>
-    {!item.resolved && !vm.submitted && <><PrismPart slotProps={{ model: vm }} as="button" {...button} title={vm.labels.edit} aria-label={vm.labels.editComment.replace('{n}', String(item.n))} onClick={() => vm.open(item.id)}><Icon name="pen" /></PrismPart><PrismPart slotProps={{ model: vm }} as="button" {...button} title={vm.labels.delete} aria-label={vm.labels.deleteComment.replace('{n}', String(item.n))} onClick={() => vm.remove(item.id)}><Icon name="trash" /></PrismPart></>}
+    {!item.resolved && !vm.submitted && <><PrismPart slotProps={{ model: vm }} as="button" {...button} data-prism-reveal="" title={vm.labels.edit} aria-label={vm.labels.editComment.replace('{n}', String(item.n))} onClick={() => vm.open(item.id)}><Icon name="pen" /></PrismPart><PrismPart slotProps={{ model: vm }} as="button" {...button} data-prism-reveal="" title={vm.labels.delete} aria-label={vm.labels.deleteComment.replace('{n}', String(item.n))} onClick={() => vm.remove(item.id)}><Icon name="trash" /></PrismPart></>}
   </div>;
+}
+function CommentRow({ vm, item, exiting, index, remove }: { vm: MockupModel; item: FeedbackItem; exiting: boolean; index: number; remove(): void }) {
+  const part = usePart('mockup', 'item'), Row = useSlot('mockup', 'item', Item), { animate, unstyled } = usePrism();
+  const element = useRef<HTMLDivElement | null>(null), removeRef = useRef(remove);
+  const spacing = useRef<{ padding: string; border: string } | undefined>(undefined);
+  removeRef.current = remove;
+  useLayoutEffect(() => {
+    if (!exiting && element.current && spacing.current) { element.current.style.paddingBlock = spacing.current.padding; element.current.style.borderBlockWidth = spacing.current.border; spacing.current = undefined; }
+  }, [exiting]);
+  const collapse = useCollapse(!exiting);
+  useLayoutEffect(() => {
+    element.current = collapse.ref.current;
+    if (exiting && element.current) {
+      spacing.current ??= { padding: element.current.style.paddingBlock, border: element.current.style.borderBlockWidth };
+      element.current.style.paddingBlock = '0'; element.current.style.borderBlockWidth = '0';
+    }
+  }, [exiting]);
+  useEffect(() => {
+    if (!exiting) return;
+    const duration = motionTime(element.current ? getComputedStyle(element.current).getPropertyValue('--prism-motion-fast') : '', 160);
+    const timer = setTimeout(() => removeRef.current(), duration);
+    return () => clearTimeout(timer);
+  }, [exiting]);
+  return <Row {...part} {...collapse} item={item} model={vm} inert={exiting || undefined} data-closing={exiting ? '' : undefined} data-prism-enter={animate && !unstyled && !exiting ? '' : undefined} style={{ ...part.style, ...collapse.style, '--prism-motion-index': Math.min(index, 8) } as CSSProperties} onMouseEnter={() => vm.setActive(item.id)} onMouseLeave={() => vm.setActive(null)} onFocus={() => vm.setActive(item.id)} onBlur={() => vm.setActive(null)} />;
+}
+function CommentList({ vm }: { vm: MockupModel }) {
+  const { animate, unstyled } = usePrism(), empty = usePart('mockup', 'empty'), EmptyState = useSlot('mockup', 'empty', Empty);
+  const retained = useRef(new Map<string, FeedbackItem>()), order = useRef<string[]>([]), [, redraw] = useState(0);
+  const items = [...vm.resolved, ...vm.state.items], ids = new Set(items.map(item => item.id));
+  for (const item of items) retained.current.set(item.id, item);
+  if (!animate || unstyled) for (const id of retained.current.keys()) if (!ids.has(id)) retained.current.delete(id);
+  const rows = [...items];
+  order.current.forEach((id, index) => { const item = retained.current.get(id); if (item && !ids.has(id)) rows.splice(index, 0, item); });
+  order.current = rows.map(item => item.id);
+  return rows.length ? rows.map((item, index) => <CommentRow key={item.id} vm={vm} item={item} index={index} exiting={!ids.has(item.id)} remove={() => { retained.current.delete(item.id); redraw(value => value + 1); }} />) : <EmptyState {...empty} model={vm} />;
 }
 function Popover({ model: vm, ...attributes }: MockupSlotProps) {
   const part = usePart('mockup', 'popover'), input = usePart('mockup', 'input'), primary = usePart('mockup', 'primary'), button = usePart('mockup', 'button');
@@ -27,18 +66,16 @@ function Popover({ model: vm, ...attributes }: MockupSlotProps) {
 }
 export function MockupComment({ vm, style, open = true }: { vm: MockupModel; style?: CSSProperties; open?: boolean }) {
   const part = usePart('mockup', 'popover'), Comment = useSlot('mockup', 'popover', Popover);
-  const active = open && !!vm.editing && !vm.submitted, enabled = usePrism().animate;
+  const { animate, unstyled } = usePrism();
+  const active = open && !!vm.editing && !vm.submitted, enabled = animate && !unstyled;
   const cached = useRef(vm), ref = useRef<HTMLDivElement>(null), [present, setPresent] = useState(active);
   if (active) cached.current = vm;
   useLayoutEffect(() => {
     if (active) { setPresent(true); return; }
     if (!present) return;
     const computed = ref.current ? getComputedStyle(ref.current) : null;
-    const time = (token: string, fallback: number) => {
-      const value = computed?.getPropertyValue(token).trim() ?? '', number = Number.parseFloat(value);
-      return Number.isFinite(number) ? Math.max(0, number * (value.endsWith('ms') ? 1 : 1000)) : fallback;
-    };
-    const duration = enabled ? time('--prism-motion-fast', 160) + (vm.submitted ? time('--prism-motion-slow', 420) : 0) : 0;
+    const time = (token: string, fallback: number) => motionTime(computed?.getPropertyValue(token) ?? '', fallback);
+    const duration = enabled ? time('--prism-motion-instant', 90) + (vm.submitted ? time('--prism-motion-slow', 420) : 0) : 0;
     if (!duration) { setPresent(false); return; }
     const timer = setTimeout(() => setPresent(false), duration);
     return () => clearTimeout(timer);
@@ -50,7 +87,7 @@ function Marker({ item, vm }: { item: FeedbackItem; vm: MockupModel }) {
   const label = item.resolved ? vm.labels.resolvedComment.replace('{n}', String(item.n)).replace('{text}', item.comment) : vm.labels.comment.replace('{n}', String(item.n)).replace('{text}', item.comment || vm.labels.placeholder);
   return <>
     {item.kind === 'drawing' && <PrismPart slotProps={{ model: vm }} as="svg" {...stroke} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d={item.path} fill="none" stroke={item.color ?? 'var(--prism-mockup-accent, var(--prism-accent-text))'} strokeWidth="2" vectorEffect="non-scaling-stroke" style={{ pointerEvents: 'stroke', cursor: 'pointer' }} onClick={() => { if (!item.resolved && !vm.submitted) vm.open(item.id); }} /></PrismPart>}
-    <PrismPart slotProps={{ model: vm }} as="button" {...marker} type="button" data-kind={item.kind} data-resolved={item.resolved || undefined} data-active={vm.active === item.id || undefined} style={{ ...marker.style, left: `${item.x}%`, top: `${item.y}%`, ...(item.kind === 'region' ? { width: `${item.w}%`, height: `${item.h}%` } : {}) }} aria-label={label} aria-disabled={item.resolved || undefined} onMouseEnter={() => vm.setActive(item.id)} onMouseLeave={() => vm.setActive(null)} onFocus={() => vm.setActive(item.id)} onBlur={() => vm.setActive(null)} onClick={() => { if (!item.resolved && !vm.submitted) vm.open(item.id); }} onKeyDown={event => { if (item.resolved || vm.submitted) return; if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); vm.remove(item.id); } if (event.key.startsWith('Arrow')) { event.preventDefault(); vm.move(item.id, item.x + (event.key === 'ArrowRight' ? 2 : event.key === 'ArrowLeft' ? -2 : 0), item.y + (event.key === 'ArrowDown' ? 2 : event.key === 'ArrowUp' ? -2 : 0)); } }}>
+    <PrismPart slotProps={{ model: vm }} as="button" {...marker} type="button" data-kind={item.kind} data-resolved={item.resolved || undefined} data-active={vm.active === item.id || vm.editing?.id === item.id || undefined} style={{ ...marker.style, left: `${item.x}%`, top: `${item.y}%`, ...(item.kind === 'region' ? { width: `${item.w}%`, height: `${item.h}%` } : {}) }} aria-label={label} aria-disabled={item.resolved || undefined} onMouseEnter={() => vm.setActive(item.id)} onMouseLeave={() => vm.setActive(null)} onFocus={() => vm.setActive(item.id)} onBlur={() => vm.setActive(null)} onClick={() => { if (!item.resolved && !vm.submitted) vm.open(item.id); }} onKeyDown={event => { if (item.resolved || vm.submitted) return; if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); vm.remove(item.id); } if (event.key.startsWith('Arrow')) { event.preventDefault(); vm.move(item.id, item.x + (event.key === 'ArrowRight' ? 2 : event.key === 'ArrowLeft' ? -2 : 0), item.y + (event.key === 'ArrowDown' ? 2 : event.key === 'ArrowUp' ? -2 : 0)); } }}>
       {item.kind === 'region' && <svg className="prism-mockup__region-outline" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" pathLength="1" vectorEffect="non-scaling-stroke" /></svg>}
       <span>{item.resolved ? <Icon name="check" /> : item.n}</span>
     </PrismPart>
@@ -68,11 +105,10 @@ export function MockupAnnotations({ vm, popover = true }: { vm: MockupModel; pop
   </>;
 }
 export function MockupView({ vm, feedback = true, embedded = false }: { vm: MockupModel; feedback?: boolean; embedded?: boolean }) {
+  const { unstyled } = usePrism();
   const root = usePart('mockup', 'member'), layout = usePart('mockup', 'layout'), viewport = usePart('mockup', 'viewport'), spacer = usePart('mockup', 'spacer'), stage = usePart('mockup', 'stage'), media = usePart('mockup', 'media'), skeleton = usePart('mockup', 'skeleton'), list = usePart('mockup', 'list'), input = usePart('mockup', 'input'), live = usePart('mockup', 'live'), overall = usePart('mockup', 'overall');
-  const itemPart = usePart('mockup', 'item'), emptyPart = usePart('mockup', 'empty');
-  const Row = useSlot('mockup', 'item', Item), EmptyState = useSlot('mockup', 'empty', Empty);
   const tools = embedded ? undefined : <MockupToolbar model={vm} vm={vm} />;
-  return <PrismPart slotProps={{ model: vm }} as="div" {...root} ref={vm.root} style={{ ...root.style, '--prism-mockup-scale': vm.scale, '--prism-mockup-inverse-scale': 1 / vm.scale } as CSSProperties} onKeyDown={vm.onKeyDown} data-device={vm.device} data-kind={vm.kind} data-embedded={embedded || undefined} data-expanded={vm.expanded || undefined} data-state={vm.submitted ? 'sent' : vm.complete ? 'ready' : 'streaming'}>
+  return <PrismPart slotProps={{ model: vm }} as="div" {...root} ref={vm.root} data-prism-reveal-host={unstyled ? undefined : ''} data-open={vm.editing ? '' : undefined} style={{ ...root.style, '--prism-mockup-scale': vm.scale, '--prism-mockup-inverse-scale': 1 / vm.scale } as CSSProperties} onKeyDown={vm.onKeyDown} data-device={vm.device} data-kind={vm.kind} data-embedded={embedded || undefined} data-expanded={vm.expanded || undefined} data-state={vm.submitted ? 'sent' : vm.complete ? 'ready' : 'streaming'}>
     <ComponentFrame slotProps={{ model: vm }} component="mockup" title={embedded ? undefined : vm.title} label={vm.title} ask={!embedded} undo={false} state={vm.submitted ? 'sent' : vm.complete ? 'ready' : 'streaming'} toolbar={tools}>
       {!embedded && vm.showSource && <MockupSource model={vm} vm={vm} />}
       <PrismPart slotProps={{ model: vm }} as="div" {...layout}><PrismPart slotProps={{ model: vm }} as="div" {...viewport} ref={vm.viewport} style={{ ...viewport.style, maxHeight: vm.props.height ?? '70vh' }}>
@@ -82,7 +118,7 @@ export function MockupView({ vm, feedback = true, embedded = false }: { vm: Mock
             <MockupAnnotations vm={vm} popover={false} />
           </>}
         </PrismPart></PrismPart>
-      </PrismPart><PrismPart slotProps={{ model: vm }} as="div" {...list} data-prism-flash={vm.flash ? "" : undefined}>{vm.state.items.length || vm.resolved.length ? [...vm.resolved, ...vm.state.items].map(item => <Row key={item.id} {...itemPart} item={item as FeedbackItem} model={vm} onMouseEnter={() => vm.setActive(item.id)} onMouseLeave={() => vm.setActive(null)} onFocus={() => vm.setActive(item.id)} onBlur={() => vm.setActive(null)} />) : <EmptyState {...emptyPart} model={vm} />}</PrismPart></PrismPart>
+      </PrismPart><PrismPart slotProps={{ model: vm }} as="div" {...list} data-prism-flash={vm.flash ? "" : undefined}><CommentList vm={vm} /></PrismPart></PrismPart>
       {feedback && <>
         {!vm.submitted && <PrismPart slotProps={{ model: vm }} as="label" {...overall}>{vm.labels.overall}<PrismPart slotProps={{ model: vm }} as="textarea" {...input} value={vm.state.overall} onChange={event => vm.feedback.setOverall(event.target.value)} onBlur={vm.saveOverall} /></PrismPart>}
         <MockupFooter model={vm} labels={vm.labels} locale={vm.locale} count={vm.submitted ? vm.feedback.toPayload().items.length : vm.state.items.length} submitted={vm.submitted} edit={() => vm.setSubmitted(false)} canUndo={vm.feedback.canUndo} canRedo={vm.feedback.canRedo} undo={() => { vm.close(); vm.feedback.undo(); }} redo={() => { vm.close(); vm.feedback.redo(); }} canSubmit={vm.canSubmit} submit={vm.submit} commitOverall={vm.saveOverall} />

@@ -11,6 +11,8 @@ import { usePrismStream, type PrismStream } from './stream';
 import { useComponentId } from './identity';
 import { createReceipt } from './presentation';
 import './presentation.css';
+import { ReplyEntryContext } from './reply-entry';
+import { useSmoothHeight } from './reply-motion';
 
 const empty = {};
 function equal(a: any, b: any, depth: number): boolean {
@@ -134,11 +136,28 @@ export function Prism({ renderers = empty, feedback, scope: providedScope, sourc
   state.text = source;
   if (done && !state.ended) { state.parser.end(); state.ended = true; }
   const streamed = usePrismStream(stream, { plugins }), root = stream ? streamed.root : state.parser.root;
+  const flow = useSmoothHeight(motion && !unstyled);
+  const mounted = useRef(false), arrivals = useRef(new Map<string, { history: boolean; index: number }>());
+  const previousParser = useRef(state.parser);
+  if (previousParser.current !== state.parser) { arrivals.current.clear(); previousParser.current = state.parser; }
+  useLayoutEffect(() => {
+    mounted.current = true;
+    for (const entry of arrivals.current.values()) entry.history = false;
+  }, []);
+  let index = 0;
+  const children = root.children.map(node => {
+    let entry = arrivals.current.get(node.key);
+    if (!entry) {
+      entry = { history: !mounted.current && done && !stream && Object.isFrozen(node), index: Math.min(index++, 8) };
+      arrivals.current.set(node.key, entry);
+    }
+    return <ReplyEntryContext.Provider key={node.key} value={entry}><NodeView node={node} /></ReplyEntryContext.Provider>;
+  });
   const context = useMemo(() => ({ registry, components, store, emit, theme: theme ?? resolvedTheme, resolvedTheme, unstyled, ...overrides, customization, format, animate: motion, applied, scope, feedback }), [registry, components, store, emit, theme, resolvedTheme, unstyled, overrides, customization, format, motion, applied, scope, feedback]);
   const streaming = stream ? !streamed.done : !done;
   return <PrismContext.Provider value={context}><ThemeScope theme={theme} mode={mode} density={density} animate={animate}
     className={cx('prism-root', className)} style={style} data-state={streaming ? 'streaming' : 'ready'}
     data-prism-presentation={unstyled ? undefined : ''}>
-    {root.children.map(node => <NodeView key={node.key} node={node} />)}
+    {!unstyled ? <div data-prism-flow="" ref={flow}>{children}</div> : children}
   </ThemeScope></PrismContext.Provider>;
 }

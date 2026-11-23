@@ -9,16 +9,18 @@
   [data-prism-enter]:not([data-prism-entered]) { opacity: 0; translate: 0 var(--prism-motion-distance); filter: blur(var(--prism-motion-blur)); }
 }
 [data-prism-press] {
+  --prism-motion-press-duration: var(--prism-motion-spring-duration);
   scale: 1;
-  transition: scale var(--prism-motion-spring-duration) var(--prism-motion-spring);
+  transition: scale var(--prism-motion-press-duration) var(--prism-motion-spring);
 }
-[data-prism-press]:active { scale: var(--prism-motion-scale); transition: scale var(--prism-motion-instant) var(--prism-motion-ease); }
+[data-prism-press]:active { --prism-motion-press-duration: var(--prism-motion-instant); scale: var(--prism-motion-scale); }
 [data-prism-reveal] {
   opacity: 1;
   translate: 0 0;
-  transition: opacity var(--prism-motion-fast) var(--prism-motion-ease), translate var(--prism-motion-fast) var(--prism-motion-ease);
+  transition: opacity var(--prism-motion-fast) var(--prism-motion-ease), translate var(--prism-motion-fast) var(--prism-motion-ease), scale var(--prism-motion-press-duration, var(--prism-motion-spring-duration)) var(--prism-motion-spring);
 }
 @media (hover: hover) {
-  [data-prism-reveal-host] [data-prism-reveal] { opacity: 0; translate: 0 min(2px, var(--prism-motion-distance)); pointer-events: none; }
-  [data-prism-reveal-host]:is(:hover, :focus-within) [data-prism-reveal] { opacity: 1; translate: 0 0; pointer-events: auto; }
+  [data-prism-reveal-host] [data-prism-reveal] { opacity: 0; translate: 0 min(2px, var(--prism-motion-distance)); pointer-events: none; transition-duration: var(--prism-motion-instant), var(--prism-motion-instant), var(--prism-motion-press-duration, var(--prism-motion-spring-duration)); transition-timing-function: var(--prism-motion-ease-exit), var(--prism-motion-ease-exit), var(--prism-motion-spring); transition-delay: calc(var(--prism-motion-instant) * 0); }
+  [data-prism-reveal-host]:hover [data-prism-reveal] { opacity: 1; translate: 0 0; pointer-events: auto; transition-duration: var(--prism-motion-fast), var(--prism-motion-fast), var(--prism-motion-press-duration, var(--prism-motion-spring-duration)); transition-timing-function: var(--prism-motion-ease), var(--prism-motion-ease), var(--prism-motion-spring); transition-delay: calc(var(--prism-motion-instant) * 2 / 3), calc(var(--prism-motion-instant) * 2 / 3), calc(var(--prism-motion-instant) * 0); }
+  [data-prism-reveal-host]:is(:focus-within, [data-open], [data-feedback-open], :has([data-open])) [data-prism-reveal] { opacity: 1; translate: 0 0; pointer-events: auto; transition-duration: var(--prism-motion-fast), var(--prism-motion-fast), var(--prism-motion-press-duration, var(--prism-motion-spring-duration)); transition-timing-function: var(--prism-motion-ease), var(--prism-motion-ease), var(--prism-motion-spring); transition-delay: calc(var(--prism-motion-instant) * 0); }
 }

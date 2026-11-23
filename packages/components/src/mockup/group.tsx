@@ -78,13 +78,14 @@ function GroupMember({ member, label, visible, submitted, register, refresh, con
   return <MockupView vm={{ ...vm, submitted }} feedback={false} embedded />;
 }
 function MockupGroupView({ members, options }: { members: Member[]; options?: MockupOptions }) {
+  const { unstyled } = usePrism();
   const vm = useMockupGroup(members), { id, rootRef, controls, expanded, source, showSource, chrome } = vm;
 
   const root = usePart('mockup', 'group'), tabs = usePart('mockup', 'tabs'), tab = usePart('mockup', 'tab'), columns = usePart('mockup', 'columns'), column = usePart('mockup', 'column'), dot = usePart('mockup', 'streamDot'), input = usePart('mockup', 'input'), button = usePart('mockup', 'button'), sharedTools = usePart('mockup', 'sharedTools');
   const selected = vm.compare ? 'compare' : vm.active.key;
-  return <PrismPart slotProps={{ model: vm }} as="div" {...root} ref={rootRef} data-expanded={expanded || undefined} data-state={vm.submitted ? 'sent' : members.some(member => !member.complete) ? 'streaming' : 'ready'}>
+  return <PrismPart slotProps={{ model: vm }} as="div" {...root} ref={rootRef} data-prism-reveal-host={unstyled ? undefined : ''} data-expanded={expanded || undefined} data-state={vm.submitted ? 'sent' : members.some(member => !member.complete) ? 'streaming' : 'ready'}>
     <ComponentFrame slotProps={{ model: vm }} component="mockup" title={vm.labels.title} ask undo={false} toolbar={<PrismPart slotProps={{ model: vm }} as="div" {...tabs} role="tablist" aria-label={vm.labels.variants}>{[...members.map((m, i) => ({ key: m.key, label: variant(m, i), complete: m.complete })), { key: 'compare', label: vm.labels.compare, complete: true }].map((entry, index) => <PrismPart slotProps={{ model: vm }} as="button" key={entry.key} {...tab} id={`${id}-tab-${entry.key}`} role="tab" aria-label={entry.label} aria-description={!entry.complete ? vm.labels.streaming : undefined} aria-selected={selected === entry.key} aria-controls={`${id}-panel-${entry.key}`} tabIndex={selected === entry.key ? 0 : -1} onClick={() => vm.setTab(entry.key)} onKeyDown={event => vm.navigate(event, index)}>{entry.label}{!entry.complete && <PrismPart slotProps={{ model: vm }} as="span" {...dot} aria-label={vm.labels.streaming} />}</PrismPart>)}</PrismPart>}>
-      <PrismPart slotProps={{ model: vm }} as="div" {...sharedTools}><MockupToolbar model={vm} vm={chrome} /></PrismPart>
+      <PrismPart slotProps={{ model: vm }} as="div" {...sharedTools} data-prism-reveal=""><MockupToolbar model={vm} vm={chrome} /></PrismPart>
       {showSource && <MockupSource model={vm} vm={{ labels: vm.labels, source, copy: async () => { try { await navigator.clipboard?.writeText(source); } catch {} } }} />}
       <PrismPart slotProps={{ model: vm }} as="div" {...columns} data-compare={vm.compare || undefined} role={vm.compare ? 'tabpanel' : undefined} id={vm.compare ? `${id}-panel-compare` : undefined} aria-labelledby={vm.compare ? `${id}-tab-compare` : undefined}>
         {members.map((member, index) => { const label = variant(member, index), visible = vm.compare || vm.active.key === member.key; return <PrismPart slotProps={{ model: vm }} as="div" key={member.key} {...column} hidden={!visible} role={!vm.compare ? 'tabpanel' : undefined} id={`${id}-panel-${member.key}`} aria-labelledby={!vm.compare ? `${id}-tab-${member.key}` : undefined}>
