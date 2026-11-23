@@ -55,6 +55,10 @@ test('follow scroll observes height, coalesces writes, respects intent, resumes 
     act(() => node.ownerDocument.dispatchEvent(new Event('pointercancel')));
     act(() => node.dispatchEvent(new Event('scroll')));
     expect(latest.following).toBe(true);
+    act(() => latest.setFollowing(false));
+    expect(latest.following).toBe(false); expect(frame).toBeUndefined(); expect(node.style.overflowAnchor).toBe('');
+    act(() => latest.setFollowing(true)); tick();
+    expect(latest.following).toBe(true); expect(top).toBe(800);
     act(() => latest.jumpToLatest());
     view.unmount(); expect(frame).toBeUndefined(); expect(disconnect).toHaveBeenCalled();
     expect(node.style.scrollbarGutter).toBe('');

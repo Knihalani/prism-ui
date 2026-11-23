@@ -54,7 +54,8 @@ export function useFollowScroll(scrollRef: RefObject<HTMLElement | null>, { thre
     state.current.following = next;
     setFollowing(next);
   }, []);
-  const jumpToLatest = useCallback(() => { change(true); state.current.schedule(); }, [change]);
+  const follow = useCallback((next: boolean) => { change(next); state.current.schedule(); }, [change]);
+  const jumpToLatest = useCallback(() => follow(true), [follow]);
   useLayoutEffect(() => {
     const node = scrollRef.current;
     if (node === state.current.node) return;
@@ -81,7 +82,8 @@ export function useFollowScroll(scrollRef: RefObject<HTMLElement | null>, { thre
     };
     const schedule = () => {
       updateAnchor();
-      if (!active || !state.current.following) return;
+      if (!active) return;
+      if (!state.current.following) { lastTop = node.scrollTop; cancel(); return; }
       quiet = 0;
       if (frame === undefined) frame = requestAnimationFrame(settle);
     };
@@ -125,5 +127,5 @@ export function useFollowScroll(scrollRef: RefObject<HTMLElement | null>, { thre
     };
   });
   useLayoutEffect(() => () => { state.current.cleanup(); state.current.node = null; }, []);
-  return { following, jumpToLatest };
+  return { following, jumpToLatest, setFollowing: follow };
 }

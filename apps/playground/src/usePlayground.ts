@@ -37,14 +37,14 @@ export function usePlaygroundController({ pace = realistic, agentFactory }: AppP
   const darkSystem = useMedia('(prefers-color-scheme: dark)'), mobile = useMedia('(max-width: 760px)'), reduced = useMedia('(prefers-reduced-motion: reduce)');
   const theme = themeChoice === 'system' ? darkSystem ? 'dark' : 'light' : themeChoice;
   const scroll = useRef<HTMLDivElement>(null), textarea = useRef<HTMLTextAreaElement>(null), sidebarRef = useRef<HTMLElement>(null), sidebarToggle = useRef<HTMLButtonElement>(null);
-  const { following, jumpToLatest } = useFollowScroll(scroll);
+  const { following, jumpToLatest, setFollowing } = useFollowScroll(scroll);
   const mounted = useRef(true);
   const focusComposer = useRef(false);
   const notify = useCallback(() => { if (mounted.current) redraw(); }, []);
   const closeOverlay = useCallback(() => setOverlay(undefined), []);
   const openOverlay = (value: 'palette' | 'settings') => { setDrawer(false); setOverlay(value); };
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; for (const c of conversations.current.values()) { c.queue = []; c.controller?.abort(); } }; }, []);
-  useEffect(() => { currentRef.current.following = following; }, [following]);
+  useEffect(() => { current.following = following; }, [following]);
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setDrawer(false); setOverlay(value => value === 'palette' ? undefined : 'palette'); }
@@ -73,10 +73,10 @@ export function usePlaygroundController({ pace = realistic, agentFactory }: AppP
   }, [current.draft, currentId, current.messages.length, surfaceKey]);
   useLayoutEffect(() => {
     const element = scroll.current; if (!element) return;
+    setFollowing(current.following);
     element.scrollTop = current.following ? element.scrollHeight : current.scroll;
-    if (current.following) jumpToLatest();
-    else element.dispatchEvent(new Event('scroll'));
-  }, [currentId, surfaceKey, current.messages.length === 0, jumpToLatest]);
+    if (!current.following) setFollowing(false);
+  }, [currentId, surfaceKey, current.messages.length === 0, setFollowing]);
   function stop(conversation = current) {
     conversation.queue = []; conversation.controller?.abort();
     for (const message of conversation.messages) message.streaming = false;
