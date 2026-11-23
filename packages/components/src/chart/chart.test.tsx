@@ -62,21 +62,23 @@ test('legend toggles persist, Enter works, and the last visible series cannot be
   expect(view.container.querySelectorAll('[data-part="line"]').length).toBe(2);
 });
 
-test('keyboard navigation updates tooltip and live text without rerendering memoized paths', () => {
-  let renders = 0;
-  function Line({ as, ...props }: any) { renders++; return <path {...props} />; }
+test('keyboard navigation refreshes custom slot models while preserving path geometry', () => {
+  let activeIndex: number | undefined;
+  function Line({ as, chart, series, point, ...props }: any) { activeIndex = chart.active?.index; return <path {...props} />; }
   const slots = { chart: { line: Line } };
   const view = render(<Prism registry={registry} source={source(base)} slots={slots} />);
-  const svg = view.getByRole('img'), before = renders;
+  const svg = view.getByRole('img'), path = view.container.querySelector('[data-part="line"]')!, before = path.getAttribute('d');
   act(() => svg.focus());
   fireEvent.keyDown(svg, { key: 'ArrowRight' });
   expect(view.getByRole('status').textContent).toBe('Feb. Revenue: 12. Cost: 5');
   expect(view.getByRole('tooltip').textContent).toContain('Feb');
   fireEvent.keyDown(svg, { key: 'ArrowDown' });
   expect(view.container.querySelector('[data-part="tooltip-row"][data-state="active"]')?.textContent).toContain('Cost');
-  fireEvent.keyDown(svg, { key: 'End' }); expect(view.getByRole('status').textContent).toContain('Mar');
+  fireEvent.keyDown(svg, { key: 'End' }); expect(view.getByRole('status').textContent).toContain('Mar'); expect(activeIndex).toBe(2);
   fireEvent.keyDown(svg, { key: 'Home' }); expect(view.getByRole('status').textContent).toContain('Jan');
-  expect(renders).toBe(before);
+  expect(activeIndex).toBe(0);
+  expect(view.container.querySelector('[data-part="line"]')).toBe(path);
+  expect(path.getAttribute('d')).toBe(before);
 });
 
 test('point click and keyboard selection emit exact structured payloads', () => {
@@ -165,13 +167,14 @@ test('one ResizeObserver updates viewBox and disconnects on unmount', () => {
   } finally { globalThis.ResizeObserver = previous; }
 });
 
-test('tooltip flips away from upcoming points on the right half of the chart', () => {
+test('tooltip exposes its point anchor for container-clamped CSS placement', () => {
   const view = render(<Prism registry={registry} source={source(base)} />);
   const svg = view.getByRole('img');
   fireEvent.keyDown(svg, { key: 'Home' });
-  expect(view.getByRole('tooltip').style.transform).toBe('translateX(12px)');
+  const first = parseFloat(view.getByRole('tooltip').style.getPropertyValue('--prism-chart-tooltip-x'));
+  expect(first).toBeGreaterThan(0);
   fireEvent.keyDown(svg, { key: 'End' });
-  expect(view.getByRole('tooltip').style.transform).toBe('translateX(calc(-100% - 12px))');
+  expect(parseFloat(view.getByRole('tooltip').style.getPropertyValue('--prism-chart-tooltip-x'))).toBeGreaterThan(first);
 });
 
 test('pie center names the total series and labels include formatted values', () => {

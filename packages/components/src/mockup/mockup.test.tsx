@@ -3,12 +3,31 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { Prism, createRegistry, defineTheme, usePrism, type Action, type PrismComponentProps } from '@prism-ui/react';
 import { createStore } from '@prism-ui/state';
 import { replayStart } from './harness/replay';
+import { MockupFooter } from './chrome';
 import { MockupView, createFeedback, mockupDefinition, mockupPlugin, parseMockupMeta, useMockup, toMessage, type FrameController, type FrameMessage, type HitRect, type MockupProps } from './index';
 
 const { render, cleanup, fireEvent, act } = await import('@testing-library/react');
 const observer = globalThis.IntersectionObserver;
 beforeEach(() => { Object.assign(globalThis, { IntersectionObserver: undefined }); });
 afterEach(() => { cleanup(); Object.assign(globalThis, { IntersectionObserver: observer }); });
+
+test('native primary slots receive disabled and sent state without interpreting Pill props', () => {
+  const store = createStore();
+  store.set('review.feedback', createFeedback({ overall: 'Looks good' }).toJSON());
+  const registry = createRegistry([{ ...mockupDefinition, component({ props }: PrismComponentProps<MockupProps>) {
+    const vm = useMockup(props, usePrism());
+    return <MockupFooter model={vm} labels={vm.labels} count={0} submitted={vm.submitted} edit={() => vm.setSubmitted(false)} canUndo={false} canRedo={false} undo={() => {}} redo={() => {}} canSubmit={vm.canSubmit} submit={vm.submit} />;
+  } }]);
+  const view = render(<Prism registry={registry} store={store} source={source({})} onAction={() => {}} slots={{ mockup: { primary: ({ model, as, sent, receipt, ...props }: any) => <button {...props} /> } }} />);
+  const button = view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement;
+  expect(button.disabled).toBe(false);
+  fireEvent.click(button);
+  expect(button.disabled).toBe(true);
+  expect(button.getAttribute('aria-disabled')).toBe('true');
+  expect(button.hasAttribute('data-sent')).toBe(true);
+  fireEvent.click(view.getByRole('button', { name: 'Edit feedback' }));
+  expect(button.disabled).toBe(false); expect(button.hasAttribute('data-sent')).toBe(false);
+});
 const source = (props: MockupProps) => '```ui:mockup\n' + JSON.stringify({ id: 'review', ...props }) + '\n```';
 function setup(props: MockupProps = {}, done = true, store = createStore()) {
   const renders: [string, boolean | undefined][] = [], actions: Action[] = [];

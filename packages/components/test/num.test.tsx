@@ -49,7 +49,7 @@ test('streaming truncated input stays stable and initializes once available', ()
   const view = render(<Prism scope="test" source=":num[" done={false} store={store} animate={false} />);
   expect(store.snapshot()).toEqual({});
   view.rerender(<Prism scope="test" source=":num[]{id=rent}" done={false} store={store} animate={false} />);
-  expect(view.getByRole('slider').getAttribute('data-state')).toBe('loading'); expect(store.get('rent')).toBeUndefined();
+  expect(view.getByRole('slider').getAttribute('data-status')).toBe('loading'); expect(view.getByRole('slider').getAttribute('data-state')).toBe('streaming'); expect(store.get('rent')).toBeUndefined();
   view.rerender(<Prism scope="test" source=":num[12]{id=rent} :calc[rent*" done={false} store={store} animate={false} />);
   expect(view.getByRole('slider').textContent).toBe('12'); expect(store.get('test:num:0:0')).toBe(12); expect(store.get('rent')).toBeUndefined();
   view.rerender(<Prism scope="test" source=":num[12]{id=rent} :calc[rent*12] " done={false} store={store} animate={false} />);

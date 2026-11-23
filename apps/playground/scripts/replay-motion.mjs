@@ -1,13 +1,14 @@
 import { chromium } from 'playwright-core';
 
+const base = process.env.BASE_URL || 'http://localhost:5173';
 const browser = await chromium.connectOverCDP(process.env.CDP_URL || 'http://localhost:29229');
 const context = await browser.newContext({ viewport: { width: 824, height: 1000 } });
 const page = await context.newPage(), errors = [];
 page.on('pageerror', error => errors.push(error.message));
 page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
 try {
-  await fetch('http://localhost:5173/scripts/replay-entry.ts');
-  await page.goto('http://localhost:5173/motion.html?only=markdown&instant=1', { waitUntil: 'networkidle' });
+  await fetch(`${base}/scripts/replay-entry.ts`);
+  await page.goto(`${base}/motion.html?only=markdown&instant=1`, { waitUntil: 'networkidle' });
   const result = await page.evaluate(async () => {
     const { React, createRoot, flushSync, Prism, demos, demoSource, playgroundPlugins, motionRenderers } = await import('/scripts/replay-entry.ts');
     const host = document.createElement('div'); document.body.append(host);

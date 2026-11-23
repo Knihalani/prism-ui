@@ -10,7 +10,7 @@ try {
         const page = await context.newPage();
         page.on('pageerror', error => errors.push(error.message));
         page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-        await page.goto(`http://localhost:5173/motion.html?only=markdown&instant=1&width=${width}&mode=${mode}`, { waitUntil: 'networkidle' });
+        await page.goto(`${process.env.BASE_URL || 'http://localhost:5173'}/motion.html?only=markdown&instant=1&width=${width}&mode=${mode}`, { waitUntil: 'networkidle' });
         const count = await page.evaluate(async ({ preference, width, mode }) => {
           const api = await import('/scripts/replay-entry.ts');
           const host = document.createElement('div');

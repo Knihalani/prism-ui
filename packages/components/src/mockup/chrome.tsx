@@ -45,7 +45,7 @@ export function MockupFooter(vm: MockupFooterModel) {
     <PrismPart slotProps={{ model }} as="button" {...button} hidden={submitted} data-secondary="" disabled={!canUndo} onClick={undo}><Icon name="undo" />{labels.undo}</PrismPart>
     <PrismPart slotProps={{ model }} as="button" {...button} hidden={submitted} data-secondary="" disabled={!canRedo} onClick={redo}><Icon name="redo" />{labels.redo}</PrismPart>
     <PrismPart slotProps={{ model }} as="span" {...countPart} hidden={submitted}>{commentCount(labels, locale, count)}</PrismPart>
-    <Primary model={model} as="button" {...primary} data-feedback-submit="" sent={submitted} receipt={commentCount(labels, locale, count, true)} disabled={!canSubmit} onBlur={() => vm.commitOverall?.()} onClick={submit}>{labels.submit}</Primary>
+    <Primary model={model} as="button" {...primary} data-feedback-submit="" data-sent={submitted ? '' : undefined} sent={submitted} receipt={commentCount(labels, locale, count, true)} disabled={submitted || !canSubmit} aria-disabled={submitted || !canSubmit} onBlur={() => vm.commitOverall?.()} onClick={submit}>{labels.submit}</Primary>
     {submitted && <PrismPart slotProps={{ model }} as="button" {...button} onClick={edit}>{labels.editFeedback}</PrismPart>}
   </PrismPart>;
 }

@@ -1,14 +1,15 @@
 import { componentStrings, formatComponentMessage } from '../strings';
-import { Children, createContext, isValidElement, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ComponentType } from 'react';
+import { Children, createContext, isValidElement, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ComponentType } from 'react';
 import type { Node } from '@prism-ui/core';
 import { s } from '@prism-ui/schema';
-import { useStrings, useCollapse, Icon, PrismPart, StreamSkeleton, ComponentContext, PrismContext, defaultRenderers, defineComponent, registerComponent, useComponentState, useEmit, useFormat, usePart, usePrism, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
+import { useStrings, useCollapse, Icon, PrismPart, StreamSkeleton, ComponentContext, PrismContext, cx, defaultRenderers, defineComponent, registerComponent, useComponentState, useSent, useFormat, usePart, usePrism, type PrismComponentProps, type PrismContextValue } from '@prism-ui/react';
 import { ComponentFrame } from '../frame';
+import { SentContent } from '../shared/controls';
 
-export interface RunbookLabels { title?: string; of?: string; progress?: string; stuck?: string; copy?: string; copied?: string; copyError?: string; loading?: string; stuckMessage?: string }
+export interface RunbookLabels { title?: string; of?: string; progress?: string; stuck?: string; sent?: string; copy?: string; copied?: string; copyError?: string; loading?: string; stuckMessage?: string }
 export interface RunbookProps { id?: string; title?: string; labels?: RunbookLabels }
 export interface StepProps { id?: string; title?: string }
-const defaults = { title: 'Runbook', of: 'of', progress: 'Progress', stuck: 'Stuck here?', copy: 'Copy', copied: 'Copied', copyError: 'Could not copy', loading: 'Loading steps', stuckMessage: `I'm stuck on step {step} of "{title}": {text}.` };
+const defaults = { title: 'Runbook', of: 'of', progress: 'Progress', stuck: 'Stuck here?', sent: 'Sent', copy: 'Copy', copied: 'Copied', copyError: 'Could not copy', loading: 'Loading steps', stuckMessage: `I'm stuck on step {step} of "{title}": {text}.` };
 function text(node: Node): string { return node.value ?? (node.children ?? []).map(text).join(node.type === 'paragraph' ? '' : '\n'); }
 function codes(node: Node): Node[] { return node.type === 'code' ? [node] : (node.children ?? []).flatMap(codes); }
 function stepKey(node: Node): string { return String(node.props?.id ?? node.key); }
@@ -17,16 +18,20 @@ export function useRunbook(props: RunbookProps, ctx: PrismContextValue) {
   const node = useContext(ComponentContext)?.node;
   const steps = useMemo(() => node?.children?.filter(child => child.type === 'component' && child.name === 'step') ?? [], [node]);
   const [done, setDone] = useComponentState<Record<string, boolean>>('done', {});
-  const emit = useEmit(), format = useFormat();
+  const { sent, send, reset } = useSent(), format = useFormat();
+  const previous = useRef(done);
+  useLayoutEffect(() => {
+    if (previous.current !== done) { previous.current = done; reset(); }
+  }, [done, reset]);
   const labels = { ...defaults, ...props.labels, ...useStrings('runbook') };
   const count = useMemo(() => steps.filter(step => done[stepKey(step)]).length, [steps, done]);
   const current = useMemo(() => steps.findIndex(step => !done[stepKey(step)]), [steps, done]);
-  return useMemo(() => ({ steps, done, current, count, labels, title: labels.title, animate: ctx.animate,
+  return useMemo(() => ({ steps, done, current, count, labels, sent, title: labels.title, animate: ctx.animate,
     complete: steps.length > 0 && count === steps.length,
     progress: `${format.number(count)} ${labels.of} ${format.number(steps.length)}`,
     toggle(key: string) { if (steps.some(step => stepKey(step) === key && step.complete === false)) return; setDone(old => ({ ...old, [key]: !old[key] })); },
-    stuck(step: Node, index: number, title: string) { if (step.complete === false) return; emit('stuck', { step: stepKey(step), index, title, text: text(step), done: !!done[stepKey(step)] }, formatComponentMessage(labels.stuckMessage, { step: format.number(index + 1), title: labels.title, text: title })); },
-  }), [steps, done, current, count, labels, props.title, ctx.animate, format, setDone, emit]);
+    stuck(step: Node, index: number, title: string) { if (step.complete === false) return; send('stuck', { step: stepKey(step), index, title, text: text(step), done: !!done[stepKey(step)] }, formatComponentMessage(labels.stuckMessage, { step: format.number(index + 1), title: labels.title, text: title })); },
+  }), [steps, done, current, count, labels, sent, props.title, ctx.animate, format, setDone, send]);
 }
 const RunbookContext = createContext<ReturnType<typeof useRunbook> | null>(null);
 export type RunbookModel = ReturnType<typeof useRunbook>;
@@ -57,9 +62,10 @@ export function useStep(props: StepProps, ctx: PrismContextValue, node: Node) {
   const commandNodes = useMemo(() => codes(node), [node]);
   const commands = useMemo(() => commandNodes.map(node => node.value ?? '').join('\n').replace(/^\$ /gm, ''), [commandNodes]);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
+  const sent = book?.sent?.type === 'stuck' && (book.sent.payload as { step?: string } | undefined)?.step === stepKey(node);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
-  return { index, done, labels, title: props.title, animate: ctx.animate, commands, commandNodes, copyState, disabled: node.complete === false,
+  return { index, done, labels, title: props.title, animate: ctx.animate, commands, commandNodes, copyState, sent, disabled: node.complete === false,
     number: index < 0 ? '' : format.number(index + 1), state: done ? 'done' : index >= 0 && book?.current === index ? 'current' : 'todo',
     toggle() { if (node.complete !== false) book?.toggle(stepKey(node)); }, stuck() { if (node.complete !== false) book?.stuck(node, index, props.title ?? ''); },
     onKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
@@ -98,7 +104,7 @@ export function Step({ props, node, children, complete }: PrismComponentProps<St
     {vm.index >= 0 && <PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="button" {...badge} type="button" role="checkbox" aria-checked={vm.done} aria-disabled={vm.disabled} disabled={vm.disabled} aria-label={props.title ?? vm.number} onClick={vm.toggle} onKeyDown={vm.onKeyDown} data-streaming={!complete}>{vm.done ? <Icon name="check" /> : vm.number}</PrismPart>}
     <PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="h4" {...title}>{vm.title ?? <PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="span" {...placeholder} aria-hidden="true">{themeStrings.nbsp}</PrismPart>}</PrismPart>
   <PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="div" {...actions}>
-    {vm.index >= 0 && <PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="button" {...stuck} type="button" disabled={vm.disabled} aria-disabled={vm.disabled} onClick={vm.stuck}>{vm.labels.stuck}</PrismPart>}
+    {vm.index >= 0 && <PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="button" {...stuck} className={cx(stuck.className, !context.unstyled && 'prism-pill')} data-variant="secondary" data-feedback="" data-sent={vm.sent ? '' : undefined} type="button" disabled={vm.disabled || vm.sent} aria-disabled={vm.disabled || vm.sent} onClick={vm.stuck}><SentContent sent={vm.sent} receipt={vm.labels.sent}>{vm.labels.stuck}</SentContent></PrismPart>}
   </PrismPart></PrismPart><PrismPart slotProps={{ step: vm } satisfies StepSlotProps} as="div" {...body} {...collapse} style={{ ...body.style, ...collapse.style }}><StepCommandContext.Provider value={{ step: vm, View }}><PrismContext.Provider value={scoped}>{children}</PrismContext.Provider></StepCommandContext.Provider></PrismPart></PrismPart>;
 }
 const labelsSchema = s.object({
@@ -106,6 +112,7 @@ const labelsSchema = s.object({
   of: s.string().optional().describe('Progress separator').example('of'),
   progress: s.string().optional().describe('Progress accessible label').example('Progress'),
   stuck: s.string().optional().describe('Help action label').example('Stuck here?'),
+  sent: s.string().optional().describe('Help receipt label').example('Sent'),
   copy: s.string().optional().describe('Copy commands label').example('Copy'),
   copied: s.string().optional().describe('Copy success label').example('Copied'),
   copyError: s.string().optional().describe('Copy failure label').example('Could not copy'),

@@ -9,7 +9,7 @@ test('domain animation interpolates, retargets, snaps without motion, and cancel
   const frames = new Map<number, FrameRequestCallback>();
   globalThis.requestAnimationFrame = callback => { frames.set(++serial, callback); return serial; };
   globalThis.cancelAnimationFrame = id => { frames.delete(id); };
-  globalThis.matchMedia = (() => ({ matches: false })) as unknown as typeof matchMedia;
+  globalThis.matchMedia = (() => ({ matches: false, addEventListener() {}, removeEventListener() {} })) as unknown as typeof matchMedia;
   const step = (time: number) => act(() => { const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach(callback => callback(time)); });
   try {
     const view = renderHook(({ target, animate }) => useDomain(target, animate), { initialProps: { target: [0, 40000] as [number, number], animate: true } });
@@ -23,7 +23,7 @@ test('domain animation interpolates, retargets, snaps without motion, and cancel
     expect(view.result.current).toEqual([0, 140000]);
     view.rerender({ target: [0, 100000], animate: false });
     expect(view.result.current).toEqual([0, 100000]);
-    globalThis.matchMedia = (() => ({ matches: true })) as unknown as typeof matchMedia;
+    globalThis.matchMedia = (() => ({ matches: true, addEventListener() {}, removeEventListener() {} })) as unknown as typeof matchMedia;
     view.rerender({ target: [0, 200000], animate: true });
     expect(view.result.current).toEqual([0, 200000]);
     globalThis.matchMedia = (() => ({ matches: false })) as unknown as typeof matchMedia;

@@ -3,7 +3,7 @@ import { ComponentContext, PrismPart, defineTheme, useFormat, usePart, useString
 import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { usePick } from '@prism-ui/components/pick';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
-import { SentAction, receiptMotion } from './motion';
+import { receiptMotion } from './motion';
 
 type SlotProps = FrameSlotProps<unknown>;
 type EstimateRow = EstimateModel['rows'][number];
@@ -103,7 +103,7 @@ export const print = defineTheme({
   dark: { bg: '#151515', surface: 'transparent', surfaceRaised: '#202020', text: '#f5f3ef', textMuted: '#c2beb7', textSubtle: '#aaa69f', border: '#6d6a65', borderStrong: '#f5f3ef', accent: '#ef4438', accentText: '#ef4438', onAccent: '#151515', focus: '#ef4438' },
   components: {
     frame: { slots: { header: Header, undo: Tool, ask: Tool, overflowTrigger: Tool }, strings: { undoLabel: 'Undo', askLabel: 'Ask', moreLabel: 'Tools' } },
-    estimate: { slots: { root: EstimateRoot, body: EstimateBody, item: EstimateItem, label: EstimateLabel, checkbox: Switch, total: Total, submit: SentAction }, strings: { title: 'Week-one estimate', sectionIndex: '01 / EST', submit: 'Send estimate ↗', sentLabel: 'Estimate sent ✓', totalLabel: 'Total', footnote: '{notes} · {currency}' } },
+    estimate: { slots: { root: EstimateRoot, body: EstimateBody, item: EstimateItem, label: EstimateLabel, checkbox: Switch, total: Total }, strings: { title: 'Week-one estimate', sectionIndex: '01 / EST', submit: 'Send estimate ↗', sentLabel: 'Estimate sent ✓', totalLabel: 'Total', footnote: '{notes} · {currency}' } },
     pick: { slots: { criteria: Criteria, item: Option, list: Options }, strings: { question: 'What matters to you?', sectionIndex: '02 / PICK', optionIndex: '{n} / APPROACH', scoreSuffix: '/100', ratingSuffix: '/10', chooseTemplate: 'Choose {title} ↗' } },
     runbook: { strings: { sectionIndex: '05 / GUIDE' } },
     summary: { strings: { sectionIndex: '06 / NOTES' } },

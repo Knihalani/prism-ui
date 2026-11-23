@@ -127,3 +127,23 @@ test('partially collapsed content remains accessible and responds to preview hei
   expect(node.style.height).toBe('70px');
   view.unmount();
 });
+
+test('collapse preserves horizontal scrolling during preview, interruption and animation completion', () => {
+  function Collapse({ open }: { open: boolean }) { return <div {...useCollapse(open, 40, 'auto')}>Long preview</div>; }
+  const view = render(<Collapse open={false} />), node = view.container.firstElementChild as HTMLElement;
+  expect(node.style.overflowX).toBe('auto'); expect(node.style.overflowY).toBe('hidden');
+  let visual: number | undefined;
+  node.getBoundingClientRect = () => ({ height: visual ?? (node.style.height === 'auto' ? 100 : 40) }) as DOMRect;
+  const animations: { cancel: () => void; onfinish: (() => void) | null }[] = [];
+  node.animate = mock(() => { const animation = { cancel() { visual = undefined; }, onfinish: null }; animations.push(animation); return animation as unknown as Animation; });
+  view.rerender(<Collapse open />);
+  expect(node.style.overflowX).toBe('auto'); expect(node.style.overflowY).toBe('hidden');
+  visual = 65;
+  view.rerender(<Collapse open={false} />);
+  expect(node.animate).toHaveBeenLastCalledWith([{ height: '65px', opacity: 1 }, { height: '40px', opacity: 1 }], { duration: 160, easing: 'cubic-bezier(.4,0,1,1)' });
+  animations.at(-1)!.onfinish!();
+  expect(node.style.overflowX).toBe('auto'); expect(node.style.overflowY).toBe('hidden');
+  view.rerender(<Collapse open />); animations.at(-1)!.onfinish!();
+  expect(node.style.overflowX).toBe('auto'); expect(node.style.height).toBe('auto');
+  view.unmount();
+});

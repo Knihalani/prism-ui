@@ -3,7 +3,7 @@ import { ComponentContext, PrismPart, defineTheme, useFlash, useFormat, usePart,
 import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
 import type { usePick } from '@prism-ui/components/pick';
-import { SentAction, receiptMotion } from './motion';
+import { receiptMotion } from './motion';
 
 type SlotProps = FrameSlotProps<unknown>;
 type PickRow = ReturnType<typeof usePick>['rows'][number];
@@ -100,7 +100,7 @@ export const instrument = defineTheme({
   components: {
     frame: { slots: { root: Chassis, header: Header, undo: Tool, ask: Tool, overflowTrigger: Tool }, strings: { undoLabel: 'Undo', askLabel: 'Ask', moreLabel: 'Tools' }, tokens: { display: '#1b1c18', 'display-ink': '#eeede3', lcd: '#bebdb8', 'lcd-ink': '#34352e', groove: '#a1a09d', 'groove-shadow': '#73726f', 'key-shadow': '#aeadaa', 'chassis-shadow': '#b8b7b4' } },
     estimate: {
-      slots: { root: Chassis, item: Item, checkbox: Toggle, total: SegmentedTotal, submit: SentAction },
+      slots: { root: Chassis, item: Item, checkbox: Toggle, total: SegmentedTotal },
       strings: { title: 'Week-one estimate', sectionIndex: '01 / EST', submit: 'Send estimate', sentLabel: 'Sent', totalLabel: 'Total', displayLabel: 'LIVE' },
       tokens: { display: '#1b1c18', signal: '#e55b25', 'display-border': '#171812', 'key-shadow': 'var(--prism-frame-key-shadow)' },
     },

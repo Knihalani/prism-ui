@@ -3,7 +3,7 @@ import { PrismPart, defineTheme, spring, useFormat, usePart, useSent, useStrings
 import type { EstimateModel } from '@prism-ui/components/estimate';
 import type { FrameSlotProps } from '@prism-ui/components/frame';
 import type { usePick } from '@prism-ui/components/pick';
-import { SentAction, receiptMotion } from './motion';
+import { receiptMotion } from './motion';
 
 type SlotProps = FrameSlotProps<unknown>;
 type PickRow = ReturnType<typeof usePick>['rows'][number];
@@ -97,7 +97,7 @@ export const objects = defineTheme({
       tokens: { 'note-yellow': '#ddd69c', 'note-pink': '#d4b5a5', 'note-sage': '#bbc5b5', 'card-two': '#e4e6d8', 'card-three': '#e8debb', tape: '#d6c8a3', stamp: '#9c493b', slot: '#373d34' },
     },
     estimate: {
-      slots: { root: Receipt, item: ReceiptItem, checkbox: Switch, total: Total, submit: SentAction }, tokens: { 'motion-slow': '620ms' },
+      slots: { root: Receipt, item: ReceiptItem, checkbox: Switch, total: Total }, tokens: { 'motion-slow': '620ms' },
       strings: { title: 'Week-one estimate', sectionIndex: '01 / EST', shopName: 'FIELDNOTES', shopLine: 'RESEARCH SUPPLY CO.', shopMotto: 'SMALL PILOTS, GOOD QUESTIONS.', submit: 'Print & send estimate ↗', sentLabel: 'Sent · estimate ✓', delivered: 'DELIVERED / READY FOR REVIEW', thankYou: '001 — THANK YOU FOR STARTING SMALL', keepReceipt: 'KEEP THIS FOR THE CONVERSATION.' },
     },
     pick: { slots: { criteria: StickyNotes, item: IndexCard, list: Cards }, strings: { question: 'What matters to you?', sectionIndex: '02 / PICK', optionIndex: '{n} / APPROACH', stamp: 'PICK', scoreSuffix: '/100', ratingSuffix: '/10', chooseTemplate: 'Choose {title} ↗', leads: 'leads.' } },

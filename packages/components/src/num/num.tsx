@@ -1,12 +1,19 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent, type PointerEvent } from 'react';
 import type { Node } from '@prism-ui/core';
+import { compile } from '@prism-ui/state';
 import { s, type Infer } from '@prism-ui/schema';
-import { useStrings, useSpringValue, PrismPart, defineComponent, registerComponent, useEmit, useFormat, useFormula, usePart, usePrism, useSlot, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
+import { Icon, useStrings, PrismPart, defineComponent, registerComponent, useEmit, useFlash, useFormat, useFormula, useLocalWrite, usePart, usePresentation, usePrism, useStoreValue, type PrismComponentProps } from '@prism-ui/react';
+import { interpolate } from '../interpolate';
+import { useInlineReadout } from './inline-layout';
+import { useNumberTween } from './use-tween';
 import { Odometer } from '../shared/controls';
+
+export const numStrings = { label: '{id}', valueLabel: '{value}', loadingLabel: '\u00a0', instructions: 'Drag to adjust, or press Enter to type. Arrow keys adjust by {step}; hold Shift for larger steps.', readoutLabel: '{label}: {value}', dragHint: 'Drag to adjust. Shift for larger steps.', changeMessage: '{label}: {value}' };
+export const calcStrings = { errorLabel: '—', loadingLabel: '\u00a0', valueLabel: '{label}: {value}', numberLabel: '{value}', errorDescription: '{expression}' };
 
 const formatting = { format: s.enum(['number', 'currency', 'percent', 'compact']).default('number'), decimals: s.number({ min: 0, max: 20 }).optional(), currency: s.string().optional(), label: s.string().optional() };
 export const numSchema = s.object({ ...formatting, id: s.string().optional(), value: s.number().optional(), min: s.number().optional(), max: s.number().optional(), step: s.number({ min: 0 }).default(1) });
-export const calcSchema = s.object({ ...formatting, expr: s.string().optional(), errorLabel: s.string().default('—') });
+export const calcSchema = s.object({ ...formatting, expr: s.string().optional(), errorLabel: s.string().default(calcStrings.errorLabel) });
 export type NumProps = Infer<typeof numSchema>;
 export type CalcProps = Infer<typeof calcSchema>;
 
@@ -24,18 +31,22 @@ function useNumberFormat(props: Pick<NumProps, 'format' | 'currency' | 'decimals
 }
 
 export function useNum(props: NumProps, ctx: PrismComponentProps<NumProps>) {
-  props = { ...props, ...useStrings('num') };
-  const { store } = usePrism(), emit = useEmit(), id = props.id ?? ctx.id;
+  const strings = useStrings('num', numStrings);
+  const { store } = usePrism(), emit = useEmit(), localWrite = useLocalWrite(), presentation = usePresentation(), id = props.id ?? ctx.id;
+  const flashing = useFlash(id), label = interpolate(strings.label, { id: props.id ?? ctx.id });
   const current = useStoreValue<unknown>(id), text = rawText(ctx.node).trim();
-  const initial = props.value ?? (text ? Number(text) : NaN), ready = Number.isFinite(initial) || typeof current === 'number';
+  const initial = props.value ?? (text ? Number(text) : NaN), ready = Number.isFinite(initial) || (typeof current === 'number' && Number.isFinite(current));
   const step = props.step > 0 ? props.step : 1, min = props.min ?? -Infinity, max = Math.max(min, props.max ?? Infinity);
   const normalize = (n: number) => Math.max(min, Math.min(max, Number((Math.round((n - (props.min ?? 0)) / step) * step + (props.min ?? 0)).toPrecision(14))));
   const value = typeof current === 'number' && Number.isFinite(current) ? current : Number.isFinite(initial) ? normalize(initial) : 0;
-  const format = useNumberFormat(props), [editing, setEditing] = useState(false), [draft, setDraft] = useState('');
+  const format = useNumberFormat(props), [editing, setEditing] = useState(false), [draft, setDraft] = useState(''), [scrubbing, setScrubbing] = useState(false), [hovered, setHovered] = useState(false), [focused, setFocused] = useState(false);
+  const formatted = ready ? format(value) : strings.loadingLabel, readoutVisible = ready && !editing && (scrubbing || hovered || focused), layout = useInlineReadout(readoutVisible, scrubbing ? formatted : strings.dragHint);
   const suppressClick = useRef(false), edit = useRef(false), previous = useRef(value), drag = useRef<{ x: number; previous: number; next: number; moved: boolean; pointer: number } | null>(null), frame = useRef<number | null>(null);
-  useLayoutEffect(() => { if (store.get(id) === undefined && Number.isFinite(initial)) store.set(id, normalize(initial)); }, [store, id, initial, min, max, step]);
+  const returnFocus = useRef(false);
+  useLayoutEffect(() => { if (!editing && returnFocus.current) { returnFocus.current = false; layout.root.current?.focus(); } }, [editing, layout.root]);
+  useLayoutEffect(() => { if (store.get(id) === undefined && Number.isFinite(initial)) localWrite(() => store.set(id, normalize(initial))); }, [store, id, initial, min, max, step, localWrite]);
   useEffect(() => () => { if (frame.current !== null) cancelAnimationFrame(frame.current); }, []);
-  const commit = (next: number, before: number) => { store.set(id, next); emit('change', { id, value: next, previous: before }); };
+  const commit = (next: number, before: number) => { localWrite(() => store.set(id, next)); emit('change', { id, value: next, previous: before }, interpolate(strings.changeMessage, { label, value: format(next), previous: format(before) })); };
   const beginEdit = () => { if (!ready) return; previous.current = value; edit.current = true; setDraft(String(value)); setEditing(true); };
   const finishEdit = (cancel = false, text = draft) => {
     if (!edit.current) return;
@@ -62,38 +73,57 @@ export function useNum(props: NumProps, ctx: PrismComponentProps<NumProps>) {
     const distance = event.clientX - active.x;
     active.moved ||= Math.abs(distance) >= 3;
     if (!active.moved) return;
+    setScrubbing(true);
     active.next = normalize(active.previous + Math.round(distance / 4) * step * (event.shiftKey ? 10 : 1));
-    if (frame.current === null) frame.current = requestAnimationFrame(() => { frame.current = null; if (drag.current) store.set(id, drag.current.next); });
+    if (frame.current === null) frame.current = requestAnimationFrame(() => { frame.current = null; if (drag.current) localWrite(() => store.set(id, drag.current!.next)); });
   };
   const endDrag = (event: PointerEvent<HTMLElement>, cancel = false) => {
     const active = drag.current; if (!active || active.pointer !== event.pointerId) return;
-    stopFrame(); drag.current = null;
+    stopFrame(); drag.current = null; setScrubbing(false);
     suppressClick.current = active.moved || cancel;
-    if (cancel) store.set(id, active.previous);
+    if (cancel) localWrite(() => store.set(id, active.previous));
     else if (active.moved) commit(active.next, active.previous);
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
-  return { editing, value, formatted: ready ? format(value) : '\u00a0', rootProps: { ...usePart('num', 'root', ready ? 'ready' : 'loading'), role: 'slider', tabIndex: ready ? 0 : -1, 'aria-label': props.label ?? id, 'aria-valuemin': props.min, 'aria-valuemax': props.max, 'aria-valuenow': value, 'aria-valuetext': format(value), 'aria-busy': !ready, onKeyDown, onPointerDown, onPointerMove, onPointerUp: (e: PointerEvent<HTMLElement>) => endDrag(e), onPointerCancel: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onLostPointerCapture: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onClick: () => { if (!suppressClick.current) beginEdit(); suppressClick.current = false; } },
-    inputProps: { ...usePart('num', 'input'), type: 'number', role: 'spinbutton', 'aria-label': props.label ?? id, min: props.min, max: props.max, step, value: draft, autoFocus: true, onFocus: (e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.select(), onChange: (e: React.ChangeEvent<HTMLInputElement>) => setDraft(e.target.value), onBlur: (e: React.FocusEvent<HTMLInputElement>) => finishEdit(false, e.currentTarget.value), onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); finishEdit(e.key === 'Escape', e.currentTarget.value); } } } };
+  return { id, value, ready, editing, scrubbing, readoutVisible, flashing, strings, layout, formatted, label,
+    parts: { value: usePart('num', 'value', ready ? 'ready' : 'loading'), readout: usePart('num', 'readout'), readoutValue: usePart('num', 'readout-value'), readoutHint: usePart('num', 'readout-hint'), icon: usePart('num', 'icon') },
+    rootProps: { ...usePart('num', 'root'), ...presentation, ref: layout.root, onPointerEnter: () => setHovered(true), onPointerLeave: () => setHovered(false), onFocus: () => setFocused(true), onBlur: (event: FocusEvent<HTMLElement>) => { if (!event.currentTarget.contains(event.relatedTarget as HTMLElement | null)) setFocused(false); }, 'data-status': !ready ? 'loading' : editing ? 'editing' : scrubbing ? 'scrubbing' : 'ready', 'data-prism-flash': flashing ? '' : undefined, role: editing ? undefined : 'slider', tabIndex: editing ? undefined : ready ? 0 : -1, 'aria-label': editing ? undefined : label, 'aria-description': interpolate(strings.instructions, { step: format(step) }), 'aria-valuemin': editing ? undefined : props.min, 'aria-valuemax': editing ? undefined : props.max, 'aria-valuenow': editing ? undefined : value, 'aria-valuetext': editing ? undefined : interpolate(strings.valueLabel, { value: format(value) }), 'aria-busy': !ready, onKeyDown: editing ? undefined : onKeyDown, onPointerDown: editing ? undefined : onPointerDown, onPointerMove: editing ? undefined : onPointerMove, onPointerUp: (e: PointerEvent<HTMLElement>) => endDrag(e), onPointerCancel: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onLostPointerCapture: (e: PointerEvent<HTMLElement>) => endDrag(e, true), onClick: editing ? undefined : () => { if (!suppressClick.current) beginEdit(); suppressClick.current = false; } },
+    inputProps: { ...usePart('num', 'input'), type: 'number', role: 'spinbutton', 'aria-label': label, min: props.min, max: props.max, step, value: draft, autoFocus: true, onFocus: (e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.select(), onChange: (e: React.ChangeEvent<HTMLInputElement>) => setDraft(e.target.value), onBlur: (e: React.FocusEvent<HTMLInputElement>) => finishEdit(false, e.currentTarget.value), onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); returnFocus.current = true; finishEdit(e.key === 'Escape', e.currentTarget.value); } } } };
 }
 
 export function Num(ctx: PrismComponentProps<NumProps>) {
-  const num = useNum(ctx.props, ctx), Value = useSlot('num', 'value', useSlot('num', 'root', 'span' as any));
-  return num.editing ? <PrismPart as="input" {...num.inputProps} /> : <Value {...num.rootProps}><Odometer value={num.value} format={() => num.formatted} /></Value>;
+  const num = useNum(ctx.props, ctx), model = { num };
+  return <PrismPart as="span" {...num.rootProps} slotProps={model}>
+    {num.editing ? <PrismPart as="input" {...num.inputProps} slotProps={model} /> : <PrismPart as="span" {...num.parts.value} slotProps={model} data-prism-skeleton={!num.ready ? '' : undefined}><Odometer value={num.value} format={() => num.formatted} /></PrismPart>}
+    {num.readoutVisible && <PrismPart as="span" {...num.parts.readout} slotProps={model} ref={num.layout.readout} style={{ ...num.parts.readout.style, ...num.layout.style }} data-side={num.layout.below ? 'below' : 'above'} aria-hidden="true">
+      <PrismPart as={Icon} {...num.parts.icon} slotProps={model} name="chevron-left" />
+      {num.scrubbing ? <PrismPart as="span" {...num.parts.readoutValue} slotProps={model}>{interpolate(num.strings.readoutLabel, { label: num.label, value: num.formatted })}</PrismPart> : <PrismPart as="span" {...num.parts.readoutHint} slotProps={model}>{num.strings.dragHint}</PrismPart>}
+      <PrismPart as={Icon} {...num.parts.icon} slotProps={model} name="chevron-right" />
+    </PrismPart>}
+  </PrismPart>;
 }
 
 export function useCalc(props: CalcProps, ctx: PrismComponentProps<CalcProps>) {
-  props = { ...props, ...useStrings('calc') };
-  const { animate } = usePrism(), expr = props.expr ?? rawText(ctx.node), result = useFormula(expr), format = useNumberFormat(props);
-  const display = useSpringValue(Number.isFinite(result) ? result : 0);
+  const strings = useStrings('calc', calcStrings);
+  const { animate, unstyled } = usePrism(), expr = props.expr ?? rawText(ctx.node), result = useFormula(expr), format = useNumberFormat(props), root = useRef<HTMLSpanElement>(null), presentation = usePresentation();
+  const deps = useMemo(() => { try { return compile(expr).deps; } catch { return []; } }, [expr]);
+  const flashing = useFlash(deps), display = useNumberTween(result, animate && !unstyled, root);
   const error = !Number.isFinite(result);
-  return { text: error ? props.errorLabel : format(animate && Number.isFinite(display) ? display : result), rootProps: { ...usePart('calc', 'root', error ? 'error' : 'ready'), 'aria-label': [props.label, error ? props.errorLabel : format(result)].filter(Boolean).join(': '), title: error ? expr : undefined } };
+  const loading = error && presentation['data-state'] === 'streaming';
+  const label = interpolate((strings.label ?? props.label) ? strings.valueLabel : strings.numberLabel, { label: strings.label ?? props.label ?? '', value: loading ? strings.loadingLabel : error ? strings.errorLabel : format(result) }), title = error ? interpolate(strings.errorDescription, { expression: expr }) : undefined;
+  return { result, display, error, loading, expr, deps, flashing, strings, text: loading ? strings.loadingLabel : error ? strings.errorLabel : format(display),
+    valueProps: { ...usePart('calc', 'value', loading ? 'loading' : error ? 'error' : 'ready'), 'aria-label': label, 'data-prism-skeleton': loading ? '' : undefined, title },
+    rootProps: { ...usePart('calc', 'root'), ...presentation, ref: root, role: 'math', 'data-status': loading ? 'loading' : error ? 'error' : 'ready', 'data-prism-flash': flashing ? '' : undefined, 'aria-label': label, title } };
 }
 export function Calc(ctx: PrismComponentProps<CalcProps>) {
-  const calc = useCalc(ctx.props, ctx), Value = useSlot('calc', 'value', useSlot('calc', 'root', 'span' as any));
-  return <Value {...calc.rootProps}>{calc.text}</Value>;
+  const calc = useCalc(ctx.props, ctx), model = { calc };
+  return <PrismPart as="span" {...calc.rootProps} slotProps={model}><PrismPart as="span" {...calc.valueProps} slotProps={model}>{calc.text}</PrismPart></PrismPart>;
 }
-export const num = defineComponent({ name: 'num', parts: ["input","root","value"], strings: {}, schema: numSchema, syntax: 'inline', inline: true, component: Num, docs: 'Editable shared-store number. Drag, click to type, or use arrow keys; percent values are fractions.', examples: [':num[1200]{id=rent min=0 max=5000 step=50 format=currency}'] });
-export const calc = defineComponent({ name: 'calc', parts: ["root","value"], strings: {}, schema: calcSchema, syntax: 'inline', inline: true, component: Calc, docs: 'Read-only live formula over shared-store paths, with localized number formatting.', examples: [':calc[rent * 12]{format=currency}'] });
+export type NumModel = ReturnType<typeof useNum>;
+export type CalcModel = ReturnType<typeof useCalc>;
+export type NumSlotProps = { [Part in 'root' | 'value' | 'input' | 'readout' | 'readout-value' | 'readout-hint' | 'icon']: { num: NumModel } };
+export type CalcSlotProps = { [Part in 'root' | 'value']: { calc: CalcModel } };
+export const num = defineComponent({ name: 'num', parts: ['input', 'root', 'value', 'readout', 'readout-value', 'readout-hint', 'icon'], strings: numStrings, schema: numSchema, syntax: 'inline', inline: true, component: Num, docs: 'Editable shared-store number. Drag, click to type, or use arrow keys; percent values are fractions.', examples: [':num[1200]{id=rent min=0 max=5000 step=50 format=currency}'] });
+export const calc = defineComponent({ name: 'calc', parts: ['root', 'value'], strings: calcStrings, schema: calcSchema, syntax: 'inline', inline: true, component: Calc, docs: 'Read-only live formula over shared-store paths, with localized number formatting.', examples: [':calc[rent * 12]{format=currency}'] });
 registerComponent(num);
 registerComponent(calc);
