@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ComponentType } from 'react';
 import { ComponentContext, Icon, PrismPart, registerFeedbackSurface, usePrism, useStrings, type FeedbackSurfaceProps } from '@prism-ui/react';
 import { FeedbackTarget } from './feedback-target';
-import { createLoader } from './shared/load';
+import { createLoader } from './feedback-loader';
 import './mockup/mockup.css';
 import './feedback.css';
 

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { createLoader } from './load';
+import { createLoader } from './feedback-loader';
 
 test('an empty loader is inert, shares pending and completed requests, and exposes the loaded value', async () => {
   let calls = 0;

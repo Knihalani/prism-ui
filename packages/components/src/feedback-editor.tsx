@@ -1,7 +1,7 @@
 import { useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { ComponentContext, PrismPart, usePart, usePrism, useStrings, useTheme } from '@prism-ui/react';
-import { MockupAnnotations, MockupComment } from './mockup/mockup';
+import { MockupAnnotations, MockupComment } from './mockup/annotations';
 import { MockupFooter, MockupPenTools } from './mockup/chrome';
 import { useMockup, type MockupModel } from './mockup/use-mockup';
 import type { FeedbackEditorProps } from './feedback';

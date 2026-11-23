@@ -40,14 +40,14 @@ function internals(): BunPlugin {
     build.onLoad({ filter: /.*/, namespace: 'common-css' }, () => ({ contents: '', loader: 'css' }));
   } };
 }
-async function bundle(entry: string, own = false, contents?: string) {
+async function bundle(entry: string, own = false, contents?: string, extra: { plugins?: BunPlugin[]; audit?: boolean } = {}) {
   const virtual: BunPlugin[] = contents === undefined ? [] : [{ name: 'shared-entry', setup(build) {
     build.onResolve({ filter: /__size_shared__\.ts$/ }, () => ({ path: '__size_shared__.ts', namespace: 'size-entry' }));
     build.onLoad({ filter: /.*/, namespace: 'size-entry' }, () => ({ contents, loader: 'ts', resolveDir: root }));
   } }];
-  const result = await Bun.build({ entrypoints: [entry], target: 'browser', format: 'esm', minify: true, splitting: true, external, plugins: [...virtual, ...(own ? [internals()] : [])] });
+  const result = await Bun.build({ entrypoints: [entry], target: 'browser', format: 'esm', minify: true, splitting: true, external, metafile: extra.audit, plugins: [...virtual, ...(own ? [internals()] : []), ...(extra.plugins ?? [])] });
   if (!result.success) throw new AggregateError(result.logs, `Could not bundle ${entry}`);
-  return result.outputs;
+  return Object.assign(result.outputs, { metafile: result.metafile });
 }
 const gzip = (value: string | ArrayBuffer) => gzipSync(typeof value === 'string' ? value : new Uint8Array(value), { level: 9 }).length;
 async function measured(name: string, entry: string, kind: SizeRow['kind'], cssEntries: string[] = [], contents?: string): Promise<SizeRow> {
@@ -80,12 +80,59 @@ export async function grammars() {
   const paths = [...new Bun.Glob('languages/*.ts').scanSync({ cwd: resolve(components, 'lib/highlight') })].sort();
   return Promise.all(paths.map(async path => ({ name: path, gzip: (await measured(path, resolve(components, 'lib/highlight', path), 'runtime')).js })));
 }
+export async function fixtureCompatibility() {
+  const rows = [];
+  for (const entry of ['view/index.ts', 'index.ts']) {
+    const contents = `import { View } from ${JSON.stringify(resolve(components, entry))}; import { createElement } from 'react'; export default function Consumer(props) { return createElement(View, props); }`;
+    let stripped = 0;
+    const without: BunPlugin = { name: 'without-fixture-export', setup(build) {
+      build.onLoad({ filter: /index\.ts$/ }, async args => {
+        if (!args.path.replaceAll('\\', '/').endsWith('/view/index.ts')) return;
+        stripped++;
+        return {
+        contents: (await Bun.file(args.path).text()).split('\n').filter(line => !line.includes('gallery as viewGallery, views as viewFixtures')).join('\n'),
+        loader: 'ts',
+        };
+      });
+    } };
+    const withExports = await bundle(resolve(root, '__size_shared__.ts'), true, contents, { audit: true });
+    const withoutExports = await bundle(resolve(root, '__size_shared__.ts'), true, contents, { plugins: [without], audit: true });
+    if (stripped !== 1) throw new Error(`Fixture export check did not load view/index.ts for ${entry}`);
+    const js = async (outputs: Awaited<ReturnType<typeof bundle>>) => (await Promise.all(outputs.filter(o => o.path.endsWith('.js')).map(async o => gzip(await o.arrayBuffer())))).reduce((a, b) => a + b, 0);
+    const present = await js(withExports), absent = await js(withoutExports);
+    const fixtureBytes = Object.values(withExports.metafile!.outputs).reduce((sum, output) => sum + Object.entries(output.inputs).filter(([path]) => path.replaceAll('\\', '/').endsWith('/view/fixtures.ts')).reduce((sum, [, input]) => sum + input.bytesInOutput, 0), 0);
+    const source = (await Promise.all(withExports.filter(o => o.path.endsWith('.js')).map(o => o.text()))).join('\n');
+    const fixturePayload = source.includes('Revenue · last 30 days') || source.includes('Pixel 9 Pro');
+    rows.push({ entry, withFixtureExports: present, withoutFixtureExports: absent, fixtureBytes, fixturePayload });
+  }
+  return rows;
+}
+export async function artifactChunks() {
+  const outputs = await bundle(resolve(components, 'artifact/index.ts'), true, undefined, { audit: true });
+  const js = await Promise.all(outputs.filter(o => o.path.endsWith('.js')).map(async o => ({ path: o.path, gzip: gzip(await o.arrayBuffer()), bytes: o.size })));
+  const files = outputs.filter(output => output.path.endsWith('.js'));
+  const joinedGzip = gzipSync(Buffer.concat(await Promise.all(files.map(async output => Buffer.from(await output.arrayBuffer())))), { level: 9 }).length;
+  const modules = new Map<string, string[]>();
+  for (const [path, output] of Object.entries(outputs.metafile!.outputs)) {
+    if (!path.endsWith('.js')) continue;
+    for (const [input, detail] of Object.entries(output.inputs)) {
+      if (!detail.bytesInOutput) continue;
+      modules.set(input, [...modules.get(input) ?? [], path]);
+    }
+  }
+  const duplicateModules = Object.fromEntries([...modules].filter(([, paths]) => paths.length > 1));
+  return { chunks: js, joinedGzip, gzipFragmentation: js.reduce((sum, output) => sum + output.gzip, 0) - joinedGzip, duplicateModules, metafile: outputs.metafile };
+}
 if (import.meta.main) {
   const budgets: Budgets = await Bun.file(resolve(root, 'size-budgets.json')).json();
   const rows = await measure(), failed = violations(rows, budgets);
-  if (Bun.argv.includes('--json')) console.log(JSON.stringify({ rows, violations: failed }, null, 2));
+  const fixtures = Bun.argv.includes('--fixtures') ? await fixtureCompatibility() : undefined;
+  const chunks = Bun.argv.includes('--chunks') ? await artifactChunks() : undefined;
+  if (Bun.argv.includes('--json')) console.log(JSON.stringify({ rows, violations: failed, fixtures, artifact: chunks }, null, 2));
   else {
     console.log(table(rows, budgets));
+    if (fixtures) console.log('\nFixture compatibility (tree-shaking):\n' + JSON.stringify(fixtures, null, 2));
+    if (chunks) console.log('\nArtifact chunks and module ownership:\n' + JSON.stringify(chunks, null, 2));
     const lazy = rows.filter(row => row.deferred);
     if (lazy.length) console.log('\nInitial / deferred JS gzip:\n' + lazy.map(row => `${row.name}: ${row.initial} / ${row.deferred}B`).join('\n'));
     if (Bun.argv.includes('--grammars')) console.log('\nGrammar gzip (eager, independent bundles):\n' + (await grammars()).map(row => `${row.name}: ${row.gzip}B`).join('\n'));

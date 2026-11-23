@@ -1,57 +1,116 @@
 # Component size audit
 
-Baseline: `ba8a0ae` (before Step B); after: Step B changes on the perf-audit branch.
+Baseline: `ba8a0ae` (before Step B); after: the B rework on the perf-audit branch.
 Bun 1.4.4, minified browser ESM, gzip level 9. See [accounting](../scripts/README.md).
 All numbers are bytes. Full component JS is **own + the entire shared entry**,
 not a standalone consumer bundle. Runtime rows do not add shared.
 
+**Remaining limitations:** Chart/DataTable net trimming is only 68B, not a
+meaningful reduction of their own code. Public fixture compatibility is restored,
+but Bun still retains fixture payload through a root consumer import.
+
 | Entry | Own JS before → after | Full JS before → after | Own CSS before → after |
 |---|---:|---:|---:|
-| callout | 1201 → 1201 | 26160 → 28310 | 1092 → 1092 |
-| card | 2166 → 2166 | 27125 → 29275 | 1487 → 1487 |
-| grid | 917 → 917 | 25876 → 28026 | 1080 → 1080 |
-| badge | 755 → 755 | 25714 → 27864 | 830 → 830 |
-| tabs | 2929 → 2929 | 27888 → 30038 | 1577 → 1577 |
-| table | 4321 → 4321 | 29280 → 31430 | 1844 → 1844 |
-| summary | 3755 → 3755 | 28714 → 30864 | 2700 → 2700 |
-| num | 4172 → 4172 | 29131 → 31281 | 1416 → 1416 |
-| estimate | 3504 → 3504 | 28463 → 30613 | 1432 → 1432 |
-| pick | 5138 → 5138 | 30097 → 32247 | 2399 → 2399 |
-| runbook | 3697 → 3697 | 28656 → 30806 | 2300 → 2300 |
-| troubleshoot | 4295 → 4295 | 29254 → 31404 | 2208 → 2208 |
-| ask | 6425 → 6425 | 31384 → 33534 | 2486 → 2486 |
-| codeblock | 3675 → 3675 | 28634 → 30784 | 2345 → 2345 |
-| datatable | 8518 → 7926 | 33477 → 35035 | 3309 → 3309 |
-| chart | 9609 → 8360 | 34568 → 35469 | 2307 → 2307 |
-| artifact | 45049 → 47144 | 70008 → 74253 | 4882 → 4882 |
-| mockup | 32287 → 32287 | 57246 → 59396 | 3324 → 3324 |
-| view | 18126 → 15273 | 43085 → 42382 | 5231 → 5231 |
-| shared | 24959 → 27109 | 24959 → 27109 | 8923 → 8923 |
+| callout | 1201 → 1201 | 26160 → 26092 | 1092 → 1092 |
+| card | 2166 → 2166 | 27125 → 27057 | 1487 → 1487 |
+| grid | 917 → 917 | 25876 → 25808 | 1080 → 1080 |
+| badge | 755 → 755 | 25714 → 25646 | 830 → 830 |
+| tabs | 2929 → 2929 | 27888 → 27820 | 1577 → 1577 |
+| table | 4321 → 4321 | 29280 → 29212 | 1844 → 1844 |
+| summary | 3755 → 3755 | 28714 → 28646 | 2700 → 2700 |
+| num | 4172 → 4172 | 29131 → 29063 | 1416 → 1416 |
+| estimate | 3504 → 3504 | 28463 → 28395 | 1432 → 1432 |
+| pick | 5138 → 5138 | 30097 → 30029 | 2399 → 2399 |
+| runbook | 3697 → 3697 | 28656 → 28588 | 2300 → 2300 |
+| troubleshoot | 4295 → 4295 | 29254 → 29186 | 2208 → 2208 |
+| ask | 6425 → 6425 | 31384 → 31316 | 2486 → 2486 |
+| codeblock | 3675 → 3675 | 28634 → 28566 | 2345 → 2345 |
+| datatable | 8518 → 8518 | 33477 → 33409 | 3309 → 3309 |
+| chart | 9609 → 9609 | 34568 → 34500 | 2307 → 2307 |
+| artifact | 45049 → 40393 | 70008 → 65284 | 4882 → 4882 |
+| mockup | 32287 → 32574 | 57246 → 57465 | 3324 → 3324 |
+| view | 18126 → 18102 | 43085 → 42993 | 5231 → 5231 |
+| shared | 24959 → 24891 | 24959 → 24891 | 8923 → 8923 |
 | react | 19071 → 19071 | 19071 → 19071 | 2608 → 2608 |
 | core | 11595 → 11595 | 11595 → 11595 | 0 → 0 |
 | state | 3422 → 3422 | 3422 → 3422 | 0 → 0 |
 | schema | 1825 → 1825 | 1825 → 1825 | 0 → 0 |
 
-DataTable own decreases **6.95%**, Chart own **13.00%** by extracting reusable
-cell/row normalization and chart geometry into common utilities. Their renderers,
-interaction state and schemas still exceed 4 KiB; explicit budgets allow about
-5% headroom. This is an ownership reallocation, **not a net byte reduction**:
-shared grows 2,150B, so the conservative full figures for these entries increase.
+## Chart and DataTable: ownership extraction reverted
 
-Artifact initial own JS decreases **45,049 → 13,643B (69.71%)**. Graphic feedback
-and its mockup engines are deferred (**33,501B**), preloaded when the feedback
-surface mounts and on hover/focus. All deferred chunks remain budgeted: total
-own grows **45,049 → 47,144B** from splitting and the async bridge. A first
-activation arriving before the import finishes is retained and opens when
-ready; closing while pending is also retained. Existing feedback state,
-fullscreen, undo, save and receipt tests remain intact, with explicit preload
-setup for synchronous interaction assertions.
+The geometry, column/row normalization and cell formatter extraction increased
+consumer cost, so it is reverted. Small shared formatter-cache, date-tick and
+pivot-write deduplications remain. Their output is covered by the existing tests.
 
-View own decreases **18,126 → 15,273B (15.74%)**. Demo fixtures now require the
-explicit `@prism-ui/components/view/fixtures` subpath; the playground imports
-them there. The runtime keeps its compact built-in example. Existing consumers
-of `viewFixtures` / `viewGallery` from the runtime entry must migrate to that
-subpath (aliases shown in the accounting guide).
+- Shared + Chart + DataTable: **43,086 → 43,018B (−68B, −0.16%)**.
+- Previous Step B result: 43,395B; rework removes 377B from that result.
+- Full Chart: **34,568 → 34,500B**; full DataTable: **33,477 → 33,409B**.
+- Own Chart/DataTable are unchanged from the pre-B baseline: 9,609 / 8,518B.
+  The 4KiB goal and substantial named-component trims remain unmet.
+- Higher caps retain approximately 5% headroom, with explicit feature reasons.
+  No validation, schema documentation, slots, chart types or interactions were removed.
+
+A shared JS/TS keyword-factory trial increased the all-grammar entry by 8B,
+so it was reverted. Grammars remain eager and unchanged.
+
+## Public View fixture compatibility
+
+Before Step B, `src/view/index.ts` exported `viewGallery` and `viewFixtures`;
+`src/index.ts` re-exported `./view`, and package.json exposed `./view`.
+Both aliases were therefore public. They are restored in their original places,
+and a test verifies identity with the explicit fixture exports.
+
+The explicit `@prism-ui/components/view/fixtures` subpath remains available.
+The gallery initializer is pure so a consumer importing only `View` from
+`./view` includes **0 fixture module bytes** in Bun's metafile.
+
+**Unresolved:** the same consumer importing `View` from the root retains
+**8,593 minified fixture bytes**, about **2,827B additional gzip** in this
+measurement. The cause of root-only retention was not isolated. This is not a
+claim that all root imports now tree-shake fixtures. The public-index own budget
+includes the legacy exported fixture data; there is no forced API migration.
+
+## Artifact: chunk accounting and unused graph removal
+
+The previous full increase **70,008 → 74,253B (+4,245B)** comprised:
+
+- **+2,150B shared**, mostly the ownership extraction, not Artifact code.
+- **+2,095B own**, from the lazy bridge, chunk framing/layout and independent gzip.
+
+Archived-input rebuilds give 47,145B own (1B above the published result because
+chunk-name hashes affect gzip), versus 45,049B static. Independent gzip costs
+about **1,140B** more than gzipping the same emitted chunk text concatenated.
+The remaining approximately **956B** difference includes bridge/import/export
+framing and changed minification/compression layout; it is not all loader code.
+Raw emitted JS grows 130,639 → 131,820B in that comparison.
+
+Metafiles show **zero modules emitted into multiple JS chunks**, both before and
+after rework. There was no cross-chunk module duplication to remove. Instead,
+feedback's import from `mockup/mockup.tsx` retained unrelated renderer UI.
+Annotations/comments now live in `mockup/annotations.tsx`, with public re-exports
+preserved. Feedback imports that narrow module. The loader is feedback-specific,
+not charged to every shared-runtime consumer.
+
+Module evidence in the deferred graph (minified bytes, not gzip):
+
+| Module | Previous → rework |
+|---|---:|
+| mockup/mockup.tsx | 15948 → 0 |
+| mockup/group.tsx | 8391 → 0 |
+| mockup/chrome.tsx | 4970 → 2443 |
+| mockup/annotations.tsx | 0 → 5738 |
+| mockup/engine/wireframe.ts | 20899 → 18714 |
+
+Part of chrome/footer remains needed by the feedback toolbar; it was not entirely removed.
+The complete deferred chunk falls **76,897 → 53,488 raw bytes**.
+Final own chunks are **13,680 + 7,581 + 19,132 = 40,393B gzip**:
+initial **13,680B**, deferred **26,713B**, full **65,284B**.
+All chunks remain budgeted. Final independent-gzip fragmentation is 1,204B;
+the concatenated-text compression diagnostic is 39,189B. It is not runnable JS.
+
+Feedback preload, pending-first-activation, failure/retry, keyboard, Escape,
+reopen and draft retention tests remain in place. The extraction changes no
+annotation behavior; cold loading still uses the prior Step B pending bridge.
 
 ## Eager highlighter grammars
 
@@ -79,22 +138,23 @@ include imported helpers and are **not additive**. The all-grammar entry is
 | tsx | 2687 |
 | yaml | 1199 |
 
-## Verification
 
-- `bun run size --markdown --grammars`: all budgets passed.
+## Verification and evidence
+
+- `bun run size --json --fixtures --chunks`: exit 0, no violations.
 - `bunx tsc --noEmit`: exit 0.
-- `bun test`: 1,098 pass, 1 skip, 0 fail; 1,099 tests / 124 files, 82.48s.
-  The skip is the absent real live-model recording; no timing tests flaked.
-- `bun run --cwd apps/playground build`: built in 2.83s; existing >500 kB
-  chunk warning remains.
-- Playground spot checks used the same host shell, sources, viewport, fonts,
-  reduced-motion setting and keyboard feedback activation before/after.
-  Exact RGBA pixel differences: DataTable **0%**, Chart **0%**, Artifact **0%**,
-  Artifact feedback **0%**. Escape/reopen preserved feedback text; 0 page errors.
-  The harness's initial pointer activation was intercepted by the artifact
-  iframe already on the baseline; keyboard activation was used instead.
+- `bun test`: **1,099 pass, 1 skip, 0 fail**, 1,100 tests / 123 files, 63.93s.
+  The skip is the absent real live-model recording. An earlier rework run flaked
+  `packages/core/test/scaling.test.ts` (`four-character streaming scales linearly
+  for long open blocks`, ratio 2.889 > 2.6); the final suite had no timing failure.
+- Playground production build: **built in 2.35s**, exit 0. Existing >500kB
+  chunk warning remains. Dedicated production replay build also passed.
+- Captured and inspected DataTable, Chart, Artifact and Artifact feedback;
+  exact RGBA differences against the original screenshots are **0% for all four**.
+  Escape/reopen retains the feedback draft; 0 page errors.
+- No push, remote CI or live-provider calls were made for this rework.
 
-Screenshots: `~/shots/perf/{datatable,chart,artifact,artifact-feedback}-{before,after}.png`;
-diff images use `-diff.png`. Raw measurements, logs and capture script:
-`~/conformance/perf-audit/step-b/`. No live model calls or full streaming trace
-were part of Step B.
+Screenshots: `~/shots/perf/{datatable,chart,artifact,artifact-feedback}-{before,after}.png`.
+Raw sizes/metafiles, logs and helpers: `~/conformance/perf-audit/step-c/`.
+See [production performance evidence](PERFORMANCE-AUDIT.md) for the benchmark
+and Chrome results, including the unresolved long-task target.

@@ -4,17 +4,23 @@ export type FormatOptions = Intl.NumberFormatOptions & Intl.DateTimeFormatOption
   locale?: Locale; currency?: string; fallback?: string; now?: Date | number;
 };
 
-const numbers = new Map<string, Intl.NumberFormat>();
-const dates = new Map<string, Intl.DateTimeFormat>();
-const relatives = new Map<string, Intl.RelativeTimeFormat>();
+interface Formatters { number: Intl.NumberFormat; date: Intl.DateTimeFormat; relative: Intl.RelativeTimeFormat }
+const formatters = new Map<string, Formatters[keyof Formatters]>();
 function key(locale: Locale | undefined, options: object): string {
   return JSON.stringify([locale, Object.entries(options).sort(([a], [b]) => a.localeCompare(b))]);
 }
+function cached<K extends keyof Formatters>(kind: K, locale: Locale | undefined, options: object): Formatters[K] {
+  const id = kind + ':' + key(locale, options);
+  let formatter = formatters.get(id);
+  if (!formatter) {
+    const Constructor = { number: Intl.NumberFormat, date: Intl.DateTimeFormat, relative: Intl.RelativeTimeFormat }[kind] as new (locale?: Locale, options?: object) => Formatters[keyof Formatters];
+    formatter = new Constructor(locale, options);
+    formatters.set(id, formatter);
+  }
+  return formatter as Formatters[K];
+}
 export function getNumberFormat(locale?: Locale, options: Intl.NumberFormatOptions = {}): Intl.NumberFormat {
-  const id = key(locale, options);
-  let formatter = numbers.get(id);
-  if (!formatter) { formatter = new Intl.NumberFormat(locale, options); numbers.set(id, formatter); }
-  return formatter;
+  return cached('number', locale, options);
 }
 function safe(fallback: string, fn: () => string): string { try { return fn(); } catch { return fallback; } }
 function numeric(value: unknown): value is number { return typeof value === 'number' && Number.isFinite(value); }
@@ -35,10 +41,7 @@ export function formatDate(value: unknown, locale?: Locale, options: Intl.DateTi
   return safe(fallback, () => {
     const date = dateValue(value);
     if (!Number.isFinite(date.getTime())) return fallback;
-    const id = key(locale, options);
-    let formatter = dates.get(id);
-    if (!formatter) { formatter = new Intl.DateTimeFormat(locale, options); dates.set(id, formatter); }
-    return formatter.format(date);
+    return cached('date', locale, options).format(date);
   });
 }
 export function formatDateTime(value: unknown, locale?: Locale, options: Intl.DateTimeFormatOptions = {}, fallback = ''): string {
@@ -52,10 +55,7 @@ export function formatRelativeTime(value: unknown, locale?: Locale, options: Int
     const units: [Intl.RelativeTimeFormatUnit, number][] = [['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60], ['second', 1]];
     const [unit, divisor] = units.find(([, size]) => Math.abs(seconds) >= size) ?? units[units.length - 1];
     const settings = { numeric: 'auto' as const, ...intl };
-    const id = key(locale, settings);
-    let formatter = relatives.get(id);
-    if (!formatter) { formatter = new Intl.RelativeTimeFormat(locale, settings); relatives.set(id, formatter); }
-    return formatter.format(Math.round(seconds / divisor), unit);
+    return cached('relative', locale, settings).format(Math.round(seconds / divisor), unit);
   });
 }
 export function format(value: unknown, kind: FormatKind = 'text', options: FormatOptions = {}): string {

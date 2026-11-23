@@ -7,6 +7,7 @@ bun run size
 bun run size --markdown
 bun run size --markdown --grammars
 bun run size --json
+bun run size --json --fixtures --chunks
 ```
 
 The command always enforces `size-budgets.json` and exits nonzero on an
@@ -42,11 +43,22 @@ reports independent eager grammar bundles (including their helper imports),
 so those grammar numbers are not additive. All grammars are charged once to
 shared. No safe grammar duplication was found to remove.
 
-View demo/test data is opt-in, outside the runtime entry:
+View demo/test data has an explicit entry:
 
 ```ts
 import { views as viewFixtures, gallery as viewGallery } from '@prism-ui/components/view/fixtures';
 ```
 
-The view definition retains its compact built-in example; the playground
-imports the full fixture collection explicitly.
+The old `viewFixtures` and `viewGallery` aliases remain public through both
+the root and `./view` entries. The gallery's pure initializer lets Bun remove
+the fixture module when importing `View` from `./view`. `--fixtures` checks
+the actual consumer graph, not just gzip equality (chunk hashes can differ).
+The root consumer currently still retains 8,593 minified fixture bytes;
+root-level fixture tree-shaking is an unresolved limitation, not a claimed
+win. Prefer subpath imports for lean consumers. The view definition retains
+its compact built-in example; the playground imports fixtures explicitly.
+
+`--chunks` reports Artifact's emitted chunks, metafile ownership, duplicated
+modules and the compression difference between independent chunk gzip and
+concatenated chunk text. Concatenation is a compression diagnostic, not a
+distributable JS bundle. All actual chunks remain charged to the budget.

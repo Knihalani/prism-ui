@@ -30,17 +30,17 @@
       "reason": "Multi-field form renderer, validation, conditional fields and submission state."
     },
     "datatable": {
-      "js": 8325,
+      "js": 8944,
       "css": 4096,
-      "reason": "Sortable, selectable, virtualized data grid with streaming, animation and accessibility."
+      "reason": "Sorting, filtering, selection, paging/windowing and schema metadata; common extraction reverted because it increased net cost."
     },
     "chart": {
-      "js": 8780,
+      "js": 10090,
       "css": 4096,
-      "reason": "Interactive SVG renderer for four chart types, streaming domains, pivots and accessibility."
+      "reason": "Interactive SVG geometry, accessibility table, interaction state and schema metadata; common extraction reverted because it increased net cost."
     },
     "artifact": {
-      "js": 49550,
+      "js": 42413,
       "css": 5130,
       "reason": "Sandbox/compiler plus deferred graphic feedback and mockup engines; all lazy JS is charged."
     },
@@ -50,12 +50,12 @@
       "reason": "Wireframe renderer, sandbox messaging, drawing, annotations and feedback history."
     },
     "view": {
-      "js": 16050,
+      "js": 19008,
       "css": 5500,
-      "reason": "Recursive bound UI renderer and styled primitives, expressions and event handlers."
+      "reason": "Bound layout renderer and legacy fixture aliases; subpath runtime imports tree-shake fixtures, but Bun root imports currently retain them."
     },
     "shared": {
-      "js": 28500,
+      "js": 26154,
       "css": 9400,
       "reason": "All frame/controls, utilities, eager grammars, strings, tokens and common styles, once."
     },

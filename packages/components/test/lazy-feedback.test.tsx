@@ -3,7 +3,7 @@ import { afterEach, expect, test } from 'bun:test';
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { Prism } from '@prism-ui/react';
 import { FeedbackEditorLoader, type FeedbackEditorProps } from '../src/feedback';
-import { createLoader } from '../src/shared/load';
+import { createLoader } from '../src/feedback-loader';
 
 afterEach(cleanup);
 const source = '```ui:lazy-target\n{}\n```';
