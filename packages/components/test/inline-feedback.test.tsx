@@ -31,6 +31,35 @@ for (const value of [null, 'other value', [], {}, { items: [], overall: 1 }, { i
   expect((view.getByRole('button', { name: 'Submit feedback' }) as HTMLButtonElement).disabled).toBe(true);
 });
 
+for (const id of ['007', 'group.007', '7']) for (const legacy of [false, true]) test(`${legacy ? 'legacy' : 'new'} feedback for numeric id ${id} survives JSON snapshot and reload`, () => {
+  const original = createFeedback({ overall: 'Saved overall' }); original.addPin({ x: 20, y: 30, comment: 'Saved annotation' });
+  const initial = legacy ? id === 'group.007' ? { group: { '007': { feedback: original.toJSON() } } } : { [id]: { feedback: original.toJSON() } } : {};
+  const store = createStore({ initial });
+  const path = `__prism.feedback.${id}`;
+  const ui = (active = store) => <Prism store={active} feedback animate={false} source={`:calc[1]{id="${id}"}`} />;
+  const view = render(ui());
+  fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
+  if (!legacy) {
+    fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
+    change(view.getByPlaceholderText('Add a comment…'), 'Saved annotation');
+    fireEvent.click(view.getByRole('button', { name: 'Save' }));
+  }
+  expect(view.getByRole('button', { name: 'Comment 1: Saved annotation' })).toBeTruthy();
+  const serialized = JSON.parse(JSON.stringify(store.snapshot()));
+  expect(Array.isArray(serialized.__prism.feedback)).toBe(false);
+  expect(createStore({ initial: serialized }).get(`${path}.items`)).toHaveLength(1);
+  view.unmount();
+  const reloaded = createStore({ initial: serialized }), restored = render(ui(reloaded));
+  fireEvent.click(restored.getByRole('button', { name: 'Give feedback' }));
+  expect(restored.getByRole('button', { name: 'Comment 1: Saved annotation' })).toBeTruthy();
+  fireEvent.click(restored.getByRole('button', { name: 'Submit feedback' }));
+  expect(reloaded.get(`${path}.submitted`)).toBe(true);
+  act(() => reloaded.undo(path));
+  expect(restored.getByRole('button', { name: 'Comment 1: Saved annotation' })).toBeTruthy();
+  act(() => reloaded.redo(path));
+  expect(createStore({ initial: JSON.parse(JSON.stringify(reloaded.snapshot())) }).get(`${path}.items`)).toHaveLength(1);
+});
+
 test('Mockup keeps its own feedback controls without a duplicate global editor', () => {
   for (const src of ['', 'data:image/png;base64,iVBORw0KGgo=']) {
     const view = render(<Prism feedback animate={false} source={'```ui:mockup\n' + JSON.stringify({ id: 'native-review', kind: 'image', src }) + '\n```'} />);
@@ -54,9 +83,9 @@ test('saving numeric inline feedback preserves the scalar value and dependent fo
   expect(view.getByRole('math').textContent).toBe('14,400');
 });
 
-for (const name of ['num', 'calc']) test(`saved ${name} feedback survives streamed explicit-id finalization and reload`, () => {
+for (const id of ['amount', '007']) for (const name of ['num', 'calc']) test(`saved ${name} feedback survives streamed explicit-id ${id} finalization and reload`, () => {
   const store = createStore(), actions: Action[] = [];
-  const ui = (done: boolean) => <Prism scope="feedback-stream" store={store} feedback animate={false} source={`:${name}[1200]{id="amount"}`} done={done} onAction={action => actions.push(action)} />;
+  const ui = (done: boolean) => <Prism scope="feedback-stream" store={store} feedback animate={false} source={`:${name}[1200]{id="${id}"}`} done={done} onAction={action => actions.push(action)} />;
   const view = render(ui(false));
   fireEvent.click(view.getByRole('button', { name: 'Give feedback' }));
   fireEvent.keyDown(view.getByRole('application'), { key: 'Enter' });
@@ -65,15 +94,15 @@ for (const name of ['num', 'calc']) test(`saved ${name} feedback survives stream
   expect(view.getByRole('button', { name: 'Comment 1: Saved during streaming' })).toBeTruthy();
   view.rerender(ui(true));
   expect(view.getByRole('button', { name: 'Comment 1: Saved during streaming' })).toBeTruthy();
-  expect(store.get('__prism.feedback.amount.items')).toHaveLength(1);
-  if (name === 'num') expect(store.get('amount')).toBe(1200);
+  expect(createStore({ initial: JSON.parse(JSON.stringify(store.snapshot())) }).get(`__prism.feedback.${id}.items`)).toHaveLength(1);
+  if (name === 'num') expect(store.get(id)).toBe(1200);
   fireEvent.click(view.getByRole('button', { name: 'Submit feedback' }));
-  expect(actions.at(-1)?.payload).toMatchObject({ target: { id: 'amount' }, items: [{ comment: 'Saved during streaming' }] });
+  expect(actions.at(-1)?.payload).toMatchObject({ target: { id }, items: [{ comment: 'Saved during streaming' }] });
   view.unmount();
   const restored = render(ui(true));
   fireEvent.click(restored.getByRole('button', { name: 'Give feedback' }));
   expect(restored.getByText('Edit feedback')).toBeTruthy();
-  expect(store.get('__prism.feedback.amount.submitted')).toBe(true);
+  expect(store.get(`__prism.feedback.${id}.submitted`)).toBe(true);
 });
 
 for (const name of ['num', 'calc']) for (const operation of ['submit', 'submit-overall', 'delete']) test(`legacy ${name} annotations ${operation} consistently`, () => {

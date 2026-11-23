@@ -10,7 +10,7 @@ export function migrateComponentState(store: Store, from: string, to: string) {
   if (!store.hydrated) { void store.ready.then(() => migrateComponentState(store, from, to)); return; }
   store.batch(() => {
     store.move(from, to);
-    store.move(`__prism.feedback.${from}`, `__prism.feedback.${to}`);
+    store.move(`__prism.feedback.${from}`, `__prism.feedback.${to}`, { record: true });
   }, { history: false });
 }
 
