@@ -28,6 +28,28 @@ test('native primary slots receive disabled and sent state without interpreting 
   fireEvent.click(view.getByRole('button', { name: 'Edit feedback' }));
   expect(button.disabled).toBe(false); expect(button.hasAttribute('data-sent')).toBe(false);
 });
+test('comment rows stagger, collapse inertly on removal, and restore the same row on undo', async () => {
+  const a = setup();
+  a.pointer('pointerdown', 200, 100); a.pointer('pointerup', 200, 100);
+  a.change(a.view.getByRole('textbox', { name: 'Add a comment…' }), 'Keep the title');
+  const pin = a.view.container.querySelector('[data-part=marker]')!;
+  fireEvent.mouseLeave(pin);
+  expect(pin.getAttribute('data-active')).toBe('true');
+  fireEvent.click(a.view.getByText('Save'));
+  const row = a.view.container.querySelector<HTMLElement>('[data-part=list] [data-part=item]')!;
+  expect(row.hasAttribute('data-prism-enter')).toBe(true);
+  expect(row.style.getPropertyValue('--prism-motion-index')).toBe('0');
+  act(() => a.model.remove(a.model.state.items[0].id));
+  expect(row.isConnected).toBe(true); expect(row.inert).toBe(true);
+  expect(row.getAttribute('aria-hidden')).toBe('true'); expect(row.style.height).toBe('0px');
+  act(() => a.model.feedback.undo());
+  expect(a.view.container.querySelector('[data-part=list] [data-part=item]')).toBe(row);
+  expect(row.inert).toBe(false); expect(row.hasAttribute('data-closing')).toBe(false);
+  act(() => a.model.remove(a.model.state.items[0].id));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 180)); });
+  expect(row.isConnected).toBe(false);
+  expect(a.view.container.querySelector('[data-part=list] [data-part=empty]')).not.toBeNull();
+});
 const source = (props: MockupProps) => '```ui:mockup\n' + JSON.stringify({ id: 'review', ...props }) + '\n```';
 function setup(props: MockupProps = {}, done = true, store = createStore()) {
   const renders: [string, boolean | undefined][] = [], actions: Action[] = [];
